@@ -1,11 +1,10 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.detekt)
-    alias(libs.plugins.junit)
+    alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.compose.compiler)
     alias(libs.plugins.kotlin.parcelize)
-    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
 }
@@ -14,13 +13,9 @@ android {
     compileSdk = 34
     namespace = "com.huntercoles.fatline.basicfeature"
 
-    with (defaultConfig) {
+    defaultConfig {
         minSdk = 26
         targetSdk = 34
-    }
-
-    defaultConfig {
-        testInstrumentationRunner = "com.huntercoles.fatline.core.utils.HiltTestRunner"
     }
 
     buildFeatures {
@@ -41,22 +36,6 @@ android {
 
     kotlin {
         jvmToolchain(17)
-
-        compilerOptions {
-            freeCompilerArgs.addAll(
-                "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-                "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
-            )
-        }
-    }
-
-    sourceSets {
-        getByName("androidTest") {
-            java.srcDir(project(":core").file("src/androidTest/java"))
-        }
-        getByName("test") {
-            java.srcDir(project(":core").file("src/test/java"))
-        }
     }
 }
 
@@ -67,18 +46,15 @@ dependencies {
     implementation(libs.coil)
     implementation(libs.compose.material3)
     implementation(libs.hilt)
-    implementation(libs.kotlin.coroutines)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.navigation)
     implementation(libs.navigation.hilt)
-    implementation(libs.kotlin.serialization)
-    implementation(libs.retrofit)
     implementation(libs.room)
     implementation(libs.timber)
+    
     testImplementation(libs.bundles.common.test)
     androidTestImplementation(libs.bundles.common.android.test)
     debugImplementation(libs.debug.compose.manifest)
 
     ksp(libs.hilt.compiler)
-    kspAndroidTest(libs.hilt.compiler)
 }

@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="rocket_cost_per_launch">Cost per launch: $%dm</string>
-    <string name="rocket_first_flight">First flight: %s</string>
-    <string name="rocket_height">Height: %dm</string>
-    <string name="rocket_weight">Weight: %dt</string>
-
-    <string name="rockets_error_fetching">Sorry, something went wrong when fetching rockets</string>
-    <string name="rockets_error_refreshing">Sorry, something went wrong when refreshing rockets</string>
-
-    <string name="rocket_image_content_description">Rocket image</string>
+    <!-- Calculator Screen -->
+    <string name="calculator_title">Poker Payout Calculator</string>
+    <string name="tournament_config">Tournament Configuration</string>
+    <string name="number_of_players">Number of Players: %d</string>
+    <string name="buy_in_label">Buy-in per player ($)</string>
+    <string name="food_pool_label">Food pool per player ($)</string>
+    <string name="bounty_label">Bounty per player ($)</string>
+    <string name="pool_summary">Pool Summary</string>
+    <string name="prize_pool">Prize Pool: $%s</string>
+    <string name="food_pool">Food Pool: $%s</string>
+    <string name="bounty_pool">Bounty Pool: $%s</string>
+    <string name="total_pool">Total Pool: $%s</string>
+    <string name="per_player">Per Player: $%s</string>
+    <string name="tournament_payouts">Tournament Payouts</string>
+    <string name="place_suffix_st">st</string>
+    <string name="place_suffix_nd">nd</string>
+    <string name="place_suffix_rd">rd</string>
+    <string name="place_suffix_th">th</string>
+    <string name="weight_percentage" formatted="false">Weight: %d (%.1f%%)</string>
 </resources>

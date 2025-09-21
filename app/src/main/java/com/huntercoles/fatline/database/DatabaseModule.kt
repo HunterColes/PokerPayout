@@ -2,7 +2,6 @@ package com.huntercoles.fatline.database
 
 import android.content.Context
 import androidx.room.Room
-import com.huntercoles.fatline.basicfeature.data.local.dao.RocketDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -10,7 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-private const val APP_DATABASE_NAME = "app_database_name"
+private const val APP_DATABASE_NAME = "poker_payout_database"
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -26,7 +25,5 @@ internal object DatabaseModule {
         APP_DATABASE_NAME,
     ).build()
 
-    @Singleton
-    @Provides
-    fun provideRocketDao(database: AppDatabase): RocketDao = database.rocketDao()
+    // Poker-specific DAO providers will be added here as needed
 }

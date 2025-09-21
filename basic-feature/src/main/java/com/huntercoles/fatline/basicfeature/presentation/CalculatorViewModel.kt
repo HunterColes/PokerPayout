@@ -1,21 +1,22 @@
 package com.huntercoles.fatline.basicfeature.presentation
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.huntercoles.fatline.basicfeature.domain.usecase.CalculatePayoutsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class CalculatorViewModel @Inject constructor() : ViewModel() {
+class CalculatorViewModel @Inject constructor(
+    private val calculatePayoutsUseCase: CalculatePayoutsUseCase
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalculatorUiState())
     val uiState: StateFlow<CalculatorUiState> = _uiState.asStateFlow()
-
-    // Default payout weights (same as Python app)
-    private val defaultWeights = listOf(35, 20, 15, 10, 8, 6, 3, 2, 1)
 
     init {
         calculatePayouts()
@@ -23,78 +24,53 @@ class CalculatorViewModel @Inject constructor() : ViewModel() {
 
     fun acceptIntent(intent: CalculatorIntent) {
         when (intent) {
-            is CalculatorIntent.PlayerCountChanged -> updatePlayerCount(intent.count)
-            is CalculatorIntent.BuyInChanged -> updateBuyIn(intent.amount)
-            is CalculatorIntent.FoodPoolChanged -> updateFoodPool(intent.amount)
-            is CalculatorIntent.BountyPoolChanged -> updateBountyPool(intent.amount)
+            is CalculatorIntent.UpdatePlayerCount -> updatePlayerCount(intent.count)
+            is CalculatorIntent.UpdateBuyIn -> updateBuyIn(intent.buyIn)
+            is CalculatorIntent.UpdateFoodPerPlayer -> updateFoodPerPlayer(intent.food)
+            is CalculatorIntent.UpdateBountyPerPlayer -> updateBountyPerPlayer(intent.bounty)
+            is CalculatorIntent.UpdateWeights -> updateWeights(intent.weights)
         }
     }
 
     private fun updatePlayerCount(count: Int) {
-        _uiState.update { it.copy(playerCount = count) }
+        val newConfig = _uiState.value.tournamentConfig.copy(numPlayers = count)
+        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
         calculatePayouts()
     }
 
-    private fun updateBuyIn(amount: Double) {
-        _uiState.update { it.copy(buyIn = amount) }
-        updateTotalPerPlayer()
+    private fun updateBuyIn(buyIn: Double) {
+        val newConfig = _uiState.value.tournamentConfig.copy(buyIn = buyIn)
+        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
         calculatePayouts()
     }
 
-    private fun updateFoodPool(amount: Double) {
-        _uiState.update { it.copy(foodPool = amount) }
-        updateTotalPerPlayer()
+    private fun updateFoodPerPlayer(food: Double) {
+        val newConfig = _uiState.value.tournamentConfig.copy(foodPerPlayer = food)
+        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
         calculatePayouts()
     }
 
-    private fun updateBountyPool(amount: Double) {
-        _uiState.update { it.copy(bountyPool = amount) }
-        updateTotalPerPlayer()
+    private fun updateBountyPerPlayer(bounty: Double) {
+        val newConfig = _uiState.value.tournamentConfig.copy(bountyPerPlayer = bounty)
+        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
         calculatePayouts()
     }
 
-    private fun updateTotalPerPlayer() {
-        val currentState = _uiState.value
-        val total = currentState.buyIn + currentState.foodPool + currentState.bountyPool
-        _uiState.update { it.copy(totalPerPlayer = total) }
+    private fun updateWeights(weights: List<Int>) {
+        val newConfig = _uiState.value.tournamentConfig.copy(payoutWeights = weights)
+        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
+        calculatePayouts()
     }
 
     private fun calculatePayouts() {
-        val currentState = _uiState.value
-
-        // Calculate prize pool
-        val prizePool = currentState.playerCount * currentState.buyIn
-
-        // Calculate total pool
-        val totalPool = prizePool +
-                       (currentState.playerCount * currentState.foodPool) +
-                       (currentState.playerCount * currentState.bountyPool)
-
-        // Calculate number of paying positions (max 1/3 of players or length of weights)
-        val maxPayingPositions = minOf(
-            maxOf(1, currentState.playerCount / 3),
-            defaultWeights.size
-        )
-
-        // Calculate total weight
-        val payingWeights = defaultWeights.take(maxPayingPositions)
-        val totalWeight = payingWeights.sum()
-
-        // Calculate payouts
-        val payouts = if (totalWeight > 0) {
-            payingWeights.mapIndexed { index, weight ->
-                val payout = (weight.toDouble() / totalWeight) * prizePool
-                (index + 1) to payout
-            }
-        } else {
-            emptyList()
-        }
-
-        _uiState.update {
-            it.copy(
-                prizePool = prizePool,
-                totalPool = totalPool,
-                payouts = payouts
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            
+            val payouts = calculatePayoutsUseCase(_uiState.value.tournamentConfig)
+            
+            _uiState.value = _uiState.value.copy(
+                payouts = payouts,
+                isLoading = false
             )
         }
     }

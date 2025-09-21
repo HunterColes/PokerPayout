@@ -10,12 +10,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,7 +36,7 @@ import com.huntercoles.fatline.settingsfeature.presentation.TimerDirection
 import com.huntercoles.fatline.settingsfeature.presentation.TimerIntent
 import com.huntercoles.fatline.settingsfeature.presentation.TimerUiState
 import com.huntercoles.fatline.settingsfeature.presentation.TimerViewModel
-import com.huntercoles.fatline.core.design.PokerGold
+import com.huntercoles.fatline.core.design.PokerColors
 
 @Composable
 fun TimerRoute(viewModel: TimerViewModel = hiltViewModel()) {
@@ -61,7 +64,7 @@ internal fun TimerScreen(
             text = "⏰ Blind Timer",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = PokerGold,
+            color = PokerColors.PokerGold,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
         )
@@ -69,7 +72,8 @@ internal fun TimerScreen(
         // Game Duration Setting
         Card(
             modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -78,7 +82,7 @@ internal fun TimerScreen(
                     text = "Game Duration (minutes)",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = PokerGold
+                    color = PokerColors.PokerGold
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -86,7 +90,13 @@ internal fun TimerScreen(
                 OutlinedTextField(
                     value = uiState.gameDurationMinutes.toString(),
                     onValueChange = { onIntent(TimerIntent.GameDurationChanged(it.toIntOrNull() ?: 180)) },
-                    label = { Text("Duration") },
+                    label = { Text("Duration", color = PokerColors.CardWhite) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PokerColors.AccentGreen,
+                        unfocusedBorderColor = PokerColors.CardWhite,
+                        focusedTextColor = PokerColors.CardWhite,
+                        unfocusedTextColor = PokerColors.CardWhite
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -96,7 +106,8 @@ internal fun TimerScreen(
                 Text(
                     text = "Timer Mode",
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = PokerColors.CardWhite
                 )
 
                 Row(
@@ -108,9 +119,13 @@ internal fun TimerScreen(
                     ) {
                         RadioButton(
                             selected = uiState.timerDirection == TimerDirection.COUNTDOWN,
-                            onClick = { onIntent(TimerIntent.TimerDirectionChanged(TimerDirection.COUNTDOWN)) }
+                            onClick = { onIntent(TimerIntent.TimerDirectionChanged(TimerDirection.COUNTDOWN)) },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = PokerColors.PokerGold,
+                                unselectedColor = PokerColors.CardWhite
+                            )
                         )
-                        Text("Countdown", style = MaterialTheme.typography.bodyMedium)
+                        Text("Countdown", style = MaterialTheme.typography.bodyMedium, color = PokerColors.CardWhite)
                     }
 
                     Row(
@@ -118,9 +133,13 @@ internal fun TimerScreen(
                     ) {
                         RadioButton(
                             selected = uiState.timerDirection == TimerDirection.COUNTUP,
-                            onClick = { onIntent(TimerIntent.TimerDirectionChanged(TimerDirection.COUNTUP)) }
+                            onClick = { onIntent(TimerIntent.TimerDirectionChanged(TimerDirection.COUNTUP)) },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = PokerColors.PokerGold,
+                                unselectedColor = PokerColors.CardWhite
+                            )
                         )
-                        Text("Count Up", style = MaterialTheme.typography.bodyMedium)
+                        Text("Count Up", style = MaterialTheme.typography.bodyMedium, color = PokerColors.CardWhite)
                     }
                 }
             }
@@ -133,7 +152,7 @@ internal fun TimerScreen(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                containerColor = PokerColors.FeltGreen
             )
         ) {
             Column(
@@ -145,9 +164,9 @@ internal fun TimerScreen(
                     style = MaterialTheme.typography.displayLarge,
                     fontWeight = FontWeight.Bold,
                     color = when {
-                        uiState.isTimeLow -> MaterialTheme.colorScheme.error
-                        uiState.isTimeCritical -> PokerGold
-                        else -> MaterialTheme.colorScheme.onPrimaryContainer
+                        uiState.isTimeLow -> PokerColors.ErrorRed
+                        uiState.isTimeCritical -> PokerColors.PokerGold
+                        else -> PokerColors.PokerGold
                     }
                 )
 
@@ -159,10 +178,11 @@ internal fun TimerScreen(
                         .fillMaxWidth()
                         .height(12.dp),
                     color = when {
-                        uiState.isTimeCritical -> MaterialTheme.colorScheme.error
-                        uiState.isTimeLow -> PokerGold
-                        else -> MaterialTheme.colorScheme.primary
-                    }
+                        uiState.isTimeCritical -> PokerColors.ErrorRed
+                        uiState.isTimeLow -> PokerColors.PokerGold
+                        else -> PokerColors.AccentGreen
+                    },
+                    trackColor = PokerColors.DarkGreen
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -170,7 +190,7 @@ internal fun TimerScreen(
                 Text(
                     text = "${String.format("%.1f", uiState.progress * 100)}% Complete",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = PokerColors.CardWhite
                 )
             }
         }
@@ -185,14 +205,22 @@ internal fun TimerScreen(
             Button(
                 onClick = { onIntent(TimerIntent.ToggleTimer) },
                 modifier = Modifier.weight(1f),
-                enabled = !uiState.isFinished
+                enabled = !uiState.isFinished,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PokerColors.AccentGreen,
+                    contentColor = PokerColors.DarkGreen
+                )
             ) {
                 Text(if (uiState.isRunning) "⏸️ Pause" else "▶️ Start")
             }
 
             Button(
                 onClick = { onIntent(TimerIntent.ResetTimer) },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PokerColors.LightGreen,
+                    contentColor = PokerColors.CardWhite
+                )
             ) {
                 Text("🔄 Reset")
             }
@@ -205,7 +233,7 @@ internal fun TimerScreen(
                 text = "🎉 Time's Up!",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = PokerGold,
+                color = PokerColors.PokerGold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )

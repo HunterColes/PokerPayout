@@ -32,7 +32,7 @@ import com.huntercoles.fatline.portfoliofeature.presentation.BankIntent
 import com.huntercoles.fatline.portfoliofeature.presentation.BankUiState
 import com.huntercoles.fatline.portfoliofeature.presentation.BankViewModel
 import com.huntercoles.fatline.portfoliofeature.presentation.PlayerData
-import com.huntercoles.fatline.core.design.PokerGold
+import com.huntercoles.fatline.core.design.PokerColors
 
 @Composable
 fun BankRoute(viewModel: BankViewModel = hiltViewModel()) {
@@ -59,7 +59,7 @@ internal fun BankScreen(
             text = "🏦 Bank Tracker",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = PokerGold,
+            color = PokerColors.PokerGold,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
         )
@@ -98,7 +98,8 @@ internal fun BankScreen(
 private fun PoolSummaryCard(uiState: BankUiState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -107,7 +108,7 @@ private fun PoolSummaryCard(uiState: BankUiState) {
                 text = "💰 Pool Summary",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = PokerGold
+                color = PokerColors.PokerGold
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -118,12 +119,14 @@ private fun PoolSummaryCard(uiState: BankUiState) {
             ) {
                 Text(
                     text = "Total Pool:",
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = PokerColors.CardWhite
                 )
                 Text(
                     text = "$${String.format("%.2f", uiState.totalPool)}",
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = PokerColors.CardWhite
                 )
             }
 
@@ -133,12 +136,14 @@ private fun PoolSummaryCard(uiState: BankUiState) {
             ) {
                 Text(
                     text = "Total Paid:",
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = PokerColors.CardWhite
                 )
                 Text(
                     text = "$${String.format("%.2f", uiState.totalPaid)}",
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = PokerColors.CardWhite
                 )
             }
 
@@ -148,16 +153,17 @@ private fun PoolSummaryCard(uiState: BankUiState) {
             ) {
                 Text(
                     text = "Percent Paid:",
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = PokerColors.CardWhite
                 )
                 Text(
                     text = "${String.format("%.1f", uiState.percentPaid)}%",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = when {
-                        uiState.percentPaid >= 100 -> PokerGold
-                        uiState.percentPaid >= 75 -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.onSurface
+                        uiState.percentPaid >= 100 -> PokerColors.PokerGold
+                        uiState.percentPaid >= 75 -> PokerColors.AccentGreen
+                        else -> PokerColors.CardWhite
                     }
                 )
             }
@@ -167,7 +173,7 @@ private fun PoolSummaryCard(uiState: BankUiState) {
             Text(
                 text = "Active: ${uiState.activePlayers} | Paid Out: ${uiState.payedOutCount}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = PokerColors.CardWhite,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
             )
@@ -181,7 +187,7 @@ private fun PlayerHeader() {
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = PokerColors.FeltGreen
         )
     ) {
         Row(
@@ -194,6 +200,7 @@ private fun PlayerHeader() {
                 text = "Player Name",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
+                color = PokerColors.PokerGold,
                 modifier = Modifier.weight(1f)
             )
 
@@ -201,6 +208,7 @@ private fun PlayerHeader() {
                 text = "Buy-In",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
+                color = PokerColors.CardWhite,
                 modifier = Modifier.weight(0.4f),
                 textAlign = TextAlign.Center
             )
@@ -209,6 +217,7 @@ private fun PlayerHeader() {
                 text = "Food",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
+                color = PokerColors.CardWhite,
                 modifier = Modifier.weight(0.4f),
                 textAlign = TextAlign.Center
             )
@@ -217,6 +226,7 @@ private fun PlayerHeader() {
                 text = "Bounty",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
+                color = PokerColors.CardWhite,
                 modifier = Modifier.weight(0.4f),
                 textAlign = TextAlign.Center
             )
@@ -225,6 +235,7 @@ private fun PlayerHeader() {
                 text = "All",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
+                color = PokerColors.CardWhite,
                 modifier = Modifier.weight(0.4f),
                 textAlign = TextAlign.Center
             )
@@ -233,6 +244,7 @@ private fun PlayerHeader() {
                 text = "❌",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
+                color = PokerColors.CardWhite,
                 modifier = Modifier.weight(0.3f),
                 textAlign = TextAlign.Center
             )
@@ -241,6 +253,7 @@ private fun PlayerHeader() {
                 text = "⭐",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
+                color = PokerColors.CardWhite,
                 modifier = Modifier.weight(0.3f),
                 textAlign = TextAlign.Center
             )
@@ -261,7 +274,8 @@ private fun PlayerRow(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = PokerColors.SurfaceSecondary)
     ) {
         Row(
             modifier = Modifier
@@ -274,7 +288,13 @@ private fun PlayerRow(
                 onValueChange = onNameChange,
                 modifier = Modifier.weight(1f),
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium
+                textStyle = MaterialTheme.typography.bodyMedium,
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PokerColors.AccentGreen,
+                    unfocusedBorderColor = PokerColors.CardWhite,
+                    focusedTextColor = PokerColors.CardWhite,
+                    unfocusedTextColor = PokerColors.CardWhite
+                )
             )
 
             Spacer(modifier = Modifier.weight(0.1f))
@@ -282,37 +302,67 @@ private fun PlayerRow(
             Checkbox(
                 checked = player.buyIn,
                 onCheckedChange = { onBuyInToggle() },
-                modifier = Modifier.weight(0.4f)
+                modifier = Modifier.weight(0.4f),
+                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                    checkedColor = PokerColors.AccentGreen,
+                    uncheckedColor = PokerColors.CardWhite,
+                    checkmarkColor = PokerColors.DarkGreen
+                )
             )
 
             Checkbox(
                 checked = player.food,
                 onCheckedChange = { onFoodToggle() },
-                modifier = Modifier.weight(0.4f)
+                modifier = Modifier.weight(0.4f),
+                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                    checkedColor = PokerColors.AccentGreen,
+                    uncheckedColor = PokerColors.CardWhite,
+                    checkmarkColor = PokerColors.DarkGreen
+                )
             )
 
             Checkbox(
                 checked = player.bounty,
                 onCheckedChange = { onBountyToggle() },
-                modifier = Modifier.weight(0.4f)
+                modifier = Modifier.weight(0.4f),
+                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                    checkedColor = PokerColors.AccentGreen,
+                    uncheckedColor = PokerColors.CardWhite,
+                    checkmarkColor = PokerColors.DarkGreen
+                )
             )
 
             Checkbox(
                 checked = player.all,
                 onCheckedChange = { onAllToggle() },
-                modifier = Modifier.weight(0.4f)
+                modifier = Modifier.weight(0.4f),
+                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                    checkedColor = PokerColors.AccentGreen,
+                    uncheckedColor = PokerColors.CardWhite,
+                    checkmarkColor = PokerColors.DarkGreen
+                )
             )
 
             Checkbox(
                 checked = player.eliminated,
                 onCheckedChange = { onEliminatedToggle() },
-                modifier = Modifier.weight(0.3f)
+                modifier = Modifier.weight(0.3f),
+                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                    checkedColor = PokerColors.ErrorRed,
+                    uncheckedColor = PokerColors.CardWhite,
+                    checkmarkColor = PokerColors.CardWhite
+                )
             )
 
             Checkbox(
                 checked = player.payedOut,
                 onCheckedChange = { onPayedOutToggle() },
-                modifier = Modifier.weight(0.3f)
+                modifier = Modifier.weight(0.3f),
+                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                    checkedColor = PokerColors.PokerGold,
+                    uncheckedColor = PokerColors.CardWhite,
+                    checkmarkColor = PokerColors.DarkGreen
+                )
             )
         }
     }

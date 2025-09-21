@@ -7,25 +7,25 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ViewModelComponent
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
-import com.huntercoles.fatline.portfoliofeature.presentation.PortfolioNavigationFactory
-import com.huntercoles.fatline.portfoliofeature.presentation.PortfolioUiState
+import com.huntercoles.fatline.portfoliofeature.presentation.BankNavigationFactory
+import com.huntercoles.fatline.portfoliofeature.presentation.BankUiState
 import com.huntercoles.fatline.core.navigation.NavigationFactory
 import javax.inject.Singleton
 
 @Module
 @InstallIn(ViewModelComponent::class)
-internal object PortfolioViewModelModule {
+internal object BankViewModelModule {
 
     @Provides
-    fun provideInitialPortfolioUiState(): PortfolioUiState = PortfolioUiState()
+    fun provideInitialBankUiState(): BankUiState = BankUiState()
 }
 
 @Module
 @InstallIn(SingletonComponent::class)
-internal interface PortfolioSingletonModule {
+internal interface BankSingletonModule {
 
     @Singleton
     @Binds
     @IntoSet
-    fun bindPortfolioNavigationFactory(factory: PortfolioNavigationFactory): NavigationFactory
+    fun bindBankNavigationFactory(factory: BankNavigationFactory): NavigationFactory
 }

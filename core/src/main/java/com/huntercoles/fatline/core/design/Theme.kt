@@ -16,16 +16,30 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
+private val PokerDarkColorScheme = darkColorScheme(
+    primary = PokerDarkPrimary,
+    secondary = PokerDarkSecondary,
+    tertiary = PokerDarkTertiary,
+    background = PokerDarkBackground,
+    surface = PokerDarkSurface,
+    onPrimary = PokerDarkOnPrimary,
+    onSecondary = PokerDarkOnSecondary,
+    onTertiary = PokerDarkOnTertiary,
+    onBackground = PokerDarkOnBackground,
+    onSurface = PokerDarkOnSurface,
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
+private val PokerLightColorScheme = lightColorScheme(
+    primary = PokerLightPrimary,
+    secondary = PokerLightSecondary,
+    tertiary = PokerLightTertiary,
+    background = PokerLightBackground,
+    surface = PokerLightSurface,
+    onPrimary = PokerLightOnPrimary,
+    onSecondary = PokerLightOnSecondary,
+    onTertiary = PokerLightOnTertiary,
+    onBackground = PokerLightOnBackground,
+    onSurface = PokerLightOnSurface,
 )
 
 @Composable
@@ -59,6 +73,6 @@ fun pickColorScheme(darkTheme: Boolean): ColorScheme = when {
         val context = LocalContext.current
         if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     }
-    darkTheme -> DarkColorScheme
-    else -> LightColorScheme
+    darkTheme -> PokerDarkColorScheme
+    else -> PokerLightColorScheme
 }

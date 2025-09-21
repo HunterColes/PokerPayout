@@ -2,9 +2,9 @@ package com.huntercoles.fatline.core.navigation
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.huntercoles.fatline.core.R
 
@@ -16,18 +16,18 @@ data class BottomNavigationItem(
 
 val bottomNavigationItems = listOf(
     BottomNavigationItem(
-        destination = NavigationDestination.Search,
-        icon = Icons.Default.Search,
-        label = R.string.navigation_search
+        destination = NavigationDestination.Calculator,
+        icon = Icons.Filled.Add,
+        label = R.string.navigation_calculator
     ),
     BottomNavigationItem(
-        destination = NavigationDestination.Portfolio,
-        icon = Icons.Default.Home,
-        label = R.string.navigation_portfolio
+        destination = NavigationDestination.Bank,
+        icon = Icons.Filled.AttachMoney,
+        label = R.string.navigation_bank
     ),
     BottomNavigationItem(
-        destination = NavigationDestination.Settings,
-        icon = Icons.Default.Settings,
-        label = R.string.navigation_settings
+        destination = NavigationDestination.Timer,
+        icon = Icons.Filled.AccessTime,
+        label = R.string.navigation_timer
     ),
 )

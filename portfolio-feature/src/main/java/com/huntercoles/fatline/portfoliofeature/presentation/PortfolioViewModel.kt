@@ -19,10 +19,9 @@ import javax.inject.Inject
 @HiltViewModel
 class PortfolioViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val portfolioUiState: PortfolioUiState,
 ) : BaseViewModel<PortfolioUiState, PartialState, PortfolioEvent, PortfolioIntent>(
     savedStateHandle = savedStateHandle,
-    initialState = portfolioUiState,
+    initialState = PortfolioUiState(),
 ) {
 
     override fun mapIntents(intent: PortfolioIntent): Flow<PartialState> = when (intent) {

@@ -1,46 +1,55 @@
-# **FatLine - FOSS Stock Portfolio App**
+# **Poker Payout Calculator** 🃏
 
-A free and open-source stock portfolio application built with modern Android development practices.
+A sleek and comprehensive poker tournament management application built with modern Android development practices.
 
 ### **Purpose**
-To provide users with a simple, free, and privacy-focused way to track their virtual stock investments without ads or data collection.
+To provide poker tournament organizers and players with a complete toolkit for managing tournament payouts, tracking player payments, and timing blind levels with a beautiful poker-themed interface.
 
 ### **Description**
-FatLine is a virtual stock portfolio application that:
+Poker Payout Calculator is a professional-grade tournament management application that:
 
-- Connects to Yahoo Finance API in a respectful manner with proper rate limiting
-- Allows users to search for stocks and add them to their virtual portfolio
-- Tracks portfolio performance over time
-- Stores all data locally for privacy (offline-first approach)
-- Provides a clean, Material3 design interface
-- Supports light/dark mode theming automatically
-- Is completely free and open-source (GPL licensed)
+- Calculates tournament payouts with customizable weight distributions
+- Tracks player buy-ins, food pools, and bounty payments
+- Provides real-time payment status and pool summaries
+- Features a professional blind timer with countdown/countup modes
+- Uses an authentic poker green color scheme
+- Stores all data locally for privacy
+- Provides a clean, intuitive interface optimized for tournament play
+- Is completely free and open-source
 
 ### **Features**
-- **🔍 Stock Search**: Search and discover stocks from major exchanges
-- **📊 Portfolio Management**: Add stocks to your virtual portfolio and track performance
-- **⚙️ Settings**: Customize app preferences and view about information
-
+- **🃏 Payout Calculator**: Configure tournament structure and calculate payouts with custom weights
+- **🏦 Bank Tracker**: Track player payments with checkboxes for buy-in, food, and bounty
+- **⏰ Blind Timer**: Professional tournament timer with visual progress indicators
+- **📊 Pool Management**: Real-time calculation of total pools and payment percentages
+- **🎯 Tournament Tools**: Complete tournament management in one app
 
 ### **Libraries/concepts used**
 
 * Gradle modularised project by features
-* The Clean Architecture with MVI pattern in presentation layer
+* MVVM pattern with modern Android architecture
 * Jetpack Compose with Material3 design - for UI layer
 * Kotlin Coroutines & Kotlin Flow - for concurrency & reactive approach
-* Kotlin Serialization converter - for JSON parsing
-* Retrofit - for networking
 * Hilt - for Dependency Injection pattern implementation
 * Room - for local database
-* Coil - for image loading
 * Version Catalog - for dependency management
 * Baseline and Startup Profiles - for performance improvements during app launch
 * Timber - for logging
 * JUnit5, Turbine and MockK - for unit tests
-* Jetpack Compose test dependencies, Maestro and Hilt - for UI tests
+* Jetpack Compose test dependencies - for UI tests
 * GitHub Actions - for CI/CD
 * KtLint and Detekt - for code linting
 
+### **Screenshots**
+*Coming soon - tournament in progress!*
+
+### **Contributing**
+We welcome contributions! Please feel free to submit a Pull Request.
+
+### **License**
+This project is licensed under the GPL License - see the [LICENSE](LICENSE.md) file for details.
+
+---
 
 Build Commands
 Clean and Build:

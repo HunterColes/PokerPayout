@@ -7,25 +7,25 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ViewModelComponent
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
-import com.huntercoles.fatline.basicfeature.presentation.SearchNavigationFactory
-import com.huntercoles.fatline.basicfeature.presentation.StockSearchUiState
+import com.huntercoles.fatline.basicfeature.presentation.CalculatorNavigationFactory
+import com.huntercoles.fatline.basicfeature.presentation.CalculatorUiState
 import com.huntercoles.fatline.core.navigation.NavigationFactory
 import javax.inject.Singleton
 
 @Module
 @InstallIn(ViewModelComponent::class)
-internal object StockSearchViewModelModule {
+internal object CalculatorViewModelModule {
 
     @Provides
-    fun provideInitialStockSearchUiState(): StockSearchUiState = StockSearchUiState()
+    fun provideInitialCalculatorUiState(): CalculatorUiState = CalculatorUiState()
 }
 
 @Module
 @InstallIn(SingletonComponent::class)
-internal interface StockSearchSingletonModule {
+internal interface CalculatorSingletonModule {
 
     @Singleton
     @Binds
     @IntoSet
-    fun bindSearchNavigationFactory(factory: SearchNavigationFactory): NavigationFactory
+    fun bindCalculatorNavigationFactory(factory: CalculatorNavigationFactory): NavigationFactory
 }

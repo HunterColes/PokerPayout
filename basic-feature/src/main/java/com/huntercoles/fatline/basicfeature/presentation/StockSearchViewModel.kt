@@ -25,10 +25,9 @@ import javax.inject.Inject
 @HiltViewModel
 class StockSearchViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val stockSearchUiState: StockSearchUiState,
 ) : BaseViewModel<StockSearchUiState, PartialState, StockSearchEvent, StockSearchIntent>(
     savedStateHandle = savedStateHandle,
-    initialState = stockSearchUiState,
+    initialState = StockSearchUiState(),
 ) {
 
     override fun mapIntents(intent: StockSearchIntent): Flow<PartialState> = when (intent) {

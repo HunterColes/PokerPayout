@@ -2,10 +2,35 @@ package com.huntercoles.fatline.core.design
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Poker Green Theme Colors
+val PokerDarkGreen = Color(0xFF0D4F3C)
+val PokerMediumGreen = Color(0xFF1B5E20)
+val PokerLightGreen = Color(0xFF2E7D32)
+val PokerAccentGreen = Color(0xFF4CAF50)
+val PokerFeltGreen = Color(0xFF0A3D2E)
+val PokerGold = Color(0xFFFFD700)
+val PokerCardWhite = Color(0xFFF5F5F5)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// Dark theme colors
+val PokerDarkPrimary = PokerDarkGreen
+val PokerDarkSecondary = PokerMediumGreen
+val PokerDarkTertiary = PokerAccentGreen
+val PokerDarkBackground = PokerFeltGreen
+val PokerDarkSurface = PokerDarkGreen
+val PokerDarkOnPrimary = PokerCardWhite
+val PokerDarkOnSecondary = PokerCardWhite
+val PokerDarkOnTertiary = PokerFeltGreen
+val PokerDarkOnBackground = PokerCardWhite
+val PokerDarkOnSurface = PokerCardWhite
+
+// Light theme colors
+val PokerLightPrimary = PokerMediumGreen
+val PokerLightSecondary = PokerLightGreen
+val PokerLightTertiary = PokerAccentGreen
+val PokerLightBackground = PokerCardWhite
+val PokerLightSurface = PokerLightGreen
+val PokerLightOnPrimary = PokerCardWhite
+val PokerLightOnSecondary = PokerCardWhite
+val PokerLightOnTertiary = PokerFeltGreen
+val PokerLightOnBackground = PokerFeltGreen
+val PokerLightOnSurface = PokerFeltGreen

@@ -1,0 +1,46 @@
+name: CI workflow
+
+on: pull_request
+
+jobs:
+  build:
+    runs-on: macos-13
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup JDK environment
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run KtLint
+        run: ./gradlew lintKotlin
+
+      - name: Run Detekt
+        run: ./gradlew detekt
+
+      - name: Assemble app
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Run unit tests
+        run: ./gradlew app:testDebugUnitTest basic-feature:testDebugUnitTest --stacktrace
+
+      - name: Run Compose UI tests
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 26
+          disable-animations: false
+          script: ./gradlew basic-feature:connectedCheck --stacktrace
+
+      - name: Run Maestro UI tests
+        uses: mobile-dev-inc/action-maestro-cloud@v1
+        with:
+          api-key: ${{ secrets.MAESTRO_CLOUD_API_KEY }}
+          app-file: app/build/outputs/apk/debug/app-debug.apk

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Portfolio Screen -->
+    <string name="portfolio_total_value">Total Portfolio Value</string>
+    <string name="portfolio_total_change">Total Change</string>
+    <string name="portfolio_shares">shares</string>
+    <string name="portfolio_empty_message">Your portfolio is empty.\nAdd some stocks to get started!</string>
+    <string name="portfolio_error_loading">Error loading portfolio.\nPull to refresh to try again.</string>
+</resources>

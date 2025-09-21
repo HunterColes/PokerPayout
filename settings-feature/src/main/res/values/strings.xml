@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_desc">Get alerts for portfolio changes</string>
+    <string name="settings_dark_mode">Dark Mode</string>
+    <string name="settings_dark_mode_desc">Use dark theme</string>
+    <string name="settings_about">About FatLine</string>
+    <string name="settings_about_desc">FatLine is a free and open-source stock portfolio tracker. Version 1.0\n\nGPL Licensed - No ads, no tracking, no data collection.</string>
+</resources>

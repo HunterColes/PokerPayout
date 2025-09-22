@@ -4,6 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +42,8 @@ fun CalculatorContent(
     uiState: CalculatorUiState,
     onIntent: (CalculatorIntent) -> Unit
 ) {
+    var isConfigExpanded by remember { mutableStateOf(true) }
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -54,75 +60,20 @@ fun CalculatorContent(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Configuration Section
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "💵 Tournament Configuration",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = PokerColors.PokerGold
-                )
+        // Configuration Section (Collapsible)
+        TournamentConfigurationCard(
+            uiState = uiState,
+            onIntent = onIntent,
+            isExpanded = isConfigExpanded,
+            onExpandedChange = { isConfigExpanded = it }
+        )
 
-                // Player Count Slider
-                PlayerCountSlider(
-                    playerCount = uiState.tournamentConfig.numPlayers,
-                    onPlayerCountChange = { count ->
-                        onIntent(CalculatorIntent.UpdatePlayerCount(count))
-                    }
-                )
-
-                // Pool Configuration
-                PoolConfigurationSection(
-                    buyIn = uiState.tournamentConfig.buyIn,
-                    foodPerPlayer = uiState.tournamentConfig.foodPerPlayer,
-                    bountyPerPlayer = uiState.tournamentConfig.bountyPerPlayer,
-                    onBuyInChange = { onIntent(CalculatorIntent.UpdateBuyIn(it)) },
-                    onFoodChange = { onIntent(CalculatorIntent.UpdateFoodPerPlayer(it)) },
-                    onBountyChange = { onIntent(CalculatorIntent.UpdateBountyPerPlayer(it)) }
-                )
-
-                // Pool Summary
-                PoolSummarySection(uiState.tournamentConfig)
-            }
-        }
-
-        // Payouts Section
-        Card(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            colors = CardDefaults.cardColors(containerColor = PokerColors.SurfaceSecondary),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text = "💰 Tournament Payouts",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = PokerColors.PokerGold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                if (uiState.isLoading) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = PokerColors.AccentGreen)
-                    }
-                } else {
-                    PayoutsList(payouts = uiState.payouts)
-                }
-            }
-        }
+        // Leaderboard/Payout Structure Section
+        LeaderboardCard(
+            payouts = uiState.payouts,
+            onIntent = onIntent,
+            modifier = Modifier.fillMaxWidth().weight(1f)
+        )
     }
 }
 
@@ -152,5 +103,245 @@ fun PlayerCountSlider(
                 inactiveTrackColor = PokerColors.DarkGreen
             )
         )
+    }
+}
+
+@Composable
+fun TournamentConfigurationCard(
+    uiState: CalculatorUiState,
+    onIntent: (CalculatorIntent) -> Unit,
+    isExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // Header with collapse arrow
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "💵 Tournament Configuration",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PokerColors.PokerGold
+                )
+                
+                IconButton(
+                    onClick = { onExpandedChange(!isExpanded) }
+                ) {
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        tint = PokerColors.PokerGold
+                    )
+                }
+            }
+            
+            // Collapsible content
+            if (isExpanded) {
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Player Count Slider
+                    PlayerCountSlider(
+                        playerCount = uiState.tournamentConfig.numPlayers,
+                        onPlayerCountChange = { count ->
+                            onIntent(CalculatorIntent.UpdatePlayerCount(count))
+                        }
+                    )
+
+                    // Pool Configuration
+                    PoolConfigurationSection(
+                        buyIn = uiState.tournamentConfig.buyIn,
+                        foodPerPlayer = uiState.tournamentConfig.foodPerPlayer,
+                        bountyPerPlayer = uiState.tournamentConfig.bountyPerPlayer,
+                        onBuyInChange = { onIntent(CalculatorIntent.UpdateBuyIn(it)) },
+                        onFoodChange = { onIntent(CalculatorIntent.UpdateFoodPerPlayer(it)) },
+                        onBountyChange = { onIntent(CalculatorIntent.UpdateBountyPerPlayer(it)) }
+                    )
+
+                    // Pool Summary
+                    PoolSummarySection(uiState.tournamentConfig)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LeaderboardCard(
+    payouts: List<com.huntercoles.fatline.basicfeature.domain.model.PayoutPosition>,
+    onIntent: (CalculatorIntent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showWeightsDialog by remember { mutableStateOf(false) }
+    
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = PokerColors.SurfaceSecondary),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            // Header with edit weights button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "🏆 Tournament Leaderboard",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PokerColors.PokerGold
+                    )
+                    
+                    if (payouts.isNotEmpty()) {
+                        val payingPositions = payouts.count { it.isPaying }
+                        Text(
+                            text = "$payingPositions paying positions",
+                            fontSize = 12.sp,
+                            color = PokerColors.AccentGreen
+                        )
+                    }
+                }
+                
+                IconButton(
+                    onClick = { showWeightsDialog = true }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit Weights",
+                        tint = PokerColors.AccentGreen
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Leaderboard positions (scrollable)
+            if (payouts.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Configure tournament settings to see payouts",
+                        color = PokerColors.CardWhite,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(payouts) { payout ->
+                        LeaderboardPosition(payout = payout)
+                    }
+                }
+            }
+        }
+    }
+    
+    // Weights editor dialog
+    if (showWeightsDialog) {
+        WeightsEditorDialog(
+            currentWeights = payouts.map { it.weight },
+            onWeightsChanged = { newWeights ->
+                onIntent(CalculatorIntent.UpdateWeights(newWeights))
+            },
+            onDismiss = { showWeightsDialog = false }
+        )
+    }
+}
+
+@Composable
+fun LeaderboardPosition(
+    payout: com.huntercoles.fatline.basicfeature.domain.model.PayoutPosition
+) {
+    val trophy = when (payout.position) {
+        1 -> "🥇"
+        2 -> "🥈" 
+        3 -> "🥉"
+        else -> "" // No medal for positions 4+
+    }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (payout.position <= 3) PokerColors.AccentGreen.copy(alpha = 0.3f) 
+                          else PokerColors.DarkGreen
+        ),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Position and player placeholder
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (trophy.isNotEmpty()) {
+                    Text(
+                        text = trophy,
+                        fontSize = 20.sp,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
+                
+                Column {
+                    Text(
+                        text = "${payout.position}${payout.positionSuffix} Place",
+                        color = PokerColors.CardWhite,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    
+                    Text(
+                        text = "-----", // Placeholder for player name
+                        color = PokerColors.CardWhite.copy(alpha = 0.6f),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+            
+            // Payout amount
+            Column(
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    text = payout.formattedPayout,
+                    color = PokerColors.PokerGold,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+                
+                Text(
+                    text = payout.formattedPercentage,
+                    color = PokerColors.CardWhite.copy(alpha = 0.8f),
+                    fontSize = 11.sp
+                )
+            }
+        }
     }
 }

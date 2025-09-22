@@ -24,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import com.huntercoles.fatline.core.R
 import com.huntercoles.fatline.core.design.AndroidStarterTheme
+import com.huntercoles.fatline.core.design.PokerColors
 import com.huntercoles.fatline.core.navigation.BottomNavigationItem
 import com.huntercoles.fatline.core.navigation.NavigationDestination
 import com.huntercoles.fatline.core.navigation.NavigationFactory
@@ -96,11 +97,12 @@ private fun MainTopAppBar() {
             Text(
                 text = stringResource(id = R.string.app_name),
                 fontWeight = FontWeight.Medium,
+                color = PokerColors.PokerGold
             )
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            titleContentColor = MaterialTheme.colorScheme.onPrimary,
+            containerColor = PokerColors.FeltGreen,
+            titleContentColor = PokerColors.PokerGold,
         ),
     )
 }
@@ -113,24 +115,40 @@ private fun MainBottomNavigationBar(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = PokerColors.DarkGreen,
+        contentColor = PokerColors.CardWhite
+    ) {
         bottomNavigationItems.forEach { item ->
             NavigationBarItem(
                 icon = {
                     Icon(
                         imageVector = item.icon,
-                        contentDescription = stringResource(item.label)
+                        contentDescription = stringResource(item.label),
+                        tint = if (currentDestination?.hasRoute(item.destination::class) == true) 
+                            PokerColors.PokerGold else PokerColors.CardWhite
                     )
                 },
                 label = { 
-                    Text(text = stringResource(item.label))
+                    Text(
+                        text = stringResource(item.label),
+                        color = if (currentDestination?.hasRoute(item.destination::class) == true) 
+                            PokerColors.PokerGold else PokerColors.CardWhite
+                    )
                 },
                 selected = currentDestination?.hasRoute(item.destination::class) == true,
                 onClick = {
                     navigationManager.navigate(object : com.huntercoles.fatline.core.navigation.NavigationCommand {
                         override val destination = item.destination
                     })
-                }
+                },
+                colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                    selectedIconColor = PokerColors.PokerGold,
+                    selectedTextColor = PokerColors.PokerGold,
+                    indicatorColor = PokerColors.AccentGreen,
+                    unselectedIconColor = PokerColors.CardWhite,
+                    unselectedTextColor = PokerColors.CardWhite
+                )
             )
         }
     }

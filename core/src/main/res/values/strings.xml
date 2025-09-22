@@ -1,8 +1,8 @@
 <resources>
-    <string name="app_name">Poker Payout Calculator</string>
+    <string name="app_name">PokerPayout</string>
 
     <!-- Navigation -->
     <string name="navigation_calculator">Calculator</string>
     <string name="navigation_bank">Bank</string>
-    <string name="navigation_timer">Timer</string>
+    <string name="navigation_timer">Play</string>
 </resources>

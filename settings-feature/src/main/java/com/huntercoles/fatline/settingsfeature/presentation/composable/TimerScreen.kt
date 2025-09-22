@@ -9,10 +9,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -57,126 +63,88 @@ internal fun TimerScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Title
         Text(
-            text = "⏰ Blind Timer",
+            text = "⏰ Play Timer",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = PokerColors.PokerGold,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
+            modifier = Modifier.fillMaxWidth()
         )
 
-        // Game Duration Setting
+        // Timer Display with integrated controls
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary)
+            colors = CardDefaults.cardColors(containerColor = PokerColors.FeltGreen)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    text = "Game Duration (minutes)",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = PokerColors.PokerGold
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = uiState.gameDurationMinutes.toString(),
-                    onValueChange = { onIntent(TimerIntent.GameDurationChanged(it.toIntOrNull() ?: 180)) },
-                    label = { Text("Duration", color = PokerColors.CardWhite) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PokerColors.AccentGreen,
-                        unfocusedBorderColor = PokerColors.CardWhite,
-                        focusedTextColor = PokerColors.CardWhite,
-                        unfocusedTextColor = PokerColors.CardWhite
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Timer Mode Selection
-                Text(
-                    text = "Timer Mode",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = PokerColors.CardWhite
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.timerDirection == TimerDirection.COUNTDOWN,
-                            onClick = { onIntent(TimerIntent.TimerDirectionChanged(TimerDirection.COUNTDOWN)) },
-                            colors = RadioButtonDefaults.colors(
-                                selectedColor = PokerColors.PokerGold,
-                                unselectedColor = PokerColors.CardWhite
-                            )
-                        )
-                        Text("Countdown", style = MaterialTheme.typography.bodyMedium, color = PokerColors.CardWhite)
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = uiState.timerDirection == TimerDirection.COUNTUP,
-                            onClick = { onIntent(TimerIntent.TimerDirectionChanged(TimerDirection.COUNTUP)) },
-                            colors = RadioButtonDefaults.colors(
-                                selectedColor = PokerColors.PokerGold,
-                                unselectedColor = PokerColors.CardWhite
-                            )
-                        )
-                        Text("Count Up", style = MaterialTheme.typography.bodyMedium, color = PokerColors.CardWhite)
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Timer Display
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = PokerColors.FeltGreen
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = uiState.formattedTime,
-                    style = MaterialTheme.typography.displayLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = when {
-                        uiState.isTimeLow -> PokerColors.ErrorRed
-                        uiState.isTimeCritical -> PokerColors.PokerGold
-                        else -> PokerColors.PokerGold
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Start/Pause Button
+                    IconButton(
+                        onClick = { onIntent(TimerIntent.ToggleTimer) },
+                        enabled = !uiState.isFinished
+                    ) {
+                        if (uiState.isRunning) {
+                            // Pause icon using Text
+                            Text(
+                                text = "⏸",
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = PokerColors.CardWhite
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "Start",
+                                tint = PokerColors.CardWhite,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
-                )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    // Timer Display
+                    Text(
+                        text = uiState.formattedTime,
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = when {
+                            uiState.isTimeLow -> PokerColors.ErrorRed
+                            uiState.isTimeCritical -> PokerColors.PokerGold
+                            else -> PokerColors.PokerGold
+                        }
+                    )
+
+                    // Reset Button
+                    IconButton(
+                        onClick = { onIntent(TimerIntent.ResetTimer) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reset",
+                            tint = PokerColors.CardWhite,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 LinearProgressIndicator(
                     progress = uiState.progress,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(12.dp),
+                        .height(8.dp),
                     color = when {
                         uiState.isTimeCritical -> PokerColors.ErrorRed
                         uiState.isTimeLow -> PokerColors.PokerGold
@@ -185,58 +153,234 @@ internal fun TimerScreen(
                     trackColor = PokerColors.DarkGreen
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "${String.format("%.1f", uiState.progress * 100)}% Complete",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "${String.format("%.0f", uiState.progress * 100)}% Complete",
+                    style = MaterialTheme.typography.bodySmall,
                     color = PokerColors.CardWhite
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // Blind Settings (moved above blind information)
+        BlindSettingsCard(
+            uiState = uiState,
+            onIntent = onIntent
+        )
 
-        // Control Buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Button(
-                onClick = { onIntent(TimerIntent.ToggleTimer) },
-                modifier = Modifier.weight(1f),
-                enabled = !uiState.isFinished,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PokerColors.AccentGreen,
-                    contentColor = PokerColors.DarkGreen
-                )
-            ) {
-                Text(if (uiState.isRunning) "⏸️ Pause" else "▶️ Start")
-            }
-
-            Button(
-                onClick = { onIntent(TimerIntent.ResetTimer) },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PokerColors.LightGreen,
-                    contentColor = PokerColors.CardWhite
-                )
-            ) {
-                Text("🔄 Reset")
-            }
-        }
+        // Blind Information Section (renamed from "Current Blinds" to "Blinds")
+        BlindInformationTile()
 
         // Status Message
         if (uiState.isFinished) {
-            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "🎉 Time's Up!",
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = PokerColors.PokerGold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+    }
+}
+
+@Composable
+private fun BlindInformationTile() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "🃏 Blinds",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = PokerColors.PokerGold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Small Blind",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.CardWhite
+                    )
+                    Text(
+                        text = "$25",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = PokerColors.PokerGold
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Big Blind",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.CardWhite
+                    )
+                    Text(
+                        text = "$50",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = PokerColors.PokerGold
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Ante",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.CardWhite
+                    )
+                    Text(
+                        text = "$5",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = PokerColors.PokerGold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Next Level: 15:00",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PokerColors.CardWhite
+                )
+                Text(
+                    text = "Level 3 of 12",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PokerColors.CardWhite
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BlindSettingsCard(
+    uiState: TimerUiState,
+    onIntent: (TimerIntent) -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = PokerColors.SurfaceSecondary)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "⚙️ Blind Settings",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = PokerColors.PokerGold
+                )
+                Button(
+                    onClick = { isExpanded = !isExpanded },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PokerColors.AccentGreen.copy(alpha = 0.3f),
+                        contentColor = PokerColors.CardWhite
+                    )
+                ) {
+                    Text(if (isExpanded) "Collapse" else "Expand")
+                }
+            }
+
+            if (isExpanded) {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Duration Setting (Compact)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Duration:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.CardWhite,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = uiState.gameDurationMinutes.toString(),
+                        onValueChange = { onIntent(TimerIntent.GameDurationChanged(it.toIntOrNull() ?: 180)) },
+                        label = { Text("Min", color = PokerColors.CardWhite) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PokerColors.AccentGreen,
+                            unfocusedBorderColor = PokerColors.CardWhite,
+                            focusedTextColor = PokerColors.CardWhite,
+                            unfocusedTextColor = PokerColors.CardWhite
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Timer Direction (Compact)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Mode:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.CardWhite,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Row(
+                        modifier = Modifier.weight(2f),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = uiState.timerDirection == TimerDirection.COUNTDOWN,
+                                onClick = { onIntent(TimerIntent.TimerDirectionChanged(TimerDirection.COUNTDOWN)) },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = PokerColors.PokerGold,
+                                    unselectedColor = PokerColors.CardWhite
+                                )
+                            )
+                            Text("Countdown", style = MaterialTheme.typography.bodySmall, color = PokerColors.CardWhite)
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = uiState.timerDirection == TimerDirection.COUNTUP,
+                                onClick = { onIntent(TimerIntent.TimerDirectionChanged(TimerDirection.COUNTUP)) },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = PokerColors.PokerGold,
+                                    unselectedColor = PokerColors.CardWhite
+                                )
+                            )
+                            Text("Count Up", style = MaterialTheme.typography.bodySmall, color = PokerColors.CardWhite)
+                        }
+                    }
+                }
+            }
         }
     }
 }

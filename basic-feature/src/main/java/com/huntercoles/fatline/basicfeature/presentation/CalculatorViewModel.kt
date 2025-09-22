@@ -3,6 +3,7 @@ package com.huntercoles.fatline.basicfeature.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.huntercoles.fatline.basicfeature.domain.usecase.CalculatePayoutsUseCase
+import com.huntercoles.fatline.core.preferences.TournamentPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,13 +13,18 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CalculatorViewModel @Inject constructor(
-    private val calculatePayoutsUseCase: CalculatePayoutsUseCase
+    private val calculatePayoutsUseCase: CalculatePayoutsUseCase,
+    private val tournamentPreferences: TournamentPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalculatorUiState())
     val uiState: StateFlow<CalculatorUiState> = _uiState.asStateFlow()
 
     init {
+        // Load player count from preferences
+        val savedPlayerCount = tournamentPreferences.getPlayerCount()
+        val initialConfig = _uiState.value.tournamentConfig.copy(numPlayers = savedPlayerCount)
+        _uiState.value = _uiState.value.copy(tournamentConfig = initialConfig)
         calculatePayouts()
     }
 
@@ -35,6 +41,8 @@ class CalculatorViewModel @Inject constructor(
     private fun updatePlayerCount(count: Int) {
         val newConfig = _uiState.value.tournamentConfig.copy(numPlayers = count)
         _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
+        // Save to shared preferences
+        tournamentPreferences.setPlayerCount(count)
         calculatePayouts()
     }
 

@@ -20,4 +20,13 @@ data class PayoutPosition(
         
     val formattedPosition: String
         get() = "$position$positionSuffix"
+        
+    val isPaying: Boolean
+        get() = payout > 0.0
+        
+    val formattedPayout: String
+        get() = if (isPaying) "$${String.format("%.2f", payout)}" else "-----"
+        
+    val formattedPercentage: String
+        get() = if (isPaying) "${String.format("%.1f", percentage)}%" else "-----"
 }

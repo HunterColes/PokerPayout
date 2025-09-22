@@ -1,21 +1,37 @@
 package com.huntercoles.fatline.portfoliofeature.presentation
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.huntercoles.fatline.core.preferences.TournamentPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class BankViewModel @Inject constructor() : ViewModel() {
+class BankViewModel @Inject constructor(
+    private val tournamentPreferences: TournamentPreferences
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BankUiState())
     val uiState: StateFlow<BankUiState> = _uiState.asStateFlow()
 
     init {
-        initializePlayers(9) // Default 9 players
+        // Initialize with saved player count
+        val savedPlayerCount = tournamentPreferences.getPlayerCount()
+        initializePlayers(savedPlayerCount)
+        
+        // Listen for player count changes from calculator
+        viewModelScope.launch {
+            tournamentPreferences.playerCount.collect { newPlayerCount ->
+                if (newPlayerCount != _uiState.value.players.size) {
+                    updatePlayerCount(newPlayerCount)
+                }
+            }
+        }
     }
 
     fun acceptIntent(intent: BankIntent) {

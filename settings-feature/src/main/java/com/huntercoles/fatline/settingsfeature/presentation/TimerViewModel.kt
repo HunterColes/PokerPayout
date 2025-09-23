@@ -2,6 +2,8 @@ package com.huntercoles.fatline.settingsfeature.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.huntercoles.fatline.core.preferences.TimerPreferences
+import com.huntercoles.fatline.core.preferences.TournamentPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -13,12 +15,46 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class TimerViewModel @Inject constructor() : ViewModel() {
+class TimerViewModel @Inject constructor(
+    private val timerPreferences: TimerPreferences,
+    private val tournamentPreferences: TournamentPreferences
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimerUiState())
     val uiState: StateFlow<TimerUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
+
+    init {
+        // Restore timer state from preferences
+        restoreTimerState()
+    }
+
+    private fun restoreTimerState() {
+        val actualTime = timerPreferences.calculateActualTime()
+        val direction = when (timerPreferences.getTimerDirection()) {
+            "COUNTUP" -> TimerDirection.COUNTUP
+            else -> TimerDirection.COUNTDOWN
+        }
+        
+        _uiState.update { 
+            it.copy(
+                gameDurationMinutes = timerPreferences.getGameDurationMinutes(),
+                currentTimeSeconds = actualTime,
+                timerDirection = direction,
+                isRunning = timerPreferences.getTimerRunning() && !timerPreferences.getIsFinished(),
+                isFinished = timerPreferences.getIsFinished()
+            )
+        }
+        
+        // Update preferences with the calculated time
+        timerPreferences.setCurrentTimeSeconds(actualTime)
+        
+        // If timer was running and not finished, continue it
+        if (timerPreferences.getTimerRunning() && !timerPreferences.getIsFinished()) {
+            startTimer()
+        }
+    }
 
     fun acceptIntent(intent: TimerIntent) {
         when (intent) {
@@ -32,6 +68,8 @@ class TimerViewModel @Inject constructor() : ViewModel() {
 
     private fun updateGameDuration(minutes: Int) {
         val validMinutes = minutes.coerceIn(1, 1440) // 1 minute to 24 hours
+        timerPreferences.setGameDurationMinutes(validMinutes)
+        
         _uiState.update { state ->
             val newTotalSeconds = validMinutes * 60
             val newCurrentSeconds = when (state.timerDirection) {
@@ -44,10 +82,19 @@ class TimerViewModel @Inject constructor() : ViewModel() {
                 isFinished = false
             )
         }
+        
+        timerPreferences.setCurrentTimeSeconds(_uiState.value.currentTimeSeconds)
+        timerPreferences.setIsFinished(false)
         stopTimer()
     }
 
     private fun updateTimerDirection(direction: TimerDirection) {
+        val directionString = when (direction) {
+            TimerDirection.COUNTDOWN -> "COUNTDOWN"
+            TimerDirection.COUNTUP -> "COUNTUP"
+        }
+        timerPreferences.setTimerDirection(directionString)
+        
         _uiState.update { state ->
             val newCurrentSeconds = when (direction) {
                 TimerDirection.COUNTDOWN -> state.totalDurationSeconds
@@ -59,6 +106,9 @@ class TimerViewModel @Inject constructor() : ViewModel() {
                 isFinished = false
             )
         }
+        
+        timerPreferences.setCurrentTimeSeconds(_uiState.value.currentTimeSeconds)
+        timerPreferences.setIsFinished(false)
         stopTimer()
     }
 
@@ -75,6 +125,11 @@ class TimerViewModel @Inject constructor() : ViewModel() {
         if (timerJob?.isActive == true) return
 
         _uiState.update { it.copy(isRunning = true, isFinished = false) }
+        timerPreferences.setTimerRunning(true)
+        timerPreferences.setIsFinished(false)
+        
+        // Lock tournament settings when timer starts
+        tournamentPreferences.setTournamentLocked(true)
 
         timerJob = viewModelScope.launch {
             while (true) {
@@ -93,19 +148,26 @@ class TimerViewModel @Inject constructor() : ViewModel() {
                 }
 
                 if (shouldFinish) {
+                    val finalSeconds = when (currentState.timerDirection) {
+                        TimerDirection.COUNTDOWN -> 0
+                        TimerDirection.COUNTUP -> currentState.totalDurationSeconds
+                    }
+                    
                     _uiState.update {
                         it.copy(
-                            currentTimeSeconds = when (it.timerDirection) {
-                                TimerDirection.COUNTDOWN -> 0
-                                TimerDirection.COUNTUP -> it.totalDurationSeconds
-                            },
+                            currentTimeSeconds = finalSeconds,
                             isRunning = false,
                             isFinished = true
                         )
                     }
+                    
+                    timerPreferences.setCurrentTimeSeconds(finalSeconds)
+                    timerPreferences.setTimerRunning(false)
+                    timerPreferences.setIsFinished(true)
                     break
                 } else {
                     _uiState.update { it.copy(currentTimeSeconds = newTimeSeconds) }
+                    timerPreferences.setCurrentTimeSeconds(newTimeSeconds)
                 }
             }
         }
@@ -115,10 +177,15 @@ class TimerViewModel @Inject constructor() : ViewModel() {
         timerJob?.cancel()
         timerJob = null
         _uiState.update { it.copy(isRunning = false) }
+        timerPreferences.setTimerRunning(false)
     }
 
     private fun resetTimer() {
         stopTimer()
+        
+        // Unlock tournament settings when timer is reset
+        tournamentPreferences.setTournamentLocked(false)
+        
         _uiState.update { state ->
             val resetSeconds = when (state.timerDirection) {
                 TimerDirection.COUNTDOWN -> state.totalDurationSeconds
@@ -130,10 +197,13 @@ class TimerViewModel @Inject constructor() : ViewModel() {
                 isFinished = false
             )
         }
+        
+        timerPreferences.resetTimer()
     }
 
     private fun updateTimer(seconds: Int) {
         _uiState.update { it.copy(currentTimeSeconds = seconds) }
+        timerPreferences.setCurrentTimeSeconds(seconds)
     }
 
     override fun onCleared() {

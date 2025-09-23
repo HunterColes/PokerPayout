@@ -26,7 +26,8 @@ fun PoolConfigurationSection(
     bountyPerPlayer: Double,
     onBuyInChange: (Double) -> Unit,
     onFoodChange: (Double) -> Unit,
-    onBountyChange: (Double) -> Unit
+    onBountyChange: (Double) -> Unit,
+    isLocked: Boolean = false
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -35,15 +36,20 @@ fun PoolConfigurationSection(
         OutlinedTextField(
             value = if (buyIn == 0.0) "" else buyIn.toString(),
             onValueChange = { value ->
-                value.toDoubleOrNull()?.let { onBuyInChange(it) }
+                if (!isLocked) {
+                    value.toDoubleOrNull()?.let { onBuyInChange(it) }
+                }
             },
-            label = { Text("Buy-in per player ($)", color = PokerColors.CardWhite) },
+            label = { Text("Buy-in per player ($)", color = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            enabled = !isLocked,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = PokerColors.AccentGreen,
-                unfocusedBorderColor = PokerColors.CardWhite,
-                focusedTextColor = PokerColors.CardWhite,
-                unfocusedTextColor = PokerColors.CardWhite
+                focusedBorderColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.AccentGreen,
+                unfocusedBorderColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.CardWhite,
+                focusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
+                unfocusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
+                disabledBorderColor = PokerColors.CardWhite.copy(alpha = 0.5f),
+                disabledTextColor = PokerColors.PokerGold
             ),
             modifier = Modifier.fillMaxWidth()
         )
@@ -52,15 +58,20 @@ fun PoolConfigurationSection(
         OutlinedTextField(
             value = if (foodPerPlayer == 0.0) "" else foodPerPlayer.toString(),
             onValueChange = { value ->
-                value.toDoubleOrNull()?.let { onFoodChange(it) }
+                if (!isLocked) {
+                    value.toDoubleOrNull()?.let { onFoodChange(it) }
+                }
             },
-            label = { Text("Food per player ($)", color = PokerColors.CardWhite) },
+            label = { Text("Food per player ($)", color = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            enabled = !isLocked,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = PokerColors.AccentGreen,
-                unfocusedBorderColor = PokerColors.CardWhite,
-                focusedTextColor = PokerColors.CardWhite,
-                unfocusedTextColor = PokerColors.CardWhite
+                focusedBorderColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.AccentGreen,
+                unfocusedBorderColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.CardWhite,
+                focusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
+                unfocusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
+                disabledBorderColor = PokerColors.CardWhite.copy(alpha = 0.5f),
+                disabledTextColor = PokerColors.PokerGold
             ),
             modifier = Modifier.fillMaxWidth()
         )
@@ -69,15 +80,20 @@ fun PoolConfigurationSection(
         OutlinedTextField(
             value = if (bountyPerPlayer == 0.0) "" else bountyPerPlayer.toString(),
             onValueChange = { value ->
-                value.toDoubleOrNull()?.let { onBountyChange(it) }
+                if (!isLocked) {
+                    value.toDoubleOrNull()?.let { onBountyChange(it) }
+                }
             },
-            label = { Text("Bounty per player ($)", color = PokerColors.CardWhite) },
+            label = { Text("Bounty per player ($)", color = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            enabled = !isLocked,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = PokerColors.AccentGreen,
-                unfocusedBorderColor = PokerColors.CardWhite,
-                focusedTextColor = PokerColors.CardWhite,
-                unfocusedTextColor = PokerColors.CardWhite
+                focusedBorderColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.AccentGreen,
+                unfocusedBorderColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.CardWhite,
+                focusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
+                unfocusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
+                disabledBorderColor = PokerColors.CardWhite.copy(alpha = 0.5f),
+                disabledTextColor = PokerColors.PokerGold
             ),
             modifier = Modifier.fillMaxWidth()
         )

@@ -9,5 +9,8 @@ import com.huntercoles.fatline.basicfeature.domain.model.TournamentConfig
 data class CalculatorUiState(
     val tournamentConfig: TournamentConfig = TournamentConfig(),
     val payouts: List<PayoutPosition> = emptyList(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val isTournamentLocked: Boolean = false,
+    val isConfigExpanded: Boolean = true,
+    val showResetDialog: Boolean = false
 )

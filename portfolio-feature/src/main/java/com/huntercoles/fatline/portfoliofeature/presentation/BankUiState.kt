@@ -7,12 +7,9 @@ import kotlinx.parcelize.Parcelize
 data class PlayerData(
     val id: Int,
     val name: String,
-    val buyIn: Boolean = false,
-    val food: Boolean = false,
-    val bounty: Boolean = false,
-    val all: Boolean = false,
-    val eliminated: Boolean = false,
-    val payedOut: Boolean = false
+    val buyIn: Boolean = false,    // Buy-In button
+    val out: Boolean = false,      // Out button (replaces eliminated)
+    val payedOut: Boolean = false  // Payed-Out button
 ) : Parcelable
 
 @Parcelize
@@ -25,5 +22,6 @@ data class BankUiState(
     val payedOutCount: Int = 0,
     val buyInAmount: Double = 20.0,
     val foodAmount: Double = 5.0,
-    val bountyAmount: Double = 2.0
+    val bountyAmount: Double = 2.0,
+    val showResetDialog: Boolean = false
 ) : Parcelable

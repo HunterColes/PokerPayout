@@ -8,14 +8,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -54,15 +54,84 @@ internal fun BankScreen(
             .fillMaxSize()
             .padding(16.dp),
     ) {
-        // Title
-        Text(
-            text = "🏦 Bank Tracker",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = PokerColors.PokerGold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
-        )
+        // Title with Reset Button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "🏦 Bank Tracker",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = PokerColors.PokerGold,
+                modifier = Modifier.weight(1f)
+            )
+            
+            // Green circular background with yellow refresh button
+            Card(
+                modifier = Modifier.size(48.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
+            ) {
+                IconButton(
+                    onClick = { onIntent(BankIntent.ShowResetDialog) },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Reset Bank Data",
+                        tint = PokerColors.PokerGold,
+                        modifier = Modifier.size(24.dp).graphicsLayer(scaleX = -1f)
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Reset Confirmation Dialog
+        if (uiState.showResetDialog) {
+            AlertDialog(
+                onDismissRequest = { onIntent(BankIntent.HideResetDialog) },
+                containerColor = PokerColors.DarkGreen,
+                title = {
+                    Text(
+                        text = "Reset?",
+                        color = PokerColors.PokerGold,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        text = "This will reset all player names and payment statuses to defaults.",
+                        color = PokerColors.CardWhite
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { onIntent(BankIntent.HideResetDialog) }
+                    ) {
+                        Text(
+                            text = "No",
+                            color = PokerColors.CardWhite
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { onIntent(BankIntent.ConfirmReset) }
+                    ) {
+                        Text(
+                            text = "Yes",
+                            color = PokerColors.PokerGold,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                shape = RoundedCornerShape(16.dp)
+            )
+        }
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -83,10 +152,7 @@ internal fun BankScreen(
                     player = player,
                     onNameChange = { onIntent(BankIntent.PlayerNameChanged(player.id, it)) },
                     onBuyInToggle = { onIntent(BankIntent.BuyInToggled(player.id)) },
-                    onFoodToggle = { onIntent(BankIntent.FoodToggled(player.id)) },
-                    onBountyToggle = { onIntent(BankIntent.BountyToggled(player.id)) },
-                    onAllToggle = { onIntent(BankIntent.AllToggled(player.id)) },
-                    onEliminatedToggle = { onIntent(BankIntent.EliminatedToggled(player.id)) },
+                    onOutToggle = { onIntent(BankIntent.OutToggled(player.id)) },
                     onPayedOutToggle = { onIntent(BankIntent.PayedOutToggled(player.id)) }
                 )
             }
@@ -209,52 +275,25 @@ private fun PlayerHeader() {
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
                 color = PokerColors.CardWhite,
-                modifier = Modifier.weight(0.4f),
+                modifier = Modifier.weight(0.5f),
                 textAlign = TextAlign.Center
             )
 
             Text(
-                text = "Food",
+                text = "Out",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
                 color = PokerColors.CardWhite,
-                modifier = Modifier.weight(0.4f),
+                modifier = Modifier.weight(0.5f),
                 textAlign = TextAlign.Center
             )
 
             Text(
-                text = "Bounty",
+                text = "Payed-Out",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
                 color = PokerColors.CardWhite,
-                modifier = Modifier.weight(0.4f),
-                textAlign = TextAlign.Center
-            )
-
-            Text(
-                text = "All",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold,
-                color = PokerColors.CardWhite,
-                modifier = Modifier.weight(0.4f),
-                textAlign = TextAlign.Center
-            )
-
-            Text(
-                text = "❌",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold,
-                color = PokerColors.CardWhite,
-                modifier = Modifier.weight(0.3f),
-                textAlign = TextAlign.Center
-            )
-
-            Text(
-                text = "⭐",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold,
-                color = PokerColors.CardWhite,
-                modifier = Modifier.weight(0.3f),
+                modifier = Modifier.weight(0.5f),
                 textAlign = TextAlign.Center
             )
         }
@@ -266,10 +305,7 @@ private fun PlayerRow(
     player: PlayerData,
     onNameChange: (String) -> Unit,
     onBuyInToggle: () -> Unit,
-    onFoodToggle: () -> Unit,
-    onBountyToggle: () -> Unit,
-    onAllToggle: () -> Unit,
-    onEliminatedToggle: () -> Unit,
+    onOutToggle: () -> Unit,
     onPayedOutToggle: () -> Unit
 ) {
     Card(
@@ -289,7 +325,7 @@ private fun PlayerRow(
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyMedium,
-                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = PokerColors.AccentGreen,
                     unfocusedBorderColor = PokerColors.CardWhite,
                     focusedTextColor = PokerColors.CardWhite,
@@ -299,66 +335,36 @@ private fun PlayerRow(
 
             Spacer(modifier = Modifier.weight(0.1f))
 
+            // Buy-In Checkbox
             Checkbox(
                 checked = player.buyIn,
                 onCheckedChange = { onBuyInToggle() },
-                modifier = Modifier.weight(0.4f),
-                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                modifier = Modifier.weight(0.5f),
+                colors = CheckboxDefaults.colors(
                     checkedColor = PokerColors.AccentGreen,
                     uncheckedColor = PokerColors.CardWhite,
                     checkmarkColor = PokerColors.DarkGreen
                 )
             )
 
+            // Out Checkbox (❌)
             Checkbox(
-                checked = player.food,
-                onCheckedChange = { onFoodToggle() },
-                modifier = Modifier.weight(0.4f),
-                colors = androidx.compose.material3.CheckboxDefaults.colors(
-                    checkedColor = PokerColors.AccentGreen,
-                    uncheckedColor = PokerColors.CardWhite,
-                    checkmarkColor = PokerColors.DarkGreen
-                )
-            )
-
-            Checkbox(
-                checked = player.bounty,
-                onCheckedChange = { onBountyToggle() },
-                modifier = Modifier.weight(0.4f),
-                colors = androidx.compose.material3.CheckboxDefaults.colors(
-                    checkedColor = PokerColors.AccentGreen,
-                    uncheckedColor = PokerColors.CardWhite,
-                    checkmarkColor = PokerColors.DarkGreen
-                )
-            )
-
-            Checkbox(
-                checked = player.all,
-                onCheckedChange = { onAllToggle() },
-                modifier = Modifier.weight(0.4f),
-                colors = androidx.compose.material3.CheckboxDefaults.colors(
-                    checkedColor = PokerColors.AccentGreen,
-                    uncheckedColor = PokerColors.CardWhite,
-                    checkmarkColor = PokerColors.DarkGreen
-                )
-            )
-
-            Checkbox(
-                checked = player.eliminated,
-                onCheckedChange = { onEliminatedToggle() },
-                modifier = Modifier.weight(0.3f),
-                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                checked = player.out,
+                onCheckedChange = { onOutToggle() },
+                modifier = Modifier.weight(0.5f),
+                colors = CheckboxDefaults.colors(
                     checkedColor = PokerColors.ErrorRed,
                     uncheckedColor = PokerColors.CardWhite,
                     checkmarkColor = PokerColors.CardWhite
                 )
             )
 
+            // Payed-Out Checkbox (⭐)
             Checkbox(
                 checked = player.payedOut,
                 onCheckedChange = { onPayedOutToggle() },
-                modifier = Modifier.weight(0.3f),
-                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                modifier = Modifier.weight(0.5f),
+                colors = CheckboxDefaults.colors(
                     checkedColor = PokerColors.PokerGold,
                     uncheckedColor = PokerColors.CardWhite,
                     checkmarkColor = PokerColors.DarkGreen

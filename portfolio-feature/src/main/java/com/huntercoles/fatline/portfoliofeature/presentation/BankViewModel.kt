@@ -38,12 +38,20 @@ class BankViewModel @Inject constructor(
         when (intent) {
             is BankIntent.PlayerNameChanged -> updatePlayerName(intent.playerId, intent.name)
             is BankIntent.BuyInToggled -> toggleBuyIn(intent.playerId)
-            is BankIntent.FoodToggled -> toggleFood(intent.playerId)
-            is BankIntent.BountyToggled -> toggleBounty(intent.playerId)
-            is BankIntent.AllToggled -> toggleAll(intent.playerId)
-            is BankIntent.EliminatedToggled -> toggleEliminated(intent.playerId)
+            is BankIntent.OutToggled -> toggleOut(intent.playerId)
             is BankIntent.PayedOutToggled -> togglePayedOut(intent.playerId)
             is BankIntent.PlayerCountChanged -> updatePlayerCount(intent.count)
+            is BankIntent.ShowResetDialog -> {
+                // Only show dialog if not in default state
+                if (!isInDefaultState()) {
+                    showResetDialog()
+                }
+            }
+            is BankIntent.HideResetDialog -> hideResetDialog()
+            is BankIntent.ConfirmReset -> {
+                resetBankData()
+                hideResetDialog()
+            }
         }
     }
 
@@ -90,32 +98,8 @@ class BankViewModel @Inject constructor(
         updatePlayerPayment(playerId) { it.copy(buyIn = !it.buyIn) }
     }
 
-    private fun toggleFood(playerId: Int) {
-        updatePlayerPayment(playerId) { it.copy(food = !it.food) }
-    }
-
-    private fun toggleBounty(playerId: Int) {
-        updatePlayerPayment(playerId) { it.copy(bounty = !it.bounty) }
-    }
-
-    private fun toggleAll(playerId: Int) {
-        val currentState = _uiState.value
-        val player = currentState.players.find { it.id == playerId }
-        if (player != null) {
-            val allChecked = !player.all
-            updatePlayerPayment(playerId) {
-                it.copy(
-                    buyIn = allChecked,
-                    food = allChecked,
-                    bounty = allChecked,
-                    all = allChecked
-                )
-            }
-        }
-    }
-
-    private fun toggleEliminated(playerId: Int) {
-        updatePlayerPayment(playerId) { it.copy(eliminated = !it.eliminated) }
+    private fun toggleOut(playerId: Int) {
+        updatePlayerPayment(playerId) { it.copy(out = !it.out) }
     }
 
     private fun togglePayedOut(playerId: Int) {
@@ -126,10 +110,7 @@ class BankViewModel @Inject constructor(
         _uiState.update { state ->
             val updatedPlayers = state.players.map { player ->
                 if (player.id == playerId) {
-                    val updatedPlayer = updateFunction(player)
-                    // Auto-update "all" checkbox based on individual payments
-                    val allChecked = updatedPlayer.buyIn && updatedPlayer.food && updatedPlayer.bounty
-                    updatedPlayer.copy(all = allChecked)
+                    updateFunction(player)
                 } else player
             }
             state.copy(players = updatedPlayers)
@@ -141,23 +122,21 @@ class BankViewModel @Inject constructor(
         val currentState = _uiState.value
         val playerCount = currentState.players.size
 
+        // Get tournament config from preferences
+        val tournamentConfig = tournamentPreferences.getCurrentTournamentConfig()
+        val totalPerPlayer = tournamentConfig.totalPerPlayer
+
         // Calculate total pool
-        val totalPool = playerCount * (currentState.buyInAmount + currentState.foodAmount + currentState.bountyAmount)
+        val totalPool = playerCount * totalPerPlayer
 
-        // Calculate total paid
-        var totalPaid = 0.0
-        var eliminatedCount = 0
-        var payedOutCount = 0
+        // Calculate total paid (only count players who have bought in)
+        val totalPaid = currentState.players.count { it.buyIn } * totalPerPlayer
 
-        for (player in currentState.players) {
-            if (player.buyIn) totalPaid += currentState.buyInAmount
-            if (player.food) totalPaid += currentState.foodAmount
-            if (player.bounty) totalPaid += currentState.bountyAmount
-            if (player.eliminated) eliminatedCount++
-            if (player.payedOut) payedOutCount++
-        }
+        // Count various player states
+        val outCount = currentState.players.count { it.out }
+        val payedOutCount = currentState.players.count { it.payedOut }
+        val activePlayers = playerCount - outCount
 
-        val activePlayers = playerCount - eliminatedCount
         val percentPaid = if (totalPool > 0) (totalPaid / totalPool) * 100 else 0.0
 
         _uiState.update {
@@ -166,8 +145,36 @@ class BankViewModel @Inject constructor(
                 totalPaid = totalPaid,
                 percentPaid = percentPaid,
                 activePlayers = activePlayers,
-                payedOutCount = payedOutCount
+                payedOutCount = payedOutCount,
+                buyInAmount = tournamentConfig.buyIn,
+                foodAmount = tournamentConfig.foodPerPlayer,
+                bountyAmount = tournamentConfig.bountyPerPlayer
             )
+        }
+    }
+    
+    private fun showResetDialog() {
+        _uiState.update { it.copy(showResetDialog = true) }
+    }
+    
+    private fun hideResetDialog() {
+        _uiState.update { it.copy(showResetDialog = false) }
+    }
+    
+    private fun resetBankData() {
+        val savedPlayerCount = tournamentPreferences.getPlayerCount()
+        initializePlayers(savedPlayerCount)
+    }
+    
+    private fun isInDefaultState(): Boolean {
+        val currentState = _uiState.value
+        
+        // Check if all players have default names and no checkboxes are ticked
+        return currentState.players.all { player ->
+            player.name == "Player ${player.id}" &&
+            !player.buyIn &&
+            !player.out &&
+            !player.payedOut
         }
     }
 }

@@ -4,10 +4,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.scale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,7 +45,6 @@ fun CalculatorContent(
     uiState: CalculatorUiState,
     onIntent: (CalculatorIntent) -> Unit
 ) {
-    var isConfigExpanded by remember { mutableStateOf(true) }
     
     Column(
         modifier = Modifier
@@ -50,28 +52,98 @@ fun CalculatorContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Title
-        Text(
-            text = "🃏 Poker Payout Calculator",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = PokerColors.PokerGold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
+        // Title with Reset Button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "🃏 Poker Payout Calculator",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = PokerColors.PokerGold,
+                modifier = Modifier.weight(1f)
+            )
+            
+            // Green circular background with yellow refresh button
+            Card(
+                modifier = Modifier.size(48.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
+            ) {
+                IconButton(
+                    onClick = { onIntent(CalculatorIntent.ShowResetDialog) },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Reset All Data",
+                        tint = PokerColors.PokerGold,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .scale(-1f, 1f) // Invert horizontally
+                    )
+                }
+            }
+        }
+
+        // Reset Confirmation Dialog
+        if (uiState.showResetDialog) {
+            AlertDialog(
+                onDismissRequest = { onIntent(CalculatorIntent.HideResetDialog) },
+                containerColor = PokerColors.DarkGreen,
+                title = {
+                    Text(
+                        text = "Reset?",
+                        color = PokerColors.PokerGold,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        text = "This will reset all tournament settings and timer data to defaults.",
+                        color = PokerColors.CardWhite
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { onIntent(CalculatorIntent.HideResetDialog) }
+                    ) {
+                        Text(
+                            text = "No",
+                            color = PokerColors.CardWhite
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { onIntent(CalculatorIntent.ConfirmReset) }
+                    ) {
+                        Text(
+                            text = "Yes",
+                            color = PokerColors.PokerGold,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                shape = RoundedCornerShape(16.dp)
+            )
+        }
 
         // Configuration Section (Collapsible)
         TournamentConfigurationCard(
             uiState = uiState,
             onIntent = onIntent,
-            isExpanded = isConfigExpanded,
-            onExpandedChange = { isConfigExpanded = it }
+            isExpanded = uiState.isConfigExpanded,
+            onExpandedChange = { onIntent(CalculatorIntent.ToggleConfigExpanded(it)) }
         )
 
         // Leaderboard/Payout Structure Section
         LeaderboardCard(
             payouts = uiState.payouts,
             onIntent = onIntent,
+            isTournamentLocked = uiState.isTournamentLocked,
             modifier = Modifier.fillMaxWidth().weight(1f)
         )
     }
@@ -80,27 +152,32 @@ fun CalculatorContent(
 @Composable
 fun PlayerCountSlider(
     playerCount: Int,
-    onPlayerCountChange: (Int) -> Unit
+    onPlayerCountChange: (Int) -> Unit,
+    isLocked: Boolean = false
 ) {
     Column {
         Text(
             text = "Number of Players: $playerCount",
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
-            color = PokerColors.CardWhite
+            color = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite
         )
         
         Spacer(modifier = Modifier.height(8.dp))
         
         Slider(
             value = playerCount.toFloat(),
-            onValueChange = { onPlayerCountChange(it.toInt()) },
+            onValueChange = { if (!isLocked) onPlayerCountChange(it.toInt()) },
             valueRange = 3f..30f,
             steps = 26,
+            enabled = !isLocked,
             colors = SliderDefaults.colors(
-                thumbColor = PokerColors.PokerGold,
-                activeTrackColor = PokerColors.AccentGreen,
-                inactiveTrackColor = PokerColors.DarkGreen
+                thumbColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.PokerGold,
+                activeTrackColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.AccentGreen,
+                inactiveTrackColor = PokerColors.DarkGreen,
+                disabledThumbColor = PokerColors.CardWhite.copy(alpha = 0.5f),
+                disabledActiveTrackColor = PokerColors.CardWhite.copy(alpha = 0.5f),
+                disabledInactiveTrackColor = PokerColors.DarkGreen
             )
         )
     }
@@ -134,14 +211,31 @@ fun TournamentConfigurationCard(
                     color = PokerColors.PokerGold
                 )
                 
-                IconButton(
-                    onClick = { onExpandedChange(!isExpanded) }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (isExpanded) "Collapse" else "Expand",
-                        tint = PokerColors.PokerGold
-                    )
+                    // Lock icon when tournament is locked
+                    if (uiState.isTournamentLocked) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "Tournament Locked",
+                            tint = PokerColors.PokerGold,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    
+                    IconButton(
+                        onClick = { 
+                            onExpandedChange(!isExpanded)
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (isExpanded) "Collapse" else "Expand",
+                            tint = PokerColors.PokerGold
+                        )
+                    }
                 }
             }
             
@@ -157,7 +251,8 @@ fun TournamentConfigurationCard(
                         playerCount = uiState.tournamentConfig.numPlayers,
                         onPlayerCountChange = { count ->
                             onIntent(CalculatorIntent.UpdatePlayerCount(count))
-                        }
+                        },
+                        isLocked = uiState.isTournamentLocked
                     )
 
                     // Pool Configuration
@@ -167,7 +262,8 @@ fun TournamentConfigurationCard(
                         bountyPerPlayer = uiState.tournamentConfig.bountyPerPlayer,
                         onBuyInChange = { onIntent(CalculatorIntent.UpdateBuyIn(it)) },
                         onFoodChange = { onIntent(CalculatorIntent.UpdateFoodPerPlayer(it)) },
-                        onBountyChange = { onIntent(CalculatorIntent.UpdateBountyPerPlayer(it)) }
+                        onBountyChange = { onIntent(CalculatorIntent.UpdateBountyPerPlayer(it)) },
+                        isLocked = uiState.isTournamentLocked
                     )
 
                     // Pool Summary
@@ -182,6 +278,7 @@ fun TournamentConfigurationCard(
 fun LeaderboardCard(
     payouts: List<com.huntercoles.fatline.basicfeature.domain.model.PayoutPosition>,
     onIntent: (CalculatorIntent) -> Unit,
+    isTournamentLocked: Boolean,
     modifier: Modifier = Modifier
 ) {
     var showWeightsDialog by remember { mutableStateOf(false) }
@@ -221,12 +318,14 @@ fun LeaderboardCard(
                 }
                 
                 IconButton(
-                    onClick = { showWeightsDialog = true }
+                    onClick = { showWeightsDialog = true },
+                    enabled = !isTournamentLocked
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Edit Weights",
-                        tint = PokerColors.AccentGreen
+                        tint = if (isTournamentLocked) PokerColors.CardWhite.copy(alpha = 0.5f) 
+                              else PokerColors.AccentGreen
                     )
                 }
             }
@@ -260,7 +359,7 @@ fun LeaderboardCard(
     }
     
     // Weights editor dialog
-    if (showWeightsDialog) {
+    if (showWeightsDialog && !isTournamentLocked) {
         WeightsEditorDialog(
             currentWeights = payouts.map { it.weight },
             onWeightsChanged = { newWeights ->

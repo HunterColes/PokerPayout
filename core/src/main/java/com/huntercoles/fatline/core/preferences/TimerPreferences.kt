@@ -30,6 +30,9 @@ class TimerPreferences @Inject constructor(
     private val _isFinished = MutableStateFlow(getIsFinished())
     val isFinished: Flow<Boolean> = _isFinished.asStateFlow()
     
+    private val _hasTimerStarted = MutableStateFlow(getHasTimerStarted())
+    val hasTimerStarted: Flow<Boolean> = _hasTimerStarted.asStateFlow()
+    
     private val _lastUpdateTime = MutableStateFlow(getLastUpdateTime())
     val lastUpdateTime: Flow<Long> = _lastUpdateTime.asStateFlow()
     
@@ -62,6 +65,11 @@ class TimerPreferences @Inject constructor(
         _isFinished.value = finished
     }
     
+    fun setHasTimerStarted(hasStarted: Boolean) {
+        prefs.edit().putBoolean(HAS_TIMER_STARTED_KEY, hasStarted).apply()
+        _hasTimerStarted.value = hasStarted
+    }
+    
     private fun setLastUpdateTime(time: Long) {
         prefs.edit().putLong(LAST_UPDATE_TIME_KEY, time).apply()
         _lastUpdateTime.value = time
@@ -85,6 +93,10 @@ class TimerPreferences @Inject constructor(
     
     fun getIsFinished(): Boolean {
         return prefs.getBoolean(IS_FINISHED_KEY, false)
+    }
+    
+    fun getHasTimerStarted(): Boolean {
+        return prefs.getBoolean(HAS_TIMER_STARTED_KEY, false)
     }
     
     fun getLastUpdateTime(): Long {
@@ -118,13 +130,24 @@ class TimerPreferences @Inject constructor(
         setCurrentTimeSeconds(resetSeconds)
         setTimerRunning(false)
         setIsFinished(false)
+        setHasTimerStarted(false)  // Reset the started flag
     }
     
     /**
      * Reset all timer data to default values
      */
     fun resetAllTimerData() {
-        prefs.edit().clear().apply()
+        // Reset specific keys instead of clearing all preferences
+        val currentTime = System.currentTimeMillis()
+        prefs.edit()
+            .putBoolean(TIMER_RUNNING_KEY, false)
+            .putInt(CURRENT_TIME_SECONDS_KEY, 180 * 60)
+            .putInt(GAME_DURATION_MINUTES_KEY, 180)
+            .putString(TIMER_DIRECTION_KEY, "COUNTDOWN")
+            .putBoolean(IS_FINISHED_KEY, false)
+            .putBoolean(HAS_TIMER_STARTED_KEY, false)
+            .putLong(LAST_UPDATE_TIME_KEY, currentTime)
+            .apply()
         
         // Reset all state flows to default values
         _timerRunning.value = false
@@ -132,7 +155,8 @@ class TimerPreferences @Inject constructor(
         _gameDurationMinutes.value = 180 // 3 hours
         _timerDirection.value = "COUNTDOWN"
         _isFinished.value = false
-        _lastUpdateTime.value = System.currentTimeMillis()
+        _hasTimerStarted.value = false
+        _lastUpdateTime.value = currentTime
     }
     
     /**
@@ -143,7 +167,8 @@ class TimerPreferences @Inject constructor(
                getCurrentTimeSeconds() == 180 * 60 &&
                getGameDurationMinutes() == 180 &&
                getTimerDirection() == "COUNTDOWN" &&
-               !getIsFinished()
+               !getIsFinished() &&
+               !getHasTimerStarted()
     }
     
     companion object {
@@ -152,6 +177,7 @@ class TimerPreferences @Inject constructor(
         private const val GAME_DURATION_MINUTES_KEY = "game_duration_minutes"
         private const val TIMER_DIRECTION_KEY = "timer_direction"
         private const val IS_FINISHED_KEY = "is_finished"
+        private const val HAS_TIMER_STARTED_KEY = "has_timer_started"
         private const val LAST_UPDATE_TIME_KEY = "last_update_time"
     }
 }

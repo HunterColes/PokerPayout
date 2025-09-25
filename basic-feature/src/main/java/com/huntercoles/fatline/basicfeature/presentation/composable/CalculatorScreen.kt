@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,14 @@ fun CalculatorContent(
     uiState: CalculatorUiState,
     onIntent: (CalculatorIntent) -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+    
+    // Clear focus immediately when this composable is disposed (tab switch)
+    DisposableEffect(Unit) {
+        onDispose {
+            focusManager.clearFocus(force = true)
+        }
+    }
     
     Column(
         modifier = Modifier

@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -13,13 +15,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.huntercoles.fatline.core.design.PokerColors
+
+/**
+ * Validates integer input to only allow digits
+ */
+private fun isValidIntegerInput(text: String): Boolean {
+    if (text.isEmpty()) return true
+    return text.all { it.isDigit() } && text.length <= 3 // Max 999
+}
 
 @Composable
 fun WeightsEditorDialog(
@@ -226,25 +238,40 @@ fun WeightRow(
             
             // Weight input
             var weightText by remember(weight) { mutableStateOf(weight.toString()) }
+            val focusManager = LocalFocusManager.current
             
             OutlinedTextField(
                 value = weightText,
                 onValueChange = { newValue ->
-                    weightText = newValue
-                    newValue.toIntOrNull()?.let { newWeight ->
-                        if (newWeight > 0) {
-                            onWeightChange(newWeight)
+                    // Only allow valid integer input
+                    if (isValidIntegerInput(newValue)) {
+                        weightText = newValue
+                        newValue.toIntOrNull()?.let { newWeight ->
+                            if (newWeight > 0 && newWeight <= 999) {
+                                onWeightChange(newWeight)
+                            }
                         }
                     }
                 },
                 modifier = Modifier.width(80.dp),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() }
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = PokerColors.AccentGreen,
                     unfocusedBorderColor = PokerColors.CardWhite.copy(alpha = 0.5f),
                     focusedTextColor = PokerColors.CardWhite,
-                    unfocusedTextColor = PokerColors.CardWhite
+                    unfocusedTextColor = PokerColors.CardWhite,
+                    cursorColor = PokerColors.PokerGold,
+                    selectionColors = TextSelectionColors(
+                        handleColor = PokerColors.PokerGold,
+                        backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
+                    )
                 )
             )
             

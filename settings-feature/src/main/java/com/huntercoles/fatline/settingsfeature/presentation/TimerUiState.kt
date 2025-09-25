@@ -9,13 +9,20 @@ enum class TimerDirection {
 
 @Parcelize
 data class TimerUiState(
-    val gameDurationMinutes: Int = 180, // Default 3 hours
+    val gameDurationMinutes: Int = 180, // Default 3 hours (kept for compatibility)
     val currentTimeSeconds: Int = 180 * 60, // Start with full time
     val timerDirection: TimerDirection = TimerDirection.COUNTDOWN,
     val isRunning: Boolean = false,
-    val isFinished: Boolean = false
+    val isFinished: Boolean = false,
+    val blindConfiguration: BlindConfiguration = BlindConfiguration(),
+    val isBlindConfigCollapsed: Boolean = false, // Start auto open
+    val hasTimerStarted: Boolean = false // Track if timer has ever been started (stays true until reset)
 ) : Parcelable {
 
+    // Convert minutes to hours for UI display
+    val gameDurationHours: Int
+        get() = gameDurationMinutes / 60
+    
     val totalDurationSeconds: Int
         get() = gameDurationMinutes * 60
 

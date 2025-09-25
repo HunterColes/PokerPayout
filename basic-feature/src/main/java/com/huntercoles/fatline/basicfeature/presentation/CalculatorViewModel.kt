@@ -23,11 +23,6 @@ class CalculatorViewModel @Inject constructor(
     val uiState: StateFlow<CalculatorUiState> = _uiState.asStateFlow()
 
     init {
-        // Only reset if timer is not currently running (true app startup vs tab switch)
-        if (!timerPreferences.getTimerRunning()) {
-            resetAllData()
-        }
-        
         // Load all tournament configuration from preferences
         loadTournamentConfiguration()
         

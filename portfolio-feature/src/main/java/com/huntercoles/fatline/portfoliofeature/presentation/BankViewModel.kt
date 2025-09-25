@@ -3,6 +3,7 @@ package com.huntercoles.fatline.portfoliofeature.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.huntercoles.fatline.core.preferences.TournamentPreferences
+import com.huntercoles.fatline.core.preferences.BankPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +14,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class BankViewModel @Inject constructor(
-    private val tournamentPreferences: TournamentPreferences
+    private val tournamentPreferences: TournamentPreferences,
+    private val bankPreferences: BankPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BankUiState())
@@ -59,7 +61,10 @@ class BankViewModel @Inject constructor(
         val players = (1..count).map { playerNum ->
             PlayerData(
                 id = playerNum,
-                name = "Player $playerNum"
+                name = bankPreferences.getPlayerName(playerNum),
+                buyIn = bankPreferences.getPlayerBuyInStatus(playerNum),
+                out = bankPreferences.getPlayerOutStatus(playerNum),
+                payedOut = bankPreferences.getPlayerPayedOutStatus(playerNum)
             )
         }
         _uiState.update { it.copy(players = players) }
@@ -86,6 +91,9 @@ class BankViewModel @Inject constructor(
     }
 
     private fun updatePlayerName(playerId: Int, name: String) {
+        // Save to preferences
+        bankPreferences.savePlayerName(playerId, name)
+        
         _uiState.update { state ->
             val updatedPlayers = state.players.map { player ->
                 if (player.id == playerId) player.copy(name = name) else player
@@ -110,7 +118,14 @@ class BankViewModel @Inject constructor(
         _uiState.update { state ->
             val updatedPlayers = state.players.map { player ->
                 if (player.id == playerId) {
-                    updateFunction(player)
+                    val updatedPlayer = updateFunction(player)
+                    
+                    // Save to preferences
+                    bankPreferences.savePlayerBuyInStatus(playerId, updatedPlayer.buyIn)
+                    bankPreferences.savePlayerOutStatus(playerId, updatedPlayer.out)
+                    bankPreferences.savePlayerPayedOutStatus(playerId, updatedPlayer.payedOut)
+                    
+                    updatedPlayer
                 } else player
             }
             state.copy(players = updatedPlayers)
@@ -162,19 +177,16 @@ class BankViewModel @Inject constructor(
     }
     
     private fun resetBankData() {
+        // Reset bank preferences
+        bankPreferences.resetAllBankData()
+        
+        // Reinitialize players with fresh data
         val savedPlayerCount = tournamentPreferences.getPlayerCount()
         initializePlayers(savedPlayerCount)
     }
     
     private fun isInDefaultState(): Boolean {
-        val currentState = _uiState.value
-        
-        // Check if all players have default names and no checkboxes are ticked
-        return currentState.players.all { player ->
-            player.name == "Player ${player.id}" &&
-            !player.buyIn &&
-            !player.out &&
-            !player.payedOut
-        }
+        val currentPlayerCount = _uiState.value.players.size
+        return bankPreferences.isInDefaultState(currentPlayerCount)
     }
 }

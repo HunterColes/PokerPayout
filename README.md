@@ -51,34 +51,34 @@ This project is licensed under the GPL License - see the [LICENSE](LICENSE.md) f
 
 ---
 
-Build Commands
+## **Build Commands** 🔨
 Clean and Build:
 ```
-gradlew clean build
+.\gradlew clean build
 ```
 Build Debug APK:
 ```
-gradlew assembleDebug
+.\gradlew assembleDebug
 ```
 Build Release APK:
 ```
-gradlew assembleRelease
+.\gradlew assembleRelease
 ```
 Install Commands
 Install Debug APK to Connected Device:
 ```
-gradlew installDebug
+.\gradlew installDebug
 ```
 Install Release APK:
 ```
-gradlew installRelease
+.\gradlew installRelease
 ```
 Install and Run:
 ```
-gradlew installDebug && adb shell am start -n com.huntercoles.fatline/.MainActivity
+.\gradlew installDebug && adb shell am start -n com.huntercoles.fatline/.MainActivity
 ```
 Debug Commands
 Run Tests:
 ```
-gradlew test
+.\gradlew test
 ```

@@ -32,7 +32,7 @@ class ThemePreferences @Inject constructor(
     }
     
     fun getDarkModePreference(): Boolean {
-        return prefs.getBoolean(DARK_MODE_KEY, false)
+        return prefs.getBoolean(DARK_MODE_KEY, true)
     }
     
     companion object {

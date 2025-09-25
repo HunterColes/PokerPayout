@@ -43,7 +43,8 @@ class TimerViewModel @Inject constructor(
                 currentTimeSeconds = actualTime,
                 timerDirection = direction,
                 isRunning = timerPreferences.getTimerRunning() && !timerPreferences.getIsFinished(),
-                isFinished = timerPreferences.getIsFinished()
+                isFinished = timerPreferences.getIsFinished(),
+                hasTimerStarted = timerPreferences.getHasTimerStarted()
             )
         }
         
@@ -59,10 +60,17 @@ class TimerViewModel @Inject constructor(
     fun acceptIntent(intent: TimerIntent) {
         when (intent) {
             is TimerIntent.GameDurationChanged -> updateGameDuration(intent.minutes)
+            is TimerIntent.GameDurationHoursChanged -> updateGameDurationHours(intent.hours)
             is TimerIntent.TimerDirectionChanged -> updateTimerDirection(intent.direction)
             is TimerIntent.ToggleTimer -> toggleTimer()
             is TimerIntent.ResetTimer -> resetTimer()
             is TimerIntent.TimerTick -> updateTimer(intent.seconds)
+            
+            // Blind configuration intents
+            is TimerIntent.UpdateSmallestChip -> updateSmallestChip(intent.value)
+            is TimerIntent.UpdateStartingChips -> updateStartingChips(intent.value)
+            is TimerIntent.UpdateRoundLength -> updateRoundLength(intent.minutes)
+            is TimerIntent.ToggleBlindConfigCollapsed -> toggleBlindConfigCollapsed(intent.collapsed)
         }
     }
 
@@ -79,13 +87,20 @@ class TimerViewModel @Inject constructor(
             state.copy(
                 gameDurationMinutes = validMinutes,
                 currentTimeSeconds = newCurrentSeconds,
-                isFinished = false
+                isFinished = false,
+                hasTimerStarted = state.hasTimerStarted  // Preserve hasTimerStarted
             )
         }
         
         timerPreferences.setCurrentTimeSeconds(_uiState.value.currentTimeSeconds)
         timerPreferences.setIsFinished(false)
         stopTimer()
+    }
+
+    private fun updateGameDurationHours(hours: Int) {
+        val validHours = hours.coerceIn(1, 24) // 1 hour to 24 hours
+        val minutes = validHours * 60
+        updateGameDuration(minutes)
     }
 
     private fun updateTimerDirection(direction: TimerDirection) {
@@ -103,7 +118,8 @@ class TimerViewModel @Inject constructor(
             state.copy(
                 timerDirection = direction,
                 currentTimeSeconds = newCurrentSeconds,
-                isFinished = false
+                isFinished = false,
+                hasTimerStarted = state.hasTimerStarted  // Preserve hasTimerStarted
             )
         }
         
@@ -124,9 +140,17 @@ class TimerViewModel @Inject constructor(
     private fun startTimer() {
         if (timerJob?.isActive == true) return
 
-        _uiState.update { it.copy(isRunning = true, isFinished = false) }
+        _uiState.update { 
+            it.copy(
+                isRunning = true, 
+                isFinished = false,
+                isBlindConfigCollapsed = true,  // Auto-collapse when timer starts
+                hasTimerStarted = true  // Mark that timer has been started (stays true until reset)
+            ) 
+        }
         timerPreferences.setTimerRunning(true)
         timerPreferences.setIsFinished(false)
+        timerPreferences.setHasTimerStarted(true)  // Set the preference
         
         // Lock tournament settings when timer starts
         tournamentPreferences.setTournamentLocked(true)
@@ -194,7 +218,9 @@ class TimerViewModel @Inject constructor(
             state.copy(
                 currentTimeSeconds = resetSeconds,
                 isRunning = false,
-                isFinished = false
+                isFinished = false,
+                isBlindConfigCollapsed = false,  // Unlock and expand blind config on reset
+                hasTimerStarted = false  // Reset the timer started flag
             )
         }
         
@@ -204,6 +230,37 @@ class TimerViewModel @Inject constructor(
     private fun updateTimer(seconds: Int) {
         _uiState.update { it.copy(currentTimeSeconds = seconds) }
         timerPreferences.setCurrentTimeSeconds(seconds)
+    }
+
+    // Blind configuration methods
+    private fun updateSmallestChip(value: Int) {
+        _uiState.update { state ->
+            state.copy(
+                blindConfiguration = state.blindConfiguration.copy(smallestChip = value)
+            )
+        }
+    }
+
+    private fun updateStartingChips(value: Int) {
+        _uiState.update { state ->
+            state.copy(
+                blindConfiguration = state.blindConfiguration.copy(startingChips = value)
+            )
+        }
+    }
+
+    private fun updateRoundLength(minutes: Int) {
+        _uiState.update { state ->
+            state.copy(
+                blindConfiguration = state.blindConfiguration.copy(roundLengthMinutes = minutes)
+            )
+        }
+    }
+
+    private fun toggleBlindConfigCollapsed(collapsed: Boolean) {
+        _uiState.update { state ->
+            state.copy(isBlindConfigCollapsed = collapsed)
+        }
     }
 
     override fun onCleared() {

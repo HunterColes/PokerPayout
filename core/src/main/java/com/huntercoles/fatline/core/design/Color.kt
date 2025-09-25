@@ -10,12 +10,13 @@ val PokerAccentGreen = Color(0xFF4CAF50)
 val PokerFeltGreen = Color(0xFF0A3D2E)
 val PokerGold = Color(0xFFFFD700)
 val PokerCardWhite = Color(0xFFF5F5F5)
+val PokerDeepBlack = Color(0xFF0B0B0B)
 
 // Dark theme colors
 val PokerDarkPrimary = PokerDarkGreen
 val PokerDarkSecondary = PokerMediumGreen
 val PokerDarkTertiary = PokerAccentGreen
-val PokerDarkBackground = PokerFeltGreen
+val PokerDarkBackground = PokerDeepBlack
 val PokerDarkSurface = PokerDarkGreen
 val PokerDarkOnPrimary = PokerCardWhite
 val PokerDarkOnSecondary = PokerCardWhite

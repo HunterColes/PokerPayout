@@ -15,6 +15,9 @@ android {
 
     defaultConfig {
         minSdk = 26
+    }
+
+    testOptions {
         targetSdk = 34
     }
 
@@ -52,8 +55,11 @@ dependencies {
     implementation(libs.room)
     implementation(libs.timber)
     
+    // Testing dependencies
     testImplementation(libs.bundles.common.test)
     androidTestImplementation(libs.bundles.common.android.test)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.test.android.junit)
     debugImplementation(libs.debug.compose.manifest)
 
     ksp(libs.hilt.compiler)

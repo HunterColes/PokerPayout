@@ -133,7 +133,15 @@ class TournamentPreferences @Inject constructor(
      * Reset all tournament data to default values
      */
     fun resetAllTournamentData() {
-        prefs.edit().clear().apply()
+        // Reset specific keys instead of clearing all preferences
+        prefs.edit()
+            .putInt(PLAYER_COUNT_KEY, 9)
+            .putBoolean(TOURNAMENT_LOCKED_KEY, false)
+            .putFloat(BUY_IN_KEY, 20.0f)
+            .putFloat(FOOD_PER_PLAYER_KEY, 5.0f)
+            .putFloat(BOUNTY_PER_PLAYER_KEY, 5.0f)
+            .putString(PAYOUT_WEIGHTS_KEY, "50,30,20")
+            .apply()
         
         // Reset all state flows to default values
         _playerCount.value = 9

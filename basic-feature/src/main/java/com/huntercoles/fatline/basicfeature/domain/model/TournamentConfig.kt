@@ -1,5 +1,7 @@
 package com.huntercoles.fatline.basicfeature.domain.model
 
+import com.huntercoles.fatline.core.constants.TournamentConstants
+
 /**
  * Configuration for a poker tournament
  */
@@ -8,7 +10,7 @@ data class TournamentConfig(
     val buyIn: Double = 20.0,
     val foodPerPlayer: Double = 5.0,
     val bountyPerPlayer: Double = 2.0,
-    val payoutWeights: List<Int> = listOf(35, 20, 15, 10, 8, 6, 3, 2, 1) // Default weights for top 9 positions
+    val payoutWeights: List<Int> = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS
 ) {
     val totalPerPlayer: Double
         get() = buyIn + foodPerPlayer + bountyPerPlayer

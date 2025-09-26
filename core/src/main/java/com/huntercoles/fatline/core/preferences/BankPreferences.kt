@@ -5,12 +5,17 @@ import android.content.SharedPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 @Singleton
 class BankPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val prefs: SharedPreferences = context.getSharedPreferences("bank_prefs", Context.MODE_PRIVATE)
+    private val _eliminationOrder = MutableStateFlow(readEliminationOrderFromPrefs())
+    val eliminationOrder: Flow<List<Int>> = _eliminationOrder.asStateFlow()
     
     fun savePlayerName(playerId: Int, name: String) {
         prefs.edit().putString("player_name_$playerId", name).apply()
@@ -42,6 +47,18 @@ class BankPreferences @Inject constructor(
     
     fun getPlayerPayedOutStatus(playerId: Int): Boolean {
         return prefs.getBoolean("player_payedout_$playerId", false)
+    }
+
+    fun getEliminationOrder(): List<Int> = _eliminationOrder.value
+
+    fun saveEliminationOrder(order: List<Int>) {
+        val sanitized = order
+            .filter { it > 0 }
+            .distinct()
+        prefs.edit()
+            .putString(ELIMINATION_ORDER_KEY, sanitized.joinToString(","))
+            .apply()
+        _eliminationOrder.value = sanitized
     }
     
     /**
@@ -76,6 +93,20 @@ class BankPreferences @Inject constructor(
                 editor.remove(key)
             }
         }
+        editor.remove(ELIMINATION_ORDER_KEY)
         editor.apply()
+        _eliminationOrder.value = emptyList()
+    }
+
+    private fun readEliminationOrderFromPrefs(): List<Int> {
+        val stored = prefs.getString(ELIMINATION_ORDER_KEY, null)
+        if (stored.isNullOrBlank()) return emptyList()
+        return stored.split(",")
+            .mapNotNull { it.toIntOrNull() }
+            .filter { it > 0 }
+    }
+
+    companion object {
+        private const val ELIMINATION_ORDER_KEY = "elimination_order"
     }
 }

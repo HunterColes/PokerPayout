@@ -34,6 +34,13 @@ class BankViewModel @Inject constructor(
                 }
             }
         }
+
+        // Keep elimination order in sync with preferences
+        viewModelScope.launch {
+            bankPreferences.eliminationOrder.collect { order ->
+                _uiState.update { it.copy(eliminationOrder = order) }
+            }
+        }
     }
 
     fun acceptIntent(intent: BankIntent) {
@@ -67,7 +74,18 @@ class BankViewModel @Inject constructor(
                 payedOut = bankPreferences.getPlayerPayedOutStatus(playerNum)
             )
         }
-        _uiState.update { it.copy(players = players) }
+        val validIds = players.map { it.id }.toSet()
+        val storedOrder = bankPreferences.getEliminationOrder()
+        val sanitizedOrder = storedOrder.filter { it in validIds }.distinct()
+        val missingEliminations = players
+            .filter { it.out && it.id !in sanitizedOrder }
+            .map { it.id }
+        val normalizedOrder = (sanitizedOrder + missingEliminations)
+        if (normalizedOrder != storedOrder) {
+            bankPreferences.saveEliminationOrder(normalizedOrder)
+        }
+
+        _uiState.update { it.copy(players = players, eliminationOrder = normalizedOrder) }
         updateCalculations()
     }
 
@@ -86,7 +104,15 @@ class BankViewModel @Inject constructor(
             // Remove players
             currentPlayers.take(count)
         }
-        _uiState.update { it.copy(players = newPlayers) }
+        val validIds = newPlayers.map { it.id }.toSet()
+        val adjustedOrder = bankPreferences.getEliminationOrder()
+            .filter { it in validIds }
+            .distinct()
+        if (adjustedOrder != _uiState.value.eliminationOrder) {
+            bankPreferences.saveEliminationOrder(adjustedOrder)
+        }
+
+        _uiState.update { it.copy(players = newPlayers, eliminationOrder = adjustedOrder) }
         updateCalculations()
     }
 
@@ -100,37 +126,71 @@ class BankViewModel @Inject constructor(
             }
             state.copy(players = updatedPlayers)
         }
+
+        if (_uiState.value.eliminationOrder.contains(playerId)) {
+            bankPreferences.saveEliminationOrder(_uiState.value.eliminationOrder)
+        }
     }
 
     private fun toggleBuyIn(playerId: Int) {
-        updatePlayerPayment(playerId) { it.copy(buyIn = !it.buyIn) }
+        updatePlayerPayment(
+            playerId = playerId,
+            updateFunction = { it.copy(buyIn = !it.buyIn) }
+        )
     }
 
     private fun toggleOut(playerId: Int) {
-        updatePlayerPayment(playerId) { it.copy(out = !it.out) }
+        updatePlayerPayment(
+            playerId = playerId,
+            updateFunction = { it.copy(out = !it.out) }
+        ) { updatedPlayer ->
+            updateEliminationOrder(updatedPlayer.id, updatedPlayer.out)
+        }
     }
 
     private fun togglePayedOut(playerId: Int) {
-        updatePlayerPayment(playerId) { it.copy(payedOut = !it.payedOut) }
+        updatePlayerPayment(
+            playerId = playerId,
+            updateFunction = { it.copy(payedOut = !it.payedOut) }
+        )
     }
 
-    private fun updatePlayerPayment(playerId: Int, updateFunction: (PlayerData) -> PlayerData) {
+    private fun updatePlayerPayment(
+        playerId: Int,
+        updateFunction: (PlayerData) -> PlayerData,
+        afterUpdate: ((PlayerData) -> Unit)? = null
+    ) {
+        var updatedPlayer: PlayerData? = null
         _uiState.update { state ->
             val updatedPlayers = state.players.map { player ->
                 if (player.id == playerId) {
-                    val updatedPlayer = updateFunction(player)
+                    val playerUpdate = updateFunction(player)
                     
                     // Save to preferences
-                    bankPreferences.savePlayerBuyInStatus(playerId, updatedPlayer.buyIn)
-                    bankPreferences.savePlayerOutStatus(playerId, updatedPlayer.out)
-                    bankPreferences.savePlayerPayedOutStatus(playerId, updatedPlayer.payedOut)
+                    bankPreferences.savePlayerBuyInStatus(playerId, playerUpdate.buyIn)
+                    bankPreferences.savePlayerOutStatus(playerId, playerUpdate.out)
+                    bankPreferences.savePlayerPayedOutStatus(playerId, playerUpdate.payedOut)
                     
-                    updatedPlayer
+                    updatedPlayer = playerUpdate
+                    playerUpdate
                 } else player
             }
             state.copy(players = updatedPlayers)
         }
+        updatedPlayer?.let { afterUpdate?.invoke(it) }
         updateCalculations()
+    }
+
+    private fun updateEliminationOrder(playerId: Int, isOut: Boolean) {
+        val totalPlayers = _uiState.value.players.size
+        val currentOrder = bankPreferences.getEliminationOrder()
+            .filter { it in 1..totalPlayers }
+            .distinct()
+        val filteredOrder = currentOrder.filterNot { it == playerId }
+        val nextOrder = if (isOut) filteredOrder + playerId else filteredOrder
+
+        bankPreferences.saveEliminationOrder(nextOrder)
+        _uiState.update { it.copy(eliminationOrder = nextOrder) }
     }
 
     private fun updateCalculations() {

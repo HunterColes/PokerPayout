@@ -23,5 +23,6 @@ data class BankUiState(
     val buyInAmount: Double = 20.0,
     val foodAmount: Double = 5.0,
     val bountyAmount: Double = 2.0,
-    val showResetDialog: Boolean = false
+    val showResetDialog: Boolean = false,
+    val eliminationOrder: List<Int> = emptyList()
 ) : Parcelable

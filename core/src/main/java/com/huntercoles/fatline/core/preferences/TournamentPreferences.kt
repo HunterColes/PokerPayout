@@ -2,6 +2,7 @@ package com.huntercoles.fatline.core.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.huntercoles.fatline.core.constants.TournamentConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,8 +86,8 @@ class TournamentPreferences @Inject constructor(
     }
     
     fun getPayoutWeights(): List<Int> {
-        val weightsString = prefs.getString(PAYOUT_WEIGHTS_KEY, "50,30,20") // Default weights
-        return weightsString?.split(",")?.mapNotNull { it.toIntOrNull() } ?: listOf(50, 30, 20)
+        val weightsString = prefs.getString(PAYOUT_WEIGHTS_KEY, TournamentConstants.DEFAULT_PAYOUT_WEIGHTS_STRING)
+        return weightsString?.split(",")?.mapNotNull { it.toIntOrNull() } ?: TournamentConstants.DEFAULT_PAYOUT_WEIGHTS
     }
     
     /**
@@ -125,7 +126,7 @@ class TournamentPreferences @Inject constructor(
                getBuyIn() == 20.0 &&
                getFoodPerPlayer() == 5.0 &&
                getBountyPerPlayer() == 5.0 &&
-               getPayoutWeights() == listOf(50, 30, 20) &&
+               getPayoutWeights() == TournamentConstants.DEFAULT_PAYOUT_WEIGHTS &&
                !getTournamentLocked()
     }
     
@@ -140,7 +141,7 @@ class TournamentPreferences @Inject constructor(
             .putFloat(BUY_IN_KEY, 20.0f)
             .putFloat(FOOD_PER_PLAYER_KEY, 5.0f)
             .putFloat(BOUNTY_PER_PLAYER_KEY, 5.0f)
-            .putString(PAYOUT_WEIGHTS_KEY, "50,30,20")
+            .putString(PAYOUT_WEIGHTS_KEY, TournamentConstants.DEFAULT_PAYOUT_WEIGHTS_STRING)
             .apply()
         
         // Reset all state flows to default values
@@ -149,7 +150,7 @@ class TournamentPreferences @Inject constructor(
         _buyIn.value = 20.0
         _foodPerPlayer.value = 5.0
         _bountyPerPlayer.value = 5.0
-        _payoutWeights.value = listOf(50, 30, 20)
+        _payoutWeights.value = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS
     }
     
     companion object {

@@ -12,5 +12,6 @@ data class CalculatorUiState(
     val isLoading: Boolean = false,
     val isTournamentLocked: Boolean = false,
     val isConfigExpanded: Boolean = true,
-    val showResetDialog: Boolean = false
+    val showResetDialog: Boolean = false,
+    val leaderboardNames: Map<Int, String> = emptyMap()
 )

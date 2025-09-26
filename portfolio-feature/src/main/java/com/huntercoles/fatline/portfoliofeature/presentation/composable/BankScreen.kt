@@ -238,7 +238,7 @@ private fun PoolSummaryCard(uiState: BankUiState) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Active: ${uiState.activePlayers} | Paid Out: ${uiState.payedOutCount}",
+                text = "✔️ ${uiState.activePlayers} | ⭐ ${uiState.payedOutCount}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = PokerColors.CardWhite,
                 modifier = Modifier.fillMaxWidth(),
@@ -272,28 +272,28 @@ private fun PlayerHeader() {
             )
 
             Text(
-                text = "Buy-In",
-                style = MaterialTheme.typography.bodySmall,
+                text = "💰",
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
-                color = PokerColors.CardWhite,
+                color = PokerColors.PokerGold,
                 modifier = Modifier.weight(0.5f),
                 textAlign = TextAlign.Center
             )
 
             Text(
-                text = "Out",
-                style = MaterialTheme.typography.bodySmall,
+                text = "❌",
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
-                color = PokerColors.CardWhite,
+                color = PokerColors.ErrorRed,
                 modifier = Modifier.weight(0.5f),
                 textAlign = TextAlign.Center
             )
 
             Text(
-                text = "Payed-Out",
-                style = MaterialTheme.typography.bodySmall,
+                text = "⭐",
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
-                color = PokerColors.CardWhite,
+                color = PokerColors.PokerGold,
                 modifier = Modifier.weight(0.5f),
                 textAlign = TextAlign.Center
             )
@@ -341,41 +341,41 @@ private fun PlayerRow(
 
             Spacer(modifier = Modifier.weight(0.1f))
 
-            // Buy-In Checkbox
-            Checkbox(
-                checked = player.buyIn,
-                onCheckedChange = { onBuyInToggle() },
-                modifier = Modifier.weight(0.5f),
-                colors = CheckboxDefaults.colors(
-                    checkedColor = PokerColors.AccentGreen,
-                    uncheckedColor = PokerColors.CardWhite,
-                    checkmarkColor = PokerColors.DarkGreen
+            // Buy-In Status - clickable emoji
+            TextButton(
+                onClick = onBuyInToggle,
+                modifier = Modifier.weight(0.5f)
+            ) {
+                Text(
+                    text = if (player.buyIn) "💰" else "⚪",
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
                 )
-            )
+            }
 
-            // Out Checkbox (❌)
-            Checkbox(
-                checked = player.out,
-                onCheckedChange = { onOutToggle() },
-                modifier = Modifier.weight(0.5f),
-                colors = CheckboxDefaults.colors(
-                    checkedColor = PokerColors.ErrorRed,
-                    uncheckedColor = PokerColors.CardWhite,
-                    checkmarkColor = PokerColors.CardWhite
+            // Knocked Out Status - clickable emoji
+            TextButton(
+                onClick = onOutToggle,
+                modifier = Modifier.weight(0.5f)
+            ) {
+                Text(
+                    text = if (player.out) "❌" else "⚪",
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
                 )
-            )
+            }
 
-            // Payed-Out Checkbox (⭐)
-            Checkbox(
-                checked = player.payedOut,
-                onCheckedChange = { onPayedOutToggle() },
-                modifier = Modifier.weight(0.5f),
-                colors = CheckboxDefaults.colors(
-                    checkedColor = PokerColors.PokerGold,
-                    uncheckedColor = PokerColors.CardWhite,
-                    checkmarkColor = PokerColors.DarkGreen
+            // Payed-Out Status - clickable emoji
+            TextButton(
+                onClick = onPayedOutToggle,
+                modifier = Modifier.weight(0.5f)
+            ) {
+                Text(
+                    text = if (player.payedOut) "⭐" else "⚪",
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
                 )
-            )
+            }
         }
     }
 }

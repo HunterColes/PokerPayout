@@ -148,13 +148,16 @@ fun CalculatorContent(
             onExpandedChange = { onIntent(CalculatorIntent.ToggleConfigExpanded(it)) }
         )
 
-        // Leaderboard/Payout Structure Section
-        LeaderboardCard(
-            payouts = uiState.payouts,
-            onIntent = onIntent,
-            isTournamentLocked = uiState.isTournamentLocked,
-            modifier = Modifier.fillMaxWidth().weight(1f)
-        )
+        // Leaderboard/Payout Structure Section (only show when config is collapsed)
+        if (!uiState.isConfigExpanded) {
+            LeaderboardCard(
+                payouts = uiState.payouts,
+                leaderboardNames = uiState.leaderboardNames,
+                onIntent = onIntent,
+                isTournamentLocked = uiState.isTournamentLocked,
+                modifier = Modifier.fillMaxWidth().weight(1f)
+            )
+        }
     }
 }
 
@@ -286,6 +289,7 @@ fun TournamentConfigurationCard(
 @Composable
 fun LeaderboardCard(
     payouts: List<com.huntercoles.fatline.basicfeature.domain.model.PayoutPosition>,
+    leaderboardNames: Map<Int, String>,
     onIntent: (CalculatorIntent) -> Unit,
     isTournamentLocked: Boolean,
     modifier: Modifier = Modifier
@@ -360,7 +364,10 @@ fun LeaderboardCard(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(payouts) { payout ->
-                        LeaderboardPosition(payout = payout)
+                        LeaderboardPosition(
+                            payout = payout,
+                            playerName = leaderboardNames[payout.position]
+                        )
                     }
                 }
             }
@@ -381,7 +388,8 @@ fun LeaderboardCard(
 
 @Composable
 fun LeaderboardPosition(
-    payout: com.huntercoles.fatline.basicfeature.domain.model.PayoutPosition
+    payout: com.huntercoles.fatline.basicfeature.domain.model.PayoutPosition,
+    playerName: String?
 ) {
     val trophy = when (payout.position) {
         1 -> "🥇"
@@ -426,7 +434,7 @@ fun LeaderboardPosition(
                     )
                     
                     Text(
-                        text = "-----", // Placeholder for player name
+                        text = playerName?.takeIf { it.isNotBlank() } ?: "-----",
                         color = PokerColors.CardWhite.copy(alpha = 0.6f),
                         fontSize = 12.sp
                     )

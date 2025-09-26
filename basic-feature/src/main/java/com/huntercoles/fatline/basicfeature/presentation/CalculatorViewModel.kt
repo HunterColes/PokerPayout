@@ -3,6 +3,7 @@ package com.huntercoles.fatline.basicfeature.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.huntercoles.fatline.basicfeature.domain.usecase.CalculatePayoutsUseCase
+import com.huntercoles.fatline.core.preferences.BankPreferences
 import com.huntercoles.fatline.core.preferences.TournamentPreferences
 import com.huntercoles.fatline.core.preferences.TimerPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +17,8 @@ import javax.inject.Inject
 class CalculatorViewModel @Inject constructor(
     private val calculatePayoutsUseCase: CalculatePayoutsUseCase,
     private val tournamentPreferences: TournamentPreferences,
-    private val timerPreferences: TimerPreferences
+    private val timerPreferences: TimerPreferences,
+    private val bankPreferences: BankPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalculatorUiState())
@@ -34,6 +36,12 @@ class CalculatorViewModel @Inject constructor(
                     // Auto-collapse when tournament is locked (timer started)
                     isConfigExpanded = if (isLocked) false else _uiState.value.isConfigExpanded
                 )
+            }
+        }
+
+        viewModelScope.launch {
+            bankPreferences.eliminationOrder.collect { order ->
+                refreshLeaderboard(order)
             }
         }
     }
@@ -175,6 +183,65 @@ class CalculatorViewModel @Inject constructor(
                 payouts = payouts,
                 isLoading = false
             )
+
+            refreshLeaderboard()
+        }
+    }
+
+    private fun refreshLeaderboard(eliminationOrderOverride: List<Int>? = null) {
+        val payouts = _uiState.value.payouts
+        if (payouts.isEmpty()) {
+            if (_uiState.value.leaderboardNames.isNotEmpty()) {
+                _uiState.value = _uiState.value.copy(leaderboardNames = emptyMap())
+            }
+            return
+        }
+
+        val numPlayers = _uiState.value.tournamentConfig.numPlayers
+        if (numPlayers <= 0) {
+            _uiState.value = _uiState.value.copy(leaderboardNames = emptyMap())
+            return
+        }
+
+        val eliminationOrder = (eliminationOrderOverride ?: bankPreferences.getEliminationOrder())
+            .filter { it in 1..numPlayers }
+            .distinct()
+
+        val leaderboard = mutableMapOf<Int, String>()
+        val eliminationSet = eliminationOrder.toSet()
+
+        payouts.forEach { payout ->
+            val playerId = determinePlayerForPosition(payout.position, numPlayers, eliminationOrder, eliminationSet)
+            if (playerId != null) {
+                val name = bankPreferences.getPlayerName(playerId).takeIf { it.isNotBlank() }
+                if (name != null) {
+                    leaderboard[payout.position] = name
+                }
+            }
+        }
+
+        _uiState.value = _uiState.value.copy(leaderboardNames = leaderboard)
+    }
+
+    private fun determinePlayerForPosition(
+        position: Int,
+        numPlayers: Int,
+        eliminationOrder: List<Int>,
+        eliminationSet: Set<Int>
+    ): Int? {
+        if (position < 1 || position > numPlayers) return null
+
+        return if (position == 1) {
+            when {
+                eliminationOrder.size >= numPlayers -> eliminationOrder.lastOrNull()
+                numPlayers - eliminationOrder.size == 1 -> {
+                    (1..numPlayers).firstOrNull { it !in eliminationSet }
+                }
+                else -> null
+            }
+        } else {
+            val eliminationIndex = numPlayers - position
+            if (eliminationIndex in eliminationOrder.indices) eliminationOrder[eliminationIndex] else null
         }
     }
 }

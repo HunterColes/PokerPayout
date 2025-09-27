@@ -78,6 +78,7 @@ test-junit                          = { group = "org.junit.jupiter", name = "jun
 test-kotlin                         = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 test-kotlin-coroutines              = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlin-coroutines" }
 test-mockk                          = { group = "io.mockk", name = "mockk", version.ref = "test-mockk" }
+test-mockk-agent                   = { group = "io.mockk", name = "mockk-agent-jvm", version.ref = "test-mockk" }
 test-turbine                        = { group = "app.cash.turbine", name = "turbine", version.ref = "test-turbine" }
 
 # android test libraries
@@ -98,6 +99,7 @@ common-test = [
     "test-kotlin",
     "test-kotlin-coroutines",
     "test-mockk",
+    "test-mockk-agent",
     "test-turbine"
 ]
 common-android-test = [

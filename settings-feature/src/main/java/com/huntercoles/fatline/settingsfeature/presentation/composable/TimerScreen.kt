@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -55,6 +57,8 @@ import com.huntercoles.fatline.settingsfeature.presentation.TimerIntent
 import com.huntercoles.fatline.settingsfeature.presentation.TimerUiState
 import com.huntercoles.fatline.settingsfeature.presentation.TimerViewModel
 import com.huntercoles.fatline.core.design.PokerColors
+import java.text.NumberFormat
+import java.util.Locale
 
 /**
  * Validates duration input to only allow digits and reasonable values
@@ -175,7 +179,7 @@ internal fun TimerScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 LinearProgressIndicator(
-                    progress = uiState.progress,
+                    progress = { uiState.progress },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(8.dp),
@@ -199,7 +203,10 @@ internal fun TimerScreen(
 
         // Blind Information Section (only show when blind config is collapsed)
         if (uiState.isBlindConfigCollapsed) {
-            BlindInformationTile()
+            BlindInformationTile(
+                uiState = uiState,
+                onIntent = onIntent
+            )
         }
 
         // Status Message
@@ -217,15 +224,22 @@ internal fun TimerScreen(
 }
 
 @Composable
-private fun BlindInformationTile() {
+private fun BlindInformationTile(
+    uiState: TimerUiState,
+    onIntent: (TimerIntent) -> Unit
+) {
+    val formatter = remember { NumberFormat.getIntegerInstance(Locale.getDefault()) }
+    val currentLevel = uiState.currentBlindLevel
+    val nextLevel = uiState.nextBlindLevel
+    val totalLevels = uiState.blindLevels.size
+    val suddenDeathLevels = uiState.blindLevels.count { it.isSuddenDeath }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "🃏 Blinds",
                 style = MaterialTheme.typography.titleMedium,
@@ -234,71 +248,141 @@ private fun BlindInformationTile() {
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
+            if (currentLevel == null || totalLevels == 0) {
+                Text(
+                    text = "Adjust the configuration to generate a blind schedule.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = PokerColors.CardWhite
+                )
+                return@Column
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Small Blind",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = PokerColors.CardWhite
-                    )
-                    Text(
-                        text = "$25",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = PokerColors.PokerGold
+                val atFirstLevel = currentLevel.level == 1
+                IconButton(
+                    onClick = { onIntent(TimerIntent.PreviousBlindLevel) },
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SkipPrevious,
+                        contentDescription = "Previous level",
+                        tint = if (atFirstLevel) PokerColors.CardWhite.copy(alpha = 0.7f) else PokerColors.CardWhite
                     )
                 }
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = "Big Blind",
+                        text = "Level ${currentLevel.level} of $totalLevels",
                         style = MaterialTheme.typography.bodyMedium,
                         color = PokerColors.CardWhite
                     )
                     Text(
-                        text = "$50",
+                        text = "${formatChip(currentLevel.smallBlind, formatter)} / ${formatChip(currentLevel.bigBlind, formatter)}",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = PokerColors.PokerGold
                     )
+                    Text(
+                        text = if (currentLevel.ante > 0) "Ante ${formatChip(currentLevel.ante, formatter)}" else "No ante",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PokerColors.CardWhite.copy(alpha = 0.8f)
+                    )
+                    if (currentLevel.isSuddenDeath) {
+                        Text(
+                            text = "Sudden death",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = PokerColors.ErrorRed,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Ante",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = PokerColors.CardWhite
-                    )
-                    Text(
-                        text = "$5",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = PokerColors.PokerGold
+                val atLastLevel = currentLevel.level == totalLevels
+                IconButton(
+                    onClick = { onIntent(TimerIntent.NextBlindLevel) },
+                    modifier = Modifier.size(40.dp),
+                    enabled = !atLastLevel
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SkipNext,
+                        contentDescription = "Next level",
+                        tint = if (atLastLevel) PokerColors.CardWhite.copy(alpha = 0.7f) else PokerColors.CardWhite
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Column {
+                    Text(
+                        text = "Next: ${nextLevel?.let { "${formatChip(it.smallBlind, formatter)} / ${formatChip(it.bigBlind, formatter)}" } ?: "--"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.CardWhite
+                    )
+                    val countdownText = uiState.nextLevelStartsInSeconds?.let { formatCountdown(it) } ?: "--"
+                    val nextStart = nextLevel?.let { formatLevelOffset(it.roundStartMinute) } ?: "--"
+                    Text(
+                        text = "Starts $nextStart • In $countdownText",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PokerColors.CardWhite.copy(alpha = 0.75f)
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Players ${uiState.playerCount}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.CardWhite
+                    )
+                    Text(
+                        text = "Round ${uiState.blindConfiguration.roundLengthMinutes} min",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PokerColors.CardWhite.copy(alpha = 0.75f)
+                    )
+                }
+            }
+
+            if (suddenDeathLevels > 0) {
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Next Level: 15:00",
+                    text = "$suddenDeathLevels sudden-death level${if (suddenDeathLevels > 1) "s" else ""} queued",
                     style = MaterialTheme.typography.bodySmall,
-                    color = PokerColors.CardWhite
-                )
-                Text(
-                    text = "Level 3 of 12",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PokerColors.CardWhite
+                    color = PokerColors.PokerGold
                 )
             }
         }
+    }
+}
+
+private fun formatChip(value: Int, formatter: NumberFormat): String = formatter.format(value)
+
+private fun formatLevelOffset(minutes: Int): String {
+    val hours = minutes / 60
+    val remainingMinutes = minutes % 60
+    return "+${hours}:${remainingMinutes.toString().padStart(2, '0')}"
+}
+
+private fun formatCountdown(seconds: Int): String {
+    if (seconds <= 0) return "--"
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    val remainingSeconds = seconds % 60
+    return if (hours > 0) {
+        "${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}"
+    } else {
+        "${minutes}:${remainingSeconds.toString().padStart(2, '0')}"
     }
 }
 

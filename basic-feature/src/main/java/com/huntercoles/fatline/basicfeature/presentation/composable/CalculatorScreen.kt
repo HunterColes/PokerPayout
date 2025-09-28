@@ -1,8 +1,8 @@
 package com.huntercoles.fatline.basicfeature.presentation.composable
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.scale
 import androidx.compose.material.icons.Icons
@@ -58,6 +58,7 @@ fun CalculatorContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -155,7 +156,7 @@ fun CalculatorContent(
                 leaderboardNames = uiState.leaderboardNames,
                 onIntent = onIntent,
                 isTournamentLocked = uiState.isTournamentLocked,
-                modifier = Modifier.fillMaxWidth().weight(1f)
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
@@ -272,9 +273,13 @@ fun TournamentConfigurationCard(
                         buyIn = uiState.tournamentConfig.buyIn,
                         foodPerPlayer = uiState.tournamentConfig.foodPerPlayer,
                         bountyPerPlayer = uiState.tournamentConfig.bountyPerPlayer,
+                        rebuyPerPlayer = uiState.tournamentConfig.rebuyPerPlayer,
+                        addOnPerPlayer = uiState.tournamentConfig.addOnPerPlayer,
                         onBuyInChange = { onIntent(CalculatorIntent.UpdateBuyIn(it)) },
                         onFoodChange = { onIntent(CalculatorIntent.UpdateFoodPerPlayer(it)) },
                         onBountyChange = { onIntent(CalculatorIntent.UpdateBountyPerPlayer(it)) },
+                        onRebuyChange = { onIntent(CalculatorIntent.UpdateRebuyAmount(it)) },
+                        onAddOnChange = { onIntent(CalculatorIntent.UpdateAddOnAmount(it)) },
                         isLocked = uiState.isTournamentLocked
                     )
 
@@ -303,7 +308,7 @@ fun LeaderboardCard(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(16.dp)
         ) {
             // Header with edit weights button
@@ -348,7 +353,7 @@ fun LeaderboardCard(
             // Leaderboard positions (scrollable)
             if (payouts.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -359,11 +364,11 @@ fun LeaderboardCard(
                     )
                 }
             } else {
-                LazyColumn(
+                Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(payouts) { payout ->
+                    payouts.forEach { payout ->
                         LeaderboardPosition(
                             payout = payout,
                             playerName = leaderboardNames[payout.position]

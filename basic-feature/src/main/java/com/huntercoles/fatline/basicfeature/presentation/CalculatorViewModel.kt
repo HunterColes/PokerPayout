@@ -51,6 +51,8 @@ class CalculatorViewModel @Inject constructor(
         val savedBuyIn = tournamentPreferences.getBuyIn()
         val savedFood = tournamentPreferences.getFoodPerPlayer()
         val savedBounty = tournamentPreferences.getBountyPerPlayer()
+    val savedRebuy = tournamentPreferences.getRebuyAmount()
+    val savedAddOn = tournamentPreferences.getAddOnAmount()
         val savedWeights = tournamentPreferences.getPayoutWeights()
         
         val initialConfig = _uiState.value.tournamentConfig.copy(
@@ -60,7 +62,9 @@ class CalculatorViewModel @Inject constructor(
             bountyPerPlayer = savedBounty,
             payoutWeights = savedWeights
         )
-        _uiState.value = _uiState.value.copy(tournamentConfig = initialConfig)
+    // include rebuy and add-on in the initial config
+    val withRebuy = initialConfig.copy(rebuyPerPlayer = savedRebuy, addOnPerPlayer = savedAddOn)
+    _uiState.value = _uiState.value.copy(tournamentConfig = withRebuy)
         calculatePayouts()
     }
 
@@ -85,6 +89,15 @@ class CalculatorViewModel @Inject constructor(
                 // Don't allow changes if tournament is locked
                 if (_uiState.value.isTournamentLocked) return
                 updateBountyPerPlayer(intent.bounty)
+            }
+            is CalculatorIntent.UpdateRebuyAmount -> {
+                // Don't allow changes if tournament is locked
+                if (_uiState.value.isTournamentLocked) return
+                updateRebuyPerPlayer(intent.rebuy)
+            }
+            is CalculatorIntent.UpdateAddOnAmount -> {
+                if (_uiState.value.isTournamentLocked) return
+                updateAddOnPerPlayer(intent.addOn)
             }
             is CalculatorIntent.UpdateWeights -> {
                 // Don't allow changes if tournament is locked
@@ -137,6 +150,22 @@ class CalculatorViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
         // Save to shared preferences
         tournamentPreferences.setBountyPerPlayer(bounty)
+        calculatePayouts()
+    }
+
+    private fun updateRebuyPerPlayer(rebuy: Double) {
+        val newConfig = _uiState.value.tournamentConfig.copy(rebuyPerPlayer = rebuy)
+        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
+        // Save to shared preferences
+        tournamentPreferences.setRebuyAmount(rebuy)
+        calculatePayouts()
+    }
+
+    private fun updateAddOnPerPlayer(addOn: Double) {
+        val newConfig = _uiState.value.tournamentConfig.copy(addOnPerPlayer = addOn)
+        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
+        // Save to shared preferences
+        tournamentPreferences.setAddOnAmount(addOn)
         calculatePayouts()
     }
 

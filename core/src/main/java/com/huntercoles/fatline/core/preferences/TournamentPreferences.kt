@@ -30,6 +30,12 @@ class TournamentPreferences @Inject constructor(
     
     private val _bountyPerPlayer = MutableStateFlow(getBountyPerPlayer())
     val bountyPerPlayer: Flow<Double> = _bountyPerPlayer.asStateFlow()
+
+    private val _rebuyPerPlayer = MutableStateFlow(getRebuyAmount())
+    val rebuyPerPlayer: Flow<Double> = _rebuyPerPlayer.asStateFlow()
+    
+    private val _addOnPerPlayer = MutableStateFlow(getAddOnAmount())
+    val addOnPerPlayer: Flow<Double> = _addOnPerPlayer.asStateFlow()
     
     private val _payoutWeights = MutableStateFlow(getPayoutWeights())
     val payoutWeights: Flow<List<Int>> = _payoutWeights.asStateFlow()
@@ -78,6 +84,24 @@ class TournamentPreferences @Inject constructor(
     fun getBountyPerPlayer(): Double {
         return prefs.getFloat(BOUNTY_PER_PLAYER_KEY, 5.0f).toDouble() // Default to $5
     }
+
+    fun setRebuyAmount(rebuy: Double) {
+        prefs.edit().putFloat(REBUY_PER_PLAYER_KEY, rebuy.toFloat()).apply()
+        _rebuyPerPlayer.value = rebuy
+    }
+
+    fun getRebuyAmount(): Double {
+        return prefs.getFloat(REBUY_PER_PLAYER_KEY, 0.0f).toDouble() // Default to $0
+    }
+
+    fun setAddOnAmount(addOn: Double) {
+        prefs.edit().putFloat(ADDON_PER_PLAYER_KEY, addOn.toFloat()).apply()
+        _addOnPerPlayer.value = addOn
+    }
+
+    fun getAddOnAmount(): Double {
+        return prefs.getFloat(ADDON_PER_PLAYER_KEY, 0.0f).toDouble() // Default to $0
+    }
     
     fun setPayoutWeights(weights: List<Int>) {
         val weightsString = weights.joinToString(",")
@@ -99,13 +123,16 @@ class TournamentPreferences @Inject constructor(
         val buyIn: Double,
         val foodPerPlayer: Double,
         val bountyPerPlayer: Double,
+        val rebuyPerPlayer: Double,
+        val addOnPerPlayer: Double,
         val payoutWeights: List<Int>
     ) {
-        val totalPerPlayer: Double get() = buyIn + foodPerPlayer + bountyPerPlayer
+    val totalPerPlayer: Double get() = buyIn + foodPerPlayer + bountyPerPlayer + addOnPerPlayer
         val prizePool: Double get() = numPlayers * buyIn
         val foodPool: Double get() = numPlayers * foodPerPlayer
         val bountyPool: Double get() = numPlayers * bountyPerPlayer
-        val totalPool: Double get() = prizePool + foodPool + bountyPool
+    val addOnPool: Double get() = numPlayers * addOnPerPlayer
+    val totalPool: Double get() = prizePool + foodPool + bountyPool + addOnPool
     }
     
     fun getCurrentTournamentConfig(): TournamentConfigData {
@@ -114,6 +141,8 @@ class TournamentPreferences @Inject constructor(
             buyIn = getBuyIn(),
             foodPerPlayer = getFoodPerPlayer(),
             bountyPerPlayer = getBountyPerPlayer(),
+            rebuyPerPlayer = getRebuyAmount(),
+            addOnPerPlayer = getAddOnAmount(),
             payoutWeights = getPayoutWeights()
         )
     }
@@ -126,6 +155,8 @@ class TournamentPreferences @Inject constructor(
                getBuyIn() == 20.0 &&
                getFoodPerPlayer() == 5.0 &&
                getBountyPerPlayer() == 5.0 &&
+               getRebuyAmount() == 0.0 &&
+               getAddOnAmount() == 0.0 &&
                getPayoutWeights() == TournamentConstants.DEFAULT_PAYOUT_WEIGHTS &&
                !getTournamentLocked()
     }
@@ -141,6 +172,8 @@ class TournamentPreferences @Inject constructor(
             .putFloat(BUY_IN_KEY, 20.0f)
             .putFloat(FOOD_PER_PLAYER_KEY, 5.0f)
             .putFloat(BOUNTY_PER_PLAYER_KEY, 5.0f)
+            .putFloat(REBUY_PER_PLAYER_KEY, 0.0f)
+            .putFloat(ADDON_PER_PLAYER_KEY, 0.0f)
             .putString(PAYOUT_WEIGHTS_KEY, TournamentConstants.DEFAULT_PAYOUT_WEIGHTS_STRING)
             .apply()
         
@@ -150,6 +183,8 @@ class TournamentPreferences @Inject constructor(
         _buyIn.value = 20.0
         _foodPerPlayer.value = 5.0
         _bountyPerPlayer.value = 5.0
+        _rebuyPerPlayer.value = 0.0
+        _addOnPerPlayer.value = 0.0
         _payoutWeights.value = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS
     }
     
@@ -159,6 +194,8 @@ class TournamentPreferences @Inject constructor(
         private const val BUY_IN_KEY = "buy_in"
         private const val FOOD_PER_PLAYER_KEY = "food_per_player"
         private const val BOUNTY_PER_PLAYER_KEY = "bounty_per_player"
+        private const val REBUY_PER_PLAYER_KEY = "rebuy_per_player"
+        private const val ADDON_PER_PLAYER_KEY = "addon_per_player"
         private const val PAYOUT_WEIGHTS_KEY = "payout_weights"
     }
 }

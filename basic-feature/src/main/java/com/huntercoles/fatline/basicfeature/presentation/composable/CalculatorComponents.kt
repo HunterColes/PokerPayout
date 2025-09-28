@@ -168,9 +168,13 @@ fun PoolConfigurationSection(
     buyIn: Double,
     foodPerPlayer: Double,
     bountyPerPlayer: Double,
+    rebuyPerPlayer: Double,
+    addOnPerPlayer: Double,
     onBuyInChange: (Double) -> Unit,
     onFoodChange: (Double) -> Unit,
     onBountyChange: (Double) -> Unit,
+    onRebuyChange: (Double) -> Unit,
+    onAddOnChange: (Double) -> Unit,
     isLocked: Boolean = false
 ) {
     Column(
@@ -202,6 +206,24 @@ fun PoolConfigurationSection(
             isLocked = isLocked,
             modifier = Modifier.fillMaxWidth()
         )
+
+        // Re-Buy per player
+        DecimalTextField(
+            value = rebuyPerPlayer,
+            onValueChange = { if (!isLocked) onRebuyChange(it) },
+            label = "Re-Buy per player ($)",
+            isLocked = isLocked,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Add-on per player
+        DecimalTextField(
+            value = addOnPerPlayer,
+            onValueChange = { if (!isLocked) onAddOnChange(it) },
+            label = "Add-on per player ($)",
+            isLocked = isLocked,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -229,7 +251,8 @@ fun PoolSummarySection(config: TournamentConfig) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Total Pool:", color = PokerColors.CardWhite)
-                Text("$${DecimalFormat("#,##0.00").format(config.totalPool)}", 
+                // Display total pool excluding add-on per user request
+                Text("$${DecimalFormat("#,##0.00").format(config.totalPoolWithoutAddOn)}", 
                      fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
             }
 

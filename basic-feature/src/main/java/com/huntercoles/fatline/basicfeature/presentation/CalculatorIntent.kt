@@ -8,6 +8,8 @@ sealed class CalculatorIntent {
     data class UpdateBuyIn(val buyIn: Double) : CalculatorIntent()
     data class UpdateFoodPerPlayer(val food: Double) : CalculatorIntent()
     data class UpdateBountyPerPlayer(val bounty: Double) : CalculatorIntent()
+    data class UpdateRebuyAmount(val rebuy: Double) : CalculatorIntent()
+    data class UpdateAddOnAmount(val addOn: Double) : CalculatorIntent()
     data class UpdateWeights(val weights: List<Int>) : CalculatorIntent()
     data class ToggleConfigExpanded(val isExpanded: Boolean) : CalculatorIntent()
     object ShowResetDialog : CalculatorIntent()

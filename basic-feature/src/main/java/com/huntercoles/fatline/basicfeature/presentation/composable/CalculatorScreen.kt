@@ -3,8 +3,6 @@ package com.huntercoles.fatline.basicfeature.presentation.composable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.scale
 import androidx.compose.material.icons.Icons
@@ -366,11 +364,11 @@ fun LeaderboardCard(
                     )
                 }
             } else {
-                LazyColumn(
+                Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(payouts) { payout ->
+                    payouts.forEach { payout ->
                         LeaderboardPosition(
                             payout = payout,
                             playerName = leaderboardNames[payout.position]

@@ -115,9 +115,9 @@ class TimerPreferences @Inject constructor(
         
         val savedSeconds = getCurrentTimeSeconds()
         return when (getTimerDirection()) {
-            "COUNTDOWN" -> (savedSeconds - elapsedSeconds).coerceAtLeast(0)
+            "COUNTDOWN" -> savedSeconds - elapsedSeconds
             "COUNTUP" -> (savedSeconds + elapsedSeconds).coerceAtMost(getGameDurationMinutes() * 60)
-            else -> savedSeconds
+            else -> savedSeconds - elapsedSeconds
         }
     }
     

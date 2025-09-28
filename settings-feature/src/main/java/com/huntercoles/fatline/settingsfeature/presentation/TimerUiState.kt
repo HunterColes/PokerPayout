@@ -9,6 +9,14 @@ enum class TimerDirection {
 }
 
 @Parcelize
+data class BlindLevelOverride(
+    val level: Int,
+    val smallBlind: Int,
+    val bigBlind: Int,
+    val ante: Int
+) : Parcelable
+
+@Parcelize
 data class TimerUiState(
     val gameDurationMinutes: Int = 180, // Default 3 hours (kept for compatibility)
     val currentTimeSeconds: Int = 180 * 60, // Start with full time
@@ -19,8 +27,11 @@ data class TimerUiState(
     val isBlindConfigCollapsed: Boolean = false, // Start auto open
     val hasTimerStarted: Boolean = false, // Track if timer has ever been started (stays true until reset)
     val playerCount: Int = 9,
+    val baseBlindLevels: List<BlindLevel> = emptyList(),
     val blindLevels: List<BlindLevel> = emptyList(),
-    val currentBlindLevelIndex: Int = 0
+    val currentBlindLevelIndex: Int = 0,
+    val customBlindOverrides: Map<Int, BlindLevelOverride> = emptyMap(),
+    val isUsingCustomBlinds: Boolean = false
 ) : Parcelable {
 
     // Convert minutes to hours for UI display
@@ -30,24 +41,29 @@ data class TimerUiState(
     val totalDurationSeconds: Int
         get() = gameDurationMinutes * 60
 
+    val isOvertime: Boolean
+        get() = timerDirection == TimerDirection.COUNTDOWN && currentTimeSeconds < 0
+
     val formattedTime: String
         get() {
-            val time = when (timerDirection) {
-                TimerDirection.COUNTDOWN -> currentTimeSeconds.coerceAtLeast(0)
-                TimerDirection.COUNTUP -> currentTimeSeconds
+            val rawSeconds = when (timerDirection) {
+                TimerDirection.COUNTDOWN -> if (currentTimeSeconds >= 0) currentTimeSeconds else -currentTimeSeconds
+                TimerDirection.COUNTUP -> currentTimeSeconds.coerceAtLeast(0)
             }
 
-            val hours = time / 3600
-            val minutes = (time % 3600) / 60
-            val seconds = time % 60
-            return String.format("%d:%02d:%02d", hours, minutes, seconds)
+            val hours = rawSeconds / 3600
+            val minutes = (rawSeconds % 3600) / 60
+            val seconds = rawSeconds % 60
+            val formatted = String.format("%d:%02d:%02d", hours, minutes, seconds)
+            return if (isOvertime) "+$formatted" else formatted
         }
 
     val progress: Float
         get() = when (timerDirection) {
             TimerDirection.COUNTDOWN -> {
                 if (totalDurationSeconds > 0) {
-                    1f - (currentTimeSeconds.toFloat() / totalDurationSeconds)
+                    val remaining = currentTimeSeconds.coerceAtLeast(0)
+                    (1f - (remaining.toFloat() / totalDurationSeconds)).coerceIn(0f, 1f)
                 } else 0f
             }
             TimerDirection.COUNTUP -> {

@@ -43,9 +43,14 @@ class TimerViewModel @Inject constructor(
 
     private fun restoreTimerState() {
         val actualTime = timerPreferences.calculateActualTime()
-        val direction = when (timerPreferences.getTimerDirection()) {
-            "COUNTUP" -> TimerDirection.COUNTUP
-            else -> TimerDirection.COUNTDOWN
+        val storedDirection = timerPreferences.getTimerDirection()
+        if (storedDirection != "COUNTDOWN") {
+            timerPreferences.setTimerDirection("COUNTDOWN")
+        }
+        val direction = TimerDirection.COUNTDOWN
+        val finishedPref = timerPreferences.getIsFinished()
+        if (finishedPref && direction == TimerDirection.COUNTDOWN) {
+            timerPreferences.setIsFinished(false)
         }
         
         _uiState.update { 
@@ -53,8 +58,8 @@ class TimerViewModel @Inject constructor(
                 gameDurationMinutes = timerPreferences.getGameDurationMinutes(),
                 currentTimeSeconds = actualTime,
                 timerDirection = direction,
-                isRunning = timerPreferences.getTimerRunning() && !timerPreferences.getIsFinished(),
-                isFinished = timerPreferences.getIsFinished(),
+                isRunning = timerPreferences.getTimerRunning(),
+                isFinished = if (direction == TimerDirection.COUNTDOWN) false else finishedPref,
                 hasTimerStarted = timerPreferences.getHasTimerStarted()
             )
         }
@@ -63,7 +68,7 @@ class TimerViewModel @Inject constructor(
         timerPreferences.setCurrentTimeSeconds(actualTime)
         
         // If timer was running and not finished, continue it
-        if (timerPreferences.getTimerRunning() && !timerPreferences.getIsFinished()) {
+        if (timerPreferences.getTimerRunning()) {
             startTimer()
         }
         regenerateBlindSchedule()
@@ -73,7 +78,6 @@ class TimerViewModel @Inject constructor(
         when (intent) {
             is TimerIntent.GameDurationChanged -> updateGameDuration(intent.minutes)
             is TimerIntent.GameDurationHoursChanged -> updateGameDurationHours(intent.hours)
-            is TimerIntent.TimerDirectionChanged -> updateTimerDirection(intent.direction)
             is TimerIntent.ToggleTimer -> toggleTimer()
             is TimerIntent.ResetTimer -> resetTimer()
             is TimerIntent.TimerTick -> updateTimer(intent.seconds)
@@ -85,10 +89,19 @@ class TimerViewModel @Inject constructor(
             is TimerIntent.UpdateStartingChips -> updateStartingChips(intent.value)
             is TimerIntent.UpdateRoundLength -> updateRoundLength(intent.minutes)
             is TimerIntent.ToggleBlindConfigCollapsed -> toggleBlindConfigCollapsed(intent.collapsed)
+            is TimerIntent.UpdateBlindOverride -> applyBlindOverride(
+                level = intent.level,
+                smallBlind = intent.smallBlind,
+                bigBlind = intent.bigBlind,
+                ante = intent.ante
+            )
+            is TimerIntent.ApplyBlindOverrides -> applyBlindOverrides(intent.overrides)
+            is TimerIntent.ClearBlindOverrides -> clearBlindOverrides()
         }
     }
 
     private fun updateGameDuration(minutes: Int) {
+        clearOverridesIfNeeded()
         val validMinutes = minutes.coerceIn(1, 1440) // 1 minute to 24 hours
         timerPreferences.setGameDurationMinutes(validMinutes)
         
@@ -116,32 +129,6 @@ class TimerViewModel @Inject constructor(
         val validHours = hours.coerceIn(1, 24) // 1 hour to 24 hours
         val minutes = validHours * 60
         updateGameDuration(minutes)
-    }
-
-    private fun updateTimerDirection(direction: TimerDirection) {
-        val directionString = when (direction) {
-            TimerDirection.COUNTDOWN -> "COUNTDOWN"
-            TimerDirection.COUNTUP -> "COUNTUP"
-        }
-        timerPreferences.setTimerDirection(directionString)
-        
-        _uiState.update { state ->
-            val newCurrentSeconds = when (direction) {
-                TimerDirection.COUNTDOWN -> state.totalDurationSeconds
-                TimerDirection.COUNTUP -> 0
-            }
-            state.copy(
-                timerDirection = direction,
-                currentTimeSeconds = newCurrentSeconds,
-                isFinished = false,
-                hasTimerStarted = state.hasTimerStarted  // Preserve hasTimerStarted
-            )
-        }
-        
-        timerPreferences.setCurrentTimeSeconds(_uiState.value.currentTimeSeconds)
-        timerPreferences.setIsFinished(false)
-        stopTimer()
-        updateCurrentBlindLevel()
     }
 
     private fun toggleTimer() {
@@ -181,18 +168,11 @@ class TimerViewModel @Inject constructor(
                     TimerDirection.COUNTUP -> currentState.currentTimeSeconds + 1
                 }
 
-                // Check if timer should finish
-                val shouldFinish = when (currentState.timerDirection) {
-                    TimerDirection.COUNTDOWN -> newTimeSeconds <= 0
-                    TimerDirection.COUNTUP -> newTimeSeconds >= currentState.totalDurationSeconds
-                }
+                val reachedCountUpLimit = currentState.timerDirection == TimerDirection.COUNTUP &&
+                    newTimeSeconds >= currentState.totalDurationSeconds
 
-                if (shouldFinish) {
-                    val finalSeconds = when (currentState.timerDirection) {
-                        TimerDirection.COUNTDOWN -> 0
-                        TimerDirection.COUNTUP -> currentState.totalDurationSeconds
-                    }
-                    
+                if (reachedCountUpLimit) {
+                    val finalSeconds = currentState.totalDurationSeconds
                     _uiState.update {
                         it.copy(
                             currentTimeSeconds = finalSeconds,
@@ -200,15 +180,20 @@ class TimerViewModel @Inject constructor(
                             isFinished = true
                         )
                     }
-                    
+
                     timerPreferences.setCurrentTimeSeconds(finalSeconds)
                     timerPreferences.setTimerRunning(false)
                     timerPreferences.setIsFinished(true)
                     break
-                } else {
-                    _uiState.update { it.copy(currentTimeSeconds = newTimeSeconds) }
-                    timerPreferences.setCurrentTimeSeconds(newTimeSeconds)
                 }
+
+                _uiState.update {
+                    it.copy(
+                        currentTimeSeconds = newTimeSeconds,
+                        isFinished = if (currentState.timerDirection == TimerDirection.COUNTDOWN) false else it.isFinished
+                    )
+                }
+                timerPreferences.setCurrentTimeSeconds(newTimeSeconds)
             }
         }
     }
@@ -252,6 +237,7 @@ class TimerViewModel @Inject constructor(
 
     // Blind configuration methods
     private fun updateSmallestChip(value: Int) {
+        clearOverridesIfNeeded()
         val sanitizedValue = value.coerceAtLeast(1)
         _uiState.update { state ->
             state.copy(
@@ -262,6 +248,7 @@ class TimerViewModel @Inject constructor(
     }
 
     private fun updateStartingChips(value: Int) {
+        clearOverridesIfNeeded()
         val sanitizedValue = value.coerceAtLeast(1)
         _uiState.update { state ->
             state.copy(
@@ -272,6 +259,7 @@ class TimerViewModel @Inject constructor(
     }
 
     private fun updateRoundLength(minutes: Int) {
+        clearOverridesIfNeeded()
         val sanitizedMinutes = minutes.coerceAtLeast(1)
         _uiState.update { state ->
             state.copy(
@@ -284,6 +272,48 @@ class TimerViewModel @Inject constructor(
     private fun toggleBlindConfigCollapsed(collapsed: Boolean) {
         _uiState.update { state ->
             state.copy(isBlindConfigCollapsed = collapsed)
+        }
+    }
+
+    private fun applyBlindOverride(level: Int, smallBlind: Int, bigBlind: Int, ante: Int) {
+        if (_uiState.value.hasTimerStarted) return
+        val override = BlindLevelOverride(level = level, smallBlind = smallBlind, bigBlind = bigBlind, ante = ante)
+        _uiState.update { state ->
+            val updatedOverrides = state.customBlindOverrides.toMutableMap().apply {
+                put(level, override)
+            }
+            state.copy(
+                customBlindOverrides = updatedOverrides,
+                isUsingCustomBlinds = true
+            )
+        }
+        regenerateBlindSchedule()
+    }
+
+    private fun applyBlindOverrides(overrides: Map<Int, BlindLevelOverride>) {
+        if (_uiState.value.hasTimerStarted) return
+        val orderedOverrides = overrides.toSortedMap()
+        _uiState.update { state ->
+            state.copy(
+                customBlindOverrides = orderedOverrides,
+                isUsingCustomBlinds = orderedOverrides.isNotEmpty()
+            )
+        }
+        regenerateBlindSchedule()
+    }
+
+    private fun clearBlindOverrides() {
+        if (_uiState.value.customBlindOverrides.isEmpty()) return
+        applyBlindOverrides(emptyMap())
+    }
+
+    private fun clearOverridesIfNeeded() {
+        if (_uiState.value.customBlindOverrides.isEmpty()) return
+        _uiState.update {
+            it.copy(
+                customBlindOverrides = emptyMap(),
+                isUsingCustomBlinds = false
+            )
         }
     }
 
@@ -308,6 +338,7 @@ class TimerViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     playerCount = latestPlayerCount,
+                    baseBlindLevels = emptyList(),
                     blindLevels = emptyList(),
                     currentBlindLevelIndex = 0
                 )
@@ -326,13 +357,34 @@ class TimerViewModel @Inject constructor(
         val schedule = runCatching { BlindStructureCalculator.generateSchedule(input) }
             .getOrElse { emptyList() }
 
-        val levelIndex = calculateBlindLevelIndex(schedule, state)
+        val overrides = state.customBlindOverrides
+        val adjustedSchedule = if (overrides.isNotEmpty()) {
+            schedule.map { level ->
+                overrides[level.level]?.let { override ->
+                    level.copy(
+                        smallBlind = override.smallBlind,
+                        bigBlind = override.bigBlind,
+                        ante = override.ante
+                    )
+                } ?: level
+            }
+        } else {
+            schedule
+        }
+
+        val levelIndex = if (adjustedSchedule.isEmpty()) {
+            0
+        } else {
+            calculateBlindLevelIndex(adjustedSchedule, state).coerceIn(0, adjustedSchedule.lastIndex)
+        }
 
         _uiState.update {
             it.copy(
                 playerCount = latestPlayerCount,
-                blindLevels = schedule,
-                currentBlindLevelIndex = levelIndex
+                baseBlindLevels = schedule,
+                blindLevels = adjustedSchedule,
+                currentBlindLevelIndex = levelIndex,
+                isUsingCustomBlinds = overrides.isNotEmpty()
             )
         }
     }
@@ -350,7 +402,7 @@ class TimerViewModel @Inject constructor(
     private fun calculateBlindLevelIndex(levels: List<BlindLevel>, state: TimerUiState): Int {
         if (levels.isEmpty()) return 0
         val elapsedSeconds = when (state.timerDirection) {
-            TimerDirection.COUNTDOWN -> (state.totalDurationSeconds - state.currentTimeSeconds).coerceAtLeast(0)
+            TimerDirection.COUNTDOWN -> state.totalDurationSeconds - state.currentTimeSeconds
             TimerDirection.COUNTUP -> state.currentTimeSeconds.coerceAtMost(state.totalDurationSeconds)
         }
         val elapsedMinutes = elapsedSeconds / 60
@@ -385,7 +437,7 @@ class TimerViewModel @Inject constructor(
         val targetLevel = levels[targetIndex]
         val elapsedSecondsForLevel = (targetLevel.roundStartMinute * 60).coerceAtLeast(0)
         val newCurrentSeconds = when (state.timerDirection) {
-            TimerDirection.COUNTDOWN -> (state.totalDurationSeconds - elapsedSecondsForLevel).coerceIn(0, state.totalDurationSeconds)
+            TimerDirection.COUNTDOWN -> state.totalDurationSeconds - elapsedSecondsForLevel
             TimerDirection.COUNTUP -> elapsedSecondsForLevel.coerceAtMost(state.totalDurationSeconds)
         }
 

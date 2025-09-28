@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.fatline.portfoliofeature.presentation.BankIntent
@@ -154,7 +155,9 @@ internal fun BankScreen(
                     onNameChange = { onIntent(BankIntent.PlayerNameChanged(player.id, it)) },
                     onBuyInToggle = { onIntent(BankIntent.BuyInToggled(player.id)) },
                     onOutToggle = { onIntent(BankIntent.OutToggled(player.id)) },
-                    onPayedOutToggle = { onIntent(BankIntent.PayedOutToggled(player.id)) }
+                    onPayedOutToggle = { onIntent(BankIntent.PayedOutToggled(player.id)) },
+                    onRebuyChange = { onIntent(BankIntent.PlayerRebuyChanged(player.id, it)) },
+                    onAddonChange = { onIntent(BankIntent.PlayerAddonChanged(player.id, it)) }
                 )
             }
         }
@@ -268,7 +271,25 @@ private fun PlayerHeader() {
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = PokerColors.PokerGold,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(0.8f) // Match player name field weight
+            )
+
+            Text(
+                text = "🔄", // Rebuys header
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = PokerColors.PokerGold,
+                modifier = Modifier.weight(0.35f), // Match rebuy field weight
+                textAlign = TextAlign.Center
+            )
+
+            Text(
+                text = "➕", // Addons header
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = PokerColors.PokerGold,
+                modifier = Modifier.weight(0.35f), // Match addon field weight
+                textAlign = TextAlign.Center
             )
 
             Text(
@@ -276,7 +297,7 @@ private fun PlayerHeader() {
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = PokerColors.PokerGold,
-                modifier = Modifier.weight(0.5f),
+                modifier = Modifier.weight(0.3f), // Match checkbox weights
                 textAlign = TextAlign.Center
             )
 
@@ -285,7 +306,7 @@ private fun PlayerHeader() {
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = PokerColors.ErrorRed,
-                modifier = Modifier.weight(0.5f),
+                modifier = Modifier.weight(0.3f), // Match checkbox weights
                 textAlign = TextAlign.Center
             )
 
@@ -294,7 +315,7 @@ private fun PlayerHeader() {
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = PokerColors.PokerGold,
-                modifier = Modifier.weight(0.5f),
+                modifier = Modifier.weight(0.3f), // Match checkbox weights
                 textAlign = TextAlign.Center
             )
         }
@@ -307,7 +328,9 @@ private fun PlayerRow(
     onNameChange: (String) -> Unit,
     onBuyInToggle: () -> Unit,
     onOutToggle: () -> Unit,
-    onPayedOutToggle: () -> Unit
+    onPayedOutToggle: () -> Unit,
+    onRebuyChange: (Int) -> Unit,
+    onAddonChange: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -323,7 +346,7 @@ private fun PlayerRow(
             OutlinedTextField(
                 value = player.name,
                 onValueChange = onNameChange,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(0.8f), // Made 20% smaller
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyMedium,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -339,12 +362,74 @@ private fun PlayerRow(
                 )
             )
 
-            Spacer(modifier = Modifier.weight(0.1f))
+            // Rebuys - numeric input
+            OutlinedTextField(
+                value = if (player.rebuys == 0) "" else player.rebuys.toString(),
+                onValueChange = { value ->
+                    val numericValue = value.filter { it.isDigit() }.take(2) // Limit to 2 digits max
+                    val intValue = if (numericValue.isEmpty()) 0 else numericValue.toIntOrNull() ?: 0
+                    onRebuyChange(intValue)
+                },
+                modifier = Modifier.weight(0.35f), // Made bigger to fill gap
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    textAlign = TextAlign.Center,
+                    fontSize = 16.sp // Larger font for visibility
+                ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PokerColors.AccentGreen,
+                    unfocusedBorderColor = PokerColors.CardWhite,
+                    focusedTextColor = PokerColors.CardWhite,
+                    unfocusedTextColor = PokerColors.CardWhite,
+                    cursorColor = PokerColors.PokerGold
+                ),
+                placeholder = { 
+                    Text(
+                        "0", 
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            textAlign = TextAlign.Center,
+                            fontSize = 16.sp
+                        )
+                    ) 
+                }
+            )
+
+            // Addons - numeric input
+            OutlinedTextField(
+                value = if (player.addons == 0) "" else player.addons.toString(),
+                onValueChange = { value ->
+                    val numericValue = value.filter { it.isDigit() }.take(2) // Limit to 2 digits max
+                    val intValue = if (numericValue.isEmpty()) 0 else numericValue.toIntOrNull() ?: 0
+                    onAddonChange(intValue)
+                },
+                modifier = Modifier.weight(0.35f), // Made bigger to fill gap
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    textAlign = TextAlign.Center,
+                    fontSize = 16.sp // Larger font for visibility
+                ),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PokerColors.AccentGreen,
+                    unfocusedBorderColor = PokerColors.CardWhite,
+                    focusedTextColor = PokerColors.CardWhite,
+                    unfocusedTextColor = PokerColors.CardWhite,
+                    cursorColor = PokerColors.PokerGold
+                ),
+                placeholder = { 
+                    Text(
+                        "0", 
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            textAlign = TextAlign.Center,
+                            fontSize = 16.sp
+                        )
+                    ) 
+                }
+            )
 
             // Buy-In Status - clickable emoji
             TextButton(
                 onClick = onBuyInToggle,
-                modifier = Modifier.weight(0.5f)
+                modifier = Modifier.weight(0.3f) // Reduced weight for checkboxes
             ) {
                 Text(
                     text = if (player.buyIn) "💰" else "⚪",
@@ -356,7 +441,7 @@ private fun PlayerRow(
             // Knocked Out Status - clickable emoji
             TextButton(
                 onClick = onOutToggle,
-                modifier = Modifier.weight(0.5f)
+                modifier = Modifier.weight(0.3f) // Reduced weight for checkboxes
             ) {
                 Text(
                     text = if (player.out) "❌" else "⚪",
@@ -368,7 +453,7 @@ private fun PlayerRow(
             // Payed-Out Status - clickable emoji
             TextButton(
                 onClick = onPayedOutToggle,
-                modifier = Modifier.weight(0.5f)
+                modifier = Modifier.weight(0.3f) // Reduced weight for checkboxes
             ) {
                 Text(
                     text = if (player.payedOut) "⭐" else "⚪",

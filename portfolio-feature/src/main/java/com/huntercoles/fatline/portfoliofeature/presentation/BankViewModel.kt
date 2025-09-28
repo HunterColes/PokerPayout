@@ -50,6 +50,8 @@ class BankViewModel @Inject constructor(
             is BankIntent.OutToggled -> toggleOut(intent.playerId)
             is BankIntent.PayedOutToggled -> togglePayedOut(intent.playerId)
             is BankIntent.PlayerCountChanged -> updatePlayerCount(intent.count)
+            is BankIntent.PlayerRebuyChanged -> updatePlayerRebuys(intent.playerId, intent.rebuys)
+            is BankIntent.PlayerAddonChanged -> updatePlayerAddons(intent.playerId, intent.addons)
             is BankIntent.ShowResetDialog -> {
                 // Only show dialog if not in default state
                 if (!isInDefaultState()) {
@@ -71,7 +73,9 @@ class BankViewModel @Inject constructor(
                 name = bankPreferences.getPlayerName(playerNum),
                 buyIn = bankPreferences.getPlayerBuyInStatus(playerNum),
                 out = bankPreferences.getPlayerOutStatus(playerNum),
-                payedOut = bankPreferences.getPlayerPayedOutStatus(playerNum)
+                payedOut = bankPreferences.getPlayerPayedOutStatus(playerNum),
+                rebuys = bankPreferences.getPlayerRebuys(playerNum),
+                addons = bankPreferences.getPlayerAddons(playerNum)
             )
         }
         val validIds = players.map { it.id }.toSet()
@@ -153,6 +157,32 @@ class BankViewModel @Inject constructor(
             playerId = playerId,
             updateFunction = { it.copy(payedOut = !it.payedOut) }
         )
+    }
+
+    private fun updatePlayerRebuys(playerId: Int, rebuys: Int) {
+        // Save to preferences
+        bankPreferences.savePlayerRebuys(playerId, rebuys)
+        
+        _uiState.update { state ->
+            val updatedPlayers = state.players.map { player ->
+                if (player.id == playerId) player.copy(rebuys = rebuys) else player
+            }
+            state.copy(players = updatedPlayers)
+        }
+        updateCalculations()
+    }
+
+    private fun updatePlayerAddons(playerId: Int, addons: Int) {
+        // Save to preferences
+        bankPreferences.savePlayerAddons(playerId, addons)
+        
+        _uiState.update { state ->
+            val updatedPlayers = state.players.map { player ->
+                if (player.id == playerId) player.copy(addons = addons) else player
+            }
+            state.copy(players = updatedPlayers)
+        }
+        updateCalculations()
     }
 
     private fun updatePlayerPayment(

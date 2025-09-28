@@ -9,7 +9,9 @@ data class PlayerData(
     val name: String,
     val buyIn: Boolean = false,    // Buy-In button
     val out: Boolean = false,      // Out button (replaces eliminated)
-    val payedOut: Boolean = false  // Payed-Out button
+    val payedOut: Boolean = false, // Payed-Out button
+    val rebuys: Int = 0,          // Number of rebuys
+    val addons: Int = 0           // Number of addons
 ) : Parcelable
 
 @Parcelize

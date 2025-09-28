@@ -48,6 +48,22 @@ class BankPreferences @Inject constructor(
     fun getPlayerPayedOutStatus(playerId: Int): Boolean {
         return prefs.getBoolean("player_payedout_$playerId", false)
     }
+    
+    fun savePlayerRebuys(playerId: Int, rebuys: Int) {
+        prefs.edit().putInt("player_rebuys_$playerId", rebuys).apply()
+    }
+    
+    fun getPlayerRebuys(playerId: Int): Int {
+        return prefs.getInt("player_rebuys_$playerId", 0)
+    }
+    
+    fun savePlayerAddons(playerId: Int, addons: Int) {
+        prefs.edit().putInt("player_addons_$playerId", addons).apply()
+    }
+    
+    fun getPlayerAddons(playerId: Int): Int {
+        return prefs.getInt("player_addons_$playerId", 0)
+    }
 
     fun getEliminationOrder(): List<Int> = _eliminationOrder.value
 
@@ -72,10 +88,13 @@ class BankPreferences @Inject constructor(
                 return false
             }
             
-            // Check if any boxes are checked
-            if (getPlayerBuyInStatus(playerId) || 
+            // Check if any boxes are checked or any rebuys/addons exist
+            val hasStatusChange = getPlayerBuyInStatus(playerId) || 
                 getPlayerOutStatus(playerId) || 
-                getPlayerPayedOutStatus(playerId)) {
+                getPlayerPayedOutStatus(playerId)
+            val hasRebuyAddon = getPlayerRebuys(playerId) > 0 || getPlayerAddons(playerId) > 0
+            
+            if (hasStatusChange || hasRebuyAddon) {
                 return false
             }
         }

@@ -34,6 +34,10 @@ class DecimalTextFieldTest {
                 onBuyInChange = { buyIn = it },
                 onFoodChange = { },
                 onBountyChange = { },
+                onRebuyChange = { },
+                onAddOnChange = { },
+                rebuyPerPlayer = 0.0,
+                addOnPerPlayer = 0.0,
                 isLocked = false
             )
         }
@@ -64,6 +68,10 @@ class DecimalTextFieldTest {
                 onBuyInChange = { buyIn = it },
                 onFoodChange = { },
                 onBountyChange = { },
+                onRebuyChange = { },
+                onAddOnChange = { },
+                rebuyPerPlayer = 0.0,
+                addOnPerPlayer = 0.0,
                 isLocked = false
             )
         }
@@ -92,6 +100,10 @@ class DecimalTextFieldTest {
                 onBuyInChange = { buyIn = it },
                 onFoodChange = { food = it },
                 onBountyChange = { bounty = it },
+                onRebuyChange = { },
+                onAddOnChange = { },
+                rebuyPerPlayer = 0.0,
+                addOnPerPlayer = 0.0,
                 isLocked = false
             )
         }
@@ -130,6 +142,10 @@ class DecimalTextFieldTest {
                 onBuyInChange = { },
                 onFoodChange = { },
                 onBountyChange = { },
+                onRebuyChange = { },
+                onAddOnChange = { },
+                rebuyPerPlayer = 0.0,
+                addOnPerPlayer = 0.0,
                 isLocked = true
             )
         }
@@ -154,6 +170,10 @@ class DecimalTextFieldTest {
                 onBuyInChange = { buyIn = it },
                 onFoodChange = { },
                 onBountyChange = { },
+                onRebuyChange = { },
+                onAddOnChange = { },
+                rebuyPerPlayer = 0.0,
+                addOnPerPlayer = 0.0,
                 isLocked = false
             )
         }

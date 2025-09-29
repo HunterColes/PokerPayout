@@ -2,8 +2,9 @@ package com.huntercoles.fatline.portfoliofeature.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.huntercoles.fatline.core.preferences.TournamentPreferences
+import com.huntercoles.fatline.core.constants.TournamentConstants
 import com.huntercoles.fatline.core.preferences.BankPreferences
+import com.huntercoles.fatline.core.preferences.TournamentPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,6 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.max
+import kotlin.math.min
 
 @HiltViewModel
 class BankViewModel @Inject constructor(
@@ -234,21 +237,43 @@ class BankViewModel @Inject constructor(
         // Calculate total pool
         val totalPool = playerCount * totalPerPlayer
 
-        // Calculate total paid (only count players who have bought in)
-        val totalPaid = currentState.players.count { it.buyIn } * totalPerPlayer
+        // Calculate total paid in (only count players who have bought in)
+        val totalPaidIn = currentState.players.count { it.buyIn } * totalPerPlayer
+
+        // Calculate total paid out using tournament payouts and elimination order
+        val prizePool = playerCount * tournamentConfig.buyIn
+        val payouts = calculatePayoutPositions(tournamentConfig)
+        val sanitizedElimination = currentState.eliminationOrder
+            .filter { it in 1..playerCount }
+            .distinct()
+        val eliminationSet = sanitizedElimination.toSet()
+
+        val totalPayedOut = payouts.sumOf { payout ->
+            val playerId = determinePlayerForPosition(
+                position = payout.position,
+                numPlayers = playerCount,
+                eliminationOrder = sanitizedElimination,
+                eliminationSet = eliminationSet
+            )
+
+            val isPayedOut = playerId?.let { id ->
+                currentState.players.firstOrNull { it.id == id }?.payedOut == true
+            } ?: false
+
+            if (isPayedOut) payout.payout else 0.0
+        }
 
         // Count various player states
         val outCount = currentState.players.count { it.out }
         val payedOutCount = currentState.players.count { it.payedOut }
         val activePlayers = playerCount - outCount
 
-        val percentPaid = if (totalPool > 0) (totalPaid / totalPool) * 100 else 0.0
-
         _uiState.update {
             it.copy(
                 totalPool = totalPool,
-                totalPaid = totalPaid,
-                percentPaid = percentPaid,
+                totalPaidIn = totalPaidIn,
+                totalPayedOut = totalPayedOut,
+                prizePool = prizePool,
                 activePlayers = activePlayers,
                 payedOutCount = payedOutCount,
                 buyInAmount = tournamentConfig.buyIn,
@@ -278,5 +303,64 @@ class BankViewModel @Inject constructor(
     private fun isInDefaultState(): Boolean {
         val currentPlayerCount = _uiState.value.players.size
         return bankPreferences.isInDefaultState(currentPlayerCount)
+    }
+}
+
+private data class PayoutPosition(
+    val position: Int,
+    val payout: Double
+)
+
+private fun calculatePayoutPositions(
+    config: TournamentPreferences.TournamentConfigData
+): List<PayoutPosition> {
+    val maxPayingPositions = max(1, config.numPlayers / 3)
+    val defaultWeights = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.take(maxPayingPositions)
+    val isUsingDefaultWeights = when {
+        config.payoutWeights == defaultWeights -> true
+        config.payoutWeights == TournamentConstants.DEFAULT_PAYOUT_WEIGHTS -> true
+        else -> false
+    }
+
+    val actualPayingPositions = if (isUsingDefaultWeights) {
+        min(maxPayingPositions, defaultWeights.size)
+    } else {
+        config.payoutWeights.size
+    }
+
+    val payingWeights = if (isUsingDefaultWeights) {
+        defaultWeights.take(actualPayingPositions)
+    } else {
+        config.payoutWeights.take(actualPayingPositions)
+    }
+
+    val totalWeight = payingWeights.sum()
+    if (totalWeight == 0) return emptyList()
+
+    return payingWeights.mapIndexed { index, weight ->
+        val payout = (weight.toDouble() / totalWeight) * config.prizePool
+        PayoutPosition(position = index + 1, payout = payout)
+    }
+}
+
+private fun determinePlayerForPosition(
+    position: Int,
+    numPlayers: Int,
+    eliminationOrder: List<Int>,
+    eliminationSet: Set<Int>
+): Int? {
+    if (position < 1 || position > numPlayers) return null
+
+    return if (position == 1) {
+        when {
+            eliminationOrder.size >= numPlayers -> eliminationOrder.lastOrNull()
+            numPlayers - eliminationOrder.size == 1 -> {
+                (1..numPlayers).firstOrNull { it !in eliminationSet }
+            }
+            else -> null
+        }
+    } else {
+        val eliminationIndex = numPlayers - position
+        if (eliminationIndex in eliminationOrder.indices) eliminationOrder[eliminationIndex] else null
     }
 }

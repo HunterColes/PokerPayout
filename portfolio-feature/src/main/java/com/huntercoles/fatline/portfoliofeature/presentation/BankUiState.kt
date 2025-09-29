@@ -18,8 +18,9 @@ data class PlayerData(
 data class BankUiState(
     val players: List<PlayerData> = emptyList(),
     val totalPool: Double = 0.0,
-    val totalPaid: Double = 0.0,
-    val percentPaid: Double = 0.0,
+    val totalPaidIn: Double = 0.0,
+    val totalPayedOut: Double = 0.0,
+    val prizePool: Double = 0.0,
     val activePlayers: Int = 0,
     val payedOutCount: Int = 0,
     val buyInAmount: Double = 20.0,

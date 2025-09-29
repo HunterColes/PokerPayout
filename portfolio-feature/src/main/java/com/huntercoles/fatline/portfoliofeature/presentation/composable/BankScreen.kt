@@ -1,10 +1,13 @@
 package com.huntercoles.fatline.portfoliofeature.presentation.composable
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -35,6 +40,7 @@ import com.huntercoles.fatline.portfoliofeature.presentation.BankUiState
 import com.huntercoles.fatline.portfoliofeature.presentation.BankViewModel
 import com.huntercoles.fatline.portfoliofeature.presentation.PlayerData
 import com.huntercoles.fatline.core.design.PokerColors
+import kotlin.math.roundToInt
 
 @Composable
 fun BankRoute(viewModel: BankViewModel = hiltViewModel()) {
@@ -193,60 +199,91 @@ private fun PoolSummaryCard(uiState: BankUiState) {
                     color = PokerColors.CardWhite
                 )
                 Text(
-                    text = "$${String.format("%.2f", uiState.totalPool)}",
+                    text = "${'$'}${String.format("%.2f", uiState.totalPool)}",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = PokerColors.CardWhite
                 )
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Total Paid:",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = PokerColors.CardWhite
-                )
-                Text(
-                    text = "$${String.format("%.2f", uiState.totalPaid)}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = PokerColors.CardWhite
-                )
-            }
+            Spacer(modifier = Modifier.height(20.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Percent Paid:",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = PokerColors.CardWhite
-                )
-                Text(
-                    text = "${String.format("%.1f", uiState.percentPaid)}%",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = when {
-                        uiState.percentPaid >= 100 -> PokerColors.PokerGold
-                        uiState.percentPaid >= 75 -> PokerColors.AccentGreen
-                        else -> PokerColors.CardWhite
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "✔️ ${uiState.activePlayers} | ⭐ ${uiState.payedOutCount}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = PokerColors.CardWhite,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
+            SummaryProgressBar(
+                label = "Total Payed In:",
+                currentAmount = uiState.totalPaidIn,
+                targetAmount = uiState.totalPool,
+                baseColor = PokerColors.AccentGreen
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SummaryProgressBar(
+                label = "Total Payed Out:",
+                currentAmount = uiState.totalPayedOut,
+                targetAmount = uiState.prizePool,
+                baseColor = PokerColors.SuccessGreen
+            )
+        }
+    }
+}
+
+@Composable
+private fun SummaryProgressBar(
+    label: String,
+    currentAmount: Double,
+    targetAmount: Double,
+    baseColor: Color,
+    modifier: Modifier = Modifier,
+    fullColor: Color = PokerColors.PokerGold
+) {
+    val safeTarget = targetAmount.coerceAtLeast(0.0)
+    val progress = if (safeTarget > 0.0) (currentAmount / safeTarget).coerceIn(0.0, 1.0) else 0.0
+    val isComplete = safeTarget > 0.0 && currentAmount >= safeTarget
+    val fillColor = if (isComplete) fullColor else baseColor
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(36.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(PokerColors.SurfaceSecondary.copy(alpha = 0.35f))
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(progress.toFloat())
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(fillColor)
+            )
+
+            val textColor = if (isComplete) Color.Black else PokerColors.CardWhite
+
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    color = textColor
+                )
+                Text(
+                    text = "${'$'}${String.format("%.2f", currentAmount)}",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    color = textColor
+                )
+            }
         }
     }
 }

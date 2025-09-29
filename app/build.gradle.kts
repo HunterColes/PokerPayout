@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.api.BaseVariantOutputImpl
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.baseline.profile)
@@ -17,8 +19,8 @@ android {
         applicationId = "com.huntercoles.fatline"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+    versionCode = 8
+    versionName = "1.0.8"
     }
 
     buildFeatures {
@@ -51,10 +53,32 @@ android {
     packaging {
         resources.excludes.add("/META-INF/{AL2.0,LGPL2.1}")
     }
+
+    applicationVariants.all {
+        val variantName = name
+        val variantVersion = versionName ?: "unspecified"
+        outputs
+            .mapNotNull { it as? BaseVariantOutputImpl }
+            .forEach { output ->
+                output.outputFileName = "PokerPayout-v$variantVersion-$variantName.apk"
+            }
+    }
 }
 
 baselineProfile {
     dexLayoutOptimization = true
+}
+
+android {
+    applicationVariants.all {
+        val variantName = name
+        val variantVersion = versionName ?: "unspecified"
+        outputs
+            .mapNotNull { it as? BaseVariantOutputImpl }
+            .forEach { output ->
+                output.outputFileName = "PokerPayout-v$variantVersion-$variantName.apk"
+            }
+    }
 }
 
 dependencies {

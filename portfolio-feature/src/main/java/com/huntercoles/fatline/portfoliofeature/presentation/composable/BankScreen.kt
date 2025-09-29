@@ -366,8 +366,7 @@ private fun PlayerRow(
             OutlinedTextField(
                 value = if (player.rebuys == 0) "" else player.rebuys.toString(),
                 onValueChange = { value ->
-                    val numericValue = value.filter { it.isDigit() }.take(2) // Limit to 2 digits max
-                    val intValue = if (numericValue.isEmpty()) 0 else numericValue.toIntOrNull() ?: 0
+                    val intValue = validateNumericInput(value)
                     onRebuyChange(intValue)
                 },
                 modifier = Modifier.weight(0.35f), // Made bigger to fill gap
@@ -383,23 +382,14 @@ private fun PlayerRow(
                     unfocusedTextColor = PokerColors.CardWhite,
                     cursorColor = PokerColors.PokerGold
                 ),
-                placeholder = { 
-                    Text(
-                        "0", 
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            textAlign = TextAlign.Center,
-                            fontSize = 16.sp
-                        )
-                    ) 
-                }
+                placeholder = { PlaceholderText() }
             )
 
             // Addons - numeric input
             OutlinedTextField(
                 value = if (player.addons == 0) "" else player.addons.toString(),
                 onValueChange = { value ->
-                    val numericValue = value.filter { it.isDigit() }.take(2) // Limit to 2 digits max
-                    val intValue = if (numericValue.isEmpty()) 0 else numericValue.toIntOrNull() ?: 0
+                    val intValue = validateNumericInput(value)
                     onAddonChange(intValue)
                 },
                 modifier = Modifier.weight(0.35f), // Made bigger to fill gap
@@ -415,15 +405,7 @@ private fun PlayerRow(
                     unfocusedTextColor = PokerColors.CardWhite,
                     cursorColor = PokerColors.PokerGold
                 ),
-                placeholder = { 
-                    Text(
-                        "0", 
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            textAlign = TextAlign.Center,
-                            fontSize = 16.sp
-                        )
-                    ) 
-                }
+                placeholder = { PlaceholderText() }
             )
 
             // Buy-In Status - clickable emoji
@@ -463,4 +445,22 @@ private fun PlayerRow(
             }
         }
     }
+}
+
+// Extracted reusable function for numeric input validation
+private fun validateNumericInput(value: String, maxDigits: Int = 2): Int {
+    val numericValue = value.filter { it.isDigit() }.take(maxDigits)
+    return numericValue.toIntOrNull() ?: 0
+}
+
+// Extracted reusable composable for placeholder text
+@Composable
+private fun PlaceholderText() {
+    Text(
+        "0",
+        style = MaterialTheme.typography.bodyMedium.copy(
+            textAlign = TextAlign.Center,
+            fontSize = 16.sp
+        )
+    )
 }

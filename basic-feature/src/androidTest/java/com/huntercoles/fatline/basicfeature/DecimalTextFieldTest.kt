@@ -3,11 +3,8 @@ package com.huntercoles.fatline.basicfeature
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.huntercoles.fatline.basicfeature.presentation.composable.PoolConfigurationSection
-import com.huntercoles.fatline.core.design.PokerColors
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -43,7 +40,7 @@ class DecimalTextFieldTest {
         }
 
         // When: Field is focused for the first time
-        val buyInField = composeTestRule.onNodeWithText("Buy-in per player ($)")
+        val buyInField = composeTestRule.onNodeWithText("Buy-in ($)")
         buyInField.performClick()
         
         // Then: Field should be focused and functional
@@ -109,9 +106,9 @@ class DecimalTextFieldTest {
         }
 
         // When: Switching between fields
-        val buyInField = composeTestRule.onNodeWithText("Buy-in per player ($)")
-        val foodField = composeTestRule.onNodeWithText("Food per player ($)")
-        val bountyField = composeTestRule.onNodeWithText("Bounty per player ($)")
+        val buyInField = composeTestRule.onNodeWithText("Buy-in ($)")
+        val foodField = composeTestRule.onNodeWithText("Food ($)")
+        val bountyField = composeTestRule.onNodeWithText("Bounty ($)")
 
         // Focus buy-in field
         buyInField.performClick()
@@ -151,7 +148,7 @@ class DecimalTextFieldTest {
         }
 
         // When: Attempting to interact with locked field
-        val buyInField = composeTestRule.onNodeWithText("Buy-in per player ($)")
+        val buyInField = composeTestRule.onNodeWithText("Buy-in ($)")
         
         // Then: Field should be disabled and not accept input
         buyInField.assertIsNotEnabled()
@@ -179,7 +176,7 @@ class DecimalTextFieldTest {
         }
 
         // When: User types in the field
-        val buyInField = composeTestRule.onNodeWithText("Buy-in per player ($)")
+        val buyInField = composeTestRule.onNodeWithText("Buy-in ($)")
         buyInField.performClick()
         buyInField.performTextClearance()
         buyInField.performTextInput("100.50")
@@ -206,7 +203,7 @@ class DecimalTextFieldTest {
         }
 
         // When: Field is displayed with zero value
-        val buyInField = composeTestRule.onNodeWithText("Buy-in per player ($)")
+        val buyInField = composeTestRule.onNodeWithText("Buy-in ($)")
         
         // Then: Field should be empty (not showing "0.0")
         buyInField.performClick()

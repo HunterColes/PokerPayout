@@ -131,7 +131,15 @@ private fun DecimalTextField(
                 }
             }
         },
-        label = { Text(label, color = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite) },
+        label = {
+            Text(
+                label,
+                color = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Decimal,
             imeAction = ImeAction.Done
@@ -193,55 +201,82 @@ fun PoolConfigurationSection(
     onBountyChange: (Double) -> Unit,
     onRebuyChange: (Double) -> Unit,
     onAddOnChange: (Double) -> Unit,
-    isLocked: Boolean = false
+    isLocked: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
     Column(
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Buy-in
-        DecimalTextField(
-            value = buyIn,
-            onValueChange = { if (!isLocked) onBuyInChange(it) },
-            label = "Buy-in per player ($)",
-            isLocked = isLocked,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = PokerColors.SurfaceSecondary.copy(alpha = 0.8f)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Per-Player",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = PokerColors.PokerGold
+                )
 
-        // Food per player
-        DecimalTextField(
-            value = foodPerPlayer,
-            onValueChange = { if (!isLocked) onFoodChange(it) },
-            label = "Food per player ($)",
-            isLocked = isLocked,
-            modifier = Modifier.fillMaxWidth()
-        )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DecimalTextField(
+                        value = buyIn,
+                        onValueChange = { if (!isLocked) onBuyInChange(it) },
+                        label = "Buy-in ($)",
+                        isLocked = isLocked,
+                        modifier = Modifier.weight(1f)
+                    )
 
-        // Bounty per player
-        DecimalTextField(
-            value = bountyPerPlayer,
-            onValueChange = { if (!isLocked) onBountyChange(it) },
-            label = "Bounty per player ($)",
-            isLocked = isLocked,
-            modifier = Modifier.fillMaxWidth()
-        )
+                    DecimalTextField(
+                        value = foodPerPlayer,
+                        onValueChange = { if (!isLocked) onFoodChange(it) },
+                        label = "Food ($)",
+                        isLocked = isLocked,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
-        // Re-Buy per player
-        DecimalTextField(
-            value = rebuyPerPlayer,
-            onValueChange = { if (!isLocked) onRebuyChange(it) },
-            label = "Re-Buy per player ($)",
-            isLocked = isLocked,
-            modifier = Modifier.fillMaxWidth()
-        )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DecimalTextField(
+                        value = bountyPerPlayer,
+                        onValueChange = { if (!isLocked) onBountyChange(it) },
+                        label = "Bounty ($)",
+                        isLocked = isLocked,
+                        modifier = Modifier.weight(1f)
+                    )
 
-        // Add-on per player
-        DecimalTextField(
-            value = addOnPerPlayer,
-            onValueChange = { if (!isLocked) onAddOnChange(it) },
-            label = "Add-on per player ($)",
-            isLocked = isLocked,
-            modifier = Modifier.fillMaxWidth()
-        )
+                    DecimalTextField(
+                        value = rebuyPerPlayer,
+                        onValueChange = { if (!isLocked) onRebuyChange(it) },
+                        label = "Rebuy ($)",
+                        isLocked = isLocked,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    DecimalTextField(
+                        value = addOnPerPlayer,
+                        onValueChange = { if (!isLocked) onAddOnChange(it) },
+                        label = "Add-on ($)",
+                        isLocked = isLocked,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -268,33 +303,25 @@ fun PoolSummarySection(config: TournamentConfig) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Total Pool:", color = PokerColors.CardWhite)
-                // Display total pool excluding add-on per user request
-                Text("$${DecimalFormat("#,##0.00").format(config.totalPoolWithoutAddOn)}", 
-                     fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
                 Text("Prize Pool:", color = PokerColors.CardWhite)
                 Text("$${DecimalFormat("#,##0.00").format(config.prizePool)}", 
                      fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Food Pool:", color = PokerColors.CardWhite)
-                Text("$${DecimalFormat("#,##0.00").format(config.foodPool)}", 
-                     fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
+            // Food Pool (hide when zero)
+            if (config.foodPool > 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Food Pool:", color = PokerColors.CardWhite)
+                    Text("$${DecimalFormat("#,##0.00").format(config.foodPool)}", 
+                         fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
+                }
             }
 
+            // Bounty Pool (third)
             if (config.bountyPool > 0) {
-                HorizontalDivider(color = PokerColors.AccentGreen)
-                
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -303,15 +330,19 @@ fun PoolSummarySection(config: TournamentConfig) {
                     Text("$${DecimalFormat("#,##0.00").format(config.bountyPool)}", 
                          fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
                 }
+            }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Per bounty:", color = PokerColors.CardWhite)
-                    Text("$${DecimalFormat("#,##0.00").format(config.bountyPerPlayer)}", 
-                         fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
-                }
+            // Divider then Total below it
+            HorizontalDivider(color = PokerColors.AccentGreen)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Total Pool:", color = PokerColors.CardWhite)
+                // Display total pool excluding add-on per user request
+                Text("$${DecimalFormat("#,##0.00").format(config.totalPoolWithoutAddOn)}", 
+                     fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
             }
         }
     }

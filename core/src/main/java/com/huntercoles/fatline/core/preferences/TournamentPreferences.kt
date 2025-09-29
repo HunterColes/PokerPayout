@@ -86,7 +86,7 @@ class TournamentPreferences @Inject constructor(
     }
     
     fun getBountyPerPlayer(): Double {
-        return prefs.getFloat(BOUNTY_PER_PLAYER_KEY, 5.0f).toDouble() // Default to $5
+        return prefs.getFloat(BOUNTY_PER_PLAYER_KEY, 0.0f).toDouble() // Default to empty ($0)
     }
 
     fun setRebuyAmount(rebuy: Double) {
@@ -165,7 +165,7 @@ class TournamentPreferences @Inject constructor(
      return playerCount == DEFAULT_PLAYER_COUNT &&
          getBuyIn() == 20.0 &&
          getFoodPerPlayer() == 5.0 &&
-         getBountyPerPlayer() == 5.0 &&
+         getBountyPerPlayer() == 0.0 &&
          getRebuyAmount() == 0.0 &&
          getAddOnAmount() == 0.0 &&
          getPayoutWeights() == defaultPayoutWeightsFor(playerCount) &&
@@ -182,7 +182,7 @@ class TournamentPreferences @Inject constructor(
             .putInt(PLAYER_COUNT_KEY, DEFAULT_PLAYER_COUNT)
             .putFloat(BUY_IN_KEY, 20.0f)
             .putFloat(FOOD_PER_PLAYER_KEY, 5.0f)
-            .putFloat(BOUNTY_PER_PLAYER_KEY, 5.0f)
+            .putFloat(BOUNTY_PER_PLAYER_KEY, 0.0f)
             .putFloat(REBUY_PER_PLAYER_KEY, 0.0f)
             .putFloat(ADDON_PER_PLAYER_KEY, 0.0f)
             .remove(PAYOUT_WEIGHTS_KEY)
@@ -193,7 +193,7 @@ class TournamentPreferences @Inject constructor(
         _playerCount.value = DEFAULT_PLAYER_COUNT
         _buyIn.value = 20.0
         _foodPerPlayer.value = 5.0
-        _bountyPerPlayer.value = 5.0
+        _bountyPerPlayer.value = 0.0
         _rebuyPerPlayer.value = 0.0
         _addOnPerPlayer.value = 0.0
         _payoutWeights.value = defaultPayoutWeightsFor(DEFAULT_PLAYER_COUNT)

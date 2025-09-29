@@ -153,6 +153,7 @@ fun CalculatorContent(
         if (!uiState.isConfigExpanded) {
             LeaderboardCard(
                 payouts = uiState.payouts,
+                payoutWeights = uiState.tournamentConfig.payoutWeights,
                 leaderboardNames = uiState.leaderboardNames,
                 onIntent = onIntent,
                 isTournamentLocked = uiState.isTournamentLocked,
@@ -294,6 +295,7 @@ fun TournamentConfigurationCard(
 @Composable
 fun LeaderboardCard(
     payouts: List<com.huntercoles.fatline.basicfeature.domain.model.PayoutPosition>,
+    payoutWeights: List<Int>,
     leaderboardNames: Map<Int, String>,
     onIntent: (CalculatorIntent) -> Unit,
     isTournamentLocked: Boolean,
@@ -343,7 +345,7 @@ fun LeaderboardCard(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Edit Weights",
                         tint = if (isTournamentLocked) PokerColors.CardWhite.copy(alpha = 0.5f) 
-                              else PokerColors.AccentGreen
+                              else PokerColors.PokerGold
                     )
                 }
             }
@@ -382,7 +384,7 @@ fun LeaderboardCard(
     // Weights editor dialog
     if (showWeightsDialog && !isTournamentLocked) {
         WeightsEditorDialog(
-            currentWeights = payouts.map { it.weight },
+            currentWeights = payoutWeights,
             onWeightsChanged = { newWeights ->
                 onIntent(CalculatorIntent.UpdateWeights(newWeights))
             },

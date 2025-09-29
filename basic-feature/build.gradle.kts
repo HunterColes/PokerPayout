@@ -57,6 +57,8 @@ dependencies {
     
     // Testing dependencies
     testImplementation(libs.bundles.common.test)
+    testImplementation(libs.test.robolectric)
+    testImplementation(libs.test.androidx.core)
     androidTestImplementation(libs.bundles.common.android.test)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.test.android.junit)

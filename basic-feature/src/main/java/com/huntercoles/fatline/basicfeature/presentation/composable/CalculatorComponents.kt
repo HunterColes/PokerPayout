@@ -11,8 +11,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -150,7 +154,21 @@ private fun DecimalTextField(
                 backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
             )
         ),
-        modifier = modifier.onFocusChanged { focusState ->
+        modifier = modifier
+            .onPreviewKeyEvent { event ->
+                val isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter
+                if (!isEnter) return@onPreviewKeyEvent false
+
+                when (event.type) {
+                    KeyEventType.KeyUp -> {
+                        focusManager.clearFocus(force = true)
+                        true
+                    }
+                    KeyEventType.KeyDown -> true
+                    else -> false
+                }
+            }
+            .onFocusChanged { focusState ->
             val wasFocused = isFocused
             isFocused = focusState.isFocused
             

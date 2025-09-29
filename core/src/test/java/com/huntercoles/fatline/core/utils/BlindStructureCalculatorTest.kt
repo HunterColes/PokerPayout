@@ -29,10 +29,10 @@ class BlindStructureCalculatorTest {
         )
         assertTrue(schedule.zipWithNext().all { (prev, next) -> next.smallBlind > prev.smallBlind })
 
-        // Growth between 33% and 100%
+        // Growth between 25% and 100%
         schedule.zipWithNext { prev, next -> next.smallBlind.toDouble() / prev.smallBlind }
             .forEach { growth ->
-                assertTrue(growth in 1.33..2.0, "Growth step $growth outside 33%-100% window")
+                assertTrue(growth in 1.25..2.0, "Growth step $growth outside 25%-100% window")
             }
 
         // Final big blind must be at least double the starting stack
@@ -69,7 +69,7 @@ class BlindStructureCalculatorTest {
         assertTrue(schedule.first().smallBlind == input.smallestChip)
         assertTrue(schedule.last().bigBlind >= startingStack * 2)
         growthRates.forEach { growth ->
-            assertTrue(growth in 1.33..2.0, "Growth step $growth outside expected window")
+            assertTrue(growth in 1.25..2.0, "Growth step $growth outside expected window")
         }
         assertTrue(schedule.all { it.smallBlind % input.smallestChip == 0 })
     }

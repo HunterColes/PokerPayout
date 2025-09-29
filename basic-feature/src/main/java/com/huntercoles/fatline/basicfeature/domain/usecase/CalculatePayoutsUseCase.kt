@@ -2,6 +2,7 @@ package com.huntercoles.fatline.basicfeature.domain.usecase
 
 import com.huntercoles.fatline.basicfeature.domain.model.PayoutPosition
 import com.huntercoles.fatline.basicfeature.domain.model.TournamentConfig
+import com.huntercoles.fatline.core.constants.TournamentConstants
 import kotlin.math.max
 import kotlin.math.min
 
@@ -11,14 +12,28 @@ import kotlin.math.min
 class CalculatePayoutsUseCase {
     
     operator fun invoke(config: TournamentConfig): List<PayoutPosition> {
-        // Calculate number of paying positions using the same logic as Python: max(1, num_players // 3)
-        val maxPayingPositions = kotlin.math.max(1, config.numPlayers / 3)
-        
-        // Only show positions that are actually paying out (not all weights)
-        val actualPayingPositions = kotlin.math.min(maxPayingPositions, config.payoutWeights.size)
-        
+        // If user has customized payout weights, use all of them
+        // Otherwise, fall back to the standard max paying positions calculation
+        val maxPayingPositions = max(1, config.numPlayers / 3)
+        val defaultWeights = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.take(maxPayingPositions)
+        val isUsingDefaultWeights = when {
+            config.payoutWeights == defaultWeights -> true
+            config.payoutWeights == TournamentConstants.DEFAULT_PAYOUT_WEIGHTS -> true
+            else -> false
+        }
+
+        val actualPayingPositions = if (isUsingDefaultWeights) {
+            min(maxPayingPositions, defaultWeights.size)
+        } else {
+            config.payoutWeights.size
+        }
+
         // Get paying weights for calculation
-        val payingWeights = config.payoutWeights.take(actualPayingPositions)
+        val payingWeights = if (isUsingDefaultWeights) {
+            defaultWeights.take(actualPayingPositions)
+        } else {
+            config.payoutWeights.take(actualPayingPositions)
+        }
         val totalWeight = payingWeights.sum()
         
         if (totalWeight == 0) {

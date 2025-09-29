@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.max
 
 @Singleton
 class TournamentPreferences @Inject constructor(
@@ -43,10 +44,13 @@ class TournamentPreferences @Inject constructor(
     fun setPlayerCount(count: Int) {
         prefs.edit().putInt(PLAYER_COUNT_KEY, count).apply()
         _playerCount.value = count
+        if (!prefs.contains(PAYOUT_WEIGHTS_KEY)) {
+            _payoutWeights.value = defaultPayoutWeightsFor(count)
+        }
     }
     
     fun getPlayerCount(): Int {
-        return prefs.getInt(PLAYER_COUNT_KEY, 9) // Default to 9 players
+        return prefs.getInt(PLAYER_COUNT_KEY, DEFAULT_PLAYER_COUNT)
     }
     
     fun setTournamentLocked(locked: Boolean) {
@@ -110,8 +114,14 @@ class TournamentPreferences @Inject constructor(
     }
     
     fun getPayoutWeights(): List<Int> {
-        val weightsString = prefs.getString(PAYOUT_WEIGHTS_KEY, TournamentConstants.DEFAULT_PAYOUT_WEIGHTS_STRING)
-        return weightsString?.split(",")?.mapNotNull { it.toIntOrNull() } ?: TournamentConstants.DEFAULT_PAYOUT_WEIGHTS
+        val weightsString = prefs.getString(PAYOUT_WEIGHTS_KEY, null)
+        val parsedWeights = weightsString
+            ?.split(",")
+            ?.mapNotNull { it.toIntOrNull() }
+            ?.filter { it > 0 }
+            ?.takeIf { it.isNotEmpty() }
+
+        return parsedWeights ?: defaultPayoutWeightsFor()
     }
     
     /**
@@ -151,14 +161,15 @@ class TournamentPreferences @Inject constructor(
      * Check if tournament settings are in default state
      */
     fun isInDefaultState(): Boolean {
-        return getPlayerCount() == 9 &&
-               getBuyIn() == 20.0 &&
-               getFoodPerPlayer() == 5.0 &&
-               getBountyPerPlayer() == 5.0 &&
-               getRebuyAmount() == 0.0 &&
-               getAddOnAmount() == 0.0 &&
-               getPayoutWeights() == TournamentConstants.DEFAULT_PAYOUT_WEIGHTS &&
-               !getTournamentLocked()
+     val playerCount = getPlayerCount()
+     return playerCount == DEFAULT_PLAYER_COUNT &&
+         getBuyIn() == 20.0 &&
+         getFoodPerPlayer() == 5.0 &&
+         getBountyPerPlayer() == 5.0 &&
+         getRebuyAmount() == 0.0 &&
+         getAddOnAmount() == 0.0 &&
+         getPayoutWeights() == defaultPayoutWeightsFor(playerCount) &&
+         !getTournamentLocked()
     }
     
     /**
@@ -167,25 +178,30 @@ class TournamentPreferences @Inject constructor(
     fun resetAllTournamentData() {
         // Reset specific keys instead of clearing all preferences
         prefs.edit()
-            .putInt(PLAYER_COUNT_KEY, 9)
             .putBoolean(TOURNAMENT_LOCKED_KEY, false)
+            .putInt(PLAYER_COUNT_KEY, DEFAULT_PLAYER_COUNT)
             .putFloat(BUY_IN_KEY, 20.0f)
             .putFloat(FOOD_PER_PLAYER_KEY, 5.0f)
             .putFloat(BOUNTY_PER_PLAYER_KEY, 5.0f)
             .putFloat(REBUY_PER_PLAYER_KEY, 0.0f)
             .putFloat(ADDON_PER_PLAYER_KEY, 0.0f)
-            .putString(PAYOUT_WEIGHTS_KEY, TournamentConstants.DEFAULT_PAYOUT_WEIGHTS_STRING)
+            .remove(PAYOUT_WEIGHTS_KEY)
             .apply()
         
-        // Reset all state flows to default values
-        _playerCount.value = 9
+        // Reset all state flows to default values (keep current player count)
         _tournamentLocked.value = false
+        _playerCount.value = DEFAULT_PLAYER_COUNT
         _buyIn.value = 20.0
         _foodPerPlayer.value = 5.0
         _bountyPerPlayer.value = 5.0
         _rebuyPerPlayer.value = 0.0
         _addOnPerPlayer.value = 0.0
-        _payoutWeights.value = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS
+        _payoutWeights.value = defaultPayoutWeightsFor(DEFAULT_PLAYER_COUNT)
+    }
+
+    private fun defaultPayoutWeightsFor(playerCount: Int = getPlayerCount()): List<Int> {
+        val defaultCount = max(1, playerCount / 3)
+        return TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.take(defaultCount)
     }
     
     companion object {
@@ -197,5 +213,6 @@ class TournamentPreferences @Inject constructor(
         private const val REBUY_PER_PLAYER_KEY = "rebuy_per_player"
         private const val ADDON_PER_PLAYER_KEY = "addon_per_player"
         private const val PAYOUT_WEIGHTS_KEY = "payout_weights"
+        private const val DEFAULT_PLAYER_COUNT = 9
     }
 }

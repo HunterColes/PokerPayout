@@ -5,6 +5,7 @@ import com.huntercoles.fatline.core.constants.BlindStructureConstants
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.pow
+import kotlin.math.abs
 import kotlinx.parcelize.Parcelize
 
 data class BlindStructureInput(
@@ -42,7 +43,9 @@ object BlindStructureCalculator {
             .coerceAtLeast(1)
         val totalLevels = (baseLevelCount + EXTRA_LEVELS).coerceAtLeast(2)
         val regularLevels = baseLevelCount
-        val finalSmallBlind = input.startingStack
+        
+        // Ensure final small blind produces big blind >= starting stack * 2
+        val finalSmallBlind = input.startingStack.coerceAtLeast(input.smallestChip)
 
         val schedule = generateBlindProgression(
             startingSmallBlind = input.smallestChip,
@@ -123,60 +126,123 @@ object BlindStructureCalculator {
 
         val startValue = allowedBlinds[startIndex].toDouble()
         val endValue = allowedBlinds[finalIndex].toDouble()
-        val growthFactor = if (totalLevels <= 1) {
-            1.0
-        } else {
-            (endValue / startValue).pow(1.0 / (totalLevels - 1).toDouble())
-        }
-
+        
         val progression = mutableListOf<Int>()
-        var lastValue = allowedBlinds[startIndex]
         var lastIndex = startIndex
-        progression += lastValue
+        progression += allowedBlinds[startIndex]
 
         for (level in 1 until totalLevels - 1) {
-            val rawValue = startValue * growthFactor.pow(level.toDouble())
-            val ceiling = ceil(rawValue).toInt()
-            val snappedIndexCandidate = allowedBlinds.indexOfFirst { it >= ceiling }
-            val snappedIndex = when {
-                snappedIndexCandidate == -1 -> finalIndex
-                snappedIndexCandidate > finalIndex -> finalIndex
-                snappedIndexCandidate < startIndex -> startIndex
-                else -> snappedIndexCandidate
+            // Calculate ideal position using exponential growth
+            val position = level.toDouble() / (totalLevels - 1).toDouble()
+            val targetValue = startValue * (endValue / startValue).pow(position)
+            
+            // Find next valid index
+            var candidateIndex = allowedBlinds.indexOfFirst { it >= targetValue.toInt() }
+            if (candidateIndex == -1) candidateIndex = finalIndex
+            candidateIndex = candidateIndex.coerceIn(startIndex, finalIndex)
+            
+            // Ensure monotonic progression and respect growth bounds
+            // CRITICAL: Always advance to the next index to prevent duplicates
+            val minNextIndex = lastIndex + 1
+            if (candidateIndex < minNextIndex && minNextIndex <= finalIndex) {
+                candidateIndex = minNextIndex
             }
-            val adjustedIndex = when {
-                snappedIndex <= lastIndex && lastIndex < finalIndex -> (lastIndex + 1).coerceAtMost(finalIndex)
-                else -> snappedIndex
+            
+            // Verify the growth rate is within new bounds (25% to 100%)
+            val currentValue = allowedBlinds[candidateIndex].toDouble()
+            val lastValue = allowedBlinds[lastIndex].toDouble()
+            val growthRate = currentValue / lastValue
+            
+            // If growth is outside bounds, find a better step
+            if (growthRate < 1.25 || growthRate > 2.0) {
+                var bestIndex = candidateIndex
+                var bestGrowth = growthRate
+                
+                // Look for the closest growth rate to 1.33 (33% target)
+                for (testIndex in (lastIndex + 1)..finalIndex) {
+                    val testValue = allowedBlinds[testIndex].toDouble()
+                    val testGrowth = testValue / lastValue
+                    
+                    if (testGrowth >= 1.25 && testGrowth <= 2.0) {
+                        // Prefer values closer to 33% growth
+                        val targetDistance = kotlin.math.abs(testGrowth - 1.33)
+                        val currentDistance = kotlin.math.abs(bestGrowth - 1.33)
+                        
+                        if (testGrowth >= 1.25 && testGrowth <= 2.0 && 
+                            (bestGrowth < 1.25 || bestGrowth > 2.0 || targetDistance < currentDistance)) {
+                            bestIndex = testIndex
+                            bestGrowth = testGrowth
+                        }
+                    }
+                }
+                candidateIndex = bestIndex
             }
-            val snapped = allowedBlinds[adjustedIndex]
-            val candidate = snapped
-            progression += candidate
-            lastValue = candidate
-            lastIndex = adjustedIndex
+            
+            // CRITICAL: Always ensure we advance to avoid duplicates
+            if (candidateIndex <= lastIndex && candidateIndex < finalIndex) {
+                candidateIndex = lastIndex + 1
+            }
+            
+            // Ensure we never add duplicate values - always find next unique value
+            while (candidateIndex <= finalIndex && allowedBlinds[candidateIndex] == progression.last()) {
+                candidateIndex++
+            }
+            
+            if (candidateIndex <= finalIndex) {
+                progression += allowedBlinds[candidateIndex]
+                lastIndex = candidateIndex
+            }
         }
 
-        progression += allowedBlinds[finalIndex]
-        return progression
+        // Add final level only if it's different from the last and we haven't already reached it
+        val finalValue = allowedBlinds[finalIndex]
+        if (progression.isEmpty() || finalValue != progression.last()) {
+            progression += finalValue
+        }
+        
+        // Double-check for any duplicates and remove them
+        return progression.distinct()
     }
 
     private fun buildAllowedSmallBlindList(smallestChip: Int, targetSmallBlind: Int): List<Int> {
         val factor = max(1, smallestChip / 5)
-        val values = sortedSetOf<Int>()
-        values += smallestChip
-        values += targetSmallBlind
+        val baseValues = sortedSetOf<Int>()
+        baseValues += smallestChip
+        baseValues += targetSmallBlind
 
         BlindStructureConstants.STANDARD_SMALL_BLIND_BASES
             .map { it * factor }
             .filter { it % smallestChip == 0 }
-            .forEach { values += it }
+            .forEach { baseValues += it }
 
-        var currentMax = values.maxOrNull() ?: smallestChip
+        var currentMax = baseValues.maxOrNull() ?: smallestChip
         while (currentMax < targetSmallBlind * 2) {
             currentMax *= 2
-            values += currentMax
+            baseValues += currentMax
         }
 
-        return values.filter { it >= smallestChip }.sorted()
+        val sortedValues = baseValues.filter { it >= smallestChip }.sorted()
+        
+        // Filter for smooth numbers and growth constraints (25% to 100% between consecutive values)
+        // Target 33% average growth with smooth numbers (ending in 0 after 25)
+        val filteredValues = mutableListOf<Int>()
+        filteredValues.add(sortedValues.first())
+        
+        var lastValue = sortedValues.first()
+        for (value in sortedValues.drop(1)) {
+            val growthRate = value.toDouble() / lastValue.toDouble()
+            
+            // Check if number is "smooth" - should end in 0 if value > 25
+            val isSmooth = value <= 25 || (value % 10 == 0)
+            
+            // Use relaxed growth bounds: 1.25x to 2.0x
+            if (growthRate >= 1.25 && growthRate <= 2.0 && isSmooth) {
+                filteredValues.add(value)
+                lastValue = value
+            }
+        }
+        
+        return filteredValues
     }
 
     private fun buildFallbackSchedule(

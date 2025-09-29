@@ -122,10 +122,14 @@ class CalculatorViewModel @Inject constructor(
     }
 
     private fun updatePlayerCount(count: Int) {
-        val newConfig = _uiState.value.tournamentConfig.copy(numPlayers = count)
-        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
-        // Save to shared preferences
         tournamentPreferences.setPlayerCount(count)
+        val updatedWeights = tournamentPreferences.getPayoutWeights()
+
+        val newConfig = _uiState.value.tournamentConfig.copy(
+            numPlayers = count,
+            payoutWeights = updatedWeights
+        )
+        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
         calculatePayouts()
     }
 

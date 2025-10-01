@@ -15,12 +15,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
@@ -46,6 +51,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -80,6 +88,10 @@ internal fun BankScreen(
     onIntent: (BankIntent) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
+    
+    // Track which players are being knocked out for animation
+    var knockingOutPlayerId by remember { mutableStateOf<Int?>(null) }
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -172,7 +184,13 @@ internal fun BankScreen(
                 PlayerActionDialog(
                     player = player,
                     pendingAction = action,
-                    onConfirm = { onIntent(BankIntent.ConfirmPlayerAction) },
+                    onConfirm = {
+                        // If knocking out a player, trigger animation
+                        if (action.actionType == PlayerActionType.OUT && action.apply) {
+                            knockingOutPlayerId = player.id
+                        }
+                        onIntent(BankIntent.ConfirmPlayerAction)
+                    },
                     onCancel = { onIntent(BankIntent.CancelPlayerAction) }
                 )
             }
@@ -190,10 +208,17 @@ internal fun BankScreen(
             items(sortedPlayers, key = { it.id }) { player ->
                 PlayerRow(
                     player = player,
+                    isKnockingOut = knockingOutPlayerId == player.id,
                     onNameChange = { onIntent(BankIntent.PlayerNameChanged(player.id, it)) },
                     onActionRequested = { actionType ->
                         onIntent(BankIntent.ShowPlayerActionDialog(player.id, actionType))
-                    }
+                    },
+                    onAnimationComplete = {
+                        if (knockingOutPlayerId == player.id) {
+                            knockingOutPlayerId = null
+                        }
+                    },
+                    modifier = Modifier.animateItem()
                 )
             }
         }
@@ -321,30 +346,76 @@ private fun SummaryProgressBar(
 @Composable
 private fun PlayerRow(
     player: PlayerData,
+    isKnockingOut: Boolean,
     onNameChange: (String) -> Unit,
-    onActionRequested: (PlayerActionType) -> Unit
+    onActionRequested: (PlayerActionType) -> Unit,
+    onAnimationComplete: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
     val commitAndClear: (String) -> Unit = { text ->
         onNameChange(text)
         focusManager.clearFocus()
     }
+    
+    // Animation state for the red flash effect
+    var showRedFlash by remember(player.id) { mutableStateOf(false) }
+    
+    // Trigger red flash animation when player is being knocked out
+    LaunchedEffect(isKnockingOut) {
+        if (isKnockingOut && player.out) {
+            showRedFlash = true
+            delay(600) // Flash duration
+            showRedFlash = false
+            onAnimationComplete()
+        }
+    }
+    
+    // Animate the background color
+    val backgroundColor by animateColorAsState(
+        targetValue = when {
+            showRedFlash -> PokerColors.ErrorRed
+            player.out -> PokerColors.ErrorRed.copy(alpha = 0.55f)
+            else -> PokerColors.SurfaceSecondary
+        },
+        animationSpec = tween(durationMillis = 300),
+        label = "background_color_animation"
+    )
+    
     // Keep a local editable text state to handle IME Done commits and to avoid
     // losing typed input when recomposition happens. Also sync with external
     // updates (like reset) by observing player.name.
-    var nameText by remember(player.id, player.name) { mutableStateOf(player.name) }
-    // If the player.name changes externally (reset), update local text state once
-    LaunchedEffect(player.name) {
-        if (nameText != player.name) {
-            nameText = player.name
+    var nameTextFieldValue by remember(player.id, player.name) {
+        mutableStateOf(TextFieldValue(text = player.name))
+    }
+    
+    // Track interaction source for focus detection
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    
+    // Check if the current name is default (e.g., "Player 1", "Player 2")
+    val isDefaultName = player.name.matches(Regex("^Player \\d+$"))
+    
+    // Auto-select all text when focused on default name
+    LaunchedEffect(isFocused, isDefaultName) {
+        if (isFocused && isDefaultName && nameTextFieldValue.selection.collapsed) {
+            nameTextFieldValue = nameTextFieldValue.copy(
+                selection = TextRange(0, nameTextFieldValue.text.length)
+            )
         }
     }
+    
+    // If the player.name changes externally (reset), update local text state once
+    LaunchedEffect(player.name) {
+        if (nameTextFieldValue.text != player.name) {
+            nameTextFieldValue = TextFieldValue(text = player.name)
+        }
+    }
+    
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (player.out) PokerColors.ErrorRed.copy(alpha = 0.55f) else PokerColors.SurfaceSecondary
-        )
+        colors = CardDefaults.cardColors(containerColor = backgroundColor)
     ) {
         Row(
             modifier = Modifier
@@ -353,8 +424,9 @@ private fun PlayerRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
-                value = nameText,
-                onValueChange = { new -> nameText = new },
+                value = nameTextFieldValue,
+                onValueChange = { new -> nameTextFieldValue = new },
+                interactionSource = interactionSource,
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 12.dp)
@@ -363,7 +435,7 @@ private fun PlayerRow(
                         if (native.keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
                             when (native.action) {
                                 android.view.KeyEvent.ACTION_DOWN -> true
-                                android.view.KeyEvent.ACTION_UP -> { commitAndClear(nameText); true }
+                                android.view.KeyEvent.ACTION_UP -> { commitAndClear(nameTextFieldValue.text); true }
                                 else -> false
                             }
                         } else false
@@ -382,7 +454,7 @@ private fun PlayerRow(
                     )
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { commitAndClear(nameText) })
+                keyboardActions = KeyboardActions(onDone = { commitAndClear(nameTextFieldValue.text) })
             )
 
             // Right-justified group: out chip + two vertical columns (rebuy/addon) and (buy-in/payout)

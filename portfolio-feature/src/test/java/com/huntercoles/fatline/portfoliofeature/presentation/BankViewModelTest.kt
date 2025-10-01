@@ -111,4 +111,82 @@ class BankViewModelTest {
         val expectedAfterToggle = expectedPayouts[0] + expectedPayouts[2]
         assertEquals(expectedAfterToggle, adjustedState.totalPayedOut, 0.001)
     }
+
+    @Test
+    fun confirmationDialogAppliesAndUndoesBuyIn() = runTest(testDispatcher) {
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.BUY_IN))
+        testDispatcher.scheduler.advanceUntilIdle()
+        val afterShow = viewModel.uiState.value
+        assertEquals(false, afterShow.players.first { it.id == 1 }.buyIn)
+        assertEquals(PlayerActionType.BUY_IN, afterShow.pendingAction?.actionType)
+        assertEquals(true, afterShow.pendingAction?.apply)
+
+        viewModel.acceptIntent(BankIntent.ConfirmPlayerAction)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val afterConfirm = viewModel.uiState.value
+        assertEquals(true, afterConfirm.players.first { it.id == 1 }.buyIn)
+        assertEquals(null, afterConfirm.pendingAction)
+
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.BUY_IN))
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.acceptIntent(BankIntent.ConfirmPlayerAction)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val afterUndo = viewModel.uiState.value
+        assertEquals(false, afterUndo.players.first { it.id == 1 }.buyIn)
+    }
+
+    @Test
+    fun rebuyDialogTogglesCounts() = runTest(testDispatcher) {
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.REBUY))
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.acceptIntent(BankIntent.ConfirmPlayerAction)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        var state = viewModel.uiState.value
+        assertEquals(1, state.players.first { it.id == 1 }.rebuys)
+
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.REBUY))
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(false, viewModel.uiState.value.pendingAction?.apply)
+
+        viewModel.acceptIntent(BankIntent.ConfirmPlayerAction)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        state = viewModel.uiState.value
+        assertEquals(0, state.players.first { it.id == 1 }.rebuys)
+    }
+
+    @Test
+    fun knockoutDialogUpdatesEliminationOrderAndUndoRestores() = runTest(testDispatcher) {
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.OUT))
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(true, viewModel.uiState.value.pendingAction?.apply)
+        viewModel.acceptIntent(BankIntent.ConfirmPlayerAction)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        var state = viewModel.uiState.value
+        assertEquals(true, state.players.first { it.id == 1 }.out)
+        assertEquals(listOf(1), state.eliminationOrder.takeLast(1))
+
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.OUT))
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(false, viewModel.uiState.value.pendingAction?.apply)
+        viewModel.acceptIntent(BankIntent.ConfirmPlayerAction)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        state = viewModel.uiState.value
+        assertEquals(false, state.players.first { it.id == 1 }.out)
+        assertEquals(false, state.eliminationOrder.contains(1))
+    }
 }

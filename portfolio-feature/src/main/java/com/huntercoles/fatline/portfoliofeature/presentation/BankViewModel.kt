@@ -5,6 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.huntercoles.fatline.core.constants.TournamentConstants
 import com.huntercoles.fatline.core.preferences.BankPreferences
 import com.huntercoles.fatline.core.preferences.TournamentPreferences
+import com.huntercoles.fatline.portfoliofeature.presentation.BankIntent.CancelPlayerAction
+import com.huntercoles.fatline.portfoliofeature.presentation.BankIntent.ConfirmPlayerAction
+import com.huntercoles.fatline.portfoliofeature.presentation.BankIntent.PlayerAddonChanged
+import com.huntercoles.fatline.portfoliofeature.presentation.BankIntent.PlayerCountChanged
+import com.huntercoles.fatline.portfoliofeature.presentation.BankIntent.PlayerNameChanged
+import com.huntercoles.fatline.portfoliofeature.presentation.BankIntent.PlayerRebuyChanged
+import com.huntercoles.fatline.portfoliofeature.presentation.BankIntent.ShowPlayerActionDialog
+import com.huntercoles.fatline.portfoliofeature.presentation.PendingPlayerAction
+import com.huntercoles.fatline.portfoliofeature.presentation.PlayerActionType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,13 +57,16 @@ class BankViewModel @Inject constructor(
 
     fun acceptIntent(intent: BankIntent) {
         when (intent) {
-            is BankIntent.PlayerNameChanged -> updatePlayerName(intent.playerId, intent.name)
+            is PlayerNameChanged -> updatePlayerName(intent.playerId, intent.name)
             is BankIntent.BuyInToggled -> toggleBuyIn(intent.playerId)
             is BankIntent.OutToggled -> toggleOut(intent.playerId)
             is BankIntent.PayedOutToggled -> togglePayedOut(intent.playerId)
-            is BankIntent.PlayerCountChanged -> updatePlayerCount(intent.count)
-            is BankIntent.PlayerRebuyChanged -> updatePlayerRebuys(intent.playerId, intent.rebuys)
-            is BankIntent.PlayerAddonChanged -> updatePlayerAddons(intent.playerId, intent.addons)
+            is PlayerCountChanged -> updatePlayerCount(intent.count)
+            is PlayerRebuyChanged -> updatePlayerRebuys(intent.playerId, intent.rebuys)
+            is PlayerAddonChanged -> updatePlayerAddons(intent.playerId, intent.addons)
+            is ShowPlayerActionDialog -> showPlayerActionDialog(intent.playerId, intent.action)
+            is ConfirmPlayerAction -> confirmPendingAction()
+            is CancelPlayerAction -> clearPendingAction()
             is BankIntent.ShowResetDialog -> {
                 // Only show dialog if not in default state
                 if (!isInDefaultState()) {
@@ -162,13 +174,106 @@ class BankViewModel @Inject constructor(
         )
     }
 
+    private fun showPlayerActionDialog(playerId: Int, actionType: PlayerActionType) {
+        val player = _uiState.value.players.firstOrNull { it.id == playerId } ?: return
+        val pending = when (actionType) {
+            PlayerActionType.OUT -> {
+                val apply = !player.out
+                if (!apply && !player.out) return
+                PendingPlayerAction(playerId, actionType, apply)
+            }
+            PlayerActionType.BUY_IN -> {
+                val apply = !player.buyIn
+                PendingPlayerAction(playerId, actionType, apply)
+            }
+            PlayerActionType.PAYED_OUT -> {
+                val apply = !player.payedOut
+                PendingPlayerAction(playerId, actionType, apply)
+            }
+            PlayerActionType.REBUY -> {
+                val apply = player.rebuys == 0
+                val delta = if (apply) 1 else -player.rebuys
+                if (!apply && player.rebuys == 0) return
+                PendingPlayerAction(playerId, actionType, apply, delta)
+            }
+            PlayerActionType.ADDON -> {
+                val apply = player.addons == 0
+                val delta = if (apply) 1 else -player.addons
+                if (!apply && player.addons == 0) return
+                PendingPlayerAction(playerId, actionType, apply, delta)
+            }
+        }
+
+        _uiState.update { state -> state.copy(pendingAction = pending) }
+    }
+
+    private fun clearPendingAction() {
+        _uiState.update { it.copy(pendingAction = null) }
+    }
+
+    private fun confirmPendingAction() {
+        val pendingAction = _uiState.value.pendingAction ?: return
+        val player = _uiState.value.players.firstOrNull { it.id == pendingAction.playerId }
+        if (player == null) {
+            clearPendingAction()
+            return
+        }
+
+        when (pendingAction.actionType) {
+            PlayerActionType.OUT -> setPlayerOut(player.id, pendingAction.apply)
+            PlayerActionType.BUY_IN -> setPlayerBuyIn(player.id, pendingAction.apply)
+            PlayerActionType.PAYED_OUT -> setPlayerPayedOut(player.id, pendingAction.apply)
+            PlayerActionType.REBUY -> {
+                val newCount = (player.rebuys + pendingAction.delta).coerceAtLeast(0)
+                updatePlayerRebuys(player.id, newCount)
+            }
+            PlayerActionType.ADDON -> {
+                val newCount = (player.addons + pendingAction.delta).coerceAtLeast(0)
+                updatePlayerAddons(player.id, newCount)
+            }
+        }
+
+        clearPendingAction()
+    }
+
+    private fun setPlayerBuyIn(playerId: Int, value: Boolean) {
+        updatePlayerPayment(
+            playerId = playerId,
+            updateFunction = { player ->
+                if (player.buyIn == value) player else player.copy(buyIn = value)
+            }
+        )
+    }
+
+    private fun setPlayerOut(playerId: Int, value: Boolean) {
+        updatePlayerPayment(
+            playerId = playerId,
+            updateFunction = { player ->
+                if (player.out == value) player else player.copy(out = value)
+            }
+        ) { updatedPlayer ->
+            updateEliminationOrder(updatedPlayer.id, updatedPlayer.out)
+        }
+    }
+
+    private fun setPlayerPayedOut(playerId: Int, value: Boolean) {
+        updatePlayerPayment(
+            playerId = playerId,
+            updateFunction = { player ->
+                if (player.payedOut == value) player else player.copy(payedOut = value)
+            }
+        )
+    }
+
     private fun updatePlayerRebuys(playerId: Int, rebuys: Int) {
+        val sanitized = rebuys.coerceIn(0, 1)
+
         // Save to preferences
-        bankPreferences.savePlayerRebuys(playerId, rebuys)
+        bankPreferences.savePlayerRebuys(playerId, sanitized)
         
         _uiState.update { state ->
             val updatedPlayers = state.players.map { player ->
-                if (player.id == playerId) player.copy(rebuys = rebuys) else player
+                if (player.id == playerId) player.copy(rebuys = sanitized) else player
             }
             state.copy(players = updatedPlayers)
         }
@@ -176,12 +281,14 @@ class BankViewModel @Inject constructor(
     }
 
     private fun updatePlayerAddons(playerId: Int, addons: Int) {
+        val sanitized = addons.coerceIn(0, 1)
+
         // Save to preferences
-        bankPreferences.savePlayerAddons(playerId, addons)
+        bankPreferences.savePlayerAddons(playerId, sanitized)
         
         _uiState.update { state ->
             val updatedPlayers = state.players.map { player ->
-                if (player.id == playerId) player.copy(addons = addons) else player
+                if (player.id == playerId) player.copy(addons = sanitized) else player
             }
             state.copy(players = updatedPlayers)
         }

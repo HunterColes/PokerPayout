@@ -27,5 +27,14 @@ data class BankUiState(
     val foodAmount: Double = 5.0,
     val bountyAmount: Double = 2.0,
     val showResetDialog: Boolean = false,
-    val eliminationOrder: List<Int> = emptyList()
+    val eliminationOrder: List<Int> = emptyList(),
+    val pendingAction: PendingPlayerAction? = null
+) : Parcelable
+
+@Parcelize
+data class PendingPlayerAction(
+    val playerId: Int,
+    val actionType: PlayerActionType,
+    val apply: Boolean,
+    val delta: Int = 0
 ) : Parcelable

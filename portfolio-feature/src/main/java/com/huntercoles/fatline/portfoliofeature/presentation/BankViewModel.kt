@@ -179,7 +179,8 @@ class BankViewModel @Inject constructor(
         val pending = when (actionType) {
             PlayerActionType.OUT -> {
                 val apply = !player.out
-                if (!apply && !player.out) return
+                val isLastActive = _uiState.value.players.count { !it.out } <= 1
+                if ((apply && isLastActive) || (!apply && !player.out)) return
                 PendingPlayerAction(playerId, actionType, apply)
             }
             PlayerActionType.BUY_IN -> {
@@ -191,12 +192,14 @@ class BankViewModel @Inject constructor(
                 PendingPlayerAction(playerId, actionType, apply)
             }
             PlayerActionType.REBUY -> {
+                if (_uiState.value.rebuyAmount <= 0.0) return
                 val apply = player.rebuys == 0
                 val delta = if (apply) 1 else -player.rebuys
                 if (!apply && player.rebuys == 0) return
                 PendingPlayerAction(playerId, actionType, apply, delta)
             }
             PlayerActionType.ADDON -> {
+                if (_uiState.value.addonAmount <= 0.0) return
                 val apply = player.addons == 0
                 val delta = if (apply) 1 else -player.addons
                 if (!apply && player.addons == 0) return
@@ -385,7 +388,9 @@ class BankViewModel @Inject constructor(
                 payedOutCount = payedOutCount,
                 buyInAmount = tournamentConfig.buyIn,
                 foodAmount = tournamentConfig.foodPerPlayer,
-                bountyAmount = tournamentConfig.bountyPerPlayer
+                bountyAmount = tournamentConfig.bountyPerPlayer,
+                rebuyAmount = tournamentConfig.rebuyPerPlayer,
+                addonAmount = tournamentConfig.addOnPerPlayer
             )
         }
     }

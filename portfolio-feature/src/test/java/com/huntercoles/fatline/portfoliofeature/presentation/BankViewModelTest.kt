@@ -142,6 +142,7 @@ class BankViewModelTest {
 
     @Test
     fun rebuyDialogTogglesCounts() = runTest(testDispatcher) {
+        tournamentPreferences.setRebuyAmount(10.0)
         val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -162,6 +163,83 @@ class BankViewModelTest {
 
         state = viewModel.uiState.value
         assertEquals(0, state.players.first { it.id == 1 }.rebuys)
+    }
+
+    @Test
+    fun rebuyDialogIgnoredWhenRebuyDisabled() = runTest(testDispatcher) {
+        tournamentPreferences.setRebuyAmount(0.0)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.REBUY))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(null, state.pendingAction)
+        assertEquals(0.0, state.rebuyAmount, 0.001)
+    }
+
+    @Test
+    fun addonDialogRespectConfiguration() = runTest(testDispatcher) {
+        tournamentPreferences.setAddOnAmount(15.0)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.ADDON))
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.acceptIntent(BankIntent.ConfirmPlayerAction)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        var state = viewModel.uiState.value
+        assertEquals(1, state.players.first { it.id == 1 }.addons)
+        assertEquals(15.0, state.addonAmount, 0.001)
+
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.ADDON))
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.acceptIntent(BankIntent.ConfirmPlayerAction)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        state = viewModel.uiState.value
+        assertEquals(0, state.players.first { it.id == 1 }.addons)
+    }
+
+    @Test
+    fun addonDialogIgnoredWhenAddonDisabled() = runTest(testDispatcher) {
+        tournamentPreferences.setAddOnAmount(0.0)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.ADDON))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(null, state.pendingAction)
+        assertEquals(0.0, state.addonAmount, 0.001)
+    }
+
+    @Test
+    fun lastActivePlayerCannotBeEliminated() = runTest(testDispatcher) {
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Knock out player 2 to leave player 1 as the only active participant
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 2, action = PlayerActionType.OUT))
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.acceptIntent(BankIntent.ConfirmPlayerAction)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        var state = viewModel.uiState.value
+        assertEquals(true, state.players.first { it.id == 2 }.out)
+        assertEquals(1, state.activePlayers)
+
+        // Attempt to eliminate the final active player
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.OUT))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        state = viewModel.uiState.value
+        assertEquals(null, state.pendingAction)
+        assertEquals(false, state.players.first { it.id == 1 }.out)
+        assertEquals(1, state.activePlayers)
     }
 
     @Test

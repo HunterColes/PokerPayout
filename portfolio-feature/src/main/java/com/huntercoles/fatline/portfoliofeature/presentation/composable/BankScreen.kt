@@ -48,19 +48,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.coroutines.delay
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -70,6 +77,8 @@ import com.huntercoles.fatline.portfoliofeature.presentation.BankViewModel
 import com.huntercoles.fatline.portfoliofeature.presentation.PendingPlayerAction
 import com.huntercoles.fatline.portfoliofeature.presentation.PlayerActionType
 import com.huntercoles.fatline.portfoliofeature.presentation.PlayerData
+import com.huntercoles.fatline.portfoliofeature.presentation.buildPlayerDisplayModels
+import com.huntercoles.fatline.portfoliofeature.R
 import com.huntercoles.fatline.core.design.PokerColors
 
 @Composable
@@ -177,7 +186,9 @@ internal fun BankScreen(
         }
 
         val pendingAction = uiState.pendingAction
-        val sortedPlayers = uiState.players.sortedWith(compareBy<PlayerData> { it.out }.thenBy { it.id })
+        val playerDisplayModels = remember(uiState.players, uiState.eliminationOrder) {
+            buildPlayerDisplayModels(uiState.players, uiState.eliminationOrder)
+        }
 
         pendingAction?.let { action ->
             uiState.players.firstOrNull { it.id == action.playerId }?.let { player ->
@@ -196,6 +207,9 @@ internal fun BankScreen(
             }
         }
 
+        val activePlayerIds = uiState.players.filter { !it.out }.map { it.id }
+        val championPlayerId = activePlayerIds.singleOrNull()
+
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -205,21 +219,27 @@ internal fun BankScreen(
             }
 
             // Player rows
-            items(sortedPlayers, key = { it.id }) { player ->
-                PlayerRow(
-                    player = player,
-                    isKnockingOut = knockingOutPlayerId == player.id,
-                    onNameChange = { onIntent(BankIntent.PlayerNameChanged(player.id, it)) },
-                    onActionRequested = { actionType ->
-                        onIntent(BankIntent.ShowPlayerActionDialog(player.id, actionType))
-                    },
-                    onAnimationComplete = {
-                        if (knockingOutPlayerId == player.id) {
-                            knockingOutPlayerId = null
-                        }
-                    },
-                    modifier = Modifier.animateItem()
-                )
+            items(playerDisplayModels, key = { it.player.id }) { model ->
+                val player = model.player
+                    PlayerRow(
+                        player = player,
+                        placementNumber = model.placement ?: if (championPlayerId == player.id) 1 else null,
+                        isKnockingOut = knockingOutPlayerId == player.id,
+                        isChampionHighlight = championPlayerId == player.id,
+                        outEnabled = championPlayerId == null || championPlayerId != player.id,
+                        rebuyEnabled = uiState.rebuyAmount > 0.0,
+                        addonEnabled = uiState.addonAmount > 0.0,
+                        onNameChange = { onIntent(BankIntent.PlayerNameChanged(player.id, it)) },
+                        onActionRequested = { actionType ->
+                            onIntent(BankIntent.ShowPlayerActionDialog(player.id, actionType))
+                        },
+                        onAnimationComplete = {
+                            if (knockingOutPlayerId == player.id) {
+                                knockingOutPlayerId = null
+                            }
+                        },
+                        modifier = Modifier.animateItem()
+                    )
             }
         }
     }
@@ -346,7 +366,12 @@ private fun SummaryProgressBar(
 @Composable
 private fun PlayerRow(
     player: PlayerData,
+    placementNumber: Int?,
     isKnockingOut: Boolean,
+    isChampionHighlight: Boolean,
+    outEnabled: Boolean,
+    rebuyEnabled: Boolean,
+    addonEnabled: Boolean,
     onNameChange: (String) -> Unit,
     onActionRequested: (PlayerActionType) -> Unit,
     onAnimationComplete: () -> Unit,
@@ -376,6 +401,7 @@ private fun PlayerRow(
         targetValue = when {
             showRedFlash -> PokerColors.ErrorRed
             player.out -> PokerColors.ErrorRed.copy(alpha = 0.55f)
+            isChampionHighlight -> PokerColors.PokerGold
             else -> PokerColors.SurfaceSecondary
         },
         animationSpec = tween(durationMillis = 300),
@@ -423,39 +449,94 @@ private fun PlayerRow(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
-                value = nameTextFieldValue,
-                onValueChange = { new -> nameTextFieldValue = new },
-                interactionSource = interactionSource,
+            Box(
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 12.dp)
-                    .onPreviewKeyEvent { keyEvent ->
-                        val native = keyEvent.nativeKeyEvent ?: return@onPreviewKeyEvent false
-                        if (native.keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
-                            when (native.action) {
-                                android.view.KeyEvent.ACTION_DOWN -> true
-                                android.view.KeyEvent.ACTION_UP -> { commitAndClear(nameTextFieldValue.text); true }
-                                else -> false
-                            }
-                        } else false
-                    },
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PokerColors.AccentGreen,
-                    unfocusedBorderColor = PokerColors.CardWhite,
-                    focusedTextColor = PokerColors.CardWhite,
-                    unfocusedTextColor = PokerColors.CardWhite,
-                    cursorColor = PokerColors.PokerGold,
-                    selectionColors = TextSelectionColors(
-                        handleColor = PokerColors.PokerGold,
-                        backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
+            ) {
+                placementNumber?.let { placement ->
+                    val orbitronFont = FontFamily(Font(R.font.orbitron_variablefont_wght))
+                    if (isChampionHighlight) {
+                        Text(
+                            text = "👑",
+                            style = MaterialTheme.typography.displayLarge.copy(fontSize = 55.sp),
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .graphicsLayer { rotationZ = -4f },
+                            color = Color.Unspecified,
+                            maxLines = 1
+                        )
+                    }
+                    Text(
+                        text = placement.toString(),
+                        style = MaterialTheme.typography.displayLarge.copy(
+                            fontFamily = orbitronFont,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 48.sp,
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.35f),
+                                offset = Offset(2f, 4f),
+                                blurRadius = 12f
+                            )
+                        ),
+                        color = if (isChampionHighlight) Color.Black.copy(alpha = 0.78f) else PokerColors.PokerGold.copy(alpha = 0.22f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.Center)
+                            .graphicsLayer { rotationZ = if (isChampionHighlight) -3f else -8f }
                     )
-                ),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { commitAndClear(nameTextFieldValue.text) })
-            )
+                }
+
+                OutlinedTextField(
+                    value = nameTextFieldValue,
+                    onValueChange = { new -> nameTextFieldValue = new },
+                    interactionSource = interactionSource,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onPreviewKeyEvent { keyEvent ->
+                            val native = keyEvent.nativeKeyEvent ?: return@onPreviewKeyEvent false
+                            if (native.keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
+                                when (native.action) {
+                                    android.view.KeyEvent.ACTION_DOWN -> true
+                                    android.view.KeyEvent.ACTION_UP -> { commitAndClear(nameTextFieldValue.text); true }
+                                    else -> false
+                                }
+                            } else false
+                        },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    colors = if (isChampionHighlight) {
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color.Black,
+                            unfocusedBorderColor = Color.Black,
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            cursorColor = Color.Black,
+                            selectionColors = TextSelectionColors(
+                                handleColor = Color.Black,
+                                backgroundColor = Color.Black.copy(alpha = 0.35f)
+                            )
+                        )
+                    } else {
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PokerColors.AccentGreen,
+                            unfocusedBorderColor = PokerColors.CardWhite,
+                            focusedTextColor = PokerColors.CardWhite,
+                            unfocusedTextColor = PokerColors.CardWhite,
+                            cursorColor = PokerColors.PokerGold,
+                            selectionColors = TextSelectionColors(
+                                handleColor = PokerColors.PokerGold,
+                                backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
+                            )
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { commitAndClear(nameTextFieldValue.text) })
+                )
+            }
 
             // Right-justified group: out chip + two vertical columns (rebuy/addon) and (buy-in/payout)
             Row(
@@ -470,6 +551,8 @@ private fun PlayerRow(
                     activeColor = PokerColors.ErrorRed,
                     contentDescription = if (player.out) "Knocked out" else "Still in",
                     onClick = { onActionRequested(PlayerActionType.OUT) },
+                    enabled = outEnabled,
+                    borderOverride = if (isChampionHighlight) Color.Black else null,
                     modifier = Modifier.padding(end = 8.dp)
                 )
 
@@ -484,7 +567,9 @@ private fun PlayerRow(
                         isActive = player.rebuys > 0,
                         activeColor = PokerColors.AccentGreen,
                         contentDescription = if (player.rebuys > 0) "Rebuy active" else "Rebuy available",
-                        onClick = { onActionRequested(PlayerActionType.REBUY) }
+                        onClick = { onActionRequested(PlayerActionType.REBUY) },
+                        enabled = rebuyEnabled,
+                        borderOverride = if (isChampionHighlight) Color.Black else null
                     )
 
                     PlayerStatusChip(
@@ -492,7 +577,9 @@ private fun PlayerRow(
                         isActive = player.addons > 0,
                         activeColor = PokerColors.AccentGreen,
                         contentDescription = if (player.addons > 0) "Add-on active" else "Add-on available",
-                        onClick = { onActionRequested(PlayerActionType.ADDON) }
+                        onClick = { onActionRequested(PlayerActionType.ADDON) },
+                        enabled = addonEnabled,
+                        borderOverride = if (isChampionHighlight) Color.Black else null
                     )
                 }
 
@@ -502,19 +589,21 @@ private fun PlayerRow(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     PlayerStatusChip(
-                        emoji = "💰",
+                        emoji = "💵",
                         isActive = player.buyIn,
                         activeColor = PokerColors.PokerGold,
                         contentDescription = if (player.buyIn) "Buy-in completed" else "Buy-in pending",
-                        onClick = { onActionRequested(PlayerActionType.BUY_IN) }
+                        onClick = { onActionRequested(PlayerActionType.BUY_IN) },
+                        borderOverride = if (isChampionHighlight) Color.Black else null
                     )
 
                     PlayerStatusChip(
-                        emoji = "⭐",
+                        emoji = "💸",
                         isActive = player.payedOut,
                         activeColor = PokerColors.PokerGold,
                         contentDescription = if (player.payedOut) "Payout complete" else "Payout pending",
-                        onClick = { onActionRequested(PlayerActionType.PAYED_OUT) }
+                        onClick = { onActionRequested(PlayerActionType.PAYED_OUT) },
+                        borderOverride = if (isChampionHighlight) Color.Black else null
                     )
                 }
             }
@@ -529,24 +618,48 @@ private fun PlayerStatusChip(
     activeColor: Color,
     contentDescription: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    borderOverride: Color? = null
 ) {
+    val baseBackground = when {
+        isActive -> PokerColors.DarkGreen
+        !enabled -> PokerColors.SurfaceSecondary.copy(alpha = 0.4f)
+        else -> PokerColors.SurfaceSecondary
+    }
+    val borderColor = borderOverride ?: when {
+        isActive -> activeColor
+        !enabled -> PokerColors.CardWhite.copy(alpha = 0.4f)
+        else -> PokerColors.CardWhite
+    }
+    val emojiColor = when {
+        isActive -> activeColor
+        !enabled -> PokerColors.CardWhite.copy(alpha = 0.5f)
+        else -> PokerColors.CardWhite.copy(alpha = 0.8f)
+    }
+
     Surface(
         modifier = modifier
             .size(44.dp)
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .semantics { this.contentDescription = contentDescription },
+            .clickable(
+                enabled = enabled,
+                onClick = onClick
+            )
+            .semantics {
+                this.contentDescription = contentDescription
+                if (!enabled) this.disabled()
+            },
         tonalElevation = if (isActive) 4.dp else 0.dp,
         shadowElevation = if (isActive) 2.dp else 0.dp,
-        color = if (isActive) PokerColors.DarkGreen else PokerColors.SurfaceSecondary,
-        border = BorderStroke(1.dp, if (isActive) activeColor else PokerColors.CardWhite)
+        color = baseBackground,
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 text = emoji,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (isActive) activeColor else PokerColors.CardWhite.copy(alpha = 0.8f)
+                color = emojiColor
             )
         }
     }

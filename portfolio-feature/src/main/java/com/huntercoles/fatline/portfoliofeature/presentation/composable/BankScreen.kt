@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,8 +28,9 @@ import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -68,10 +70,11 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.huntercoles.fatline.core.design.PokerDialog
 import com.huntercoles.fatline.portfoliofeature.presentation.BankIntent
+import com.huntercoles.fatline.portfoliofeature.presentation.MAX_PURCHASE_COUNT
 import com.huntercoles.fatline.portfoliofeature.presentation.BankUiState
 import com.huntercoles.fatline.portfoliofeature.presentation.BankViewModel
 import com.huntercoles.fatline.portfoliofeature.presentation.PendingPlayerAction
@@ -144,45 +147,66 @@ internal fun BankScreen(
 
         // Reset Confirmation Dialog
         if (uiState.showResetDialog) {
-            AlertDialog(
-                onDismissRequest = { focusManager.clearFocus(); onIntent(BankIntent.HideResetDialog) },
-                containerColor = PokerColors.DarkGreen,
-                title = {
-                    Text(
-                        text = "Reset?",
-                        color = PokerColors.PokerGold,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                text = {
+            PokerDialog(
+                onDismissRequest = {
+                    focusManager.clearFocus()
+                    onIntent(BankIntent.HideResetDialog)
+                }
+            ) {
+                Text(
+                    text = "Reset bank data?",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = PokerColors.PokerGold
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = PokerColors.FeltGreen,
+                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
+                ) {
                     Text(
                         text = "This will reset all player names and payment statuses to defaults.",
-                        color = PokerColors.CardWhite
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.CardWhite,
+                        modifier = Modifier.padding(16.dp)
                     )
-                },
-                confirmButton = {
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
+                ) {
                     TextButton(
-                        onClick = { focusManager.clearFocus(); onIntent(BankIntent.HideResetDialog) }
+                        onClick = {
+                            focusManager.clearFocus()
+                            onIntent(BankIntent.HideResetDialog)
+                        }
                     ) {
                         Text(
-                            text = "No",
+                            text = "Cancel",
                             color = PokerColors.CardWhite
                         )
                     }
-                },
-                dismissButton = {
+
                     TextButton(
-                        onClick = { focusManager.clearFocus(); onIntent(BankIntent.ConfirmReset) }
+                        onClick = {
+                            focusManager.clearFocus()
+                            onIntent(BankIntent.ConfirmReset)
+                        }
                     ) {
                         Text(
-                            text = "Yes",
+                            text = "Reset",
                             color = PokerColors.PokerGold,
                             fontWeight = FontWeight.Bold
                         )
                     }
-                },
-                shape = RoundedCornerShape(16.dp)
-            )
+                }
+            }
         }
 
         val pendingAction = uiState.pendingAction
@@ -195,12 +219,16 @@ internal fun BankScreen(
                 PlayerActionDialog(
                     player = player,
                     pendingAction = action,
-                    onConfirm = {
+                    onConfirm = { selectedCount ->
                         // If knocking out a player, trigger animation
                         if (action.actionType == PlayerActionType.OUT && action.apply) {
                             knockingOutPlayerId = player.id
                         }
-                        onIntent(BankIntent.ConfirmPlayerAction)
+                        if ((action.actionType == PlayerActionType.REBUY || action.actionType == PlayerActionType.ADDON) && selectedCount != null) {
+                            onIntent(BankIntent.ConfirmPlayerActionWithCount(selectedCount))
+                        } else {
+                            onIntent(BankIntent.ConfirmPlayerAction)
+                        }
                     },
                     onCancel = { onIntent(BankIntent.CancelPlayerAction) }
                 )
@@ -541,10 +569,9 @@ private fun PlayerRow(
             // Right-justified group: out chip + two vertical columns (rebuy/addon) and (buy-in/payout)
             Row(
                 modifier = Modifier.wrapContentWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Out chip (single)
                 PlayerStatusChip(
                     emoji = if (player.out) "❌" else "⚪",
                     isActive = player.out,
@@ -552,60 +579,48 @@ private fun PlayerRow(
                     contentDescription = if (player.out) "Knocked out" else "Still in",
                     onClick = { onActionRequested(PlayerActionType.OUT) },
                     enabled = outEnabled,
-                    borderOverride = if (isChampionHighlight) Color.Black else null,
-                    modifier = Modifier.padding(end = 8.dp)
+                    borderOverride = if (isChampionHighlight) Color.Black else null
                 )
 
-                // Rebuy / Add-on column (vertical)
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    PlayerStatusChip(
-                        emoji = "♻️",
-                        isActive = player.rebuys > 0,
-                        activeColor = PokerColors.AccentGreen,
-                        contentDescription = if (player.rebuys > 0) "Rebuy active" else "Rebuy available",
-                        onClick = { onActionRequested(PlayerActionType.REBUY) },
-                        enabled = rebuyEnabled,
-                        borderOverride = if (isChampionHighlight) Color.Black else null
-                    )
+                PlayerStatusChip(
+                    emoji = "♻️",
+                    isActive = player.rebuys > 0,
+                    activeColor = PokerColors.AccentGreen,
+                    contentDescription = if (player.rebuys > 0) "Rebuy active" else "Rebuy available",
+                    onClick = { onActionRequested(PlayerActionType.REBUY) },
+                    enabled = rebuyEnabled,
+                    borderOverride = if (isChampionHighlight) Color.Black else null,
+                    badgeCount = player.rebuys
+                )
 
-                    PlayerStatusChip(
-                        emoji = "➕",
-                        isActive = player.addons > 0,
-                        activeColor = PokerColors.AccentGreen,
-                        contentDescription = if (player.addons > 0) "Add-on active" else "Add-on available",
-                        onClick = { onActionRequested(PlayerActionType.ADDON) },
-                        enabled = addonEnabled,
-                        borderOverride = if (isChampionHighlight) Color.Black else null
-                    )
-                }
+                PlayerStatusChip(
+                    emoji = "➕",
+                    isActive = player.addons > 0,
+                    activeColor = PokerColors.AccentGreen,
+                    contentDescription = if (player.addons > 0) "Add-on active" else "Add-on available",
+                    onClick = { onActionRequested(PlayerActionType.ADDON) },
+                    enabled = addonEnabled,
+                    borderOverride = if (isChampionHighlight) Color.Black else null,
+                    badgeCount = player.addons
+                )
 
-                // Buy-in / Payout column (vertical)
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    PlayerStatusChip(
-                        emoji = "💵",
-                        isActive = player.buyIn,
-                        activeColor = PokerColors.PokerGold,
-                        contentDescription = if (player.buyIn) "Buy-in completed" else "Buy-in pending",
-                        onClick = { onActionRequested(PlayerActionType.BUY_IN) },
-                        borderOverride = if (isChampionHighlight) Color.Black else null
-                    )
+                PlayerStatusChip(
+                    emoji = "💵",
+                    isActive = player.buyIn,
+                    activeColor = PokerColors.PokerGold,
+                    contentDescription = if (player.buyIn) "Buy-in completed" else "Buy-in pending",
+                    onClick = { onActionRequested(PlayerActionType.BUY_IN) },
+                    borderOverride = if (isChampionHighlight) Color.Black else null
+                )
 
-                    PlayerStatusChip(
-                        emoji = "💸",
-                        isActive = player.payedOut,
-                        activeColor = PokerColors.PokerGold,
-                        contentDescription = if (player.payedOut) "Payout complete" else "Payout pending",
-                        onClick = { onActionRequested(PlayerActionType.PAYED_OUT) },
-                        borderOverride = if (isChampionHighlight) Color.Black else null
-                    )
-                }
+                PlayerStatusChip(
+                    emoji = "💸",
+                    isActive = player.payedOut,
+                    activeColor = PokerColors.PokerGold,
+                    contentDescription = if (player.payedOut) "Payout complete" else "Payout pending",
+                    onClick = { onActionRequested(PlayerActionType.PAYED_OUT) },
+                    borderOverride = if (isChampionHighlight) Color.Black else null
+                )
             }
         }
     }
@@ -620,7 +635,8 @@ private fun PlayerStatusChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    borderOverride: Color? = null
+    borderOverride: Color? = null,
+    badgeCount: Int = 0
 ) {
     val baseBackground = when {
         isActive -> PokerColors.DarkGreen
@@ -640,14 +656,15 @@ private fun PlayerStatusChip(
 
     Surface(
         modifier = modifier
-            .size(44.dp)
+            .size(38.dp)
             .clip(RoundedCornerShape(12.dp))
             .clickable(
                 enabled = enabled,
                 onClick = onClick
             )
             .semantics {
-                this.contentDescription = contentDescription
+                val badgeSuffix = if (badgeCount > 0) " ($badgeCount)" else ""
+                this.contentDescription = contentDescription + badgeSuffix
                 if (!enabled) this.disabled()
             },
         tonalElevation = if (isActive) 4.dp else 0.dp,
@@ -661,6 +678,17 @@ private fun PlayerStatusChip(
                 style = MaterialTheme.typography.titleMedium,
                 color = emojiColor
             )
+
+            if (badgeCount > 0) {
+                Text(
+                    text = "x$badgeCount",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = PokerColors.CardWhite,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 2.dp)
+                )
+            }
         }
     }
 }
@@ -669,65 +697,122 @@ private fun PlayerStatusChip(
 private fun PlayerActionDialog(
     player: PlayerData,
     pendingAction: PendingPlayerAction,
-    onConfirm: () -> Unit,
+    onConfirm: (Int?) -> Unit,
     onCancel: () -> Unit
 ) {
     val (emoji, title) = dialogTitle(pendingAction.actionType)
     val message = dialogMessage(player, pendingAction)
+    val isCountAction = pendingAction.actionType == PlayerActionType.REBUY || pendingAction.actionType == PlayerActionType.ADDON
+    val baseCount = pendingAction.baseCount.coerceAtLeast(0)
+    var purchaseCount by remember(pendingAction.playerId, pendingAction.actionType, baseCount) {
+        mutableStateOf(baseCount)
+    }
 
-    Dialog(onDismissRequest = onCancel) {
+    val clampedTarget = pendingAction.targetCount.coerceIn(0, MAX_PURCHASE_COUNT)
+
+    LaunchedEffect(pendingAction.playerId, pendingAction.actionType, baseCount, clampedTarget) {
+        purchaseCount = baseCount
+        if (isCountAction && clampedTarget != baseCount) {
+            purchaseCount = clampedTarget
+        }
+    }
+
+    val animatedCount by animateIntAsState(targetValue = purchaseCount, label = "purchaseCounter")
+
+    PokerDialog(onDismissRequest = onCancel) {
+        Text(
+            text = "$emoji $title",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = PokerColors.PokerGold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = PokerColors.DarkGreen,
-            tonalElevation = 8.dp,
-            border = BorderStroke(1.dp, PokerColors.PokerGold)
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = PokerColors.FeltGreen,
+            border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "$emoji $title",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = PokerColors.PokerGold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = PokerColors.CardWhite,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    color = PokerColors.FeltGreen,
-                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
+        if (isCountAction) {
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { purchaseCount = (purchaseCount - 1).coerceAtLeast(0) },
+                    enabled = purchaseCount > 0
                 ) {
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = PokerColors.CardWhite,
-                        modifier = Modifier.padding(16.dp)
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = "Decrease count",
+                        tint = PokerColors.CardWhite
                     )
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Surface(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = PokerColors.SurfaceSecondary,
+                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
                 ) {
-                    TextButton(onClick = onConfirm) {
-                        Text(
-                            text = "Okay",
-                            color = PokerColors.PokerGold,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    TextButton(onClick = onCancel) {
-                        Text(
-                            text = "Cancel",
-                            color = PokerColors.CardWhite
-                        )
-                    }
+                    Text(
+                        text = animatedCount.toString(),
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                        color = PokerColors.PokerGold,
+                        modifier = Modifier
+                            .padding(horizontal = 32.dp, vertical = 8.dp)
+                            .semantics { contentDescription = "Purchase count $animatedCount" }
+                    )
                 }
+
+                IconButton(
+                    onClick = { purchaseCount = (purchaseCount + 1).coerceAtMost(MAX_PURCHASE_COUNT) },
+                    enabled = purchaseCount < MAX_PURCHASE_COUNT
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Increase count",
+                        tint = PokerColors.CardWhite
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            TextButton(onClick = {
+                onConfirm(if (isCountAction) purchaseCount else null)
+            }) {
+                Text(
+                    text = "Okay",
+                    color = PokerColors.PokerGold,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            TextButton(onClick = onCancel) {
+                Text(
+                    text = "Cancel",
+                    color = PokerColors.CardWhite
+                )
             }
         }
     }
@@ -777,4 +862,32 @@ private fun dialogTitle(actionType: PlayerActionType): Pair<String, String> = wh
     PlayerActionType.PAYED_OUT -> "⭐" to "Payout"
     PlayerActionType.REBUY -> "♻️" to "Rebuy"
     PlayerActionType.ADDON -> "➕" to "Add-on"
+}
+
+@Composable
+private fun SummaryInfoRow(
+    label: String,
+    amount: Double,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = PokerColors.CardWhite,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = "${'$'}${String.format("%.2f", amount)}",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold,
+            color = PokerColors.CardWhite,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }

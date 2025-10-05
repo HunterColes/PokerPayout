@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -266,5 +267,100 @@ class BankViewModelTest {
         state = viewModel.uiState.value
         assertEquals(false, state.players.first { it.id == 1 }.out)
         assertEquals(false, state.eliminationOrder.contains(1))
+    }
+
+    @Test
+    fun rebuysAndAddonsAdjustTotalsAndPayouts() = runTest(testDispatcher) {
+        tournamentPreferences.setPlayerCount(4)
+        tournamentPreferences.setBuyIn(100.0)
+        tournamentPreferences.setFoodPerPlayer(0.0)
+        tournamentPreferences.setBountyPerPlayer(0.0)
+        tournamentPreferences.setRebuyAmount(100.0)
+        tournamentPreferences.setAddOnAmount(50.0)
+        tournamentPreferences.setPayoutWeights(listOf(3, 2, 1))
+
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        listOf(1, 2).forEach { id ->
+            viewModel.acceptIntent(BankIntent.BuyInToggled(id))
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val baselineState = viewModel.uiState.value
+        assertEquals(400.0, baselineState.totalPool, 0.001)
+        assertEquals(200.0, baselineState.totalPaidIn, 0.001)
+        val baselinePercent = baselineState.totalPaidIn / baselineState.totalPool
+        assertEquals(0.5, baselinePercent, 0.001)
+
+        viewModel.acceptIntent(BankIntent.PlayerRebuyChanged(playerId = 1, rebuys = 2))
+        viewModel.acceptIntent(BankIntent.PlayerRebuyChanged(playerId = 2, rebuys = 1))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val afterRebuys = viewModel.uiState.value
+        assertEquals(300.0, afterRebuys.rebuyPool, 0.001)
+        assertEquals(3, afterRebuys.totalRebuyCount)
+        assertEquals(700.0, afterRebuys.totalPool, 0.001)
+        assertEquals(500.0, afterRebuys.totalPaidIn, 0.001)
+        val percentAfterRebuys = afterRebuys.totalPaidIn / afterRebuys.totalPool
+        assertTrue(percentAfterRebuys > baselinePercent)
+
+        viewModel.acceptIntent(BankIntent.PlayerAddonChanged(playerId = 1, addons = 1))
+        viewModel.acceptIntent(BankIntent.PlayerAddonChanged(playerId = 2, addons = 2))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val afterAddons = viewModel.uiState.value
+        assertEquals(150.0, afterAddons.addonPool, 0.001)
+        assertEquals(3, afterAddons.totalAddonCount)
+        assertEquals(850.0, afterAddons.totalPool, 0.001)
+        assertEquals(650.0, afterAddons.totalPaidIn, 0.001)
+        val percentAfterAddons = afterAddons.totalPaidIn / afterAddons.totalPool
+        assertTrue(percentAfterAddons > percentAfterRebuys)
+        assertEquals(850.0, afterAddons.prizePool, 0.001)
+
+        (4 downTo 2).forEach { id ->
+            viewModel.acceptIntent(BankIntent.OutToggled(id))
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        listOf(3, 2, 1).forEach { id ->
+            viewModel.acceptIntent(BankIntent.PayedOutToggled(id))
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val payoutState = viewModel.uiState.value
+        assertEquals(850.0, payoutState.totalPayedOut, 0.001)
+    }
+
+    @Test
+    fun clearingRebuyOrAddonAmountsResetsPurchases() = runTest(testDispatcher) {
+        tournamentPreferences.setPlayerCount(3)
+        tournamentPreferences.setRebuyAmount(25.0)
+        tournamentPreferences.setAddOnAmount(15.0)
+
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.acceptIntent(BankIntent.PlayerRebuyChanged(playerId = 1, rebuys = 2))
+        viewModel.acceptIntent(BankIntent.PlayerRebuyChanged(playerId = 2, rebuys = 1))
+        viewModel.acceptIntent(BankIntent.PlayerAddonChanged(playerId = 1, addons = 1))
+        viewModel.acceptIntent(BankIntent.PlayerAddonChanged(playerId = 3, addons = 2))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        var state = viewModel.uiState.value
+        assertEquals(3, state.totalRebuyCount)
+        assertEquals(3, state.totalAddonCount)
+
+        tournamentPreferences.setRebuyAmount(0.0)
+        tournamentPreferences.setAddOnAmount(0.0)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        state = viewModel.uiState.value
+        assertEquals(0, state.totalRebuyCount)
+        assertEquals(0, state.totalAddonCount)
+        assertEquals(0, state.players.count { it.rebuys > 0 })
+        assertEquals(0, state.players.count { it.addons > 0 })
+        assertEquals(0.0, state.rebuyPool, 0.001)
+        assertEquals(0.0, state.addonPool, 0.001)
     }
 }

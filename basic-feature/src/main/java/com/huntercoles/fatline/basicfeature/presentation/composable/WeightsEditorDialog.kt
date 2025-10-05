@@ -22,9 +22,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.huntercoles.fatline.core.constants.TournamentConstants
 import com.huntercoles.fatline.core.design.PokerColors
+import com.huntercoles.fatline.core.design.PokerDialog
 
 private const val MAX_WEIGHT_VALUE = 999
 private val MAX_WEIGHT_POSITIONS = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.size
@@ -76,149 +76,136 @@ fun WeightsEditorDialog(
     
     val hasErrors = invalidPositions.any { it }
     
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.8f),
-            colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary),
-            shape = RoundedCornerShape(16.dp)
+    PokerDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.85f)
+    ) {
+        Text(
+            text = "⚖️ Edit Payout Weights",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = PokerColors.PokerGold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Higher weights = larger payouts.",
+            fontSize = 14.sp,
+            color = PokerColors.CardWhite,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp)
+            itemsIndexed(weights) { index, weight ->
+                WeightRow(
+                    position = index + 1,
+                    weight = weight,
+                    isError = invalidPositions.getOrElse(index) { false },
+                    onWeightChange = { newWeight ->
+                        if (newWeight > 0) {
+                            weights[index] = newWeight
+                        }
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    if (weights.size > 1) {
+                        weights.removeAt(weights.size - 1)
+                    }
+                },
+                enabled = weights.size > 1 && !hasErrors,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = PokerColors.ErrorRed
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    PokerColors.ErrorRed
+                )
             ) {
-                // Header
-                Text(
-                    text = "⚖️ Edit Payout Weights",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = PokerColors.PokerGold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                Text("-", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            }
+
+            OutlinedButton(
+                onClick = {
+                    if (weights.size < MAX_WEIGHT_POSITIONS && !hasErrors) {
+                        val nextPosition = weights.size + 1
+                        val defaultWeight = if (nextPosition <= TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.size) {
+                            TournamentConstants.DEFAULT_PAYOUT_WEIGHTS[nextPosition - 1]
+                        } else {
+                            1 // Default for positions beyond the standard defaults
+                        }
+                        weights.add(defaultWeight)
+                    }
+                },
+                enabled = weights.size < MAX_WEIGHT_POSITIONS && !hasErrors,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = PokerColors.AccentGreen
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    PokerColors.AccentGreen
                 )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = "Higher weights = larger payouts.",
-                    fontSize = 14.sp,
-                    color = PokerColors.CardWhite,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Position"
                 )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Weights list
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    itemsIndexed(weights) { index, weight ->
-                        WeightRow(
-                            position = index + 1,
-                            weight = weight,
-                            isError = invalidPositions.getOrElse(index) { false },
-                            onWeightChange = { newWeight ->
-                                if (newWeight > 0) {
-                                    weights[index] = newWeight
-                                }
-                            }
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Add/Remove position buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            if (weights.size > 1) {
-                                weights.removeAt(weights.size - 1)
-                            }
-                        },
-                        enabled = weights.size > 1 && !hasErrors,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = PokerColors.ErrorRed
-                        ),
-                        border = BorderStroke(
-                            1.dp,
-                            PokerColors.ErrorRed
-                        )
-                    ) {
-                        Text("-", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    }
-                    
-                    OutlinedButton(
-                        onClick = {
-                            if (weights.size < MAX_WEIGHT_POSITIONS && !hasErrors) {
-                                val nextPosition = weights.size + 1
-                                val defaultWeight = if (nextPosition <= TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.size) {
-                                    TournamentConstants.DEFAULT_PAYOUT_WEIGHTS[nextPosition - 1]
-                                } else {
-                                    1 // Default for positions beyond the standard defaults
-                                }
-                                weights.add(defaultWeight)
-                            }
-                        },
-                        enabled = weights.size < MAX_WEIGHT_POSITIONS && !hasErrors,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = PokerColors.AccentGreen
-                        ),
-                        border = BorderStroke(
-                            1.dp,
-                            PokerColors.AccentGreen
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Position"
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Action buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = PokerColors.CardWhite
-                        )
-                    ) {
-                        Text("Cancel")
-                    }
-                    
-                    Button(
-                        onClick = {
-                            onWeightsChanged(weights.toList())
-                            onDismiss()
-                        },
-                        enabled = !hasErrors,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = PokerColors.AccentGreen,
-                            contentColor = PokerColors.DarkGreen,
-                            disabledContainerColor = PokerColors.CardWhite.copy(alpha = 0.3f),
-                            disabledContentColor = PokerColors.CardWhite.copy(alpha = 0.5f)
-                        )
-                    ) {
-                        Text("Save", fontWeight = FontWeight.Bold)
-                    }
-                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = PokerColors.CardWhite
+                )
+            ) {
+                Text("Cancel")
+            }
+
+            Button(
+                onClick = {
+                    onWeightsChanged(weights.toList())
+                    onDismiss()
+                },
+                enabled = !hasErrors,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PokerColors.AccentGreen,
+                    contentColor = PokerColors.DarkGreen,
+                    disabledContainerColor = PokerColors.CardWhite.copy(alpha = 0.3f),
+                    disabledContentColor = PokerColors.CardWhite.copy(alpha = 0.5f)
+                )
+            ) {
+                Text("Save", fontWeight = FontWeight.Bold)
             }
         }
     }

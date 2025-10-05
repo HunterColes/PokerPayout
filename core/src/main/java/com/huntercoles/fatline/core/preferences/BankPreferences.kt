@@ -16,6 +16,10 @@ class BankPreferences @Inject constructor(
     private val prefs: SharedPreferences = context.getSharedPreferences("bank_prefs", Context.MODE_PRIVATE)
     private val _eliminationOrder = MutableStateFlow(readEliminationOrderFromPrefs())
     val eliminationOrder: Flow<List<Int>> = _eliminationOrder.asStateFlow()
+    private val _totalRebuys = MutableStateFlow(calculateTotalRebuys())
+    val totalRebuys: Flow<Int> = _totalRebuys.asStateFlow()
+    private val _totalAddons = MutableStateFlow(calculateTotalAddons())
+    val totalAddons: Flow<Int> = _totalAddons.asStateFlow()
     
     fun savePlayerName(playerId: Int, name: String) {
         prefs.edit().putString("player_name_$playerId", name).apply()
@@ -50,19 +54,43 @@ class BankPreferences @Inject constructor(
     }
     
     fun savePlayerRebuys(playerId: Int, rebuys: Int) {
-        prefs.edit().putInt("player_rebuys_$playerId", rebuys).apply()
+        prefs.edit().putInt("$PLAYER_REBUYS_PREFIX$playerId", rebuys).apply()
+        _totalRebuys.value = calculateTotalRebuys()
     }
     
     fun getPlayerRebuys(playerId: Int): Int {
-        return prefs.getInt("player_rebuys_$playerId", 0)
+        return prefs.getInt("$PLAYER_REBUYS_PREFIX$playerId", 0)
     }
     
     fun savePlayerAddons(playerId: Int, addons: Int) {
-        prefs.edit().putInt("player_addons_$playerId", addons).apply()
+        prefs.edit().putInt("$PLAYER_ADDONS_PREFIX$playerId", addons).apply()
+        _totalAddons.value = calculateTotalAddons()
     }
     
     fun getPlayerAddons(playerId: Int): Int {
-        return prefs.getInt("player_addons_$playerId", 0)
+        return prefs.getInt("$PLAYER_ADDONS_PREFIX$playerId", 0)
+    }
+
+    fun getTotalRebuyCount(): Int = _totalRebuys.value
+
+    fun getTotalAddonCount(): Int = _totalAddons.value
+
+    fun clearAllRebuys() {
+        val editor = prefs.edit()
+        prefs.all.keys
+            .filter { it.startsWith(PLAYER_REBUYS_PREFIX) }
+            .forEach { editor.remove(it) }
+        editor.apply()
+        _totalRebuys.value = 0
+    }
+
+    fun clearAllAddons() {
+        val editor = prefs.edit()
+        prefs.all.keys
+            .filter { it.startsWith(PLAYER_ADDONS_PREFIX) }
+            .forEach { editor.remove(it) }
+        editor.apply()
+        _totalAddons.value = 0
     }
 
     fun getEliminationOrder(): List<Int> = _eliminationOrder.value
@@ -115,6 +143,8 @@ class BankPreferences @Inject constructor(
         editor.remove(ELIMINATION_ORDER_KEY)
         editor.apply()
         _eliminationOrder.value = emptyList()
+        _totalRebuys.value = 0
+        _totalAddons.value = 0
     }
 
     private fun readEliminationOrderFromPrefs(): List<Int> {
@@ -125,7 +155,21 @@ class BankPreferences @Inject constructor(
             .filter { it > 0 }
     }
 
+    private fun calculateTotalRebuys(): Int {
+        return prefs.all.entries
+            .filter { it.key.startsWith(PLAYER_REBUYS_PREFIX) }
+            .sumOf { (it.value as? Number)?.toInt() ?: 0 }
+    }
+
+    private fun calculateTotalAddons(): Int {
+        return prefs.all.entries
+            .filter { it.key.startsWith(PLAYER_ADDONS_PREFIX) }
+            .sumOf { (it.value as? Number)?.toInt() ?: 0 }
+    }
+
     companion object {
         private const val ELIMINATION_ORDER_KEY = "elimination_order"
+        private const val PLAYER_REBUYS_PREFIX = "player_rebuys_"
+        private const val PLAYER_ADDONS_PREFIX = "player_addons_"
     }
 }

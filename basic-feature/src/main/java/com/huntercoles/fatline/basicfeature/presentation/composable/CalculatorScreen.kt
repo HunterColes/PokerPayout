@@ -1,5 +1,6 @@
 package com.huntercoles.fatline.basicfeature.presentation.composable
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -26,6 +27,7 @@ import com.huntercoles.fatline.basicfeature.presentation.CalculatorIntent
 import com.huntercoles.fatline.basicfeature.presentation.CalculatorUiState
 import com.huntercoles.fatline.basicfeature.presentation.CalculatorViewModel
 import com.huntercoles.fatline.core.design.PokerColors
+import com.huntercoles.fatline.core.design.PokerDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,45 +102,53 @@ fun CalculatorContent(
 
         // Reset Confirmation Dialog
         if (uiState.showResetDialog) {
-            AlertDialog(
-                onDismissRequest = { onIntent(CalculatorIntent.HideResetDialog) },
-                containerColor = PokerColors.DarkGreen,
-                title = {
-                    Text(
-                        text = "Reset?",
-                        color = PokerColors.PokerGold,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                text = {
+            PokerDialog(
+                onDismissRequest = { onIntent(CalculatorIntent.HideResetDialog) }
+            ) {
+                Text(
+                    text = "Reset tournament?",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = PokerColors.PokerGold
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = PokerColors.FeltGreen,
+                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
+                ) {
                     Text(
                         text = "This will reset all tournament settings and timer data to defaults.",
-                        color = PokerColors.CardWhite
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.CardWhite,
+                        modifier = Modifier.padding(16.dp)
                     )
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = { onIntent(CalculatorIntent.HideResetDialog) }
-                    ) {
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
+                ) {
+                    TextButton(onClick = { onIntent(CalculatorIntent.HideResetDialog) }) {
                         Text(
-                            text = "No",
+                            text = "Cancel",
                             color = PokerColors.CardWhite
                         )
                     }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { onIntent(CalculatorIntent.ConfirmReset) }
-                    ) {
+
+                    TextButton(onClick = { onIntent(CalculatorIntent.ConfirmReset) }) {
                         Text(
-                            text = "Yes",
+                            text = "Reset",
                             color = PokerColors.PokerGold,
                             fontWeight = FontWeight.Bold
                         )
                     }
-                },
-                shape = RoundedCornerShape(16.dp)
-            )
+                }
+            }
         }
 
         // Configuration Section (Collapsible)
@@ -285,7 +295,11 @@ fun TournamentConfigurationCard(
                     )
 
                     // Pool Summary
-                    PoolSummarySection(uiState.tournamentConfig)
+                    PoolSummarySection(
+                        config = uiState.tournamentConfig,
+                        rebuyPurchases = uiState.rebuyPurchases,
+                        addOnPurchases = uiState.addOnPurchases
+                    )
                 }
             }
         }

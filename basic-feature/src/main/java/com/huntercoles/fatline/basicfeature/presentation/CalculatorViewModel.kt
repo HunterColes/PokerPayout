@@ -44,6 +44,18 @@ class CalculatorViewModel @Inject constructor(
                 refreshLeaderboard(order)
             }
         }
+
+        viewModelScope.launch {
+            bankPreferences.totalRebuys.collect { count ->
+                updatePurchaseCounts(rebuyCount = count)
+            }
+        }
+
+        viewModelScope.launch {
+            bankPreferences.totalAddons.collect { count ->
+                updatePurchaseCounts(addOnCount = count)
+            }
+        }
     }
     
     private fun loadTournamentConfiguration() {
@@ -51,8 +63,8 @@ class CalculatorViewModel @Inject constructor(
         val savedBuyIn = tournamentPreferences.getBuyIn()
         val savedFood = tournamentPreferences.getFoodPerPlayer()
         val savedBounty = tournamentPreferences.getBountyPerPlayer()
-    val savedRebuy = tournamentPreferences.getRebuyAmount()
-    val savedAddOn = tournamentPreferences.getAddOnAmount()
+        val savedRebuy = tournamentPreferences.getRebuyAmount()
+        val savedAddOn = tournamentPreferences.getAddOnAmount()
         val savedWeights = tournamentPreferences.getPayoutWeights()
         
         val initialConfig = _uiState.value.tournamentConfig.copy(
@@ -62,9 +74,15 @@ class CalculatorViewModel @Inject constructor(
             bountyPerPlayer = savedBounty,
             payoutWeights = savedWeights
         )
-    // include rebuy and add-on in the initial config
-    val withRebuy = initialConfig.copy(rebuyPerPlayer = savedRebuy, addOnPerPlayer = savedAddOn)
-    _uiState.value = _uiState.value.copy(tournamentConfig = withRebuy)
+        // include rebuy and add-on in the initial config
+        val withRebuy = initialConfig.copy(rebuyPerPlayer = savedRebuy, addOnPerPlayer = savedAddOn)
+        val initialRebuyCount = bankPreferences.getTotalRebuyCount()
+        val initialAddOnCount = bankPreferences.getTotalAddonCount()
+        _uiState.value = _uiState.value.copy(
+            tournamentConfig = withRebuy,
+            rebuyPurchases = initialRebuyCount,
+            addOnPurchases = initialAddOnCount
+        )
         calculatePayouts()
     }
 
@@ -162,6 +180,9 @@ class CalculatorViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
         // Save to shared preferences
         tournamentPreferences.setRebuyAmount(rebuy)
+        if (rebuy <= 0.0) {
+            bankPreferences.clearAllRebuys()
+        }
         calculatePayouts()
     }
 
@@ -170,6 +191,9 @@ class CalculatorViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
         // Save to shared preferences
         tournamentPreferences.setAddOnAmount(addOn)
+        if (addOn <= 0.0) {
+            bankPreferences.clearAllAddons()
+        }
         calculatePayouts()
     }
 
@@ -208,16 +232,41 @@ class CalculatorViewModel @Inject constructor(
 
     private fun calculatePayouts() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            
-            val payouts = calculatePayoutsUseCase(_uiState.value.tournamentConfig)
-            
-            _uiState.value = _uiState.value.copy(
+            val currentState = _uiState.value
+            _uiState.value = currentState.copy(isLoading = true)
+
+            val stateForCalculation = _uiState.value
+            val rebuyPool = stateForCalculation.tournamentConfig.rebuyPerPlayer * stateForCalculation.rebuyPurchases
+            val addOnPool = stateForCalculation.tournamentConfig.addOnPerPlayer * stateForCalculation.addOnPurchases
+            val prizePoolOverride = stateForCalculation.tournamentConfig.prizePool + rebuyPool + addOnPool
+            val adjustedConfig = if (stateForCalculation.tournamentConfig.numPlayers > 0) {
+                stateForCalculation.tournamentConfig.copy(
+                    buyIn = prizePoolOverride / stateForCalculation.tournamentConfig.numPlayers
+                )
+            } else {
+                stateForCalculation.tournamentConfig
+            }
+
+            val payouts = calculatePayoutsUseCase(adjustedConfig)
+
+            _uiState.value = stateForCalculation.copy(
                 payouts = payouts,
                 isLoading = false
             )
 
             refreshLeaderboard()
+        }
+    }
+
+    private fun updatePurchaseCounts(rebuyCount: Int? = null, addOnCount: Int? = null) {
+        val currentState = _uiState.value
+        val updatedState = currentState.copy(
+            rebuyPurchases = rebuyCount ?: currentState.rebuyPurchases,
+            addOnPurchases = addOnCount ?: currentState.addOnPurchases
+        )
+        if (updatedState != currentState) {
+            _uiState.value = updatedState
+            calculatePayouts()
         }
     }
 

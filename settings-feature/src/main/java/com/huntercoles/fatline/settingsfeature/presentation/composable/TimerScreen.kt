@@ -79,6 +79,7 @@ import com.huntercoles.fatline.settingsfeature.presentation.TimerUiState
 import com.huntercoles.fatline.settingsfeature.presentation.TimerViewModel
 import com.huntercoles.fatline.core.utils.BlindLevel
 import com.huntercoles.fatline.core.design.PokerColors
+import com.huntercoles.fatline.core.design.PokerDialog
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -710,58 +711,61 @@ private fun BlindCustomizationDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    PokerDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "✏️ Customize Blinds",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = PokerColors.PokerGold
+                )
+                Text(
+                    text = "Adjust levels before the tournament begins.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PokerColors.CardWhite.copy(alpha = 0.7f)
+                )
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = PokerColors.CardWhite
+                )
+            }
+        }
+
+        if (!canEdit) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Blinds are locked once the timer has started.",
+                style = MaterialTheme.typography.bodySmall,
+                color = PokerColors.ErrorRed
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         Surface(
-            modifier = Modifier
-                .fillMaxWidth(1.5f)
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(20.dp),
-            color = PokerColors.SurfacePrimary,
-            tonalElevation = 8.dp
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = PokerColors.SurfacePrimary.copy(alpha = 0.9f)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "✏️ Customize Blinds",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = PokerColors.PokerGold
-                        )
-                        Text(
-                            text = "Adjust levels before the tournament begins.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = PokerColors.CardWhite.copy(alpha = 0.7f)
-                        )
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = PokerColors.CardWhite
-                        )
-                    }
-                }
-
-                if (!canEdit) {
-                    Text(
-                        text = "Blinds are locked once the timer has started.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PokerColors.ErrorRed
-                    )
-                }
-
-                HorizontalDivider(color = PokerColors.CardWhite.copy(alpha = 0.12f))
-
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -780,57 +784,60 @@ private fun BlindCustomizationDialog(
                         )
                     }
                 }
+            }
+        }
 
-                if (validationError != null) {
-                    Text(
-                        text = validationError!!,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PokerColors.ErrorRed
+        if (validationError != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = validationError!!,
+                style = MaterialTheme.typography.bodySmall,
+                color = PokerColors.ErrorRed
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                TextButton(
+                    onClick = onReset,
+                    enabled = resetEnabled,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = if (resetEnabled) PokerColors.AccentGreen else PokerColors.CardWhite.copy(alpha = 0.5f)
                     )
+                ) {
+                    Text("Reset to defaults")
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.textButtonColors(contentColor = PokerColors.CardWhite)
+                ) {
+                    Text("Cancel")
                 }
 
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                Button(
+                    onClick = { handleSave() },
+                    enabled = canEdit,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PokerColors.PokerGold,
+                        contentColor = PokerColors.DarkGreen
+                    )
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        TextButton(
-                            onClick = onReset,
-                            enabled = resetEnabled,
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = if (resetEnabled) PokerColors.AccentGreen else PokerColors.CardWhite.copy(alpha = 0.5f)
-                            )
-                        ) {
-                            Text("Reset to defaults")
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(
-                            onClick = onDismiss,
-                            colors = ButtonDefaults.textButtonColors(contentColor = PokerColors.CardWhite)
-                        ) {
-                            Text("Cancel")
-                        }
-
-                        Button(
-                            onClick = { handleSave() },
-                            enabled = canEdit,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = PokerColors.PokerGold,
-                                contentColor = PokerColors.DarkGreen
-                            )
-                        ) {
-                            Text("Save")
-                        }
-                    }
+                    Text("Save")
                 }
             }
         }
@@ -1058,44 +1065,54 @@ private fun BlindConfigurationSection(
                 ) {
                     val focusManager = LocalFocusManager.current
                     
-                    // Duration Field (hours) - simplified to use same component
-                    BlindConfigIntField(
-                        value = uiState.gameDurationHours,
-                        label = "Duration (Hours)",
-                        onValueChange = { hours -> 
-                            val cappedHours = minOf(hours, 24).coerceAtLeast(1)
-                            onIntent(TimerIntent.GameDurationHoursChanged(cappedHours))
-                        },
-                        isLocked = uiState.hasTimerStarted,
-                        focusManager = focusManager
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        BlindConfigIntField(
+                            value = uiState.gameDurationHours,
+                            label = "Duration (Hours)",
+                            onValueChange = { hours ->
+                                val cappedHours = minOf(hours, 24).coerceAtLeast(1)
+                                onIntent(TimerIntent.GameDurationHoursChanged(cappedHours))
+                            },
+                            isLocked = uiState.hasTimerStarted,
+                            focusManager = focusManager,
+                            modifier = Modifier.weight(1f)
+                        )
 
-                    // Smallest Chip
-                    BlindConfigIntField(
-                        value = uiState.blindConfiguration.smallestChip,
-                        label = "Smallest Chip",
-                        onValueChange = { onIntent(TimerIntent.UpdateSmallestChip(it)) },
-                        isLocked = uiState.hasTimerStarted,
-                        focusManager = focusManager
-                    )
+                        BlindConfigIntField(
+                            value = uiState.blindConfiguration.roundLengthMinutes,
+                            label = "Round Length (Min)",
+                            onValueChange = { onIntent(TimerIntent.UpdateRoundLength(it)) },
+                            isLocked = uiState.hasTimerStarted,
+                            focusManager = focusManager,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
 
-                    // Starting Chips  
-                    BlindConfigIntField(
-                        value = uiState.blindConfiguration.startingChips,
-                        label = "Starting Chips",
-                        onValueChange = { onIntent(TimerIntent.UpdateStartingChips(it)) },
-                        isLocked = uiState.hasTimerStarted,
-                        focusManager = focusManager
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        BlindConfigIntField(
+                            value = uiState.blindConfiguration.smallestChip,
+                            label = "Smallest Chip",
+                            onValueChange = { onIntent(TimerIntent.UpdateSmallestChip(it)) },
+                            isLocked = uiState.hasTimerStarted,
+                            focusManager = focusManager,
+                            modifier = Modifier.weight(1f)
+                        )
 
-                    // Round Length
-                    BlindConfigIntField(
-                        value = uiState.blindConfiguration.roundLengthMinutes,
-                        label = "Round Length (Min)",
-                        onValueChange = { onIntent(TimerIntent.UpdateRoundLength(it)) },
-                        isLocked = uiState.hasTimerStarted,
-                        focusManager = focusManager
-                    )
+                        BlindConfigIntField(
+                            value = uiState.blindConfiguration.startingChips,
+                            label = "Starting Chips",
+                            onValueChange = { onIntent(TimerIntent.UpdateStartingChips(it)) },
+                            isLocked = uiState.hasTimerStarted,
+                            focusManager = focusManager,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
 
                 }
             }
@@ -1117,7 +1134,8 @@ private fun BlindConfigIntField(
     label: String,
     onValueChange: (Int) -> Unit,
     isLocked: Boolean,
-    focusManager: FocusManager
+    focusManager: FocusManager,
+    modifier: Modifier = Modifier
 ) {
     var textValue by remember { mutableStateOf(value.toString()) }
     var isFocused by remember { mutableStateOf(false) }
@@ -1175,8 +1193,7 @@ private fun BlindConfigIntField(
                 backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
             )
         ),
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
             .onFocusChanged { focusState ->
                 val gainedFocus = focusState.isFocused
                 if (!gainedFocus && isFocused) {

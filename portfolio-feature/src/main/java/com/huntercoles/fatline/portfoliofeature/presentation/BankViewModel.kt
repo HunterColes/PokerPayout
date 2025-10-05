@@ -53,6 +53,22 @@ class BankViewModel @Inject constructor(
                 _uiState.update { it.copy(eliminationOrder = order) }
             }
         }
+
+        viewModelScope.launch {
+            tournamentPreferences.rebuyPerPlayer.collect { amount ->
+                if (amount <= 0.0) {
+                    resetAllRebuys()
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            tournamentPreferences.addOnPerPlayer.collect { amount ->
+                if (amount <= 0.0) {
+                    resetAllAddons()
+                }
+            }
+        }
     }
 
     fun acceptIntent(intent: BankIntent) {
@@ -66,6 +82,7 @@ class BankViewModel @Inject constructor(
             is PlayerAddonChanged -> updatePlayerAddons(intent.playerId, intent.addons)
             is ShowPlayerActionDialog -> showPlayerActionDialog(intent.playerId, intent.action)
             is ConfirmPlayerAction -> confirmPendingAction()
+            is BankIntent.ConfirmPlayerActionWithCount -> confirmPendingAction(intent.count)
             is CancelPlayerAction -> clearPendingAction()
             is BankIntent.ShowResetDialog -> {
                 // Only show dialog if not in default state
@@ -179,7 +196,8 @@ class BankViewModel @Inject constructor(
         val pending = when (actionType) {
             PlayerActionType.OUT -> {
                 val apply = !player.out
-                if (!apply && !player.out) return
+                val isLastActive = _uiState.value.players.count { !it.out } <= 1
+                if ((apply && isLastActive) || (!apply && !player.out)) return
                 PendingPlayerAction(playerId, actionType, apply)
             }
             PlayerActionType.BUY_IN -> {
@@ -191,16 +209,28 @@ class BankViewModel @Inject constructor(
                 PendingPlayerAction(playerId, actionType, apply)
             }
             PlayerActionType.REBUY -> {
-                val apply = player.rebuys == 0
-                val delta = if (apply) 1 else -player.rebuys
-                if (!apply && player.rebuys == 0) return
-                PendingPlayerAction(playerId, actionType, apply, delta)
+                if (_uiState.value.rebuyAmount <= 0.0) return
+                val baseCount = player.rebuys.coerceAtLeast(0)
+                val suggested = (baseCount + 1).coerceAtMost(MAX_PURCHASE_COUNT)
+                PendingPlayerAction(
+                    playerId = playerId,
+                    actionType = actionType,
+                    apply = true,
+                    baseCount = baseCount,
+                    targetCount = suggested
+                )
             }
             PlayerActionType.ADDON -> {
-                val apply = player.addons == 0
-                val delta = if (apply) 1 else -player.addons
-                if (!apply && player.addons == 0) return
-                PendingPlayerAction(playerId, actionType, apply, delta)
+                if (_uiState.value.addonAmount <= 0.0) return
+                val baseCount = player.addons.coerceAtLeast(0)
+                val suggested = (baseCount + 1).coerceAtMost(MAX_PURCHASE_COUNT)
+                PendingPlayerAction(
+                    playerId = playerId,
+                    actionType = actionType,
+                    apply = true,
+                    baseCount = baseCount,
+                    targetCount = suggested
+                )
             }
         }
 
@@ -211,7 +241,7 @@ class BankViewModel @Inject constructor(
         _uiState.update { it.copy(pendingAction = null) }
     }
 
-    private fun confirmPendingAction() {
+    private fun confirmPendingAction(targetCountOverride: Int? = null) {
         val pendingAction = _uiState.value.pendingAction ?: return
         val player = _uiState.value.players.firstOrNull { it.id == pendingAction.playerId }
         if (player == null) {
@@ -219,16 +249,20 @@ class BankViewModel @Inject constructor(
             return
         }
 
+        val sanitizedOverride = targetCountOverride?.coerceIn(0, MAX_PURCHASE_COUNT)
+
         when (pendingAction.actionType) {
             PlayerActionType.OUT -> setPlayerOut(player.id, pendingAction.apply)
             PlayerActionType.BUY_IN -> setPlayerBuyIn(player.id, pendingAction.apply)
             PlayerActionType.PAYED_OUT -> setPlayerPayedOut(player.id, pendingAction.apply)
             PlayerActionType.REBUY -> {
-                val newCount = (player.rebuys + pendingAction.delta).coerceAtLeast(0)
+                val fallback = if (pendingAction.targetCount >= 0) pendingAction.targetCount else player.rebuys
+                val newCount = sanitizedOverride ?: fallback
                 updatePlayerRebuys(player.id, newCount)
             }
             PlayerActionType.ADDON -> {
-                val newCount = (player.addons + pendingAction.delta).coerceAtLeast(0)
+                val fallback = if (pendingAction.targetCount >= 0) pendingAction.targetCount else player.addons
+                val newCount = sanitizedOverride ?: fallback
                 updatePlayerAddons(player.id, newCount)
             }
         }
@@ -266,7 +300,7 @@ class BankViewModel @Inject constructor(
     }
 
     private fun updatePlayerRebuys(playerId: Int, rebuys: Int) {
-        val sanitized = rebuys.coerceIn(0, 1)
+        val sanitized = rebuys.coerceIn(0, MAX_PURCHASE_COUNT)
 
         // Save to preferences
         bankPreferences.savePlayerRebuys(playerId, sanitized)
@@ -281,7 +315,7 @@ class BankViewModel @Inject constructor(
     }
 
     private fun updatePlayerAddons(playerId: Int, addons: Int) {
-        val sanitized = addons.coerceIn(0, 1)
+        val sanitized = addons.coerceIn(0, MAX_PURCHASE_COUNT)
 
         // Save to preferences
         bankPreferences.savePlayerAddons(playerId, sanitized)
@@ -339,17 +373,32 @@ class BankViewModel @Inject constructor(
 
         // Get tournament config from preferences
         val tournamentConfig = tournamentPreferences.getCurrentTournamentConfig()
-        val totalPerPlayer = tournamentConfig.totalPerPlayer
+        val basePerPlayer = tournamentConfig.buyIn + tournamentConfig.foodPerPlayer + tournamentConfig.bountyPerPlayer
 
-        // Calculate total pool
-        val totalPool = playerCount * totalPerPlayer
+        val buyInPool = playerCount * tournamentConfig.buyIn
+        val foodPool = playerCount * tournamentConfig.foodPerPlayer
+        val bountyPool = playerCount * tournamentConfig.bountyPerPlayer
 
-        // Calculate total paid in (only count players who have bought in)
-        val totalPaidIn = currentState.players.count { it.buyIn } * totalPerPlayer
+        val totalRebuyCount = currentState.players.sumOf { it.rebuys }
+        val totalAddonCount = currentState.players.sumOf { it.addons }
+
+        val rebuyPool = totalRebuyCount * tournamentConfig.rebuyPerPlayer
+        val addonPool = totalAddonCount * tournamentConfig.addOnPerPlayer
+
+        val totalPool = buyInPool + foodPool + bountyPool + rebuyPool + addonPool
+
+        val totalPaidInBase = currentState.players.sumOf { player ->
+            if (player.buyIn) basePerPlayer else 0.0
+        }
+        val totalPaidIn = totalPaidInBase + rebuyPool + addonPool
 
         // Calculate total paid out using tournament payouts and elimination order
-        val prizePool = playerCount * tournamentConfig.buyIn
-        val payouts = calculatePayoutPositions(tournamentConfig)
+        val prizePool = buyInPool + rebuyPool + addonPool
+        val payouts = calculatePayoutPositions(
+            config = tournamentConfig,
+            prizePool = prizePool,
+            playerCount = playerCount
+        )
         val sanitizedElimination = currentState.eliminationOrder
             .filter { it in 1..playerCount }
             .distinct()
@@ -381,13 +430,52 @@ class BankViewModel @Inject constructor(
                 totalPaidIn = totalPaidIn,
                 totalPayedOut = totalPayedOut,
                 prizePool = prizePool,
+                buyInPool = buyInPool,
+                foodPool = foodPool,
+                bountyPool = bountyPool,
+                rebuyPool = rebuyPool,
+                addonPool = addonPool,
+                totalRebuyCount = totalRebuyCount,
+                totalAddonCount = totalAddonCount,
                 activePlayers = activePlayers,
                 payedOutCount = payedOutCount,
                 buyInAmount = tournamentConfig.buyIn,
                 foodAmount = tournamentConfig.foodPerPlayer,
-                bountyAmount = tournamentConfig.bountyPerPlayer
+                bountyAmount = tournamentConfig.bountyPerPlayer,
+                rebuyAmount = tournamentConfig.rebuyPerPlayer,
+                addonAmount = tournamentConfig.addOnPerPlayer
             )
         }
+    }
+
+    private fun resetAllRebuys() {
+        val currentPlayers = _uiState.value.players
+        if (currentPlayers.none { it.rebuys != 0 }) {
+            bankPreferences.clearAllRebuys()
+            return
+        }
+
+        bankPreferences.clearAllRebuys()
+        val updatedPlayers = currentPlayers.map { player ->
+            if (player.rebuys != 0) player.copy(rebuys = 0) else player
+        }
+        _uiState.update { it.copy(players = updatedPlayers) }
+        updateCalculations()
+    }
+
+    private fun resetAllAddons() {
+        val currentPlayers = _uiState.value.players
+        if (currentPlayers.none { it.addons != 0 }) {
+            bankPreferences.clearAllAddons()
+            return
+        }
+
+        bankPreferences.clearAllAddons()
+        val updatedPlayers = currentPlayers.map { player ->
+            if (player.addons != 0) player.copy(addons = 0) else player
+        }
+        _uiState.update { it.copy(players = updatedPlayers) }
+        updateCalculations()
     }
     
     private fun showResetDialog() {
@@ -419,9 +507,11 @@ private data class PayoutPosition(
 )
 
 private fun calculatePayoutPositions(
-    config: TournamentPreferences.TournamentConfigData
+    config: TournamentPreferences.TournamentConfigData,
+    prizePool: Double,
+    playerCount: Int
 ): List<PayoutPosition> {
-    val maxPayingPositions = max(1, config.numPlayers / 3)
+    val maxPayingPositions = max(1, playerCount / 3)
     val defaultWeights = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.take(maxPayingPositions)
     val isUsingDefaultWeights = when {
         config.payoutWeights == defaultWeights -> true
@@ -445,7 +535,7 @@ private fun calculatePayoutPositions(
     if (totalWeight == 0) return emptyList()
 
     return payingWeights.mapIndexed { index, weight ->
-        val payout = (weight.toDouble() / totalWeight) * config.prizePool
+        val payout = (weight.toDouble() / totalWeight) * prizePool
         PayoutPosition(position = index + 1, payout = payout)
     }
 }

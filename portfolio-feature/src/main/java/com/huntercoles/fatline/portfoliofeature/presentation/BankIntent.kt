@@ -12,6 +12,7 @@ sealed class BankIntent {
     data class PlayerAddonChanged(val playerId: Int, val addons: Int) : BankIntent()
     data class ShowPlayerActionDialog(val playerId: Int, val action: PlayerActionType) : BankIntent()
     object ConfirmPlayerAction : BankIntent()
+    data class ConfirmPlayerActionWithCount(val count: Int) : BankIntent()
     object CancelPlayerAction : BankIntent()
     object ShowResetDialog : BankIntent()
     object HideResetDialog : BankIntent()

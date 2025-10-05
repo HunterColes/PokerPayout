@@ -281,13 +281,22 @@ fun PoolConfigurationSection(
 }
 
 @Composable
-fun PoolSummarySection(config: TournamentConfig) {
+fun PoolSummarySection(
+    config: TournamentConfig,
+    rebuyPurchases: Int,
+    addOnPurchases: Int
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = PokerColors.FeltGreen),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
+        val rebuyPool = config.rebuyPerPlayer * rebuyPurchases
+        val addOnPool = config.addOnPerPlayer * addOnPurchases
+        val baseTotal = config.prizePool + config.foodPool + config.bountyPool
+        val totalPool = baseTotal + rebuyPool + addOnPool
+
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -332,6 +341,28 @@ fun PoolSummarySection(config: TournamentConfig) {
                 }
             }
 
+            if (rebuyPool > 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Rebuy Pool:", color = PokerColors.CardWhite)
+                    Text("$${DecimalFormat("#,##0.00").format(rebuyPool)}",
+                         fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
+                }
+            }
+
+            if (addOnPool > 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Add-on Pool:", color = PokerColors.CardWhite)
+                    Text("$${DecimalFormat("#,##0.00").format(addOnPool)}",
+                         fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
+                }
+            }
+
             // Divider then Total below it
             HorizontalDivider(color = PokerColors.AccentGreen)
 
@@ -340,8 +371,7 @@ fun PoolSummarySection(config: TournamentConfig) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Total Pool:", color = PokerColors.CardWhite)
-                // Display total pool excluding add-on per user request
-                Text("$${DecimalFormat("#,##0.00").format(config.totalPoolWithoutAddOn)}", 
+                Text("$${DecimalFormat("#,##0.00").format(totalPool)}",
                      fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
             }
         }

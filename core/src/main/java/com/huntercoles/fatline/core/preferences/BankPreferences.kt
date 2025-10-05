@@ -52,6 +52,22 @@ class BankPreferences @Inject constructor(
     fun getPlayerPayedOutStatus(playerId: Int): Boolean {
         return prefs.getBoolean("player_payedout_$playerId", false)
     }
+
+    fun savePlayerEliminatedBy(playerId: Int, eliminatedBy: Int?) {
+        val editor = prefs.edit()
+        if (eliminatedBy == null) {
+            editor.remove("$PLAYER_ELIMINATED_BY_PREFIX$playerId")
+        } else {
+            editor.putInt("$PLAYER_ELIMINATED_BY_PREFIX$playerId", eliminatedBy)
+        }
+        editor.apply()
+    }
+
+    fun getPlayerEliminatedBy(playerId: Int): Int? {
+        if (!prefs.contains("$PLAYER_ELIMINATED_BY_PREFIX$playerId")) return null
+        return prefs.getInt("$PLAYER_ELIMINATED_BY_PREFIX$playerId", -1)
+            .takeIf { it > 0 }
+    }
     
     fun savePlayerRebuys(playerId: Int, rebuys: Int) {
         prefs.edit().putInt("$PLAYER_REBUYS_PREFIX$playerId", rebuys).apply()
@@ -93,6 +109,14 @@ class BankPreferences @Inject constructor(
         _totalAddons.value = 0
     }
 
+    fun clearAllEliminatedBy() {
+        val editor = prefs.edit()
+        prefs.all.keys
+            .filter { it.startsWith(PLAYER_ELIMINATED_BY_PREFIX) }
+            .forEach { editor.remove(it) }
+        editor.apply()
+    }
+
     fun getEliminationOrder(): List<Int> = _eliminationOrder.value
 
     fun saveEliminationOrder(order: List<Int>) {
@@ -121,8 +145,9 @@ class BankPreferences @Inject constructor(
                 getPlayerOutStatus(playerId) || 
                 getPlayerPayedOutStatus(playerId)
             val hasRebuyAddon = getPlayerRebuys(playerId) > 0 || getPlayerAddons(playerId) > 0
+            val hasEliminationAssignment = getPlayerEliminatedBy(playerId) != null
             
-            if (hasStatusChange || hasRebuyAddon) {
+            if (hasStatusChange || hasRebuyAddon || hasEliminationAssignment) {
                 return false
             }
         }
@@ -145,6 +170,7 @@ class BankPreferences @Inject constructor(
         _eliminationOrder.value = emptyList()
         _totalRebuys.value = 0
         _totalAddons.value = 0
+        clearAllEliminatedBy()
     }
 
     private fun readEliminationOrderFromPrefs(): List<Int> {
@@ -171,5 +197,6 @@ class BankPreferences @Inject constructor(
         private const val ELIMINATION_ORDER_KEY = "elimination_order"
         private const val PLAYER_REBUYS_PREFIX = "player_rebuys_"
         private const val PLAYER_ADDONS_PREFIX = "player_addons_"
+        private const val PLAYER_ELIMINATED_BY_PREFIX = "player_eliminated_by_"
     }
 }

@@ -15,10 +15,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.with
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +36,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -41,6 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -219,15 +230,30 @@ internal fun BankScreen(
                 PlayerActionDialog(
                     player = player,
                     pendingAction = action,
-                    onConfirm = { selectedCount ->
-                        // If knocking out a player, trigger animation
-                        if (action.actionType == PlayerActionType.OUT && action.apply) {
-                            knockingOutPlayerId = player.id
-                        }
-                        if ((action.actionType == PlayerActionType.REBUY || action.actionType == PlayerActionType.ADDON) && selectedCount != null) {
-                            onIntent(BankIntent.ConfirmPlayerActionWithCount(selectedCount))
-                        } else {
-                            onIntent(BankIntent.ConfirmPlayerAction)
+                    allPlayers = uiState.players,
+                    onConfirm = { selectedCount, selectedPlayerId ->
+                        when (action.actionType) {
+                            PlayerActionType.OUT -> {
+                                if (action.apply) {
+                                    knockingOutPlayerId = player.id
+                                    onIntent(
+                                        BankIntent.ConfirmPlayerActionWithCount(
+                                            selectedPlayerId = selectedPlayerId
+                                        )
+                                    )
+                                } else {
+                                    onIntent(BankIntent.ConfirmPlayerAction)
+                                }
+                            }
+                            PlayerActionType.REBUY, PlayerActionType.ADDON -> {
+                                val countToApply = selectedCount ?: action.baseCount
+                                onIntent(
+                                    BankIntent.ConfirmPlayerActionWithCount(
+                                        count = countToApply
+                                    )
+                                )
+                            }
+                            else -> onIntent(BankIntent.ConfirmPlayerAction)
                         }
                     },
                     onCancel = { onIntent(BankIntent.CancelPlayerAction) }
@@ -249,7 +275,8 @@ internal fun BankScreen(
             // Player rows
             items(playerDisplayModels, key = { it.player.id }) { model ->
                 val player = model.player
-                    PlayerRow(
+                val knockoutCount = uiState.knockoutCounts[player.id] ?: 0
+                PlayerRow(
                         player = player,
                         placementNumber = model.placement ?: if (championPlayerId == player.id) 1 else null,
                         isKnockingOut = knockingOutPlayerId == player.id,
@@ -257,6 +284,8 @@ internal fun BankScreen(
                         outEnabled = championPlayerId == null || championPlayerId != player.id,
                         rebuyEnabled = uiState.rebuyAmount > 0.0,
                         addonEnabled = uiState.addonAmount > 0.0,
+                        knockoutCount = knockoutCount,
+                        showKnockoutIndicator = knockoutCount > 0,
                         onNameChange = { onIntent(BankIntent.PlayerNameChanged(player.id, it)) },
                         onActionRequested = { actionType ->
                             onIntent(BankIntent.ShowPlayerActionDialog(player.id, actionType))
@@ -323,7 +352,7 @@ private fun PoolSummaryCard(uiState: BankUiState) {
             SummaryProgressBar(
                 label = "Total Payed Out:",
                 currentAmount = uiState.totalPayedOut,
-                targetAmount = uiState.prizePool,
+                targetAmount = uiState.prizePool + uiState.bountyPool,
                 baseColor = PokerColors.SuccessGreen
             )
         }
@@ -400,6 +429,8 @@ private fun PlayerRow(
     outEnabled: Boolean,
     rebuyEnabled: Boolean,
     addonEnabled: Boolean,
+    knockoutCount: Int,
+    showKnockoutIndicator: Boolean,
     onNameChange: (String) -> Unit,
     onActionRequested: (PlayerActionType) -> Unit,
     onAnimationComplete: () -> Unit,
@@ -582,27 +613,55 @@ private fun PlayerRow(
                     borderOverride = if (isChampionHighlight) Color.Black else null
                 )
 
-                PlayerStatusChip(
-                    emoji = "♻️",
-                    isActive = player.rebuys > 0,
-                    activeColor = PokerColors.AccentGreen,
-                    contentDescription = if (player.rebuys > 0) "Rebuy active" else "Rebuy available",
-                    onClick = { onActionRequested(PlayerActionType.REBUY) },
-                    enabled = rebuyEnabled,
-                    borderOverride = if (isChampionHighlight) Color.Black else null,
-                    badgeCount = player.rebuys
-                )
+                Box(
+                    modifier = Modifier.width(38.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    PlayerStatusChip(
+                        emoji = "♻️",
+                        isActive = player.rebuys > 0,
+                        activeColor = PokerColors.AccentGreen,
+                        contentDescription = if (player.rebuys > 0) "Rebuy active" else "Rebuy available",
+                        onClick = { onActionRequested(PlayerActionType.REBUY) },
+                        enabled = rebuyEnabled,
+                        borderOverride = if (isChampionHighlight) Color.Black else null
+                    )
 
-                PlayerStatusChip(
-                    emoji = "➕",
-                    isActive = player.addons > 0,
-                    activeColor = PokerColors.AccentGreen,
-                    contentDescription = if (player.addons > 0) "Add-on active" else "Add-on available",
-                    onClick = { onActionRequested(PlayerActionType.ADDON) },
-                    enabled = addonEnabled,
-                    borderOverride = if (isChampionHighlight) Color.Black else null,
-                    badgeCount = player.addons
-                )
+                    if (player.rebuys > 0) {
+                        CountBadge(
+                            count = player.rebuys,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .offset(y = (-18).dp),
+                            emoji = ""
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier.width(38.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    PlayerStatusChip(
+                        emoji = "➕",
+                        isActive = player.addons > 0,
+                        activeColor = PokerColors.AccentGreen,
+                        contentDescription = if (player.addons > 0) "Add-on active" else "Add-on available",
+                        onClick = { onActionRequested(PlayerActionType.ADDON) },
+                        enabled = addonEnabled,
+                        borderOverride = if (isChampionHighlight) Color.Black else null
+                    )
+
+                    if (player.addons > 0) {
+                        CountBadge(
+                            count = player.addons,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .offset(y = (-18).dp),
+                            emoji = ""
+                        )
+                    }
+                }
 
                 PlayerStatusChip(
                     emoji = "💵",
@@ -613,14 +672,28 @@ private fun PlayerRow(
                     borderOverride = if (isChampionHighlight) Color.Black else null
                 )
 
-                PlayerStatusChip(
-                    emoji = "💸",
-                    isActive = player.payedOut,
-                    activeColor = PokerColors.PokerGold,
-                    contentDescription = if (player.payedOut) "Payout complete" else "Payout pending",
-                    onClick = { onActionRequested(PlayerActionType.PAYED_OUT) },
-                    borderOverride = if (isChampionHighlight) Color.Black else null
-                )
+                Box(
+                    modifier = Modifier.width(38.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    PlayerStatusChip(
+                        emoji = "💸",
+                        isActive = player.payedOut,
+                        activeColor = PokerColors.PokerGold,
+                        contentDescription = if (player.payedOut) "Payout complete" else "Payout pending",
+                        onClick = { onActionRequested(PlayerActionType.PAYED_OUT) },
+                        borderOverride = if (isChampionHighlight) Color.Black else null
+                    )
+
+                    if (showKnockoutIndicator && knockoutCount > 0) {
+                        CountBadge(
+                            count = knockoutCount,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .offset(y = (-18).dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -693,16 +766,20 @@ private fun PlayerStatusChip(
     }
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun PlayerActionDialog(
     player: PlayerData,
     pendingAction: PendingPlayerAction,
-    onConfirm: (Int?) -> Unit,
+    allPlayers: List<PlayerData>,
+    onConfirm: (Int?, Int?) -> Unit,
     onCancel: () -> Unit
 ) {
     val (emoji, title) = dialogTitle(pendingAction.actionType)
     val message = dialogMessage(player, pendingAction)
     val isCountAction = pendingAction.actionType == PlayerActionType.REBUY || pendingAction.actionType == PlayerActionType.ADDON
+    val isKnockoutSelection = pendingAction.actionType == PlayerActionType.OUT && pendingAction.apply
+    val isPayoutAction = pendingAction.actionType == PlayerActionType.PAYED_OUT && pendingAction.apply
     val baseCount = pendingAction.baseCount.coerceAtLeast(0)
     var purchaseCount by remember(pendingAction.playerId, pendingAction.actionType, baseCount) {
         mutableStateOf(baseCount)
@@ -710,14 +787,67 @@ private fun PlayerActionDialog(
 
     val clampedTarget = pendingAction.targetCount.coerceIn(0, MAX_PURCHASE_COUNT)
 
+    var countAnimationDirection by remember(pendingAction.playerId) { mutableStateOf(1) }
+    var currentCountIndex by remember(pendingAction.playerId, baseCount) { mutableStateOf(baseCount) }
+
     LaunchedEffect(pendingAction.playerId, pendingAction.actionType, baseCount, clampedTarget) {
         purchaseCount = baseCount
+        currentCountIndex = baseCount
         if (isCountAction && clampedTarget != baseCount) {
             purchaseCount = clampedTarget
+            currentCountIndex = clampedTarget
         }
     }
 
-    val animatedCount by animateIntAsState(targetValue = purchaseCount, label = "purchaseCounter")
+    LaunchedEffect(currentCountIndex) {
+        purchaseCount = currentCountIndex
+    }
+
+    val knockoutOptions = remember(
+        pendingAction.playerId,
+        pendingAction.selectablePlayerIds,
+        allPlayers,
+        pendingAction.allowUnassignedSelection
+    ) {
+        val idToPlayer = allPlayers.associateBy { it.id }
+        val playerEntries = pendingAction.selectablePlayerIds.mapNotNull { candidateId ->
+            idToPlayer[candidateId]?.let { candidate ->
+                KnockoutOption(
+                    id = candidate.id,
+                    label = candidate.name.ifBlank { "Player ${candidate.id}" }
+                )
+            }
+        }
+
+        val withFallback = when {
+            pendingAction.allowUnassignedSelection && playerEntries.isNotEmpty() ->
+                playerEntries + KnockoutOption(null, "Nobody")
+            pendingAction.allowUnassignedSelection ->
+                listOf(KnockoutOption(null, "Nobody"))
+            else -> playerEntries
+        }
+
+        withFallback
+    }
+
+    var animationDirection by remember(pendingAction.playerId) { mutableStateOf(1) }
+    var currentOptionIndex by remember(pendingAction.playerId) { mutableStateOf(0) }
+
+    LaunchedEffect(knockoutOptions, pendingAction.selectedPlayerId) {
+        if (isKnockoutSelection) {
+            val selectedIndex = knockoutOptions.indexOfFirst { it.id == pendingAction.selectedPlayerId }
+            currentOptionIndex = when {
+                selectedIndex >= 0 -> selectedIndex
+                knockoutOptions.isNotEmpty() ->
+                    knockoutOptions.indexOfFirst { it.id != null }.takeIf { it >= 0 } ?: 0
+                else -> 0
+            }
+            animationDirection = 1
+        }
+    }
+
+    val canCycleOptions = knockoutOptions.size > 1
+    val selectedKnockoutId = if (isKnockoutSelection) knockoutOptions.getOrNull(currentOptionIndex)?.id else null
 
     PokerDialog(onDismissRequest = onCancel) {
         Text(
@@ -744,63 +874,283 @@ private fun PlayerActionDialog(
             )
         }
 
-        if (isCountAction) {
+        if (isKnockoutSelection) {
             Spacer(modifier = Modifier.height(18.dp))
 
-            Row(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                shape = RoundedCornerShape(18.dp),
+                color = PokerColors.LightGreen.copy(alpha = 0.35f),
+                border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.55f))
             ) {
-                IconButton(
-                    onClick = { purchaseCount = (purchaseCount - 1).coerceAtLeast(0) },
-                    enabled = purchaseCount > 0
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Decrease count",
-                        tint = PokerColors.CardWhite
-                    )
-                }
-
-                Surface(
+                Row(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = PokerColors.SurfaceSecondary,
-                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = animatedCount.toString(),
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                        color = PokerColors.PokerGold,
-                        modifier = Modifier
-                            .padding(horizontal = 32.dp, vertical = 8.dp)
-                            .semantics { contentDescription = "Purchase count $animatedCount" }
-                    )
-                }
+                    IconButton(
+                        onClick = {
+                            if (knockoutOptions.isNotEmpty()) {
+                                animationDirection = -1
+                                val size = knockoutOptions.size
+                                currentOptionIndex = (currentOptionIndex - 1 + size) % size
+                            }
+                        },
+                        enabled = canCycleOptions
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Previous player",
+                            tint = PokerColors.CardWhite
+                        )
+                    }
 
-                IconButton(
-                    onClick = { purchaseCount = (purchaseCount + 1).coerceAtMost(MAX_PURCHASE_COUNT) },
-                    enabled = purchaseCount < MAX_PURCHASE_COUNT
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Increase count",
-                        tint = PokerColors.CardWhite
-                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AnimatedContent(
+                            targetState = currentOptionIndex,
+                            transitionSpec = {
+                                if (animationDirection >= 0) {
+                                    (slideInHorizontally { fullWidth -> fullWidth } + fadeIn()) togetherWith
+                                        (slideOutHorizontally { fullWidth -> -fullWidth } + fadeOut())
+                                } else {
+                                    (slideInHorizontally { fullWidth -> -fullWidth } + fadeIn()) togetherWith
+                                        (slideOutHorizontally { fullWidth -> fullWidth } + fadeOut())
+                                }.using(SizeTransform(clip = false))
+                            },
+                            label = "knockout_selector"
+                        ) { targetIndex ->
+                            val optionLabel = knockoutOptions.getOrNull(targetIndex)?.label ?: "No eligible players"
+                            Text(
+                                text = optionLabel,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = PokerColors.PokerGold,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = {
+                            if (knockoutOptions.isNotEmpty()) {
+                                animationDirection = 1
+                                val size = knockoutOptions.size
+                                currentOptionIndex = (currentOptionIndex + 1) % size
+                            }
+                        },
+                        enabled = canCycleOptions
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Next player",
+                            tint = PokerColors.CardWhite
+                        )
+                    }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        if (isCountAction) {
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = PokerColors.LightGreen.copy(alpha = 0.35f),
+                border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.55f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    IconButton(
+                        onClick = {
+                            countAnimationDirection = -1
+                            currentCountIndex = (currentCountIndex - 1).coerceAtLeast(0)
+                        },
+                        enabled = currentCountIndex > 0
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Decrease count",
+                            tint = PokerColors.CardWhite
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AnimatedContent(
+                            targetState = currentCountIndex,
+                            transitionSpec = {
+                                if (countAnimationDirection >= 0) {
+                                    (slideInHorizontally { fullWidth -> fullWidth } + fadeIn()) togetherWith
+                                        (slideOutHorizontally { fullWidth -> -fullWidth } + fadeOut())
+                                } else {
+                                    (slideInHorizontally { fullWidth -> -fullWidth } + fadeIn()) togetherWith
+                                        (slideOutHorizontally { fullWidth -> fullWidth } + fadeOut())
+                                }.using(SizeTransform(clip = false))
+                            },
+                            label = "count_selector"
+                        ) { targetCount ->
+                            Text(
+                                text = targetCount.toString(),
+                                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                                color = PokerColors.PokerGold,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.semantics { contentDescription = "Purchase count $targetCount" }
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = {
+                            countAnimationDirection = 1
+                            currentCountIndex = (currentCountIndex + 1).coerceAtMost(MAX_PURCHASE_COUNT)
+                        },
+                        enabled = currentCountIndex < MAX_PURCHASE_COUNT
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Increase count",
+                            tint = PokerColors.CardWhite
+                        )
+                    }
+                }
+            }
+        }
+
+        if (isPayoutAction) {
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = PokerColors.LightGreen.copy(alpha = 0.35f),
+                border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.55f))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Payout Breakdown",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = PokerColors.PokerGold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Buy-in payout
+                    if (pendingAction.buyInPayout > 0.0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Buy-in",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = PokerColors.CardWhite
+                            )
+                            Text(
+                                text = "$${String.format("%.2f", pendingAction.buyInPayout)}",
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                color = PokerColors.PokerGold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    // Knockout bonus
+                    val knockoutCount = pendingAction.knockoutCount
+                    if (knockoutCount > 0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "${knockoutCount}x 💀",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = PokerColors.CardWhite
+                            )
+                            Text(
+                                text = "$${String.format("%.2f", pendingAction.knockoutBonus)}",
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                color = PokerColors.PokerGold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    // King's bounty
+                    if (pendingAction.kingsBounty > 0.0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "👑 King's Bounty",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = PokerColors.CardWhite
+                            )
+                            Text(
+                                text = "$${String.format("%.2f", pendingAction.kingsBounty)}",
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                color = PokerColors.PokerGold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    HorizontalDivider(color = PokerColors.PokerGold.copy(alpha = 0.3f))
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Total
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Total",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = PokerColors.CardWhite
+                        )
+                        Text(
+                            text = "$${String.format("%.2f", pendingAction.payoutAmount)}",
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                            color = PokerColors.PokerGold
+                        )
+                    }
+                }
+            }
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             TextButton(onClick = {
-                onConfirm(if (isCountAction) purchaseCount else null)
+                onConfirm(
+                    if (isCountAction) purchaseCount else null,
+                    if (isKnockoutSelection) selectedKnockoutId else null
+                )
             }) {
                 Text(
                     text = "Okay",
@@ -825,7 +1175,7 @@ private fun dialogMessage(
     val name = player.name.ifBlank { "Player ${player.id}" }
     return when (pendingAction.actionType) {
         PlayerActionType.OUT -> if (pendingAction.apply) {
-            "$name has been knocked out."
+            "$name has been knocked out by:"
         } else {
             "$name is back in the game."
         }
@@ -857,9 +1207,9 @@ private fun dialogMessage(
 }
 
 private fun dialogTitle(actionType: PlayerActionType): Pair<String, String> = when (actionType) {
-    PlayerActionType.OUT -> "❌" to "Knocked Out"
-    PlayerActionType.BUY_IN -> "💰" to "Buy-In"
-    PlayerActionType.PAYED_OUT -> "⭐" to "Payout"
+    PlayerActionType.OUT -> "❌" to "Knocked-Out"
+    PlayerActionType.BUY_IN -> "💵" to "Buy-In"
+    PlayerActionType.PAYED_OUT -> "💸" to "Pay-Out"
     PlayerActionType.REBUY -> "♻️" to "Rebuy"
     PlayerActionType.ADDON -> "➕" to "Add-on"
 }
@@ -891,3 +1241,34 @@ private fun SummaryInfoRow(
         )
     }
 }
+
+@Composable
+private fun CountBadge(
+    count: Int,
+    modifier: Modifier = Modifier,
+    emoji: String = "💀"
+) {
+    val label = if (emoji.isNotEmpty()) "${count}x$emoji" else "${count}x"
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = PokerColors.DarkGreen.copy(alpha = 0.92f),
+        border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.85f))
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 9.sp
+            ),
+            color = PokerColors.PokerGold,
+            modifier = Modifier
+                .padding(horizontal = 8.dp, vertical = 2.dp)
+        )
+    }
+}
+
+private data class KnockoutOption(
+    val id: Int?,
+    val label: String
+)

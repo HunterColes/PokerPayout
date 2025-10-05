@@ -12,4 +12,6 @@ You are GitHub Copilot assisting on the Poker Payout project. Follow these rules
 	- `.\gradlew assembleRelease`
 	- `.\gradlew test`
 	If either command fails, diagnose the failure, implement a fix, and rerun the failing command until it succeeds or a hard blocker is reached.
-7. Stop!
+7. Finally once all tasks are complete, run:
+	- `.\gradlew installRelease`
+	and stop!

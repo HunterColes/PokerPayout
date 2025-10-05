@@ -2,6 +2,7 @@ package com.huntercoles.fatline.portfoliofeature.presentation
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
 const val MAX_PURCHASE_COUNT = 20
 
@@ -13,7 +14,8 @@ data class PlayerData(
     val out: Boolean = false,      // Out button (replaces eliminated)
     val payedOut: Boolean = false, // Payed-Out button
     val rebuys: Int = 0,          // Number of rebuys
-    val addons: Int = 0           // Number of addons
+    val addons: Int = 0,          // Number of addons
+    val eliminatedBy: Int? = null // Player id who eliminated this player
 ) : Parcelable
 
 @Parcelize
@@ -39,7 +41,9 @@ data class BankUiState(
     val addonAmount: Double = 0.0,
     val showResetDialog: Boolean = false,
     val eliminationOrder: List<Int> = emptyList(),
-    val pendingAction: PendingPlayerAction? = null
+    val pendingAction: PendingPlayerAction? = null,
+    val knockoutCounts: @RawValue Map<Int, Int> = emptyMap(),
+    val payoutEligiblePlayerIds: @RawValue Set<Int> = emptySet()
 ) : Parcelable
 
 @Parcelize
@@ -49,5 +53,13 @@ data class PendingPlayerAction(
     val apply: Boolean,
     val delta: Int = 0,
     val baseCount: Int = 0,
-    val targetCount: Int = 0
+    val targetCount: Int = 0,
+    val selectablePlayerIds: List<Int> = emptyList(),
+    val selectedPlayerId: Int? = null,
+    val allowUnassignedSelection: Boolean = false,
+    val payoutAmount: Double = 0.0,
+    val buyInPayout: Double = 0.0,
+    val knockoutBonus: Double = 0.0,
+    val kingsBounty: Double = 0.0,
+    val knockoutCount: Int = 0
 ) : Parcelable

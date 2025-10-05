@@ -82,7 +82,7 @@ class BankViewModel @Inject constructor(
             is PlayerAddonChanged -> updatePlayerAddons(intent.playerId, intent.addons)
             is ShowPlayerActionDialog -> showPlayerActionDialog(intent.playerId, intent.action)
             is ConfirmPlayerAction -> confirmPendingAction()
-            is BankIntent.ConfirmPlayerActionWithCount -> confirmPendingAction(intent.count)
+            is BankIntent.ConfirmPlayerActionWithCount -> confirmPendingAction(intent.count, intent.selectedPlayerId)
             is CancelPlayerAction -> clearPendingAction()
             is BankIntent.ShowResetDialog -> {
                 // Only show dialog if not in default state
@@ -107,7 +107,8 @@ class BankViewModel @Inject constructor(
                 out = bankPreferences.getPlayerOutStatus(playerNum),
                 payedOut = bankPreferences.getPlayerPayedOutStatus(playerNum),
                 rebuys = bankPreferences.getPlayerRebuys(playerNum),
-                addons = bankPreferences.getPlayerAddons(playerNum)
+                addons = bankPreferences.getPlayerAddons(playerNum),
+                eliminatedBy = bankPreferences.getPlayerEliminatedBy(playerNum)
             )
         }
         val validIds = players.map { it.id }.toSet()
@@ -176,12 +177,9 @@ class BankViewModel @Inject constructor(
     }
 
     private fun toggleOut(playerId: Int) {
-        updatePlayerPayment(
-            playerId = playerId,
-            updateFunction = { it.copy(out = !it.out) }
-        ) { updatedPlayer ->
-            updateEliminationOrder(updatedPlayer.id, updatedPlayer.out)
-        }
+        val player = _uiState.value.players.firstOrNull { it.id == playerId } ?: return
+        val apply = !player.out
+        setPlayerOut(playerId, apply, if (apply) player.eliminatedBy else null)
     }
 
     private fun togglePayedOut(playerId: Int) {
@@ -198,7 +196,26 @@ class BankViewModel @Inject constructor(
                 val apply = !player.out
                 val isLastActive = _uiState.value.players.count { !it.out } <= 1
                 if ((apply && isLastActive) || (!apply && !player.out)) return
-                PendingPlayerAction(playerId, actionType, apply)
+
+                val selectableIds = if (apply) {
+                    buildPlayerDisplayModels(_uiState.value.players, _uiState.value.eliminationOrder)
+                        .map { it.player.id }
+                        .filter { it != playerId }
+                } else emptyList()
+
+                val initialSelection = when {
+                    player.eliminatedBy != null && selectableIds.contains(player.eliminatedBy) -> player.eliminatedBy
+                    else -> selectableIds.firstOrNull()
+                }
+
+                PendingPlayerAction(
+                    playerId = playerId,
+                    actionType = actionType,
+                    apply = apply,
+                    selectablePlayerIds = selectableIds,
+                    selectedPlayerId = if (apply) initialSelection else null,
+                    allowUnassignedSelection = apply
+                )
             }
             PlayerActionType.BUY_IN -> {
                 val apply = !player.buyIn
@@ -206,7 +223,63 @@ class BankViewModel @Inject constructor(
             }
             PlayerActionType.PAYED_OUT -> {
                 val apply = !player.payedOut
-                PendingPlayerAction(playerId, actionType, apply)
+                val (payoutAmount, buyInPayout, knockoutBonus, kingsBounty) = if (apply) {
+                    // Calculate the payout breakdown for this player
+                    val currentState = _uiState.value
+                    val tournamentConfig = tournamentPreferences.getCurrentTournamentConfig()
+                    val prizePool = currentState.buyInPool + currentState.rebuyPool + currentState.addonPool
+                    val payouts = calculatePayoutPositions(
+                        config = tournamentConfig,
+                        prizePool = prizePool,
+                        playerCount = currentState.players.size
+                    )
+                    val sanitizedElimination = currentState.eliminationOrder
+                        .filter { it in 1..currentState.players.size }
+                        .distinct()
+                    val eliminationSet = sanitizedElimination.toSet()
+                    val knockoutCounts = currentState.players
+                        .filter { it.eliminatedBy != null }
+                        .groupingBy { it.eliminatedBy!! }
+                        .eachCount()
+
+                    // Find the player's leaderboard payout
+                    val payoutPosition = payouts.firstOrNull { payout ->
+                        determinePlayerForPosition(
+                            position = payout.position,
+                            numPlayers = currentState.players.size,
+                            eliminationOrder = sanitizedElimination,
+                            eliminationSet = eliminationSet
+                        ) == playerId
+                    }
+                    val leaderboardPayout = payoutPosition?.payout ?: 0.0
+
+                    // Calculate knockout bonus
+                    val playerKnockouts = knockoutCounts[playerId] ?: 0
+                    val knockoutBonusAmount = playerKnockouts * tournamentConfig.bountyPerPlayer
+
+                    // King's bounty - winner gets their own bounty back
+                    val kingsBountyAmount = if (payoutPosition?.position == 1) tournamentConfig.bountyPerPlayer else 0.0
+
+                    // Total payout
+                    val total = leaderboardPayout + knockoutBonusAmount + kingsBountyAmount
+
+                    listOf(total, leaderboardPayout, knockoutBonusAmount, kingsBountyAmount)
+                } else listOf(0.0, 0.0, 0.0, 0.0)
+                PendingPlayerAction(
+                    playerId, actionType, apply,
+                    payoutAmount = payoutAmount,
+                    buyInPayout = buyInPayout,
+                    knockoutBonus = knockoutBonus,
+                    kingsBounty = kingsBounty,
+                    knockoutCount = if (apply) {
+                        val currentState = _uiState.value
+                        val knockoutCounts = currentState.players
+                            .filter { it.eliminatedBy != null }
+                            .groupingBy { it.eliminatedBy!! }
+                            .eachCount()
+                        knockoutCounts[playerId] ?: 0
+                    } else 0
+                )
             }
             PlayerActionType.REBUY -> {
                 if (_uiState.value.rebuyAmount <= 0.0) return
@@ -241,7 +314,7 @@ class BankViewModel @Inject constructor(
         _uiState.update { it.copy(pendingAction = null) }
     }
 
-    private fun confirmPendingAction(targetCountOverride: Int? = null) {
+    private fun confirmPendingAction(targetCountOverride: Int? = null, selectedPlayerId: Int? = null) {
         val pendingAction = _uiState.value.pendingAction ?: return
         val player = _uiState.value.players.firstOrNull { it.id == pendingAction.playerId }
         if (player == null) {
@@ -250,9 +323,19 @@ class BankViewModel @Inject constructor(
         }
 
         val sanitizedOverride = targetCountOverride?.coerceIn(0, MAX_PURCHASE_COUNT)
+        val sanitizedSelection = selectedPlayerId?.takeIf { pendingAction.selectablePlayerIds.contains(it) }
+
+        val selectionToApply = if (pendingAction.allowUnassignedSelection) {
+            sanitizedSelection
+        } else {
+            sanitizedSelection ?: pendingAction.selectedPlayerId
+        }
 
         when (pendingAction.actionType) {
-            PlayerActionType.OUT -> setPlayerOut(player.id, pendingAction.apply)
+            PlayerActionType.OUT -> {
+                val eliminatedBy = if (pendingAction.apply) selectionToApply else null
+                setPlayerOut(player.id, pendingAction.apply, eliminatedBy)
+            }
             PlayerActionType.BUY_IN -> setPlayerBuyIn(player.id, pendingAction.apply)
             PlayerActionType.PAYED_OUT -> setPlayerPayedOut(player.id, pendingAction.apply)
             PlayerActionType.REBUY -> {
@@ -279,11 +362,16 @@ class BankViewModel @Inject constructor(
         )
     }
 
-    private fun setPlayerOut(playerId: Int, value: Boolean) {
+    private fun setPlayerOut(playerId: Int, value: Boolean, eliminatedBy: Int?) {
         updatePlayerPayment(
             playerId = playerId,
             updateFunction = { player ->
-                if (player.out == value) player else player.copy(out = value)
+                val normalizedEliminator = if (value) eliminatedBy else null
+                if (player.out == value && player.eliminatedBy == normalizedEliminator) {
+                    player
+                } else {
+                    player.copy(out = value, eliminatedBy = normalizedEliminator)
+                }
             }
         ) { updatedPlayer ->
             updateEliminationOrder(updatedPlayer.id, updatedPlayer.out)
@@ -344,6 +432,7 @@ class BankViewModel @Inject constructor(
                     bankPreferences.savePlayerBuyInStatus(playerId, playerUpdate.buyIn)
                     bankPreferences.savePlayerOutStatus(playerId, playerUpdate.out)
                     bankPreferences.savePlayerPayedOutStatus(playerId, playerUpdate.payedOut)
+                    bankPreferences.savePlayerEliminatedBy(playerId, playerUpdate.eliminatedBy)
                     
                     updatedPlayer = playerUpdate
                     playerUpdate
@@ -387,6 +476,11 @@ class BankViewModel @Inject constructor(
 
         val totalPool = buyInPool + foodPool + bountyPool + rebuyPool + addonPool
 
+        val knockoutCounts = currentState.players
+            .filter { it.eliminatedBy != null }
+            .groupingBy { it.eliminatedBy!! }
+            .eachCount()
+
         val totalPaidInBase = currentState.players.sumOf { player ->
             if (player.buyIn) basePerPlayer else 0.0
         }
@@ -404,19 +498,40 @@ class BankViewModel @Inject constructor(
             .distinct()
         val eliminationSet = sanitizedElimination.toSet()
 
-        val totalPayedOut = payouts.sumOf { payout ->
+        val payoutEligibleIds = mutableSetOf<Int>()
+
+        // Calculate leaderboard payouts for each position
+        val leaderboardPayouts = mutableMapOf<Int, Double>()
+        val winnerId = payouts.firstOrNull()?.let { payout ->
+            determinePlayerForPosition(
+                position = payout.position,
+                numPlayers = playerCount,
+                eliminationOrder = sanitizedElimination,
+                eliminationSet = eliminationSet
+            )
+        }
+
+        payouts.forEach { payout ->
             val playerId = determinePlayerForPosition(
                 position = payout.position,
                 numPlayers = playerCount,
                 eliminationOrder = sanitizedElimination,
                 eliminationSet = eliminationSet
             )
+            playerId?.let { 
+                payoutEligibleIds.add(it)
+                leaderboardPayouts[it] = payout.payout
+            }
+        }
 
-            val isPayedOut = playerId?.let { id ->
-                currentState.players.firstOrNull { it.id == id }?.payedOut == true
-            } ?: false
-
-            if (isPayedOut) payout.payout else 0.0
+        // Calculate total paid out: leaderboard payouts + knockout bonuses + king's bounty
+        val totalPayedOut = currentState.players.sumOf { player ->
+            if (!player.payedOut) 0.0 else {
+                val leaderboardPayout = leaderboardPayouts[player.id] ?: 0.0
+                val knockoutBonus = (knockoutCounts[player.id] ?: 0) * tournamentConfig.bountyPerPlayer
+                val kingsBounty = if (player.id == winnerId) tournamentConfig.bountyPerPlayer else 0.0
+                leaderboardPayout + knockoutBonus + kingsBounty
+            }
         }
 
         // Count various player states
@@ -443,7 +558,9 @@ class BankViewModel @Inject constructor(
                 foodAmount = tournamentConfig.foodPerPlayer,
                 bountyAmount = tournamentConfig.bountyPerPlayer,
                 rebuyAmount = tournamentConfig.rebuyPerPlayer,
-                addonAmount = tournamentConfig.addOnPerPlayer
+                addonAmount = tournamentConfig.addOnPerPlayer,
+                knockoutCounts = knockoutCounts,
+                payoutEligiblePlayerIds = payoutEligibleIds
             )
         }
     }
@@ -560,4 +677,28 @@ private fun determinePlayerForPosition(
         val eliminationIndex = numPlayers - position
         if (eliminationIndex in eliminationOrder.indices) eliminationOrder[eliminationIndex] else null
     }
+}
+
+private fun calculatePlayerTotalPayout(
+    playerId: Int,
+    payouts: List<PayoutPosition>,
+    knockoutCounts: Map<Int, Int>,
+    bountyPerPlayer: Double,
+    playerCount: Int,
+    eliminationOrder: List<Int>,
+    eliminationSet: Set<Int>
+): Double {
+    val payoutPosition = payouts.firstOrNull { payout ->
+        determinePlayerForPosition(
+            position = payout.position,
+            numPlayers = playerCount,
+            eliminationOrder = eliminationOrder,
+            eliminationSet = eliminationSet
+        ) == playerId
+    }
+
+    val leaderboardPayout = payoutPosition?.payout ?: 0.0
+    val knockoutBonus = (knockoutCounts[playerId] ?: 0) * bountyPerPlayer
+
+    return leaderboardPayout + knockoutBonus
 }

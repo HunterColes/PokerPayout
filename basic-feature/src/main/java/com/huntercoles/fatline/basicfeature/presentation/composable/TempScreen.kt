@@ -1,8 +1,6 @@
 package com.huntercoles.fatline.basicfeature.presentation.composable
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -66,42 +64,51 @@ data class Player(
     val tiePercentage: Double = 0.0
 )
 
-data class PokerGameState(
-    val players: List<Player> = emptyList(),
-    val communityCards: List<Card> = emptyList(),
-    val isSimulating: Boolean = false,
-    val showCardPicker: Boolean = false,
-    val selectedPlayerForCard: Int? = null,
-    val selectedCardType: CardType? = null
-)
-
 enum class CardType {
     PLAYER_CARD, COMMUNITY_CARD
 }
 
-@Composable
-fun TempScreen() {
-    PokerOddsCalculatorScreen()
-}
+data class PokerGameState(
+    val players: List<Player> = emptyList(),
+    val communityCards: List<Card> = emptyList(),
+    val showCardPicker: Boolean = false,
+    val selectedPlayerForCard: Int? = null,
+    val selectedCardType: CardType? = null,
+    val isSimulating: Boolean = false
+)
+
+// All 52 cards in a deck
+val allCards = listOf(
+    // Hearts
+    Card("A", "h"), Card("K", "h"), Card("Q", "h"), Card("J", "h"), Card("T", "h"),
+    Card("9", "h"), Card("8", "h"), Card("7", "h"), Card("6", "h"), Card("5", "h"),
+    Card("4", "h"), Card("3", "h"), Card("2", "h"),
+    // Diamonds
+    Card("A", "d"), Card("K", "d"), Card("Q", "d"), Card("J", "d"), Card("T", "d"),
+    Card("9", "d"), Card("8", "d"), Card("7", "d"), Card("6", "d"), Card("5", "d"),
+    Card("4", "d"), Card("3", "d"), Card("2", "d"),
+    // Clubs
+    Card("A", "c"), Card("K", "c"), Card("Q", "c"), Card("J", "c"), Card("T", "c"),
+    Card("9", "c"), Card("8", "c"), Card("7", "c"), Card("6", "c"), Card("5", "c"),
+    Card("4", "c"), Card("3", "c"), Card("2", "c"),
+    // Spades
+    Card("A", "s"), Card("K", "s"), Card("Q", "s"), Card("J", "s"), Card("T", "s"),
+    Card("9", "s"), Card("8", "s"), Card("7", "s"), Card("6", "s"), Card("5", "s"),
+    Card("4", "s"), Card("3", "s"), Card("2", "s")
+)
 
 @Composable
-fun PokerOddsCalculatorScreen() {
+fun TempScreen() {
     var gameState by remember { mutableStateOf(PokerGameState()) }
     val scope = rememberCoroutineScope()
-    val ranks = listOf("A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2")
-    val suits = listOf("h", "d", "c", "s")
-    val allCards = ranks.flatMap { rank -> suits.map { suit -> Card(rank, suit) } }
-    
-    // Initialize with 2 players if empty
-    LaunchedEffect(Unit) {
-        if (gameState.players.isEmpty()) {
-            gameState = gameState.copy(
-                players = listOf(
-                    Player(1, "Player 1"),
-                    Player(2, "Player 2")
-                )
+
+    if (gameState.players.isEmpty()) {
+        gameState = gameState.copy(
+            players = listOf(
+                Player(1, "Player 1"),
+                Player(2, "Player 2")
             )
-        }
+        )
     }
     
     Column(
@@ -153,19 +160,27 @@ fun PokerOddsCalculatorScreen() {
         
         // Player Management
         PlayerManagementCard(
-            players = gameState.players,
-            onAddPlayer = {
-                gameState = gameState.copy(
-                    players = gameState.players + Player(
-                        id = gameState.players.size + 1,
-                        name = "Player ${gameState.players.size + 1}"
-                    )
-                )
-            },
-            onRemovePlayer = { playerId ->
-                gameState = gameState.copy(
-                    players = gameState.players.filter { it.id != playerId }
-                )
+            playerCount = gameState.players.size,
+            onPlayerCountChange = { newCount ->
+                val currentCount = gameState.players.size
+                when {
+                    newCount > currentCount -> {
+                        // Add players
+                        val newPlayers = (currentCount + 1..newCount).map { id ->
+                            Player(id, "Player $id")
+                        }
+                        gameState = gameState.copy(
+                            players = gameState.players + newPlayers
+                        )
+                    }
+                    newCount < currentCount -> {
+                        // Remove players (keep at least 2)
+                        val keepCount = max(2, newCount)
+                        gameState = gameState.copy(
+                            players = gameState.players.take(keepCount)
+                        )
+                    }
+                }
             }
         )
         
@@ -282,9 +297,8 @@ fun PokerOddsCalculatorScreen() {
 
 @Composable
 fun PlayerManagementCard(
-    players: List<Player>,
-    onAddPlayer: () -> Unit,
-    onRemovePlayer: (Int) -> Unit
+    playerCount: Int,
+    onPlayerCountChange: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -295,51 +309,35 @@ fun PlayerManagementCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Text(
+                text = "Players ($playerCount)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = PokerColors.PokerGold
+            )
+
+            // Player Count Slider
+            Column {
                 Text(
-                    text = "Players (${players.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = PokerColors.PokerGold
+                    text = "Number of Players: $playerCount",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = PokerColors.CardWhite
                 )
-                
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = onAddPlayer,
-                        enabled = players.size < 10,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = PokerColors.AccentGreen,
-                            contentColor = PokerColors.CardWhite
-                        ),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Player",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Add", fontSize = 12.sp)
-                    }
-                }
-            }
-            
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(players) { player ->
-                    PlayerChip(
-                        player = player,
-                        onRemove = { onRemovePlayer(player.id) },
-                        canRemove = players.size > 2
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Slider(
+                    value = playerCount.toFloat(),
+                    onValueChange = { onPlayerCountChange(it.toInt()) },
+                    valueRange = 2f..10f,
+                    steps = 7,
+                    colors = SliderDefaults.colors(
+                        thumbColor = PokerColors.PokerGold,
+                        activeTrackColor = PokerColors.AccentGreen,
+                        inactiveTrackColor = PokerColors.DarkGreen
                     )
-                }
+                )
             }
         }
     }
@@ -433,19 +431,17 @@ fun PlayerCardsRow(
             fontWeight = FontWeight.Medium
         )
         
-        LazyRow(
+        Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.weight(1f)
         ) {
-            items(player.cards.size) { index ->
-                PlayingCardView(
-                    card = player.cards[index],
-                    onRemove = { onRemoveCard(index) }
-                )
-            }
-            
-            if (player.cards.size < 2) {
-                item {
+            repeat(2) { index ->
+                if (index < player.cards.size) {
+                    PlayingCardView(
+                        card = player.cards[index],
+                        onRemove = { onRemoveCard(index) }
+                    )
+                } else {
                     AddCardSlot(onClick = onCardClick)
                 }
             }
@@ -458,14 +454,14 @@ fun PlayerCardsRow(
             ) {
                 Text(
                     text = "Win: ${"%.2f".format(player.winPercentage)}%",
-                    color = PokerColors.SuccessGreen,
+                    color = Color.Green,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.End
                 )
                 Text(
                     text = "Tie: ${"%.2f".format(player.tiePercentage)}%",
-                    color = PokerColors.PokerGold,
+                    color = Color.Yellow,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.End
@@ -488,7 +484,7 @@ fun CommunityCardsSection(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = "Community Cards (${communityCards.size}/5)",
@@ -496,23 +492,92 @@ fun CommunityCardsSection(
                 fontWeight = FontWeight.Bold,
                 color = PokerColors.PokerGold
             )
-            
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(communityCards.size) { index ->
-                    PlayingCardView(
-                        card = communityCards[index],
-                        onRemove = { onRemoveCommunityCard(index) }
-                    )
+
+            // Community cards in a single row of 5 boxes
+            CommunityCardBox(
+                title = "Community Cards",
+                cards = communityCards,
+                maxCards = 5,
+                onCardClick = onCommunityCardClick,
+                onRemoveCard = onRemoveCommunityCard,
+                startIndex = 0,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+fun CommunityCardBox(
+    title: String,
+    cards: List<Card>,
+    maxCards: Int,
+    onCardClick: () -> Unit,
+    onRemoveCard: (Int) -> Unit,
+    startIndex: Int,
+    modifier: Modifier = Modifier
+) {
+    // Use standard card slot size, slightly larger to match player cards
+    val slotModifier = Modifier.size(width = 52.dp, height = 72.dp)
+    if (maxCards > 1) {
+        // Multiple cards: equally spaced slots across the width
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            repeat(maxCards) { position ->
+                val label = when (position) {
+                    1 -> "Flop"
+                    3 -> "Turn"
+                    4 -> "River"
+                    else -> ""
                 }
-                
-                if (communityCards.size < 5) {
-                    item {
-                        AddCardSlot(onClick = onCommunityCardClick)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (label.isNotEmpty()) {
+                        Text(
+                            text = label,
+                            color = PokerColors.CardWhite,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Text(
+                            text = "",
+                            color = PokerColors.CardWhite,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    if (position < cards.size) {
+                        PlayingCardView(
+                            card = cards[position],
+                            onRemove = { onRemoveCard(startIndex + position) },
+                            modifier = slotModifier
+                        )
+                    } else {
+                        AddCardSlot(onClick = onCardClick, modifier = slotModifier)
                     }
                 }
             }
+        }
+    } else {
+        // Single card: show card and add slot if needed
+        cards.forEachIndexed { index, card ->
+            PlayingCardView(
+                card = card,
+                onRemove = { onRemoveCard(startIndex + index) },
+                modifier = slotModifier
+            )
+        }
+        if (cards.size < maxCards) {
+            AddCardSlot(
+                onClick = onCardClick,
+                modifier = slotModifier
+            )
         }
     }
 }
@@ -520,12 +585,11 @@ fun CommunityCardsSection(
 @Composable
 fun PlayingCardView(
     card: Card,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier.size(width = 50.dp, height = 70.dp)
 ) {
     Card(
-        modifier = Modifier
-            .size(width = 50.dp, height = 70.dp)
-            .clickable { onRemove() },
+        modifier = modifier.clickable { onRemove() },
         colors = CardDefaults.cardColors(containerColor = PokerColors.CardWhite),
         border = BorderStroke(1.dp, Color.Gray)
     ) {
@@ -550,11 +614,12 @@ fun PlayingCardView(
 }
 
 @Composable
-fun AddCardSlot(onClick: () -> Unit) {
+fun AddCardSlot(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier.size(width = 50.dp, height = 70.dp)
+) {
     Card(
-        modifier = Modifier
-            .size(width = 50.dp, height = 70.dp)
-            .clickable { onClick() },
+        modifier = modifier.clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = PokerColors.SurfaceSecondary),
         border = BorderStroke(1.dp, PokerColors.PokerGold)
     ) {

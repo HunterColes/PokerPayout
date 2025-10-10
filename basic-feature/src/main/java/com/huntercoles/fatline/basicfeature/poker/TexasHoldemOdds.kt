@@ -152,7 +152,8 @@ suspend fun simulateEquity(
     val sims = if (deterministic) 1 else iterations.coerceAtLeast(1)
 
     // Note: Players cannot have exactly identical hole cards in poker (deck has unique cards)
-    // So no optimization for identical hands is needed
+    // However, players can have identical hand types (e.g., both have AA with different suits).
+    // This implementation does not optimize for identical hand types.
 
     // Parallel processing for better performance
     val numCores = Runtime.getRuntime().availableProcessors()

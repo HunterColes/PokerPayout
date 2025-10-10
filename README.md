@@ -1,6 +1,32 @@
-# **Poker Payout Calculator** 🃏
+<a name="top"></a>
 
-A sleek and comprehensive poker tournament management application built with modern Android development practices.
+# Poker Payout Calculator 🃏
+
+[![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)](#)
+[![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white)](#)
+[![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white)](#)
+[![Latest Release](https://img.shields.io/github/v/tag/HunterColes/PokerPayout?label=Latest%20Release)](https://github.com/HunterColes/PokerPayout/releases/latest)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+[![Open Source](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red)](#-open-source--contributions)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-how-to-contribute)
+
+[![Donate Ethereum](https://img.shields.io/badge/Ξ-Ethereum-627EEA?logo=ethereum&logoColor=white)](ETHEREUM.txt)
+[![Donate Monero](https://img.shields.io/badge/Ӿ-Monero-FF6600?logo=monero&logoColor=white)](MONERO.txt)
+
+⭐ Star us on GitHub — your support motivates us a lot! 🙏😊
+
+[![Share](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/Abblix/Oidc.Server%20%23OpenIDConnect%20%23Security%20%23Authentication)
+[![Share](https://img.shields.io/badge/share-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https://github.com/Abblix/Oidc.Server)
+[![Share](https://img.shields.io/badge/share-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/Abblix/Oidc.Server)
+[![Share](https://img.shields.io/badge/share-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/submit?title=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/Abblix/Oidc.Server)
+[![Share](https://img.shields.io/badge/share-0088CC?logo=telegram&logoColor=white)](https://t.me/share/url?url=https://github.com/Abblix/Oidc.Server&text=Check%20out%20this%20project%20on%20GitHub)
+
+---
+
+## 🎯 What Is This?
+
+**Poker Payout Calculator** is a professional, all-in-one poker tournament management app for Android. Whether you're hosting a home game or managing a casino tournament, this app has everything you need:
 
 ### **Purpose**
 To provide poker tournament organizers and players with a complete toolkit for managing tournament payouts, tracking player payments, and timing blind levels with a beautiful poker-themed interface.
@@ -26,6 +52,17 @@ Poker Payout Calculator is a professional-grade tournament management applicatio
 - **📊 Pool Management**: Real-time calculation of total pools and payment percentages
 - **🎯 Tournament Tools**: Complete tournament management in one app
 
+---
+
+<p align="center">
+	<img src="docs/images/screenshots/config.png" alt="Config" width="220"/>
+	<img src="docs/images/screenshots/bank.png" alt="Bank Tracker" width="220"/>
+	<img src="docs/images/screenshots/timer.png" alt="Timer" width="220"/>
+	<img src="docs/images/screenshots/odds.png" alt="Odds" width="220"/>
+</p>
+
+---
+
 ### **Libraries/concepts used**
 
 * Gradle modularised project by features
@@ -35,63 +72,47 @@ Poker Payout Calculator is a professional-grade tournament management applicatio
 * Hilt - for Dependency Injection pattern implementation
 * Room - for local database
 * Version Catalog - for dependency management
-* Baseline and Startup Profiles - for performance improvements during app launch
-* Timber - for logging
-* JUnit5, Turbine and MockK - for unit tests
-* Jetpack Compose test dependencies - for UI tests
-* GitHub Actions - for CI/CD
-* KtLint and Detekt - for code linting
-
-### **Screenshots**
-*Coming soon - tournament in progress!*
-
-### **Blind Structure Engine**
-The blind timer now generates a full tournament-ready blind schedule using your tournament inputs:
-
-- Player count is read from the Tournament settings panel
-- Duration, smallest chip, starting stack, and round length values drive the schedule
-- Blinds increase between 33% and 100% each step and snap to casino-standard chip values
-- The final big blind is always at least double the starting stack value to force decisive play
-- Extra “sudden-death” levels are appended only when needed to finish near the target duration (duration + ~1 hour)
-- The timer screen shows the active level, time until the next level, and a preview of upcoming levels
-- Arrow controls let you jump between levels; tapping back on level one performs a full timer reset
-
-### **Contributing**
-We welcome contributions! Please feel free to submit a Pull Request.
-
-### **License**
-This project is licensed under the GPL License - see the [LICENSE](LICENSE.md) file for details.
 
 ---
 
-## **Build Commands** 🔨
-Clean and Build:
+## 🔨 Build & Installation (devs)
+
+### Prerequisites
+
+- Android Studio
+- Java 17 (JDK 17) — required for building
+- Android SDK (API 24+)
+
+### **Commands** 🔨
+Clean:
 ```
-.\gradlew clean build
+.\gradlew clean
 ```
-Build Debug APK:
-```
-.\gradlew assembleDebug
-```
-Build Release APK:
+Assemble Release APK:
 ```
 .\gradlew assembleRelease
-```
-Install Commands
-Install Debug APK to Connected Device:
-```
-.\gradlew installDebug
 ```
 Install Release APK:
 ```
 .\gradlew installRelease
 ```
-Install and Run:
-```
-.\gradlew installDebug && adb shell am start -n com.huntercoles.fatline/.MainActivity
-```
-Debug Commands
 Run Tests:
 ```
 .\gradlew test
 ```
+
+---
+
+## 🌟 Support & Contributions
+
+This project is support-driven and community-maintained. Contributions are welcome — bugs, docs, tests, UI tweaks, or code. To contribute:
+
+1. Fork the repo
+2. Create a feature branch
+3. Open a pull request
+
+For help or to discuss ideas, open an issue or a discussion on GitHub.
+
+---
+
+See also: [LICENSE.md](LICENSE.md) • [CONTRIBUTING.md](CONTRIBUTING.md) • [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)

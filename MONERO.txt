@@ -1,0 +1,6 @@
+# Monero (XMR) Donation Address
+# Add your Monero wallet address below for crypto donations
+
+# Example: 4AdUndXHHZ6cfufTMvppY6JwXNouMBzSkbLYfpAV5Usx3skxNgYeYTRj5UzqtReoS44qo9mtmXCqY45DJ852K5Jv2684Rge
+
+[Your Monero wallet address will be added here]

@@ -32,8 +32,8 @@ val bottomNavigationItems = listOf(
         label = R.string.navigation_timer
     ),
     BottomNavigationItem(
-        destination = NavigationDestination.Temp,
+        destination = NavigationDestination.OddsCalculator,
         icon = Icons.Filled.MoreHoriz,
-        label = R.string.navigation_temp
+        label = R.string.navigation_odds_calculator
     ),
 )

@@ -30,9 +30,9 @@ import com.huntercoles.fatline.core.design.PokerColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.huntercoles.fatline.basicfeature.poker.*
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.random.Random
 
 // Data classes for poker functionality
 data class Card(
@@ -98,7 +98,7 @@ val allCards = listOf(
 )
 
 @Composable
-fun TempScreen() {
+fun OddsCalculatorScreen() {
     var gameState by remember { mutableStateOf(PokerGameState()) }
     val scope = rememberCoroutineScope()
 
@@ -739,275 +739,23 @@ fun CardPickerDialog(
     )
 }
 
-// Poker calculation logic based on cookpete/poker-odds reference
-// Card values for hand evaluation
-val CARD_VALUES = listOf("2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A")
-val CARD_SUITS = listOf("s", "c", "h", "d")
-
-data class HandResult(
-    val hand: List<Card>,
-    val count: Int = 0,
-    val wins: Int = 0,
-    val ties: Int = 0
-)
-
-// Main calculation function inspired by cookpete/poker-odds
-fun calculateEquity(hands: List<List<Card>>, board: List<Card> = emptyList(), iterations: Int = 10000): List<HandResult> {
-    var results = hands.map { hand ->
-        HandResult(
-            hand = hand,
-            count = 0,
-            wins = 0,
-            ties = 0
-        )
-    }
-    
-    when {
-        board.size == 5 -> {
-            // All community cards present - evaluate final hands
-            results = analyzeHands(results, board)
-        }
-        board.size >= 3 -> {
-            // Flop or turn - enumerate remaining possibilities
-            val deck = createDeck(board + hands.flatten())
-            when (board.size) {
-                3 -> {
-                    // Need 2 more cards
-                    for (i in deck.indices) {
-                        for (j in i + 1 until deck.size) {
-                            results = analyzeHands(results, board + listOf(deck[i], deck[j]))
-                        }
-                    }
-                }
-                4 -> {
-                    // Need 1 more card
-                    for (card in deck) {
-                        results = analyzeHands(results, board + card)
-                    }
-                }
-            }
-        }
-        else -> {
-            // Preflop or minimal board - use Monte Carlo simulation
-            repeat(iterations) {
-                val remainingCards = 5 - board.size
-                val randomCards = dealRandomCards(hands.flatten() + board, remainingCards)
-                results = analyzeHands(results, board + randomCards)
-            }
-        }
-    }
-    
-    // Mark favorites
-    val maxWins = results.maxOfOrNull { it.wins } ?: 0
-    return results.map { result ->
-        result.copy()
-    }
-}
-
-fun createDeck(withoutCards: List<Card> = emptyList()): List<Card> {
-    val deck = mutableListOf<Card>()
-    for (rank in CARD_VALUES) {
-        for (suit in CARD_SUITS) {
-            val card = Card(rank, suit)
-            if (!withoutCards.contains(card)) {
-                deck.add(card)
-            }
-        }
-    }
-    return deck
-}
-
-fun dealRandomCards(withoutCards: List<Card>, count: Int): List<Card> {
-    val availableDeck = createDeck(withoutCards)
-    return availableDeck.shuffled().take(count)
-}
-
-fun analyzeHands(results: List<HandResult>, board: List<Card>): List<HandResult> {
-    val handRanks = results.map { result ->
-        rankHand(result.hand + board)
-    }
-    
-    val bestRank = handRanks.maxOrNull()
-    val bestCount = handRanks.count { it == bestRank }
-    val isTie = bestCount > 1
-    
-    return results.mapIndexed { index, result ->
-        val newResult = result.copy(count = result.count + 1)
-        
-        when {
-            handRanks[index] == bestRank && isTie -> {
-                newResult.copy(ties = newResult.ties + 1)
-            }
-            handRanks[index] == bestRank -> {
-                newResult.copy(wins = newResult.wins + 1)
-            }
-            else -> newResult
-        }
-    }
-}
-
-// Hand ranking system based on poker-odds reference
-fun rankHand(cards: List<Card>): String {
-    if (cards.size < 5) return "0" // Invalid hand
-    
-    // Get best 5-card hand from available cards
-    val bestHand = getBestHand(cards)
-    val ranks = bestHand.map { numericalValue(it) }.sorted().reversed()
-    val suits = bestHand.map { it.suit }
-    
-    val isFlush = suits.distinct().size == 1
-    val straight = getStraight(ranks)
-    val rankCounts = ranks.groupingBy { it }.eachCount()
-    val counts = rankCounts.values.sorted().reversed()
-    
-    return when {
-        isFlush && straight != null -> {
-            if (straight == 14) "9${convertToHex(listOf(14, 13, 12, 11, 10))}" // Royal flush
-            else "8${convertToHex(getStraightCards(straight))}" // Straight flush
-        }
-        counts == listOf(4, 1) -> {
-            val fourKind = rankCounts.filter { it.value == 4 }.keys.first()
-            val kicker = rankCounts.filter { it.value == 1 }.keys.first()
-            "7${convertToHex(listOf(fourKind))}${convertToHex(listOf(kicker))}"
-        }
-        counts == listOf(3, 2) -> {
-            val threeKind = rankCounts.filter { it.value == 3 }.keys.first()
-            val pair = rankCounts.filter { it.value == 2 }.keys.first()
-            "6${convertToHex(listOf(threeKind, pair))}"
-        }
-        isFlush -> {
-            "5${convertToHex(ranks.take(5))}"
-        }
-        straight != null -> {
-            "4${convertToHex(getStraightCards(straight))}"
-        }
-        counts == listOf(3, 1, 1) -> {
-            val threeKind = rankCounts.filter { it.value == 3 }.keys.first()
-            val kickers = rankCounts.filter { it.value == 1 }.keys.sorted().reversed().take(2)
-            "3${convertToHex(listOf(threeKind))}${convertToHex(kickers)}"
-        }
-        counts == listOf(2, 2, 1) -> {
-            val pairs = rankCounts.filter { it.value == 2 }.keys.sorted().reversed()
-            val kicker = rankCounts.filter { it.value == 1 }.keys.first()
-            "2${convertToHex(pairs)}${convertToHex(listOf(kicker))}"
-        }
-        counts == listOf(2, 1, 1, 1) -> {
-            val pair = rankCounts.filter { it.value == 2 }.keys.first()
-            val kickers = rankCounts.filter { it.value == 1 }.keys.sorted().reversed().take(3)
-            "1${convertToHex(listOf(pair))}${convertToHex(kickers)}"
-        }
-        else -> {
-            "0${convertToHex(ranks.take(5))}"
-        }
-    }
-}
-
-fun getBestHand(cards: List<Card>): List<Card> {
-    if (cards.size <= 5) return cards
-
-    // For more than 5 cards, find the best 5-card combination
-    // Generate all possible 5-card combinations and pick the best one
-    val combinations = generateCombinations(cards, 5)
-    var bestHand = combinations[0]
-    var bestRank = rankHand(bestHand)
-
-    for (combination in combinations.drop(1)) {
-        val currentRank = rankHand(combination)
-        if (currentRank > bestRank) {
-            bestRank = currentRank
-            bestHand = combination
-        }
-    }
-
-    return bestHand
-}
-
-fun numericalValue(card: Card): Int = when(card.rank) {
-    "A" -> 14
-    "K" -> 13
-    "Q" -> 12
-    "J" -> 11
-    "T" -> 10
-    else -> card.rank.toIntOrNull() ?: 0
-}
-
-fun getStraight(ranks: List<Int>): Int? {
-    val uniqueRanks = ranks.distinct().sorted()
-    if (uniqueRanks.size < 5) return null
-    
-    // Check for standard straights
-    for (i in 0..uniqueRanks.size - 5) {
-        val fiveCards = uniqueRanks.subList(i, i + 5)
-        if (fiveCards.last() - fiveCards.first() == 4) {
-            return fiveCards.last()
-        }
-    }
-    
-    // Check for A-2-3-4-5 straight (wheel)
-    if (uniqueRanks.contains(14) && uniqueRanks.contains(2) && 
-        uniqueRanks.contains(3) && uniqueRanks.contains(4) && uniqueRanks.contains(5)) {
-        return 5 // 5-high straight
-    }
-    
-    return null
-}
-
-fun getStraightCards(high: Int): List<Int> {
-    return when (high) {
-        5 -> listOf(5, 4, 3, 2, 1) // A-2-3-4-5 (ace low)
-        else -> listOf(high, high-1, high-2, high-3, high-4)
-    }
-}
-
-fun convertToHex(values: List<Int>): String {
-    return values.joinToString("") { 
-        when (it) {
-            10 -> "a"
-            11 -> "b" 
-            12 -> "c"
-            13 -> "d"
-            14 -> "e"
-            1 -> "1" // Ace low in wheel straight
-            else -> it.toString(16)
-        }
-    }
-}
-
-fun generateCombinations(cards: List<Card>, k: Int): List<List<Card>> {
-    val result = mutableListOf<List<Card>>()
-
-    fun combine(start: Int, current: MutableList<Card>) {
-        if (current.size == k) {
-            result.add(current.toList())
-            return
-        }
-
-        for (i in start until cards.size) {
-            current.add(cards[i])
-            combine(i + 1, current)
-            current.removeAt(current.size - 1)
-        }
-    }
-
-    combine(0, mutableListOf())
-    return result
-}
-
-// Updated simulation function to work with UI
+// Updated simulation function to use TexasHoldemOdds.simulateEquity
 fun simulateTexasHoldemOdds(players: List<Player>, communityCards: List<Card>): List<Player> {
     if (players.size < 2) return players
     
-    val hands = players.map { it.cards }
-    val results = calculateEquity(hands, communityCards, 10000)
+    // Convert UI cards to TexasHoldemOdds cards
+    val holes = players.map { player ->
+        player.cards.map { uiCard -> Card(uiCard.rank[0], uiCard.suit[0]) }
+    }
+    val board = communityCards.map { uiCard -> Card(uiCard.rank[0], uiCard.suit[0]) }
+    
+    val results = simulateEquity(holes, board)
     
     return players.mapIndexed { index, player ->
         val result = results[index]
-        val winPercentage = if (result.count > 0) (result.wins.toDouble() / result.count) * 100 else 0.0
-        val tiePercentage = if (result.count > 0) (result.ties.toDouble() / result.count) * 100 else 0.0
-        
         player.copy(
-            winPercentage = winPercentage,
-            tiePercentage = tiePercentage
+            winPercentage = result.winPct,
+            tiePercentage = result.tiePct
         )
     }
 }

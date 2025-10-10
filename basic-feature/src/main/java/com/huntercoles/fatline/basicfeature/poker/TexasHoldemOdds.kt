@@ -1,6 +1,7 @@
 package com.huntercoles.fatline.basicfeature.poker
 
 import kotlin.random.Random
+import kotlinx.coroutines.*
 
 /**
  * Core Texas Hold'em odds & evaluation logic (self-contained, original implementation).
@@ -135,7 +136,7 @@ private fun evaluate5(cards: List<Card>): Int {
 fun simulateEquity(
     holes: List<List<Card>>, // each 0..2 cards
     board: List<Card>,       // 0..5 board cards
-    iterations: Int = 5000,
+    iterations: Int = 10000,
     random: Random = Random
 ): List<EquityResult> {
     require(holes.size >= 2)
@@ -150,42 +151,79 @@ fun simulateEquity(
     val deterministic = allHolesComplete && completeBoardNeeded == 0
     val sims = if (deterministic) 1 else iterations.coerceAtLeast(1)
 
-    repeat(sims) {
-        val deck = if (deterministic) baseDeck else baseDeck.shuffled(random)
-        var deckIndex = 0
+    // Note: Players cannot have exactly identical hole cards in poker (deck has unique cards)
+    // So no optimization for identical hands is needed
 
-        // Deal missing hole cards
-        val finalHoles: List<List<Card>> = holes.mapIndexed { idx, h ->
-            if (h.size == 2) h else buildList {
-                addAll(h)
-                repeat(2 - h.size) { add(deck[deckIndex++]) }
+    // Parallel processing for better performance
+    val numCores = Runtime.getRuntime().availableProcessors()
+    val chunkSize = (sims / numCores).coerceAtLeast(1)
+    val chunks = sims / chunkSize
+    val remainder = sims % chunkSize
+
+    val partialResults = MutableList(numCores) { MutableList(holes.size) { EquityResult() } }
+
+    runBlocking(Dispatchers.Default) {
+        val jobs = (0 until numCores).map { coreIndex ->
+            async {
+                val coreRandom = Random(random.nextLong()) // Each core gets its own random sequence
+                val startSim = coreIndex * chunkSize
+                val endSim = if (coreIndex < numCores - 1) startSim + chunkSize else startSim + chunkSize + remainder
+                val localResults = MutableList(holes.size) { EquityResult() }
+
+                for (sim in startSim until endSim) {
+                    val deck = if (deterministic) baseDeck else baseDeck.shuffled(coreRandom)
+                    var deckIndex = 0
+
+                    // Deal missing hole cards
+                    val finalHoles: List<List<Card>> = holes.mapIndexed { idx, h ->
+                        if (h.size == 2) h else buildList {
+                            addAll(h)
+                            repeat(2 - h.size) { add(deck[deckIndex++]) }
+                        }
+                    }
+
+                    // Deal remaining board
+                    val finalBoard = if (completeBoardNeeded == 0) board else buildList {
+                        addAll(board)
+                        repeat(completeBoardNeeded) { add(deck[deckIndex++]) }
+                    }
+
+                    // Evaluate all showdowns
+                    val strengths = finalHoles.map { evaluateBest(it + finalBoard) }
+                    val max = strengths.maxOrNull()!!
+                    val winnerIndexes = strengths.withIndex().filter { it.value == max }.map { it.index }
+
+                    // Natural win/tie handling (removed prior forced tie rule for identical pocket ranks)
+                    if (winnerIndexes.size == 1) {
+                        val w = winnerIndexes.first()
+                        localResults[w] = localResults[w].copy(wins = localResults[w].wins + 1, simulations = localResults[w].simulations + 1)
+                        for (i in localResults.indices) if (i != w) localResults[i] = localResults[i].copy(simulations = localResults[i].simulations + 1)
+                    } else {
+                        winnerIndexes.forEach { w ->
+                            localResults[w] = localResults[w].copy(ties = localResults[w].ties + 1, simulations = localResults[w].simulations + 1)
+                        }
+                        // Non-winners still increment simulation counter
+                        for (i in localResults.indices) if (i !in winnerIndexes) {
+                            localResults[i] = localResults[i].copy(simulations = localResults[i].simulations + 1)
+                        }
+                    }
+                }
+
+                partialResults[coreIndex] = localResults
             }
         }
+        jobs.forEach { it.await() }
+    }
 
-        // Deal remaining board
-        val finalBoard = if (completeBoardNeeded == 0) board else buildList {
-            addAll(board)
-            repeat(completeBoardNeeded) { add(deck[deckIndex++]) }
-        }
-
-        // Evaluate all showdowns
-        val strengths = finalHoles.map { evaluateBest(it + finalBoard) }
-        val max = strengths.maxOrNull()!!
-        val winnerIndexes = strengths.withIndex().filter { it.value == max }.map { it.index }
-
-        // Natural win/tie handling (removed prior forced tie rule for identical pocket ranks)
-        if (winnerIndexes.size == 1) {
-            val w = winnerIndexes.first()
-            results[w] = results[w].copy(wins = results[w].wins + 1, simulations = results[w].simulations + 1)
-            for (i in results.indices) if (i != w) results[i] = results[i].copy(simulations = results[i].simulations + 1)
-        } else {
-            winnerIndexes.forEach { w ->
-                results[w] = results[w].copy(ties = results[w].ties + 1, simulations = results[w].simulations + 1)
-            }
-            // Non-winners still increment simulation counter
-            for (i in results.indices) if (i !in winnerIndexes) {
-                results[i] = results[i].copy(simulations = results[i].simulations + 1)
-            }
+    // Combine results from all cores
+    for (coreIndex in 0 until numCores) {
+        for (playerIndex in 0 until holes.size) {
+            val partial = partialResults[coreIndex][playerIndex]
+            results[playerIndex] = results[playerIndex].copy(
+                wins = results[playerIndex].wins + partial.wins,
+                ties = results[playerIndex].ties + partial.ties,
+                simulations = results[playerIndex].simulations + partial.simulations
+            )
         }
     }
 

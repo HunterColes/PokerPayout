@@ -55,10 +55,10 @@ Poker Payout Calculator is a professional-grade tournament management applicatio
 ---
 
 <p align="center">
-	<img src="docs/images/screenshots/config.png" alt="Config" width="220"/>
-	<img src="docs/images/screenshots/bank.png" alt="Bank Tracker" width="220"/>
-	<img src="docs/images/screenshots/timer.png" alt="Timer" width="220"/>
-	<img src="docs/images/screenshots/odds.png" alt="Odds" width="220"/>
+	<img src="docs/images/screenshots/config.png" alt="Config" width="160"/>
+	<img src="docs/images/screenshots/bank.png" alt="Bank Tracker" width="160"/>
+	<img src="docs/images/screenshots/timer.png" alt="Timer" width="160"/>
+	<img src="docs/images/screenshots/odds.png" alt="Odds" width="160"/>
 </p>
 
 ---

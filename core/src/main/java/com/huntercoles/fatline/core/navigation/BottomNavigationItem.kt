@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.huntercoles.fatline.core.R
 
@@ -29,5 +30,10 @@ val bottomNavigationItems = listOf(
         destination = NavigationDestination.Timer,
         icon = Icons.Filled.PlayArrow,
         label = R.string.navigation_timer
+    ),
+    BottomNavigationItem(
+        destination = NavigationDestination.OddsCalculator,
+        icon = Icons.Filled.MoreHoriz,
+        label = R.string.navigation_odds_calculator
     ),
 )

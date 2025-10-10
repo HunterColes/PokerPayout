@@ -13,5 +13,8 @@ sealed class NavigationDestination {
     data object Timer : NavigationDestination()
 
     @Serializable
+    data object OddsCalculator : NavigationDestination()
+
+    @Serializable
     data object Back : NavigationDestination()
 }

@@ -1,5 +1,6 @@
 package com.huntercoles.fatline.basicfeature.presentation.composable
 
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.Assert.*
 
@@ -10,7 +11,7 @@ import org.junit.Assert.*
 class PokerHandEvaluationTest {
 
     @Test
-    fun `test simulate texas holdem odds - AA vs KK preflop`() {
+    fun `test simulate texas holdem odds - AA vs KK preflop`() = runTest {
         val players = listOf(
             Player(1, "Player 1", listOf(Card("A", "h"), Card("A", "d"))),
             Player(2, "Player 2", listOf(Card("K", "h"), Card("K", "d")))
@@ -29,7 +30,7 @@ class PokerHandEvaluationTest {
     }
 
     @Test
-    fun `test simulation with community cards - AA vs 2-3`() {
+    fun `test simulation with community cards - AA vs 2-3`() = runTest {
         val players = listOf(
             Player(1, "Player 1", listOf(Card("A", "h"), Card("A", "d"))),
             Player(2, "Player 2", listOf(Card("2", "h"), Card("3", "d")))
@@ -42,7 +43,7 @@ class PokerHandEvaluationTest {
     }
 
     @Test
-    fun `test specific poker scenario for tie percentage functionality - 7h8h vs 8c9h with 5c6c7c flop`() {
+    fun `test specific poker scenario for tie percentage functionality - 7h8h vs 8c9h with 5c6c7c flop`() = runTest {
         // Test case: Player 1: 7♥ 8♥, Player 2: 8♣ 9♥, Flop: 5♣ 6♣ 7♣
         // Expected from solved calculator: P1 Win 2.42% Tie 6.97%, P2 Win 90.61% Tie 6.97%
 
@@ -75,7 +76,7 @@ class PokerHandEvaluationTest {
     }
 
     @Test
-    fun `test identical pocket aces equity distribution`() {
+    fun `test identical pocket aces equity distribution`() = runTest {
         val players = listOf(
             Player(1, "Player 1", listOf(Card("A", "h"), Card("A", "d"))),
             Player(2, "Player 2", listOf(Card("A", "c"), Card("A", "s")))

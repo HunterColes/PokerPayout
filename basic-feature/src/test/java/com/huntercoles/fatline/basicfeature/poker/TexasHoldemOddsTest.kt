@@ -1,5 +1,6 @@
 package com.huntercoles.fatline.basicfeature.poker
 
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -16,7 +17,7 @@ class TexasHoldemOddsTest {
     }
 
     @Test
-    fun `AA vs KK preflop equity sanity`() {
+    fun `AA vs KK preflop equity sanity`() = runTest {
         val holes = listOf(
             listOf(Card('A','h'), Card('A','d')),
             listOf(Card('K','c'), Card('K','s'))
@@ -28,7 +29,7 @@ class TexasHoldemOddsTest {
     }
 
     @Test
-    fun `identical pocket aces equity distribution`() {
+    fun `identical pocket aces equity distribution`() = runTest {
         val holes = listOf(
             listOf(Card('A','h'), Card('A','d')),
             listOf(Card('A','c'), Card('A','s'))
@@ -48,7 +49,7 @@ class TexasHoldemOddsTest {
     }
 
     @Test
-    fun `post flop deterministic when board complete`() {
+    fun `post flop deterministic when board complete`() = runTest {
         val holes = listOf(
             listOf(Card('A','h'), Card('K','d')),
             listOf(Card('Q','c'), Card('J','s'))

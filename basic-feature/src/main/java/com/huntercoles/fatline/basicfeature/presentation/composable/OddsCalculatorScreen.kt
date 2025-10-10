@@ -35,6 +35,9 @@ import kotlin.math.max
 import kotlin.math.min
 
 // Data classes for poker functionality
+// Note: This UI-layer Card uses String for display flexibility and contains UI-specific methods.
+// The poker engine uses a separate Card(Char, Char) for performance in calculations.
+// This separation keeps UI concerns separate from poker calculation logic.
 data class Card(
     val rank: String,
     val suit: String
@@ -230,10 +233,8 @@ fun OddsCalculatorScreen() {
                     
                     scope.launch {
                         try {
-                            // Simulate poker odds with proper Texas Hold'em logic on background thread
-                            val simulatedResults = withContext(Dispatchers.Default) {
-                                simulateTexasHoldemOdds(gameState.players, gameState.communityCards)
-                            }
+                            // Simulate poker odds with proper Texas Hold'em logic
+                            val simulatedResults = simulateTexasHoldemOdds(gameState.players, gameState.communityCards)
                             
                             gameState = gameState.copy(
                                 players = simulatedResults,
@@ -740,14 +741,18 @@ fun CardPickerDialog(
 }
 
 // Updated simulation function to use TexasHoldemOdds.simulateEquity
-fun simulateTexasHoldemOdds(players: List<Player>, communityCards: List<Card>): List<Player> {
+suspend fun simulateTexasHoldemOdds(players: List<Player>, communityCards: List<Card>): List<Player> {
     if (players.size < 2) return players
     
-    // Convert UI cards to TexasHoldemOdds cards
+    // Convert UI cards to TexasHoldemOdds cards with validation
     val holes = players.map { player ->
-        player.cards.map { uiCard -> Card(uiCard.rank[0], uiCard.suit[0]) }
+        player.cards
+            .filter { it.rank.isNotEmpty() && it.suit.isNotEmpty() }
+            .map { uiCard -> com.huntercoles.fatline.basicfeature.poker.Card(uiCard.rank[0], uiCard.suit[0]) }
     }
-    val board = communityCards.map { uiCard -> Card(uiCard.rank[0], uiCard.suit[0]) }
+    val board = communityCards
+        .filter { it.rank.isNotEmpty() && it.suit.isNotEmpty() }
+        .map { uiCard -> com.huntercoles.fatline.basicfeature.poker.Card(uiCard.rank[0], uiCard.suit[0]) }
     
     val results = simulateEquity(holes, board)
     

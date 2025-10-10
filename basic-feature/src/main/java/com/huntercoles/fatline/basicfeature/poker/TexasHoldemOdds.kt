@@ -133,12 +133,12 @@ private fun evaluate5(cards: List<Card>): Int {
  * Monte Carlo equity simulation. If board has 5 cards, result is deterministic.
  * Identical hole ranks across players are coerced to tie (per project requirement).
  */
-fun simulateEquity(
+suspend fun simulateEquity(
     holes: List<List<Card>>, // each 0..2 cards
     board: List<Card>,       // 0..5 board cards
     iterations: Int = 10000,
     random: Random = Random
-): List<EquityResult> {
+): List<EquityResult> = withContext(Dispatchers.Default) {
     require(holes.size >= 2)
     val used = holes.flatten() + board
     require(used.size == used.toSet().size) { "Duplicate cards provided" }
@@ -162,7 +162,7 @@ fun simulateEquity(
 
     val partialResults = MutableList(numCores) { MutableList(holes.size) { EquityResult() } }
 
-    runBlocking(Dispatchers.Default) {
+    coroutineScope {
         val jobs = (0 until numCores).map { coreIndex ->
             async {
                 val coreRandom = Random(random.nextLong()) // Each core gets its own random sequence
@@ -227,5 +227,5 @@ fun simulateEquity(
         }
     }
 
-    return results
+    results
 }

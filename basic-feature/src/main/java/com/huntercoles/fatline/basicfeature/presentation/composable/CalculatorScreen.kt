@@ -281,13 +281,6 @@ fun TournamentConfigurationCard(
                         onAddOnChange = { onIntent(CalculatorIntent.UpdateAddOnAmount(it)) },
                         isLocked = uiState.isTournamentLocked
                     )
-
-                    // Pool Summary
-                    PoolSummarySection(
-                        config = uiState.tournamentConfig,
-                        rebuyPurchases = uiState.rebuyPurchases,
-                        addOnPurchases = uiState.addOnPurchases
-                    )
                 }
             }
         }

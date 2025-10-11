@@ -56,7 +56,8 @@ data class BankUiState(
     val payoutPositions: @RawValue List<PayoutPosition> = emptyList(),
     val payoutWeights: @RawValue List<Int> = emptyList(),
     val isTimerRunning: Boolean = false,
-    val showWeightsDialog: Boolean = false
+    val showWeightsDialog: Boolean = false,
+    val showPoolSummaryDialog: Boolean = false
 ) : Parcelable
 
 @Parcelize

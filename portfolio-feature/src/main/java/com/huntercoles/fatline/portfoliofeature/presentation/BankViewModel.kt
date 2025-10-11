@@ -107,6 +107,8 @@ class BankViewModel @Inject constructor(
             is BankIntent.ShowWeightsDialog -> showWeightsDialog()
             is BankIntent.HideWeightsDialog -> hideWeightsDialog()
             is BankIntent.UpdateWeights -> updateWeights(intent.weights)
+            is BankIntent.ShowPoolSummaryDialog -> showPoolSummaryDialog()
+            is BankIntent.HidePoolSummaryDialog -> hidePoolSummaryDialog()
         }
     }
 
@@ -667,6 +669,14 @@ class BankViewModel @Inject constructor(
 
     private fun hideWeightsDialog() {
         _uiState.update { it.copy(showWeightsDialog = false) }
+    }
+
+    private fun showPoolSummaryDialog() {
+        _uiState.update { it.copy(showPoolSummaryDialog = true) }
+    }
+
+    private fun hidePoolSummaryDialog() {
+        _uiState.update { it.copy(showPoolSummaryDialog = false) }
     }
 
     private fun isInDefaultState(): Boolean {

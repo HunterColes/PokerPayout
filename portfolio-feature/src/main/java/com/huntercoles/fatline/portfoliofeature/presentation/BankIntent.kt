@@ -23,6 +23,8 @@ sealed class BankIntent {
     object ShowWeightsDialog : BankIntent()
     object HideWeightsDialog : BankIntent()
     data class UpdateWeights(val weights: List<Int>) : BankIntent()
+    object ShowPoolSummaryDialog : BankIntent()
+    object HidePoolSummaryDialog : BankIntent()
 }
 
 @Parcelize

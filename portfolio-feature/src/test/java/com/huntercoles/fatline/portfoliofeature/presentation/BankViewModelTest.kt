@@ -3,9 +3,14 @@ package com.huntercoles.fatline.portfoliofeature.presentation
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.fatline.core.preferences.BankPreferences
+import com.huntercoles.fatline.core.preferences.TimerPreferences
 import com.huntercoles.fatline.core.preferences.TournamentPreferences
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -27,6 +32,7 @@ class BankViewModelTest {
     private lateinit var context: Context
     private lateinit var tournamentPreferences: TournamentPreferences
     private lateinit var bankPreferences: BankPreferences
+    private lateinit var timerPreferences: TimerPreferences
 
     @Before
     fun setUp() {
@@ -34,8 +40,13 @@ class BankViewModelTest {
         context = ApplicationProvider.getApplicationContext()
         context.getSharedPreferences("tournament_prefs", Context.MODE_PRIVATE).edit().clear().apply()
         context.getSharedPreferences("bank_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+        context.getSharedPreferences("timer_prefs", Context.MODE_PRIVATE).edit().clear().apply()
         tournamentPreferences = TournamentPreferences(context)
         bankPreferences = BankPreferences(context)
+        timerPreferences = mockk<TimerPreferences> {
+            val timerRunningFlow = MutableStateFlow(false)
+            every { timerRunning } returns timerRunningFlow.asStateFlow()
+        }
         tournamentPreferences.resetAllTournamentData()
         bankPreferences.resetAllBankData()
     }
@@ -47,7 +58,7 @@ class BankViewModelTest {
 
     @Test
     fun totalPaidInReflectsBuyIns() = runTest(testDispatcher) {
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val initialState = viewModel.uiState.value
@@ -74,7 +85,7 @@ class BankViewModelTest {
 
     @Test
     fun totalPayedOutTracksPayoutPositions() = runTest(testDispatcher) {
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val initialState = viewModel.uiState.value
@@ -116,7 +127,7 @@ class BankViewModelTest {
 
     @Test
     fun confirmationDialogAppliesAndUndoesBuyIn() = runTest(testDispatcher) {
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.BUY_IN))
@@ -145,7 +156,7 @@ class BankViewModelTest {
     @Test
     fun rebuyDialogTogglesCounts() = runTest(testDispatcher) {
         tournamentPreferences.setRebuyAmount(10.0)
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.REBUY))
@@ -170,7 +181,7 @@ class BankViewModelTest {
     @Test
     fun rebuyDialogIgnoredWhenRebuyDisabled() = runTest(testDispatcher) {
         tournamentPreferences.setRebuyAmount(0.0)
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.REBUY))
@@ -184,7 +195,7 @@ class BankViewModelTest {
     @Test
     fun addonDialogRespectConfiguration() = runTest(testDispatcher) {
         tournamentPreferences.setAddOnAmount(15.0)
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.ADDON))
@@ -208,7 +219,7 @@ class BankViewModelTest {
     @Test
     fun addonDialogIgnoredWhenAddonDisabled() = runTest(testDispatcher) {
         tournamentPreferences.setAddOnAmount(0.0)
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.ADDON))
@@ -221,7 +232,7 @@ class BankViewModelTest {
 
     @Test
     fun lastActivePlayerCannotBeEliminated() = runTest(testDispatcher) {
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Knock out player 2 to leave player 1 as the only active participant
@@ -246,7 +257,7 @@ class BankViewModelTest {
 
     @Test
     fun knockoutDialogUpdatesEliminationOrderAndUndoRestores() = runTest(testDispatcher) {
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.OUT))
@@ -272,7 +283,7 @@ class BankViewModelTest {
 
     @Test
     fun assigningKnockoutCreditsEliminator() = runTest(testDispatcher) {
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 2, action = PlayerActionType.OUT))
@@ -304,7 +315,7 @@ class BankViewModelTest {
         tournamentPreferences.setPlayerCount(3)
         tournamentPreferences.setPayoutWeights(listOf(3, 2, 1))
 
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.acceptIntent(BankIntent.OutToggled(3))
@@ -325,7 +336,7 @@ class BankViewModelTest {
         tournamentPreferences.setAddOnAmount(50.0)
         tournamentPreferences.setPayoutWeights(listOf(3, 2, 1))
 
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         listOf(1, 2).forEach { id ->
@@ -384,7 +395,7 @@ class BankViewModelTest {
         tournamentPreferences.setRebuyAmount(25.0)
         tournamentPreferences.setAddOnAmount(15.0)
 
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.acceptIntent(BankIntent.PlayerRebuyChanged(playerId = 1, rebuys = 2))
@@ -420,7 +431,7 @@ class BankViewModelTest {
         tournamentPreferences.setAddOnAmount(0.0)
         tournamentPreferences.setPayoutWeights(listOf(3, 2, 1))
 
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -439,7 +450,7 @@ class BankViewModelTest {
         tournamentPreferences.setAddOnAmount(0.0)
         tournamentPreferences.setPayoutWeights(listOf(3, 2, 1))
 
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Set up players and eliminate them
@@ -482,7 +493,7 @@ class BankViewModelTest {
         tournamentPreferences.setAddOnAmount(0.0)
         tournamentPreferences.setPayoutWeights(listOf(3, 2, 1))
 
-        val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Set up players
@@ -553,7 +564,7 @@ class BankViewModelTest {
             tournamentPreferences.setAddOnAmount(testCase.addon)
             tournamentPreferences.setPayoutWeights(testCase.weights)
 
-            val viewModel = BankViewModel(tournamentPreferences, bankPreferences)
+            val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
             testDispatcher.scheduler.advanceUntilIdle()
 
             // All players buy in

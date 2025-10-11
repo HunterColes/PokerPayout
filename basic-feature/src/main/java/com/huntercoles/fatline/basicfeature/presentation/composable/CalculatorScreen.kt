@@ -9,7 +9,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -159,17 +158,6 @@ fun CalculatorContent(
             onExpandedChange = { onIntent(CalculatorIntent.ToggleConfigExpanded(it)) }
         )
 
-        // Leaderboard/Payout Structure Section (only show when config is collapsed)
-        if (!uiState.isConfigExpanded) {
-            LeaderboardCard(
-                payouts = uiState.payouts,
-                payoutWeights = uiState.tournamentConfig.payoutWeights,
-                leaderboardNames = uiState.leaderboardNames,
-                onIntent = onIntent,
-                isTournamentLocked = uiState.isTournamentLocked,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
     }
 }
 
@@ -301,183 +289,6 @@ fun TournamentConfigurationCard(
                         addOnPurchases = uiState.addOnPurchases
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun LeaderboardCard(
-    payouts: List<com.huntercoles.fatline.basicfeature.domain.model.PayoutPosition>,
-    payoutWeights: List<Int>,
-    leaderboardNames: Map<Int, String>,
-    onIntent: (CalculatorIntent) -> Unit,
-    isTournamentLocked: Boolean,
-    modifier: Modifier = Modifier
-) {
-    var showWeightsDialog by remember { mutableStateOf(false) }
-    
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = PokerColors.SurfaceSecondary),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // Header with edit weights button
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "🏆 Tournament Leaderboard",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = PokerColors.PokerGold
-                    )
-                    
-                    if (payouts.isNotEmpty()) {
-                        val payingPositions = payouts.count { it.isPaying }
-                        Text(
-                            text = "$payingPositions paying positions",
-                            fontSize = 12.sp,
-                            color = PokerColors.AccentGreen
-                        )
-                    }
-                }
-                
-                IconButton(
-                    onClick = { showWeightsDialog = true },
-                    enabled = !isTournamentLocked
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit Weights",
-                        tint = if (isTournamentLocked) PokerColors.CardWhite.copy(alpha = 0.5f) 
-                              else PokerColors.PokerGold
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Leaderboard positions (scrollable)
-            if (payouts.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Configure tournament settings to see payouts",
-                        color = PokerColors.CardWhite,
-                        fontSize = 14.sp,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    payouts.forEach { payout ->
-                        LeaderboardPosition(
-                            payout = payout,
-                            playerName = leaderboardNames[payout.position]
-                        )
-                    }
-                }
-            }
-        }
-    }
-    
-    // Weights editor dialog
-    if (showWeightsDialog && !isTournamentLocked) {
-        WeightsEditorDialog(
-            currentWeights = payoutWeights,
-            onWeightsChanged = { newWeights ->
-                onIntent(CalculatorIntent.UpdateWeights(newWeights))
-            },
-            onDismiss = { showWeightsDialog = false }
-        )
-    }
-}
-
-@Composable
-fun LeaderboardPosition(
-    payout: com.huntercoles.fatline.basicfeature.domain.model.PayoutPosition,
-    playerName: String?
-) {
-    val trophy = when (payout.position) {
-        1 -> "🥇"
-        2 -> "🥈" 
-        3 -> "🥉"
-        else -> "" // No medal for positions 4+
-    }
-    
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (payout.position <= 3) PokerColors.AccentGreen.copy(alpha = 0.3f) 
-                          else PokerColors.DarkGreen
-        ),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Position and player placeholder
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (trophy.isNotEmpty()) {
-                    Text(
-                        text = trophy,
-                        fontSize = 20.sp,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                }
-                
-                Column {
-                    Text(
-                        text = "${payout.position}${payout.positionSuffix} Place",
-                        color = PokerColors.CardWhite,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                    
-                    Text(
-                        text = playerName?.takeIf { it.isNotBlank() } ?: "-----",
-                        color = PokerColors.CardWhite.copy(alpha = 0.6f),
-                        fontSize = 12.sp
-                    )
-                }
-            }
-            
-            // Payout amount
-            Column(
-                horizontalAlignment = Alignment.End
-            ) {
-                Text(
-                    text = payout.formattedPayout,
-                    color = PokerColors.PokerGold,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-                
-                Text(
-                    text = payout.formattedPercentage,
-                    color = PokerColors.CardWhite.copy(alpha = 0.8f),
-                    fontSize = 11.sp
-                )
             }
         }
     }

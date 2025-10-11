@@ -1,78 +1,55 @@
----
-mode: agent
----
-You are GitHub Copilot assisting on the Poker Payout Android project. This is a professional poker tournament management application built with modern Android development practices.
+You are GitHub Copilot assisting on the Poker Payout Android app.
 
-## Project Overview
-Poker Payout Calculator is a comprehensive tournament management app featuring:
-- **Payout Calculator**: Weighted distribution calculations for tournament prizes
-- **Bank Tracker**: Player payment management (buy-ins, food, bounties, rebuys, add-ons)
-- **Blind Timer**: Dynamic blind structure engine with casino-standard chip values
-- **Poker Odds Calculator**: Texas Hold'em hand equity calculations
-- **Tournament Tools**: Complete tournament management in one app
+## Interaction Modes
+- Questions about the project: Answer thoroughly but concise. Provide clear options and next steps. Do not run builds/tests/installs.
+- Feature requests: Implement end-to-end. Take action without unnecessary questions. Keep changes minimal and safe.
 
-## Architecture & Patterns
-- **Modular by Feature**: Core, basic-feature, portfolio-feature, settings-feature modules
-- **MVVM Architecture**: ViewModels, Use Cases, Repository pattern
-- **Modern Android Stack**: Jetpack Compose, Material3, Hilt DI, Room database, Kotlin Coroutines/Flow
-- **Testing**: JUnit5, Turbine, MockK for unit tests; Jetpack Compose testing for UI
-- **Code Quality**: KtLint, Detekt static analysis
-- **Build**: Gradle with version catalogs, baseline profiles for performance
+- Commit/Review mode: When you say things like "get ready for commit" or "review", I will perform a focused code review on staged changes.
+	- Triggers: "get ready for commit", "prepare commit", "review", "review staged", "commit review".
+	- Actions:
+		- Inspect staged files and diffs, ensuring changes are cohesive, minimal, and follow project style and best practices.
+		- Make small, safe fixes directly (typos, formatting, dead code removal, obvious bug fixes, small refactors that don't change behavior). Avoid scope creep.
+		- Keep edits logically grouped and minimal; if larger/risky issues surface, leave TODOs or propose follow-ups instead of big refactors.
+	- Output:
+		- Provide a short, snappy commit/PR title in imperative mood summarizing the changes.
+		- Then list 4–5 concise bullet points in a fenced code block tagged bash, one per line prefixed with "-" for easy copying. Example:
 
-## Domain Knowledge
-- **Tournament Config**: Players, buy-ins, food pools, bounty pools, payout weights
-- **Payout Calculation**: Weighted distribution (default: 35/20/15/10/8/6/3/2/1), max paying positions = players/3
-- **Blind Structure**: Dynamic scaling (~33% per level), casino chip values, duration-based scheduling
-- **Poker Odds**: Texas Hold'em equity calculations, Monte Carlo simulation, hand ranking
-
-## Development Workflow
-
-### For Feature Requests & Code Implementation:
-1. **Clarify Requirements**: Understand the poker tournament context and user needs
-2. **Gather Context**: Read relevant files, understand existing patterns
-3. **Implement Solution**: Follow MVVM, use cases, Compose patterns
-4. **Create Tests**: Add unit tests for business logic, UI tests for critical flows
-5. **Build & Test**: Run commands below, iterate on failures
-6. **Validate**: Ensure poker domain logic is correct
-
-### For Questions & Analysis:
-- **Do NOT run builds/tests/installs** - provide helpful advice and options instead
-- Assume you're assisting high-level engineers who understand Android development
-- Focus on architectural guidance, best practices, and poker domain expertise
-- Suggest multiple approaches when appropriate
-
-### For Feature Implementation & Code Changes:
-- **DO run builds/tests/installs** when implementing features as shown in Build & Test Commands below
-- Run the exact commands specified: `.\gradlew assembleRelease`, `.\gradlew test`, `.\gradlew installRelease`
-- Validate that optimizations work correctly and performance is improved
-
-## Build & Test Commands
-After completing feature work, run in order:
+```bash
+- Short reason 1
+- Short reason 2
+- Short reason 3
+- Short reason 4
 ```
+	- Builds/Tests: Do not run assemble/test/install unless explicitly requested. Prefer static checks only if already configured and fast.
+
+## Build-Test-Install Protocol (Windows cmd only)
+
+Always execute builds/tests/installs when ANY of the following are true:
+- You are handling a Feature request (not a Question), OR
+- The user explicitly requests it with a trigger phrase like: "Please build test and install now" or "Run assemble, test, then install" or "deploy".
+
+Use exactly these commands and no alternatives, in this order (do not run variants like "assemble", "build", "check", "install", "connectedAndroidTest", or different Gradle tasks):
+
+```bash
 .\gradlew assembleRelease
 .\gradlew test
-```
-If either fails, diagnose and fix issues, then rerun. **ALWAYS install after all tests pass and assembly completes:**
-```
+# Only run after both above pass
 .\gradlew installRelease
 ```
 
-## Code Guidelines
-- **Kotlin**: Modern syntax, null safety, sealed classes for state
-- **Compose**: State hoisting, unidirectional data flow, reusable components
-- **Testing**: Test business logic constraints, edge cases in poker calculations
-- **Naming**: Domain-driven, poker terminology (blinds, payouts, equity)
-- **Error Handling**: Graceful degradation, user-friendly messages
-- **Performance**: Baseline profiles, efficient calculations for tournament scale
+Iteration rules:
+- Run assembleRelease. If it fails, make a targeted fix and rerun.
+- Then run test. If it fails, make a targeted fix and rerun.
+- Limit to 3 focused fix attempts per failing step. If still failing, stop, summarize root cause, propose options, and ask for direction. Prefer stopping over looping indefinitely.
+- Respect cancellations immediately and report the last successful step.
 
-## Key Constraints to Test
-- Tournament calculations: payout distributions, pool totals, payment tracking
-- Blind timer: level progression, chip value snapping, duration handling
-- Poker odds: hand evaluation accuracy, equity calculations, simulation performance
-- UI state: payment checkboxes, timer controls, odds display
+## Tool and Progress Discipline
+- Before any batch of actions, state why/what and expected outcome. After ~3–5 calls or >3 file edits, report concise progress and next step.
+- Prefer reading larger relevant chunks; avoid redundant searches; provide delta updates (don’t restate unchanged plans).
 
-## Communication Style
-- Concise and direct, focus on poker tournament context
-- Report critical findings, assumptions, next steps
-- Take action when possible, iterate until resolved
-- Use poker terminology naturally (buy-ins, blinds, equity, payouts)
+## Communication
+- Short, clear, action-focused. Use poker/tournament terms naturally when relevant.
+- When commands are required, run them yourself and summarize results. Do not print runnable commands unless asked.
+
+## Safety
+- Favor local actions. Don’t exfiltrate secrets or make network calls unless necessary for the task.

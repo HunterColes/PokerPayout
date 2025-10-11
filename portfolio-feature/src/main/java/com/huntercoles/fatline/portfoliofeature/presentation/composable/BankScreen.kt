@@ -81,6 +81,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.fatline.core.design.PokerDialog
@@ -134,22 +135,47 @@ internal fun BankScreen(
                 modifier = Modifier.weight(1f)
             )
             
-            // Green circular background with yellow refresh button
-            Card(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                IconButton(
-                    onClick = { focusManager.clearFocus(); onIntent(BankIntent.ShowResetDialog) },
-                    modifier = Modifier.fillMaxSize()
+                // Edit weights button
+                Card(
+                    modifier = Modifier.size(48.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Reset Bank Data",
-                        tint = PokerColors.PokerGold,
-                        modifier = Modifier.size(24.dp).graphicsLayer(scaleX = -1f)
-                    )
+                    IconButton(
+                        onClick = { focusManager.clearFocus(); onIntent(BankIntent.ShowWeightsDialog) },
+                        enabled = !uiState.isTimerRunning,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_balance_scale),
+                            contentDescription = "Edit payout weights",
+                            tint = if (uiState.isTimerRunning) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.PokerGold,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                
+                // Green circular background with yellow refresh button
+                Card(
+                    modifier = Modifier.size(48.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
+                ) {
+                    IconButton(
+                        onClick = { focusManager.clearFocus(); onIntent(BankIntent.ShowResetDialog) },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reset Bank Data",
+                            tint = PokerColors.PokerGold,
+                            modifier = Modifier.size(24.dp).graphicsLayer(scaleX = -1f)
+                        )
+                    }
                 }
             }
         }
@@ -218,6 +244,17 @@ internal fun BankScreen(
                     }
                 }
             }
+        }
+
+        // Weights Editor Dialog
+        if (uiState.showWeightsDialog) {
+            WeightsEditorDialog(
+                currentWeights = uiState.payoutWeights,
+                onWeightsChanged = { newWeights ->
+                    onIntent(BankIntent.UpdateWeights(newWeights))
+                },
+                onDismiss = { onIntent(BankIntent.HideWeightsDialog) }
+            )
         }
 
         val pendingAction = uiState.pendingAction

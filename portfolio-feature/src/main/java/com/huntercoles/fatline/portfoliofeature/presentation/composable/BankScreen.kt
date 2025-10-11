@@ -268,6 +268,7 @@ internal fun BankScreen(
                     player = player,
                     pendingAction = action,
                     allPlayers = uiState.players,
+                    uiState = uiState,
                     onConfirm = { selectedCount, selectedPlayerId ->
                         when (action.actionType) {
                             PlayerActionType.OUT -> {
@@ -407,7 +408,7 @@ private fun SummaryProgressBar(
 ) {
     val safeTarget = targetAmount.coerceAtLeast(0.0)
     val progress = if (safeTarget > 0.0) (currentAmount / safeTarget).coerceIn(0.0, 1.0) else 0.0
-    val isComplete = safeTarget > 0.0 && currentAmount >= safeTarget
+    val isComplete = safeTarget > 0.0 && (currentAmount + 0.01) >= safeTarget
     val fillColor = if (isComplete) fullColor else baseColor
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -809,6 +810,7 @@ private fun PlayerActionDialog(
     player: PlayerData,
     pendingAction: PendingPlayerAction,
     allPlayers: List<PlayerData>,
+    uiState: BankUiState,
     onConfirm: (Int?, Int?) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -817,6 +819,7 @@ private fun PlayerActionDialog(
     val isCountAction = pendingAction.actionType == PlayerActionType.REBUY || pendingAction.actionType == PlayerActionType.ADDON
     val isKnockoutSelection = pendingAction.actionType == PlayerActionType.OUT && pendingAction.apply
     val isPayoutAction = pendingAction.actionType == PlayerActionType.PAYED_OUT && pendingAction.apply
+    val isBuyInAction = pendingAction.actionType == PlayerActionType.BUY_IN && pendingAction.apply
     val baseCount = pendingAction.baseCount.coerceAtLeast(0)
     var purchaseCount by remember(pendingAction.playerId, pendingAction.actionType, baseCount) {
         mutableStateOf(baseCount)
@@ -1073,6 +1076,30 @@ private fun PlayerActionDialog(
             }
         }
 
+        if (isBuyInAction) {
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = PokerColors.LightGreen.copy(alpha = 0.35f),
+                border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.55f))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "$${String.format("%.2f", pendingAction.buyInCost)}",
+                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                        color = PokerColors.PokerGold
+                    )
+                }
+            }
+        }
+
         if (isPayoutAction) {
             Spacer(modifier = Modifier.height(18.dp))
 
@@ -1096,14 +1123,34 @@ private fun PlayerActionDialog(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Buy-in payout
+                    // Buy-in cost (negative, red)
+                    if (pendingAction.buyInCost > 0.0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Buy-In",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = PokerColors.ErrorRed
+                            )
+                            Text(
+                                text = "-$${String.format("%.2f", pendingAction.buyInCost)}",
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                color = PokerColors.ErrorRed
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    // Payout (leaderboard payout)
                     if (pendingAction.buyInPayout > 0.0) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Buy-in",
+                                text = "Pay-Out",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = PokerColors.CardWhite
                             )
@@ -1159,20 +1206,25 @@ private fun PlayerActionDialog(
                     HorizontalDivider(color = PokerColors.PokerGold.copy(alpha = 0.3f))
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Total
+                    // Net Pay (was Total)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Total",
+                            text = "Net Pay:",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = PokerColors.CardWhite
                         )
+                        val netPayColor = if (pendingAction.payoutAmount >= 0) PokerColors.PokerGold else PokerColors.ErrorRed
+                        val netPayText = if (pendingAction.payoutAmount >= 0) 
+                            "$${String.format("%.2f", pendingAction.payoutAmount)}" 
+                        else 
+                            "-$${String.format("%.2f", -pendingAction.payoutAmount)}"
                         Text(
-                            text = "$${String.format("%.2f", pendingAction.payoutAmount)}",
+                            text = netPayText,
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                            color = PokerColors.PokerGold
+                            color = netPayColor
                         )
                     }
                 }

@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -151,6 +152,53 @@ class BankViewModelTest {
 
         val afterUndo = viewModel.uiState.value
         assertEquals(false, afterUndo.players.first { it.id == 1 }.buyIn)
+    }
+
+    @Test
+    fun buyInCostCalculationIncludesAddons() = runTest(testDispatcher) {
+        tournamentPreferences.setBuyIn(100.0)
+        tournamentPreferences.setFoodPerPlayer(10.0)
+        tournamentPreferences.setAddOnAmount(25.0)
+
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Add an addon to player 1
+        viewModel.acceptIntent(BankIntent.PlayerAddonChanged(playerId = 1, addons = 1))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Show buy-in dialog for player 1
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.BUY_IN))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val pendingAction = viewModel.uiState.value.pendingAction
+        assertEquals(PlayerActionType.BUY_IN, pendingAction?.actionType)
+        assertEquals(true, pendingAction?.apply)
+        // Cost should be: buyIn (100) + food (10) + addons (1 * 25) = 135
+        assertNotNull(pendingAction)
+        assertEquals(135.0, pendingAction!!.buyInCost, 0.001)
+
+        // Confirm buy-in
+        viewModel.acceptIntent(BankIntent.ConfirmPlayerAction)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Add another addon
+        viewModel.acceptIntent(BankIntent.PlayerAddonChanged(playerId = 1, addons = 2))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Uncheck and recheck buy-in
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.BUY_IN))
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.acceptIntent(BankIntent.ConfirmPlayerAction) // Uncheck
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.BUY_IN))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val updatedPendingAction = viewModel.uiState.value.pendingAction
+        // Cost should now include 2 addons: 100 + 10 + (2 * 25) = 160
+        assertNotNull(updatedPendingAction)
+        assertEquals(160.0, updatedPendingAction!!.buyInCost, 0.001)
     }
 
     @Test
@@ -611,6 +659,264 @@ class BankViewModelTest {
         }
     }
 
+    @Test
+    fun buyInsSumToTotalPool() = runTest(testDispatcher) {
+        tournamentPreferences.setPlayerCount(4)
+        tournamentPreferences.setBuyIn(50.0)
+        tournamentPreferences.setFoodPerPlayer(10.0)
+        tournamentPreferences.setBountyPerPlayer(5.0)
+
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // All players buy in
+        (1..4).forEach { id ->
+            viewModel.acceptIntent(BankIntent.BuyInToggled(id))
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        // Each player pays: 50 (buy-in) + 10 (food) + 5 (bounty) = 65
+        // Total pool should be: 4 players * 65 = 260
+        assertEquals(260.0, state.totalPool, 0.001)
+        assertEquals(260.0, state.totalPaidIn, 0.001)
+    }
+
+    @Test
+    fun buyInCostsSumToTotalPool() = runTest(testDispatcher) {
+        tournamentPreferences.setPlayerCount(3)
+        tournamentPreferences.setBuyIn(100.0)
+        tournamentPreferences.setFoodPerPlayer(20.0)
+        tournamentPreferences.setBountyPerPlayer(10.0)
+        tournamentPreferences.setRebuyAmount(50.0)
+        tournamentPreferences.setAddOnAmount(25.0)
+
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Set up some rebuys and addons
+        viewModel.acceptIntent(BankIntent.PlayerRebuyChanged(playerId = 1, rebuys = 2))
+        viewModel.acceptIntent(BankIntent.PlayerRebuyChanged(playerId = 2, rebuys = 1))
+        viewModel.acceptIntent(BankIntent.PlayerAddonChanged(playerId = 1, addons = 1))
+        viewModel.acceptIntent(BankIntent.PlayerAddonChanged(playerId = 3, addons = 2))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Calculate buy-in costs for each player by showing their buy-in dialogs
+        val buyInCosts = mutableListOf<Double>()
+        (1..3).forEach { id ->
+            viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = id, action = PlayerActionType.BUY_IN))
+            testDispatcher.scheduler.advanceUntilIdle()
+            val pendingAction = viewModel.uiState.value.pendingAction
+            assertNotNull(pendingAction)
+            buyInCosts.add(pendingAction!!.buyInCost)
+            // Don't confirm, just cancel the dialog
+            viewModel.acceptIntent(BankIntent.CancelPlayerAction)
+            testDispatcher.scheduler.advanceUntilIdle()
+        }
+
+        // Sum of buy-in costs should equal total pool
+        val totalBuyInCosts = buyInCosts.sum()
+        val state = viewModel.uiState.value
+        assertEquals(state.totalPool, totalBuyInCosts, 0.001)
+
+        // Verify individual costs:
+        // Player 1: 100 + 20 + 10 + (1*25) + (2*50) = 255
+        // Player 2: 100 + 20 + 10 + (0*25) + (1*50) = 180
+        // Player 3: 100 + 20 + 10 + (2*25) + (0*50) = 180
+        // Total: 255 + 180 + 180 = 615
+        assertEquals(255.0, buyInCosts[0], 0.001)
+        assertEquals(180.0, buyInCosts[1], 0.001)
+        assertEquals(180.0, buyInCosts[2], 0.001)
+        assertEquals(615.0, totalBuyInCosts, 0.001)
+    }
+
+    @Test
+    fun payoutsSumToTotalPool() = runTest(testDispatcher) {
+        tournamentPreferences.setPlayerCount(4)
+        tournamentPreferences.setBuyIn(50.0)
+        tournamentPreferences.setFoodPerPlayer(10.0)
+        tournamentPreferences.setBountyPerPlayer(5.0)
+        tournamentPreferences.setPayoutWeights(listOf(3, 2, 1))
+
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // All players buy in
+        (1..4).forEach { id ->
+            viewModel.acceptIntent(BankIntent.BuyInToggled(id))
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Eliminate players to set up payout positions
+        (4 downTo 2).forEach { id ->
+            viewModel.acceptIntent(BankIntent.OutToggled(id))
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Pay out all players
+        listOf(3, 2, 1).forEach { id ->
+            viewModel.acceptIntent(BankIntent.PayedOutToggled(id))
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        // Conservation: totalPayedOut + foodPool = totalPool - bountyPool
+        // (since bounties are redistributed as knockout bonuses and king's bounty)
+        val expectedTotal = state.totalPayedOut + state.foodPool
+        val actualTotal = state.totalPool - state.bountyPool
+        assertEquals(expectedTotal, actualTotal, 0.001)
+    }
+
+    @Test
+    fun netPaysSumToZero() = runTest(testDispatcher) {
+        tournamentPreferences.setPlayerCount(4)
+        tournamentPreferences.setBuyIn(100.0)
+        tournamentPreferences.setFoodPerPlayer(20.0)
+        tournamentPreferences.setBountyPerPlayer(10.0)
+        tournamentPreferences.setRebuyAmount(50.0)
+        tournamentPreferences.setAddOnAmount(25.0)
+        tournamentPreferences.setPayoutWeights(listOf(3, 2, 1))
+
+        val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // All players buy in
+        (1..4).forEach { id ->
+            viewModel.acceptIntent(BankIntent.BuyInToggled(id))
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Add some rebuys and addons for complexity
+        viewModel.acceptIntent(BankIntent.PlayerRebuyChanged(playerId = 1, rebuys = 1))
+        viewModel.acceptIntent(BankIntent.PlayerAddonChanged(playerId = 2, addons = 1))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Eliminate players to set up payout positions
+        (4 downTo 2).forEach { id ->
+            viewModel.acceptIntent(BankIntent.OutToggled(id))
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Pay out all players
+        listOf(3, 2, 1).forEach { id ->
+            viewModel.acceptIntent(BankIntent.PayedOutToggled(id))
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Calculate net pay for each player by showing their payout dialogs
+        val netPays = mutableListOf<Double>()
+        (1..4).forEach { id ->
+            if (viewModel.uiState.value.players.first { it.id == id }.payedOut) {
+                viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = id, action = PlayerActionType.PAYED_OUT))
+                testDispatcher.scheduler.advanceUntilIdle()
+                val pendingAction = viewModel.uiState.value.pendingAction
+                assertNotNull(pendingAction)
+                netPays.add(pendingAction!!.payoutAmount)
+                // Don't confirm, just cancel the dialog
+                viewModel.acceptIntent(BankIntent.CancelPlayerAction)
+                testDispatcher.scheduler.advanceUntilIdle()
+            }
+        }
+
+        // Sum of net pays should be 0 (conservation of money)
+        val totalNetPay = netPays.sum()
+        assertEquals(0.0, totalNetPay, 0.01) // Allow small epsilon for floating point precision
+    }
+
+    @Test
+    fun sporadicEdgeCases() = runTest(testDispatcher) {
+        val edgeCases = listOf(
+            EdgeCase(2, 0.01, 0.0, 0.0, 0.0, 0.0, listOf(1), "Penny tournament"),
+            EdgeCase(3, 10000.0, 5000.0, 1000.0, 2000.0, 0.0, listOf(2, 1), "High roller tournament"),
+            EdgeCase(7, 13.0, 7.0, 3.0, 5.0, 0.0, listOf(4, 3, 2, 1), "Prime number players"),
+            EdgeCase(5, 21.0, 13.0, 8.0, 5.0, 0.0, listOf(3, 2, 1), "Fibonacci amounts"),
+            EdgeCase(4, 25.0, 25.0, 25.0, 25.0, 0.0, listOf(1, 1, 1), "Equal weights"),
+            EdgeCase(1, 100.0, 50.0, 25.0, 12.5, 0.0, listOf(1), "Single player"),
+            EdgeCase(3, 10.0, 5.0, 2.0, 1.0, 0.0, listOf(2, 1), "Max purchases", 20, 20),
+            EdgeCase(4, 50.0, 0.0, 10.0, 5.0, 0.0, listOf(3, 2, 1), "Zero bounty"),
+            EdgeCase(3, 0.0, 100.0, 0.0, 0.0, 0.0, listOf(2, 1), "Bounty only"),
+            EdgeCase(3, 14.14, 7.07, 3.54, 1.77, 0.0, listOf(2, 1), "Irrational amounts")
+        )
+
+        edgeCases.forEach { edgeCase ->
+            tournamentPreferences.setPlayerCount(edgeCase.playerCount)
+            tournamentPreferences.setBuyIn(edgeCase.buyIn)
+            tournamentPreferences.setFoodPerPlayer(edgeCase.food)
+            tournamentPreferences.setBountyPerPlayer(edgeCase.bounty)
+            tournamentPreferences.setRebuyAmount(edgeCase.rebuy)
+            tournamentPreferences.setAddOnAmount(edgeCase.addon)
+            tournamentPreferences.setPayoutWeights(edgeCase.weights)
+
+            val viewModel = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // All players buy in
+            (1..edgeCase.playerCount).forEach { id ->
+                viewModel.acceptIntent(BankIntent.BuyInToggled(id))
+            }
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Add maximum rebuys and addons if specified
+            if (edgeCase.maxRebuys > 0) {
+                (1..edgeCase.playerCount).forEach { id ->
+                    viewModel.acceptIntent(BankIntent.PlayerRebuyChanged(playerId = id, rebuys = edgeCase.maxRebuys))
+                    viewModel.acceptIntent(BankIntent.PlayerAddonChanged(playerId = id, addons = edgeCase.maxAddons))
+                }
+                testDispatcher.scheduler.advanceUntilIdle()
+            }
+
+            val stateAfterBuyIn = viewModel.uiState.value
+
+            // Verify total pool calculation
+            val expectedPool = edgeCase.playerCount * (edgeCase.buyIn + edgeCase.food + edgeCase.bounty) +
+                              (edgeCase.maxRebuys * edgeCase.playerCount * edgeCase.rebuy) +
+                              (edgeCase.maxAddons * edgeCase.playerCount * edgeCase.addon)
+            assertEquals(expectedPool, stateAfterBuyIn.totalPool, 0.01)
+
+            // Eliminate players to leave only the number needed for payouts
+            val playersToEliminate = edgeCase.playerCount - edgeCase.weights.size
+            if (playersToEliminate > 0) {
+                (edgeCase.playerCount downTo edgeCase.weights.size + 1).forEach { id ->
+                    if (edgeCase.bounty > 0 && id == edgeCase.playerCount) {
+                        // Last elimination gets a knockout
+                        viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(id, PlayerActionType.OUT))
+                        viewModel.acceptIntent(BankIntent.ConfirmPlayerActionWithCount(selectedPlayerId = 1))
+                    } else {
+                        viewModel.acceptIntent(BankIntent.OutToggled(id))
+                    }
+                    testDispatcher.scheduler.advanceUntilIdle()
+                }
+            }
+
+            // Pay out remaining players
+            (1..edgeCase.weights.size).forEach { id ->
+                viewModel.acceptIntent(BankIntent.PayedOutToggled(id))
+            }
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val finalState = viewModel.uiState.value
+
+            // Verify conservation: total paid in should equal total paid out
+            assertEquals(finalState.totalPaidIn, finalState.totalPayedOut, 0.01)
+
+            // Verify net pays sum to zero
+            val netPays = mutableListOf<Double>()
+            (1..edgeCase.playerCount).forEach { id ->
+                if (finalState.players.first { it.id == id }.payedOut) {
+                    viewModel.acceptIntent(BankIntent.ShowPlayerActionDialog(playerId = id, action = PlayerActionType.PAYED_OUT))
+                    testDispatcher.scheduler.advanceUntilIdle()
+                    val pendingAction = viewModel.uiState.value.pendingAction
+                    assertNotNull(pendingAction)
+                    netPays.add(pendingAction!!.payoutAmount)
+                    viewModel.acceptIntent(BankIntent.CancelPlayerAction)
+                    testDispatcher.scheduler.advanceUntilIdle()
+                }
+            }
+            val totalNetPay = netPays.sum()
+            assertEquals(0.0, totalNetPay, 0.01)
+        }
+    }
+
     private data class TestCase(
         val playerCount: Int,
         val buyIn: Double,
@@ -619,5 +925,18 @@ class BankViewModelTest {
         val addon: Double,
         val weights: List<Int>,
         val description: String
+    )
+
+    private data class EdgeCase(
+        val playerCount: Int,
+        val buyIn: Double,
+        val food: Double,
+        val bounty: Double,
+        val rebuy: Double,
+        val addon: Double,
+        val weights: List<Int>,
+        val description: String,
+        val maxRebuys: Int = 0,
+        val maxAddons: Int = 0
     )
 }

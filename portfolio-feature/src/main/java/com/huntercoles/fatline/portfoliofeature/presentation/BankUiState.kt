@@ -72,6 +72,7 @@ data class PendingPlayerAction(
     val allowUnassignedSelection: Boolean = false,
     val payoutAmount: Double = 0.0,
     val buyInPayout: Double = 0.0,
+    val buyInCost: Double = 0.0,
     val knockoutBonus: Double = 0.0,
     val kingsBounty: Double = 0.0,
     val knockoutCount: Int = 0

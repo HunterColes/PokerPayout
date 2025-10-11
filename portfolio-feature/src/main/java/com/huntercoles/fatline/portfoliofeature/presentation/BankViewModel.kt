@@ -231,11 +231,16 @@ class BankViewModel @Inject constructor(
             }
             PlayerActionType.BUY_IN -> {
                 val apply = !player.buyIn
-                PendingPlayerAction(playerId, actionType, apply)
+                val tournamentConfig = tournamentPreferences.getCurrentTournamentConfig()
+                val buyInCost = if (apply) {
+                    tournamentConfig.buyIn + tournamentConfig.foodPerPlayer + tournamentConfig.bountyPerPlayer + 
+                    (player.addons * tournamentConfig.addOnPerPlayer) + (player.rebuys * tournamentConfig.rebuyPerPlayer)
+                } else 0.0
+                PendingPlayerAction(playerId, actionType, apply, buyInCost = buyInCost)
             }
             PlayerActionType.PAYED_OUT -> {
                 val apply = !player.payedOut
-                val (payoutAmount, buyInPayout, knockoutBonus, kingsBounty) = if (apply) {
+                val (payoutAmount, buyInPayout, knockoutBonus, kingsBounty, buyInCost) = if (apply) {
                     // Calculate the payout breakdown for this player
                     val currentState = _uiState.value
                     val tournamentConfig = tournamentPreferences.getCurrentTournamentConfig()
@@ -272,17 +277,22 @@ class BankViewModel @Inject constructor(
                     // King's bounty - winner gets their own bounty back
                     val kingsBountyAmount = if (payoutPosition?.position == 1) tournamentConfig.bountyPerPlayer else 0.0
 
-                    // Total payout
-                    val total = leaderboardPayout + knockoutBonusAmount + kingsBountyAmount
+                    // Calculate player's buy-in cost (buy-in + food + bounty + addons + rebuys)
+                    val playerBuyInCost = tournamentConfig.buyIn + tournamentConfig.foodPerPlayer + tournamentConfig.bountyPerPlayer + 
+                        (player.addons * tournamentConfig.addOnPerPlayer) + (player.rebuys * tournamentConfig.rebuyPerPlayer)
 
-                    listOf(total, leaderboardPayout, knockoutBonusAmount, kingsBountyAmount)
-                } else listOf(0.0, 0.0, 0.0, 0.0)
+                    // Total payout (net pay = winnings - buy-in cost)
+                    val netPay = leaderboardPayout + knockoutBonusAmount + kingsBountyAmount - playerBuyInCost
+
+                    listOf(netPay, leaderboardPayout, knockoutBonusAmount, kingsBountyAmount, playerBuyInCost)
+                } else listOf(0.0, 0.0, 0.0, 0.0, 0.0)
                 PendingPlayerAction(
                     playerId, actionType, apply,
                     payoutAmount = payoutAmount,
                     buyInPayout = buyInPayout,
                     knockoutBonus = knockoutBonus,
                     kingsBounty = kingsBounty,
+                    buyInCost = buyInCost,
                     knockoutCount = if (apply) {
                         val currentState = _uiState.value
                         val knockoutCounts = currentState.players

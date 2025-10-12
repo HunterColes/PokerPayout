@@ -193,7 +193,10 @@ fun PlayContent(
                         )
                     }
 
-                    TextButton(onClick = { onCalculatorIntent(PlayConfigIntent.ConfirmReset) }) {
+                    TextButton(onClick = { 
+                        onCalculatorIntent(PlayConfigIntent.ConfirmReset)
+                        onTimerIntent(TimerIntent.ResetTimer)
+                    }) {
                         Text(
                             text = "Reset",
                             color = PokerColors.PokerGold,
@@ -208,6 +211,7 @@ fun PlayContent(
         TournamentConfigurationCard(
             uiState = calculatorUiState,
             onIntent = onCalculatorIntent,
+            onTimerIntent = onTimerIntent,
             isExpanded = calculatorUiState.isConfigExpanded,
             onExpandedChange = { onCalculatorIntent(PlayConfigIntent.ToggleConfigExpanded(it)) }
         )
@@ -259,6 +263,7 @@ fun PlayerCountSlider(
 fun TournamentConfigurationCard(
     uiState: PlayConfigUiState,
     onIntent: (PlayConfigIntent) -> Unit,
+    onTimerIntent: (TimerIntent) -> Unit,
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit
 ) {
@@ -338,10 +343,22 @@ fun TournamentConfigurationCard(
                         roundLengthMinutes = uiState.roundLengthMinutes,
                         smallestChip = uiState.smallestChip,
                         startingChips = uiState.startingChips,
-                        onGameDurationHoursChange = { onIntent(PlayConfigIntent.UpdateGameDurationHours(it)) },
-                        onRoundLengthChange = { onIntent(PlayConfigIntent.UpdateRoundLength(it)) },
-                        onSmallestChipChange = { onIntent(PlayConfigIntent.UpdateSmallestChip(it)) },
-                        onStartingChipsChange = { onIntent(PlayConfigIntent.UpdateStartingChips(it)) },
+                        onGameDurationHoursChange = { hours ->
+                            onIntent(PlayConfigIntent.UpdateGameDurationHours(hours))
+                            onTimerIntent(TimerIntent.GameDurationHoursChanged(hours))
+                        },
+                        onRoundLengthChange = { minutes ->
+                            onIntent(PlayConfigIntent.UpdateRoundLength(minutes))
+                            onTimerIntent(TimerIntent.UpdateRoundLength(minutes))
+                        },
+                        onSmallestChipChange = { chip ->
+                            onIntent(PlayConfigIntent.UpdateSmallestChip(chip))
+                            onTimerIntent(TimerIntent.UpdateSmallestChip(chip))
+                        },
+                        onStartingChipsChange = { chips ->
+                            onIntent(PlayConfigIntent.UpdateStartingChips(chips))
+                            onTimerIntent(TimerIntent.UpdateStartingChips(chips))
+                        },
                         isLocked = uiState.isTournamentLocked
                     )
                 }

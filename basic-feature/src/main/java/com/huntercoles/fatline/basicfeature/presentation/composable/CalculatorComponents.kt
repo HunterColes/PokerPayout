@@ -499,5 +499,19 @@ fun BlindConfigIntField(
                 }
                 isFocused = gainedFocus
             }
+            .onPreviewKeyEvent { event ->
+                val isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter
+                if (!isEnter) return@onPreviewKeyEvent false
+
+                when (event.type) {
+                    KeyEventType.KeyUp -> {
+                        commitInput()
+                        focusManager.clearFocus(force = true)
+                        true
+                    }
+                    KeyEventType.KeyDown -> true
+                    else -> false
+                }
+            }
     )
 }

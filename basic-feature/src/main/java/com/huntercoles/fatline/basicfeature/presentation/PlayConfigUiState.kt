@@ -4,9 +4,9 @@ import com.huntercoles.fatline.basicfeature.domain.model.PayoutPosition
 import com.huntercoles.fatline.basicfeature.domain.model.TournamentConfig
 
 /**
- * UI state for the calculator screen
+ * UI state for the play config screen
  */
-data class CalculatorUiState(
+data class PlayConfigUiState(
     val tournamentConfig: TournamentConfig = TournamentConfig(),
     val payouts: List<PayoutPosition> = emptyList(),
     val isLoading: Boolean = false,

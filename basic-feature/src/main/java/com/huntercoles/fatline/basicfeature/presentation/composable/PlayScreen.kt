@@ -66,40 +66,50 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.huntercoles.fatline.basicfeature.presentation.CalculatorIntent
-import com.huntercoles.fatline.basicfeature.presentation.CalculatorUiState
-import com.huntercoles.fatline.basicfeature.presentation.CalculatorViewModel
+import com.huntercoles.fatline.basicfeature.presentation.PlayConfigIntent
+import com.huntercoles.fatline.basicfeature.presentation.PlayConfigUiState
+import com.huntercoles.fatline.basicfeature.presentation.PlayConfigViewModel
 import com.huntercoles.fatline.core.design.PokerColors
 import com.huntercoles.fatline.core.design.PokerDialog
+import com.huntercoles.fatline.settingsfeature.presentation.composable.TimerScreen
+import com.huntercoles.fatline.settingsfeature.presentation.TimerIntent
+import com.huntercoles.fatline.settingsfeature.presentation.TimerUiState
+import com.huntercoles.fatline.settingsfeature.presentation.TimerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CalculatorScreen(
-    viewModel: CalculatorViewModel = hiltViewModel()
+fun PlayScreen(
+    calculatorViewModel: PlayConfigViewModel = hiltViewModel(),
+    timerViewModel: TimerViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val calculatorUiState by calculatorViewModel.uiState.collectAsStateWithLifecycle()
+    val timerUiState by timerViewModel.uiState.collectAsStateWithLifecycle()
 
-    CalculatorContent(
-        uiState = uiState,
-        onIntent = viewModel::acceptIntent
+    PlayContent(
+        calculatorUiState = calculatorUiState,
+        timerUiState = timerUiState,
+        onCalculatorIntent = calculatorViewModel::acceptIntent,
+        onTimerIntent = timerViewModel::acceptIntent
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CalculatorContent(
-    uiState: CalculatorUiState,
-    onIntent: (CalculatorIntent) -> Unit
+fun PlayContent(
+    calculatorUiState: PlayConfigUiState,
+    timerUiState: TimerUiState,
+    onCalculatorIntent: (PlayConfigIntent) -> Unit,
+    onTimerIntent: (TimerIntent) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
-    
+
     // Clear focus immediately when this composable is disposed (tab switch)
     DisposableEffect(Unit) {
         onDispose {
             focusManager.clearFocus(force = true)
         }
     }
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -120,7 +130,7 @@ fun CalculatorContent(
                 color = PokerColors.PokerGold,
                 modifier = Modifier.weight(1f)
             )
-            
+
             // Green circular background with yellow refresh button
             Card(
                 modifier = Modifier.size(48.dp),
@@ -128,7 +138,7 @@ fun CalculatorContent(
                 colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
             ) {
                 IconButton(
-                    onClick = { onIntent(CalculatorIntent.ShowResetDialog) },
+                    onClick = { onCalculatorIntent(PlayConfigIntent.ShowResetDialog) },
                     modifier = Modifier.fillMaxSize()
                 ) {
                     Icon(
@@ -144,9 +154,9 @@ fun CalculatorContent(
         }
 
         // Reset Confirmation Dialog
-        if (uiState.showResetDialog) {
+        if (calculatorUiState.showResetDialog) {
             PokerDialog(
-                onDismissRequest = { onIntent(CalculatorIntent.HideResetDialog) }
+                onDismissRequest = { onCalculatorIntent(PlayConfigIntent.HideResetDialog) }
             ) {
                 Text(
                     text = "Reset tournament?",
@@ -176,14 +186,14 @@ fun CalculatorContent(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
                 ) {
-                    TextButton(onClick = { onIntent(CalculatorIntent.HideResetDialog) }) {
+                    TextButton(onClick = { onCalculatorIntent(PlayConfigIntent.HideResetDialog) }) {
                         Text(
                             text = "Cancel",
                             color = PokerColors.CardWhite
                         )
                     }
 
-                    TextButton(onClick = { onIntent(CalculatorIntent.ConfirmReset) }) {
+                    TextButton(onClick = { onCalculatorIntent(PlayConfigIntent.ConfirmReset) }) {
                         Text(
                             text = "Reset",
                             color = PokerColors.PokerGold,
@@ -196,13 +206,20 @@ fun CalculatorContent(
 
         // Configuration Section (Collapsible)
         TournamentConfigurationCard(
-            uiState = uiState,
-            onIntent = onIntent,
-            isExpanded = uiState.isConfigExpanded,
-            onExpandedChange = { onIntent(CalculatorIntent.ToggleConfigExpanded(it)) }
+            uiState = calculatorUiState,
+            onIntent = onCalculatorIntent,
+            isExpanded = calculatorUiState.isConfigExpanded,
+            onExpandedChange = { onCalculatorIntent(PlayConfigIntent.ToggleConfigExpanded(it)) }
+        )
+
+        // Timer Section (from Timer screen)
+        TimerScreen(
+            uiState = timerUiState,
+            onIntent = onTimerIntent
         )
     }
 }
+
 
 @Composable
 fun PlayerCountSlider(
@@ -217,9 +234,9 @@ fun PlayerCountSlider(
             fontWeight = FontWeight.Medium,
             color = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite
         )
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         Slider(
             value = playerCount.toFloat(),
             onValueChange = { if (!isLocked) onPlayerCountChange(it.toInt()) },
@@ -240,8 +257,8 @@ fun PlayerCountSlider(
 
 @Composable
 fun TournamentConfigurationCard(
-    uiState: CalculatorUiState,
-    onIntent: (CalculatorIntent) -> Unit,
+    uiState: PlayConfigUiState,
+    onIntent: (PlayConfigIntent) -> Unit,
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit
 ) {
@@ -265,7 +282,7 @@ fun TournamentConfigurationCard(
                     fontWeight = FontWeight.Bold,
                     color = PokerColors.PokerGold
                 )
-                
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -279,9 +296,9 @@ fun TournamentConfigurationCard(
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    
+
                     IconButton(
-                        onClick = { 
+                        onClick = {
                             onExpandedChange(!isExpanded)
                         }
                     ) {
@@ -293,11 +310,11 @@ fun TournamentConfigurationCard(
                     }
                 }
             }
-            
+
             // Collapsible content
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Column(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -308,23 +325,23 @@ fun TournamentConfigurationCard(
                         bountyPerPlayer = uiState.tournamentConfig.bountyPerPlayer,
                         rebuyPerPlayer = uiState.tournamentConfig.rebuyPerPlayer,
                         addOnPerPlayer = uiState.tournamentConfig.addOnPerPlayer,
-                        onBuyInChange = { onIntent(CalculatorIntent.UpdateBuyIn(it)) },
-                        onFoodChange = { onIntent(CalculatorIntent.UpdateFoodPerPlayer(it)) },
-                        onBountyChange = { onIntent(CalculatorIntent.UpdateBountyPerPlayer(it)) },
-                        onRebuyChange = { onIntent(CalculatorIntent.UpdateRebuyAmount(it)) },
-                        onAddOnChange = { onIntent(CalculatorIntent.UpdateAddOnAmount(it)) },
+                        onBuyInChange = { onIntent(PlayConfigIntent.UpdateBuyIn(it)) },
+                        onFoodChange = { onIntent(PlayConfigIntent.UpdateFoodPerPlayer(it)) },
+                        onBountyChange = { onIntent(PlayConfigIntent.UpdateBountyPerPlayer(it)) },
+                        onRebuyChange = { onIntent(PlayConfigIntent.UpdateRebuyAmount(it)) },
+                        onAddOnChange = { onIntent(PlayConfigIntent.UpdateAddOnAmount(it)) },
                         playerCount = uiState.tournamentConfig.numPlayers,
                         onPlayerCountChange = { count ->
-                            onIntent(CalculatorIntent.UpdatePlayerCount(count))
+                            onIntent(PlayConfigIntent.UpdatePlayerCount(count))
                         },
                         gameDurationHours = uiState.gameDurationHours,
                         roundLengthMinutes = uiState.roundLengthMinutes,
                         smallestChip = uiState.smallestChip,
                         startingChips = uiState.startingChips,
-                        onGameDurationHoursChange = { onIntent(CalculatorIntent.UpdateGameDurationHours(it)) },
-                        onRoundLengthChange = { onIntent(CalculatorIntent.UpdateRoundLength(it)) },
-                        onSmallestChipChange = { onIntent(CalculatorIntent.UpdateSmallestChip(it)) },
-                        onStartingChipsChange = { onIntent(CalculatorIntent.UpdateStartingChips(it)) },
+                        onGameDurationHoursChange = { onIntent(PlayConfigIntent.UpdateGameDurationHours(it)) },
+                        onRoundLengthChange = { onIntent(PlayConfigIntent.UpdateRoundLength(it)) },
+                        onSmallestChipChange = { onIntent(PlayConfigIntent.UpdateSmallestChip(it)) },
+                        onStartingChipsChange = { onIntent(PlayConfigIntent.UpdateStartingChips(it)) },
                         isLocked = uiState.isTournamentLocked
                     )
                 }

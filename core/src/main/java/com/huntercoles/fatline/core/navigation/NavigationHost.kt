@@ -13,7 +13,7 @@ fun NavigationHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = NavigationDestination.Calculator,
+        startDestination = NavigationDestination.Play,
         modifier = modifier,
     ) {
         factories.forEach {

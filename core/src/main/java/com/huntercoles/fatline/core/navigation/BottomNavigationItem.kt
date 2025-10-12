@@ -17,19 +17,14 @@ data class BottomNavigationItem(
 
 val bottomNavigationItems = listOf(
     BottomNavigationItem(
-        destination = NavigationDestination.Calculator,
-        icon = Icons.Filled.Add,
-        label = R.string.navigation_calculator
+        destination = NavigationDestination.Play,
+        icon = Icons.Filled.PlayArrow,
+        label = R.string.navigation_play
     ),
     BottomNavigationItem(
         destination = NavigationDestination.Bank,
         icon = Icons.Filled.AttachMoney,
         label = R.string.navigation_bank
-    ),
-    BottomNavigationItem(
-        destination = NavigationDestination.Timer,
-        icon = Icons.Filled.PlayArrow,
-        label = R.string.navigation_timer
     ),
     BottomNavigationItem(
         destination = NavigationDestination.OddsCalculator,

@@ -102,7 +102,7 @@ fun TimerRoute(viewModel: TimerViewModel = hiltViewModel()) {
 }
 
 @Composable
-internal fun TimerScreen(
+fun TimerScreen(
     uiState: TimerUiState,
     onIntent: (TimerIntent) -> Unit,
 ) {

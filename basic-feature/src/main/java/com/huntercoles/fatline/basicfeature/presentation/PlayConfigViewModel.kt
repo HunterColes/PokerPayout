@@ -14,20 +14,20 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class CalculatorViewModel @Inject constructor(
+class PlayConfigViewModel @Inject constructor(
     private val calculatePayoutsUseCase: CalculatePayoutsUseCase,
     private val tournamentPreferences: TournamentPreferences,
     private val timerPreferences: TimerPreferences,
     private val bankPreferences: BankPreferences
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CalculatorUiState())
-    val uiState: StateFlow<CalculatorUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(PlayConfigUiState())
+    val uiState: StateFlow<PlayConfigUiState> = _uiState.asStateFlow()
 
     init {
         // Load all tournament configuration from preferences
         loadTournamentConfiguration()
-        
+
         // Listen for tournament lock state changes
         viewModelScope.launch {
             tournamentPreferences.tournamentLocked.collect { isLocked ->
@@ -57,7 +57,28 @@ class CalculatorViewModel @Inject constructor(
             }
         }
     }
-    
+
+    fun acceptIntent(intent: PlayConfigIntent) {
+        when (intent) {
+            is PlayConfigIntent.UpdatePlayerCount -> updatePlayerCount(intent.count)
+            is PlayConfigIntent.UpdateBuyIn -> updateBuyIn(intent.buyIn)
+            is PlayConfigIntent.UpdateFoodPerPlayer -> updateFoodPerPlayer(intent.food)
+            is PlayConfigIntent.UpdateBountyPerPlayer -> updateBountyPerPlayer(intent.bounty)
+            is PlayConfigIntent.UpdateRebuyAmount -> updateRebuyPerPlayer(intent.rebuy)
+            is PlayConfigIntent.UpdateAddOnAmount -> updateAddOnPerPlayer(intent.addOn)
+            is PlayConfigIntent.UpdateWeights -> updateWeights(intent.weights)
+            is PlayConfigIntent.ToggleConfigExpanded -> toggleConfigExpanded(intent.isExpanded)
+            is PlayConfigIntent.ToggleBlindConfigExpanded -> toggleBlindConfigExpanded(intent.isExpanded)
+            is PlayConfigIntent.UpdateGameDurationHours -> updateGameDurationHours(intent.hours)
+            is PlayConfigIntent.UpdateRoundLength -> updateRoundLength(intent.minutes)
+            is PlayConfigIntent.UpdateSmallestChip -> updateSmallestChip(intent.chip)
+            is PlayConfigIntent.UpdateStartingChips -> updateStartingChips(intent.chips)
+            PlayConfigIntent.ShowResetDialog -> showResetDialog()
+            PlayConfigIntent.HideResetDialog -> hideResetDialog()
+            PlayConfigIntent.ConfirmReset -> confirmReset()
+        }
+    }
+
     private fun loadTournamentConfiguration() {
         val savedPlayerCount = tournamentPreferences.getPlayerCount()
         val savedBuyIn = tournamentPreferences.getBuyIn()
@@ -66,7 +87,7 @@ class CalculatorViewModel @Inject constructor(
         val savedRebuy = tournamentPreferences.getRebuyAmount()
         val savedAddOn = tournamentPreferences.getAddOnAmount()
         val savedWeights = tournamentPreferences.getPayoutWeights()
-        
+
         val initialConfig = _uiState.value.tournamentConfig.copy(
             numPlayers = savedPlayerCount,
             buyIn = savedBuyIn,
@@ -84,74 +105,6 @@ class CalculatorViewModel @Inject constructor(
             addOnPurchases = initialAddOnCount
         )
         calculatePayouts()
-    }
-
-    fun acceptIntent(intent: CalculatorIntent) {
-        when (intent) {
-            is CalculatorIntent.UpdatePlayerCount -> {
-                // Don't allow changes if tournament is locked
-                if (_uiState.value.isTournamentLocked) return
-                updatePlayerCount(intent.count)
-            }
-            is CalculatorIntent.UpdateBuyIn -> {
-                // Don't allow changes if tournament is locked
-                if (_uiState.value.isTournamentLocked) return
-                updateBuyIn(intent.buyIn)
-            }
-            is CalculatorIntent.UpdateFoodPerPlayer -> {
-                // Don't allow changes if tournament is locked
-                if (_uiState.value.isTournamentLocked) return
-                updateFoodPerPlayer(intent.food)
-            }
-            is CalculatorIntent.UpdateBountyPerPlayer -> {
-                // Don't allow changes if tournament is locked
-                if (_uiState.value.isTournamentLocked) return
-                updateBountyPerPlayer(intent.bounty)
-            }
-            is CalculatorIntent.UpdateRebuyAmount -> {
-                // Don't allow changes if tournament is locked
-                if (_uiState.value.isTournamentLocked) return
-                updateRebuyPerPlayer(intent.rebuy)
-            }
-            is CalculatorIntent.UpdateAddOnAmount -> {
-                if (_uiState.value.isTournamentLocked) return
-                updateAddOnPerPlayer(intent.addOn)
-            }
-            is CalculatorIntent.UpdateWeights -> {
-                // Don't allow changes if tournament is locked
-                if (_uiState.value.isTournamentLocked) return
-                updateWeights(intent.weights)
-            }
-            is CalculatorIntent.ToggleConfigExpanded -> {
-                // Allow manual toggle even when locked
-                toggleConfigExpanded(intent.isExpanded)
-            }
-            is CalculatorIntent.ShowResetDialog -> {
-                showResetDialog()
-            }
-            is CalculatorIntent.HideResetDialog -> {
-                hideResetDialog()
-            }
-            is CalculatorIntent.ToggleBlindConfigExpanded -> {
-                toggleBlindConfigExpanded(intent.isExpanded)
-            }
-            is CalculatorIntent.UpdateGameDurationHours -> {
-                updateGameDurationHours(intent.hours)
-            }
-            is CalculatorIntent.UpdateRoundLength -> {
-                updateRoundLength(intent.minutes)
-            }
-            is CalculatorIntent.UpdateSmallestChip -> {
-                updateSmallestChip(intent.chip)
-            }
-            is CalculatorIntent.UpdateStartingChips -> {
-                updateStartingChips(intent.chips)
-            }
-            is CalculatorIntent.ConfirmReset -> {
-                resetAllData()
-                hideResetDialog()
-            }
-        }
     }
 
     private fun updatePlayerCount(count: Int) {
@@ -223,22 +176,27 @@ class CalculatorViewModel @Inject constructor(
     private fun toggleConfigExpanded(isExpanded: Boolean) {
         _uiState.value = _uiState.value.copy(isConfigExpanded = isExpanded)
     }
-    
+
     private fun showResetDialog() {
         // Only show dialog if not already in default state
         if (!isInDefaultState()) {
             _uiState.value = _uiState.value.copy(showResetDialog = true)
         }
     }
-    
+
     private fun hideResetDialog() {
         _uiState.value = _uiState.value.copy(showResetDialog = false)
     }
-    
+
     private fun isInDefaultState(): Boolean {
         return tournamentPreferences.isInDefaultState() && timerPreferences.isInDefaultState()
     }
-    
+
+    private fun confirmReset() {
+        resetAllData()
+        _uiState.value = _uiState.value.copy(showResetDialog = false)
+    }
+
     private fun resetAllData() {
         tournamentPreferences.resetAllTournamentData()
         timerPreferences.resetAllTimerData()
@@ -345,7 +303,7 @@ class CalculatorViewModel @Inject constructor(
         if (eliminationOrder.size < position) {
             return null
         }
-        
+
         // Position 1 (1st place) is the last player eliminated (winner)
         // Position 2 (2nd place) is the second-to-last, etc.
         val index = eliminationOrder.size - position

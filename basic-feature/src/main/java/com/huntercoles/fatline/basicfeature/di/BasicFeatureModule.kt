@@ -1,7 +1,7 @@
 package com.huntercoles.fatline.basicfeature.di
 
 import com.huntercoles.fatline.basicfeature.domain.usecase.CalculatePayoutsUseCase
-import com.huntercoles.fatline.basicfeature.presentation.CalculatorNavigationFactory
+import com.huntercoles.fatline.basicfeature.presentation.PlayNavigationFactory
 import com.huntercoles.fatline.basicfeature.presentation.OddsCalculatorNavigationFactory
 import com.huntercoles.fatline.core.navigation.NavigationFactory
 import dagger.Binds
@@ -18,7 +18,7 @@ abstract class BasicFeatureModule {
 
     @Binds
     @IntoSet
-    abstract fun bindCalculatorNavigationFactory(factory: CalculatorNavigationFactory): NavigationFactory
+    abstract fun bindPlayNavigationFactory(factory: PlayNavigationFactory): NavigationFactory
 
     @Binds
     @IntoSet

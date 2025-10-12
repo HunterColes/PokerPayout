@@ -21,7 +21,7 @@ import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-class CalculatorViewModelTest {
+class PlayConfigViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var context: Context
@@ -49,8 +49,8 @@ class CalculatorViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel(): CalculatorViewModel {
-        val viewModel = CalculatorViewModel(
+    private fun createViewModel(): PlayConfigViewModel {
+        val viewModel = PlayConfigViewModel(
             calculatePayoutsUseCase = CalculatePayoutsUseCase(),
             tournamentPreferences = tournamentPreferences,
             timerPreferences = timerPreferences,
@@ -98,8 +98,8 @@ class CalculatorViewModelTest {
         bankPreferences.savePlayerAddons(playerId = 2, addons = 2)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        viewModel.acceptIntent(CalculatorIntent.UpdateRebuyAmount(0.0))
-        viewModel.acceptIntent(CalculatorIntent.UpdateAddOnAmount(0.0))
+        viewModel.acceptIntent(PlayConfigIntent.UpdateRebuyAmount(0.0))
+        viewModel.acceptIntent(PlayConfigIntent.UpdateAddOnAmount(0.0))
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value

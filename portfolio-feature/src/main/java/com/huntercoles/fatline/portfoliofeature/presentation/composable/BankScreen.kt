@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -81,6 +82,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.fatline.core.design.PokerDialog
@@ -134,22 +136,46 @@ internal fun BankScreen(
                 modifier = Modifier.weight(1f)
             )
             
-            // Green circular background with yellow refresh button
-            Card(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                IconButton(
-                    onClick = { focusManager.clearFocus(); onIntent(BankIntent.ShowResetDialog) },
-                    modifier = Modifier.fillMaxSize()
+                // Edit weights button
+                Card(
+                    modifier = Modifier.size(48.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Reset Bank Data",
-                        tint = PokerColors.PokerGold,
-                        modifier = Modifier.size(24.dp).graphicsLayer(scaleX = -1f)
-                    )
+                    IconButton(
+                        onClick = { focusManager.clearFocus(); onIntent(BankIntent.ShowWeightsDialog) },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_balance_scale),
+                            contentDescription = "Edit payout weights",
+                            tint = PokerColors.PokerGold,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                
+                // Green circular background with yellow refresh button
+                Card(
+                    modifier = Modifier.size(48.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
+                ) {
+                    IconButton(
+                        onClick = { focusManager.clearFocus(); onIntent(BankIntent.ShowResetDialog) },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reset Bank Data",
+                            tint = PokerColors.PokerGold,
+                            modifier = Modifier.size(24.dp).graphicsLayer(scaleX = -1f)
+                        )
+                    }
                 }
             }
         }
@@ -220,6 +246,26 @@ internal fun BankScreen(
             }
         }
 
+        // Weights Editor Dialog
+        if (uiState.showWeightsDialog) {
+            WeightsEditorDialog(
+                currentWeights = uiState.payoutWeights,
+                onWeightsChanged = { newWeights ->
+                    onIntent(BankIntent.UpdateWeights(newWeights))
+                },
+                onDismiss = { onIntent(BankIntent.HideWeightsDialog) },
+                isLocked = uiState.isTimerRunning
+            )
+        }
+
+        // Pool Summary Dialog
+        if (uiState.showPoolSummaryDialog) {
+            PoolSummaryDialog(
+                uiState = uiState,
+                onDismiss = { onIntent(BankIntent.HidePoolSummaryDialog) }
+            )
+        }
+
         val pendingAction = uiState.pendingAction
         val playerDisplayModels = remember(uiState.players, uiState.eliminationOrder) {
             buildPlayerDisplayModels(uiState.players, uiState.eliminationOrder)
@@ -231,6 +277,7 @@ internal fun BankScreen(
                     player = player,
                     pendingAction = action,
                     allPlayers = uiState.players,
+                    uiState = uiState,
                     onConfirm = { selectedCount, selectedPlayerId ->
                         when (action.actionType) {
                             PlayerActionType.OUT -> {
@@ -269,7 +316,7 @@ internal fun BankScreen(
         ) {
             // Pool Summary
             item {
-                PoolSummaryCard(uiState = uiState)
+                PoolSummaryCard(uiState = uiState, onIntent = onIntent)
             }
 
             // Player rows
@@ -303,7 +350,7 @@ internal fun BankScreen(
 }
 
 @Composable
-private fun PoolSummaryCard(uiState: BankUiState) {
+private fun PoolSummaryCard(uiState: BankUiState, onIntent: (BankIntent) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -312,12 +359,37 @@ private fun PoolSummaryCard(uiState: BankUiState) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = "💰 Pool Summary",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = PokerColors.PokerGold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "💰 Pool Summary",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = PokerColors.PokerGold
+                )
+                
+                // Info button
+                Card(
+                    modifier = Modifier.size(32.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
+                ) {
+                    IconButton(
+                        onClick = { onIntent(BankIntent.ShowPoolSummaryDialog) },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Info,
+                            contentDescription = "Pool Summary Details",
+                            tint = PokerColors.PokerGold,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -370,7 +442,7 @@ private fun SummaryProgressBar(
 ) {
     val safeTarget = targetAmount.coerceAtLeast(0.0)
     val progress = if (safeTarget > 0.0) (currentAmount / safeTarget).coerceIn(0.0, 1.0) else 0.0
-    val isComplete = safeTarget > 0.0 && currentAmount >= safeTarget
+    val isComplete = safeTarget > 0.0 && (currentAmount + 0.01) >= safeTarget
     val fillColor = if (isComplete) fullColor else baseColor
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -772,6 +844,7 @@ private fun PlayerActionDialog(
     player: PlayerData,
     pendingAction: PendingPlayerAction,
     allPlayers: List<PlayerData>,
+    uiState: BankUiState,
     onConfirm: (Int?, Int?) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -780,6 +853,7 @@ private fun PlayerActionDialog(
     val isCountAction = pendingAction.actionType == PlayerActionType.REBUY || pendingAction.actionType == PlayerActionType.ADDON
     val isKnockoutSelection = pendingAction.actionType == PlayerActionType.OUT && pendingAction.apply
     val isPayoutAction = pendingAction.actionType == PlayerActionType.PAYED_OUT && pendingAction.apply
+    val isBuyInAction = pendingAction.actionType == PlayerActionType.BUY_IN && pendingAction.apply
     val baseCount = pendingAction.baseCount.coerceAtLeast(0)
     var purchaseCount by remember(pendingAction.playerId, pendingAction.actionType, baseCount) {
         mutableStateOf(baseCount)
@@ -1036,6 +1110,30 @@ private fun PlayerActionDialog(
             }
         }
 
+        if (isBuyInAction) {
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = PokerColors.LightGreen.copy(alpha = 0.35f),
+                border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.55f))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "$${String.format("%.2f", pendingAction.buyInCost)}",
+                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                        color = PokerColors.PokerGold
+                    )
+                }
+            }
+        }
+
         if (isPayoutAction) {
             Spacer(modifier = Modifier.height(18.dp))
 
@@ -1059,14 +1157,34 @@ private fun PlayerActionDialog(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Buy-in payout
+                    // Buy-in cost (negative, red)
+                    if (pendingAction.buyInCost > 0.0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Buy-In",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = PokerColors.ErrorRed
+                            )
+                            Text(
+                                text = "-$${String.format("%.2f", pendingAction.buyInCost)}",
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                color = PokerColors.ErrorRed
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    // Payout (leaderboard payout)
                     if (pendingAction.buyInPayout > 0.0) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Buy-in",
+                                text = "Pay-Out",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = PokerColors.CardWhite
                             )
@@ -1122,20 +1240,25 @@ private fun PlayerActionDialog(
                     HorizontalDivider(color = PokerColors.PokerGold.copy(alpha = 0.3f))
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Total
+                    // Net Pay (was Total)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Total",
+                            text = "Net Pay:",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = PokerColors.CardWhite
                         )
+                        val netPayColor = if (pendingAction.payoutAmount >= 0) PokerColors.PokerGold else PokerColors.ErrorRed
+                        val netPayText = if (pendingAction.payoutAmount >= 0) 
+                            "$${String.format("%.2f", pendingAction.payoutAmount)}" 
+                        else 
+                            "-$${String.format("%.2f", -pendingAction.payoutAmount)}"
                         Text(
-                            text = "$${String.format("%.2f", pendingAction.payoutAmount)}",
+                            text = netPayText,
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                            color = PokerColors.PokerGold
+                            color = netPayColor
                         )
                     }
                 }
@@ -1163,6 +1286,128 @@ private fun PlayerActionDialog(
                     text = "Cancel",
                     color = PokerColors.CardWhite
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PoolSummaryDialog(
+    uiState: BankUiState,
+    onDismiss: () -> Unit
+) {
+    PokerDialog(onDismissRequest = onDismiss) {
+        Text(
+            text = "💰 Pool Summary Breakdown",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = PokerColors.PokerGold
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = PokerColors.FeltGreen,
+            border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Prize Pool
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Prize Pool:", color = PokerColors.CardWhite)
+                    Text("$${String.format("%.2f", uiState.prizePool)}", 
+                         fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
+                }
+
+                // Food Pool (hide when zero)
+                if (uiState.foodPool > 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Food Pool:", color = PokerColors.CardWhite)
+                        Text("$${String.format("%.2f", uiState.foodPool)}", 
+                             fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
+                    }
+                }
+
+                // Bounty Pool (hide when zero)
+                if (uiState.bountyPool > 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Bounty Pool:", color = PokerColors.CardWhite)
+                        Text("$${String.format("%.2f", uiState.bountyPool)}", 
+                             fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
+                    }
+                }
+
+                // Rebuy Pool (hide when zero)
+                if (uiState.rebuyPool > 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Rebuy Pool:", color = PokerColors.CardWhite)
+                        Text("$${String.format("%.2f", uiState.rebuyPool)}",
+                             fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
+                    }
+                }
+
+                // Add-on Pool (hide when zero)
+                if (uiState.addonPool > 0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Add-on Pool:", color = PokerColors.CardWhite)
+                        Text("$${String.format("%.2f", uiState.addonPool)}",
+                             fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
+                    }
+                }
+
+                // Divider then Total below it
+                HorizontalDivider(color = PokerColors.PokerGold.copy(alpha = 0.3f))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Total Pool:", color = PokerColors.CardWhite, fontWeight = FontWeight.Bold)
+                    Text("$${String.format("%.2f", uiState.totalPool)}",
+                         fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            color = PokerColors.LightGreen.copy(alpha = 0.35f),
+            border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.55f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        text = "Close",
+                        color = PokerColors.CardWhite,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
             }
         }
     }

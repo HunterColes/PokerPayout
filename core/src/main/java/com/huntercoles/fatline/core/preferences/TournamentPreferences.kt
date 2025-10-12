@@ -42,10 +42,21 @@ class TournamentPreferences @Inject constructor(
     val payoutWeights: Flow<List<Int>> = _payoutWeights.asStateFlow()
     
     fun setPlayerCount(count: Int) {
+        val oldCount = getPlayerCount()
         prefs.edit().putInt(PLAYER_COUNT_KEY, count).apply()
         _playerCount.value = count
+        
+        // If weights haven't been set before, set defaults
         if (!prefs.contains(PAYOUT_WEIGHTS_KEY)) {
             _payoutWeights.value = defaultPayoutWeightsFor(count)
+        } else {
+            // If current weights match the default for the old count, update to new defaults
+            val currentWeights = getPayoutWeights()
+            val oldDefaults = defaultPayoutWeightsFor(oldCount)
+            if (currentWeights == oldDefaults) {
+                val newDefaults = defaultPayoutWeightsFor(count)
+                setPayoutWeights(newDefaults)
+            }
         }
     }
     

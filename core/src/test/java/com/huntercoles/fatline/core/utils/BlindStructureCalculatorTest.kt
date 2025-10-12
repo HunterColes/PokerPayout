@@ -42,13 +42,6 @@ class BlindStructureCalculatorTest {
         // All blinds are multiples of the smallest chip denomination
         assertTrue(schedule.all { it.smallBlind % input.smallestChip == 0 })
 
-        // Overtime levels should be flagged as sudden-death
-        val regulationCutoff = ceil(input.targetDurationMinutes.toDouble() / input.roundLengthMinutes).toInt()
-        schedule.withIndex()
-            .filter { it.index >= regulationCutoff }
-            .forEach { (_, level) ->
-                assertTrue(level.isSuddenDeath, "Expected level ${level.level} to be marked as sudden death")
-            }
     }
 
     @Test

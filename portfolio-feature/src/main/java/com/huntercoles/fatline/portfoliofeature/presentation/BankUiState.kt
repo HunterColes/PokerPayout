@@ -19,6 +19,15 @@ data class PlayerData(
 ) : Parcelable
 
 @Parcelize
+data class PayoutPosition(
+    val position: Int,
+    val payout: Double,
+    val formattedPayout: String,
+    val formattedPercentage: String,
+    val positionSuffix: String
+) : Parcelable
+
+@Parcelize
 data class BankUiState(
     val players: List<PlayerData> = emptyList(),
     val totalPool: Double = 0.0,
@@ -43,7 +52,12 @@ data class BankUiState(
     val eliminationOrder: List<Int> = emptyList(),
     val pendingAction: PendingPlayerAction? = null,
     val knockoutCounts: @RawValue Map<Int, Int> = emptyMap(),
-    val payoutEligiblePlayerIds: @RawValue Set<Int> = emptySet()
+    val payoutEligiblePlayerIds: @RawValue Set<Int> = emptySet(),
+    val payoutPositions: @RawValue List<PayoutPosition> = emptyList(),
+    val payoutWeights: @RawValue List<Int> = emptyList(),
+    val isTimerRunning: Boolean = false,
+    val showWeightsDialog: Boolean = false,
+    val showPoolSummaryDialog: Boolean = false
 ) : Parcelable
 
 @Parcelize
@@ -59,6 +73,7 @@ data class PendingPlayerAction(
     val allowUnassignedSelection: Boolean = false,
     val payoutAmount: Double = 0.0,
     val buyInPayout: Double = 0.0,
+    val buyInCost: Double = 0.0,
     val knockoutBonus: Double = 0.0,
     val kingsBounty: Double = 0.0,
     val knockoutCount: Int = 0

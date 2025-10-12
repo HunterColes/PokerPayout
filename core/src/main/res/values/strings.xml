@@ -2,8 +2,7 @@
     <string name="app_name">PokerPayout</string>
 
     <!-- Navigation -->
-    <string name="navigation_calculator">Calculator</string>
+    <string name="navigation_play">Play</string>
     <string name="navigation_bank">Bank</string>
-    <string name="navigation_timer">Play</string>
     <string name="navigation_odds_calculator">Odds</string>
 </resources>

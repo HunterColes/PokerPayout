@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.huntercoles.fatline.core.constants.TournamentConstants
 import com.huntercoles.fatline.core.preferences.BankPreferences
+import com.huntercoles.fatline.core.preferences.TimerPreferences
 import com.huntercoles.fatline.core.preferences.TournamentPreferences
 import com.huntercoles.fatline.portfoliofeature.presentation.BankIntent.CancelPlayerAction
 import com.huntercoles.fatline.portfoliofeature.presentation.BankIntent.ConfirmPlayerAction
@@ -27,7 +28,8 @@ import kotlin.math.min
 @HiltViewModel
 class BankViewModel @Inject constructor(
     private val tournamentPreferences: TournamentPreferences,
-    private val bankPreferences: BankPreferences
+    private val bankPreferences: BankPreferences,
+    private val timerPreferences: TimerPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BankUiState())
@@ -69,6 +71,13 @@ class BankViewModel @Inject constructor(
                 }
             }
         }
+
+        // Listen for timer running state changes
+        viewModelScope.launch {
+            timerPreferences.timerRunning.collect { isRunning ->
+                _uiState.update { it.copy(isTimerRunning = isRunning) }
+            }
+        }
     }
 
     fun acceptIntent(intent: BankIntent) {
@@ -95,6 +104,11 @@ class BankViewModel @Inject constructor(
                 resetBankData()
                 hideResetDialog()
             }
+            is BankIntent.ShowWeightsDialog -> showWeightsDialog()
+            is BankIntent.HideWeightsDialog -> hideWeightsDialog()
+            is BankIntent.UpdateWeights -> updateWeights(intent.weights)
+            is BankIntent.ShowPoolSummaryDialog -> showPoolSummaryDialog()
+            is BankIntent.HidePoolSummaryDialog -> hidePoolSummaryDialog()
         }
     }
 
@@ -219,11 +233,16 @@ class BankViewModel @Inject constructor(
             }
             PlayerActionType.BUY_IN -> {
                 val apply = !player.buyIn
-                PendingPlayerAction(playerId, actionType, apply)
+                val tournamentConfig = tournamentPreferences.getCurrentTournamentConfig()
+                val buyInCost = if (apply) {
+                    tournamentConfig.buyIn + tournamentConfig.foodPerPlayer + tournamentConfig.bountyPerPlayer + 
+                    (player.addons * tournamentConfig.addOnPerPlayer) + (player.rebuys * tournamentConfig.rebuyPerPlayer)
+                } else 0.0
+                PendingPlayerAction(playerId, actionType, apply, buyInCost = buyInCost)
             }
             PlayerActionType.PAYED_OUT -> {
                 val apply = !player.payedOut
-                val (payoutAmount, buyInPayout, knockoutBonus, kingsBounty) = if (apply) {
+                val (payoutAmount, buyInPayout, knockoutBonus, kingsBounty, buyInCost) = if (apply) {
                     // Calculate the payout breakdown for this player
                     val currentState = _uiState.value
                     val tournamentConfig = tournamentPreferences.getCurrentTournamentConfig()
@@ -260,17 +279,22 @@ class BankViewModel @Inject constructor(
                     // King's bounty - winner gets their own bounty back
                     val kingsBountyAmount = if (payoutPosition?.position == 1) tournamentConfig.bountyPerPlayer else 0.0
 
-                    // Total payout
-                    val total = leaderboardPayout + knockoutBonusAmount + kingsBountyAmount
+                    // Calculate player's buy-in cost (buy-in + food + bounty + addons + rebuys)
+                    val playerBuyInCost = tournamentConfig.buyIn + tournamentConfig.foodPerPlayer + tournamentConfig.bountyPerPlayer + 
+                        (player.addons * tournamentConfig.addOnPerPlayer) + (player.rebuys * tournamentConfig.rebuyPerPlayer)
 
-                    listOf(total, leaderboardPayout, knockoutBonusAmount, kingsBountyAmount)
-                } else listOf(0.0, 0.0, 0.0, 0.0)
+                    // Total payout (net pay = winnings - buy-in cost)
+                    val netPay = leaderboardPayout + knockoutBonusAmount + kingsBountyAmount - playerBuyInCost
+
+                    listOf(netPay, leaderboardPayout, knockoutBonusAmount, kingsBountyAmount, playerBuyInCost)
+                } else listOf(0.0, 0.0, 0.0, 0.0, 0.0)
                 PendingPlayerAction(
                     playerId, actionType, apply,
                     payoutAmount = payoutAmount,
                     buyInPayout = buyInPayout,
                     knockoutBonus = knockoutBonus,
                     kingsBounty = kingsBounty,
+                    buyInCost = buyInCost,
                     knockoutCount = if (apply) {
                         val currentState = _uiState.value
                         val knockoutCounts = currentState.players
@@ -534,6 +558,25 @@ class BankViewModel @Inject constructor(
             }
         }
 
+        // Create formatted payout positions for UI
+        val formattedPayoutPositions = payouts.map { payout ->
+            val percentage = if (prizePool > 0) (payout.payout / prizePool) * 100 else 0.0
+            val positionSuffix = when {
+                payout.position % 100 in 10..20 -> "th"
+                payout.position % 10 == 1 -> "st"
+                payout.position % 10 == 2 -> "nd"
+                payout.position % 10 == 3 -> "rd"
+                else -> "th"
+            }
+            PayoutPosition(
+                position = payout.position,
+                payout = payout.payout,
+                formattedPayout = "$${String.format("%.2f", payout.payout)}",
+                formattedPercentage = "${String.format("%.1f", percentage)}%",
+                positionSuffix = positionSuffix
+            )
+        }
+
         // Count various player states
         val outCount = currentState.players.count { it.out }
         val payedOutCount = currentState.players.count { it.payedOut }
@@ -560,7 +603,9 @@ class BankViewModel @Inject constructor(
                 rebuyAmount = tournamentConfig.rebuyPerPlayer,
                 addonAmount = tournamentConfig.addOnPerPlayer,
                 knockoutCounts = knockoutCounts,
-                payoutEligiblePlayerIds = payoutEligibleIds
+                payoutEligiblePlayerIds = payoutEligibleIds,
+                payoutPositions = formattedPayoutPositions,
+                payoutWeights = tournamentConfig.payoutWeights
             )
         }
     }
@@ -612,13 +657,35 @@ class BankViewModel @Inject constructor(
         initializePlayers(savedPlayerCount)
     }
     
+    private fun updateWeights(weights: List<Int>) {
+        tournamentPreferences.setPayoutWeights(weights)
+        updateCalculations()
+        hideWeightsDialog()
+    }
+    
+    private fun showWeightsDialog() {
+        _uiState.update { it.copy(showWeightsDialog = true) }
+    }
+
+    private fun hideWeightsDialog() {
+        _uiState.update { it.copy(showWeightsDialog = false) }
+    }
+
+    private fun showPoolSummaryDialog() {
+        _uiState.update { it.copy(showPoolSummaryDialog = true) }
+    }
+
+    private fun hidePoolSummaryDialog() {
+        _uiState.update { it.copy(showPoolSummaryDialog = false) }
+    }
+
     private fun isInDefaultState(): Boolean {
         val currentPlayerCount = _uiState.value.players.size
         return bankPreferences.isInDefaultState(currentPlayerCount)
     }
 }
 
-private data class PayoutPosition(
+private data class PayoutPositionInternal(
     val position: Int,
     val payout: Double
 )
@@ -627,7 +694,7 @@ private fun calculatePayoutPositions(
     config: TournamentPreferences.TournamentConfigData,
     prizePool: Double,
     playerCount: Int
-): List<PayoutPosition> {
+): List<PayoutPositionInternal> {
     val maxPayingPositions = max(1, playerCount / 3)
     val defaultWeights = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.take(maxPayingPositions)
     val isUsingDefaultWeights = when {
@@ -653,7 +720,7 @@ private fun calculatePayoutPositions(
 
     return payingWeights.mapIndexed { index, weight ->
         val payout = (weight.toDouble() / totalWeight) * prizePool
-        PayoutPosition(position = index + 1, payout = payout)
+        PayoutPositionInternal(position = index + 1, payout = payout)
     }
 }
 
@@ -681,7 +748,7 @@ private fun determinePlayerForPosition(
 
 private fun calculatePlayerTotalPayout(
     playerId: Int,
-    payouts: List<PayoutPosition>,
+    payouts: List<PayoutPositionInternal>,
     knockoutCounts: Map<Int, Int>,
     bountyPerPlayer: Double,
     playerCount: Int,

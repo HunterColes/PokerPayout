@@ -2,16 +2,16 @@ package com.huntercoles.fatline.basicfeature.presentation
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.huntercoles.fatline.basicfeature.presentation.composable.CalculatorScreen
+import com.huntercoles.fatline.basicfeature.presentation.composable.PlayScreen
 import com.huntercoles.fatline.core.navigation.NavigationDestination
 import com.huntercoles.fatline.core.navigation.NavigationFactory
 import javax.inject.Inject
 
-class CalculatorNavigationFactory @Inject constructor() : NavigationFactory {
+class PlayNavigationFactory @Inject constructor() : NavigationFactory {
 
     override fun create(builder: NavGraphBuilder) {
-        builder.composable<NavigationDestination.Calculator> {
-            CalculatorScreen()
+        builder.composable<NavigationDestination.Play> {
+            PlayScreen()
         }
     }
 }

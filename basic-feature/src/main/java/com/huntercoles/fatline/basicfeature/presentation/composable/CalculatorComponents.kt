@@ -7,6 +7,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -188,6 +192,46 @@ private fun DecimalTextField(
     )
 }
 
+@Composable
+fun FolderTab(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp)
+    ) {
+        // Tab background - selected appears raised, unselected appears recessed
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+            color = if (isSelected) PokerColors.SurfaceSecondary.copy(alpha = 0.4f) else PokerColors.FeltGreen,
+            shadowElevation = if (isSelected) 4.dp else 0.dp,
+            border = BorderStroke(
+                width = 2.dp,
+                color = if (isSelected) PokerColors.PokerGold else PokerColors.CardWhite.copy(alpha = 0.3f)
+            )
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Text(
+                    text = text,
+                    color = if (isSelected) PokerColors.CardWhite else PokerColors.CardWhite.copy(alpha = 0.7f),
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    fontSize = 16.sp
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PoolConfigurationSection(
@@ -214,154 +258,180 @@ fun PoolConfigurationSection(
     isLocked: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    var selectedPanel by remember { mutableStateOf("player") }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Player Panel
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = PokerColors.SurfaceSecondary.copy(alpha = 0.8f)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "Player",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = PokerColors.PokerGold
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    DecimalTextField(
-                        value = buyIn,
-                        onValueChange = { if (!isLocked) onBuyInChange(it) },
-                        label = "Buy-in ($)",
-                        isLocked = isLocked,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    DecimalTextField(
-                        value = foodPerPlayer,
-                        onValueChange = { if (!isLocked) onFoodChange(it) },
-                        label = "Food ($)",
-                        isLocked = isLocked,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    DecimalTextField(
-                        value = bountyPerPlayer,
-                        onValueChange = { if (!isLocked) onBountyChange(it) },
-                        label = "Bounty ($)",
-                        isLocked = isLocked,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    DecimalTextField(
-                        value = rebuyPerPlayer,
-                        onValueChange = { if (!isLocked) onRebuyChange(it) },
-                        label = "Rebuy ($)",
-                        isLocked = isLocked,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    DecimalTextField(
-                        value = addOnPerPlayer,
-                        onValueChange = { if (!isLocked) onAddOnChange(it) },
-                        label = "Add-on ($)",
-                        isLocked = isLocked,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        // Player Count Slider (moved here, below Player panel)
+        // Player Count Slider (moved to top)
         PlayerCountSlider(
             playerCount = playerCount,
             onPlayerCountChange = onPlayerCountChange,
             isLocked = isLocked
         )
 
-        // Blinds Panel
+        // Shared Panel with Folder Tabs
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             color = PokerColors.SurfaceSecondary.copy(alpha = 0.8f)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = "Blinds",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = PokerColors.PokerGold
-                )
-
-                val focusManager = LocalFocusManager.current
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                // Divider-style tabs with background bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .background(
+                            color = PokerColors.SurfaceSecondary.copy(alpha = 0.8f),
+                            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                        )
                 ) {
-                    BlindConfigIntField(
-                        value = gameDurationHours,
-                        label = "Duration (Hours)",
-                        onValueChange = { hours ->
-                            val cappedHours = minOf(hours, 24).coerceAtLeast(1)
-                            if (!isLocked) onGameDurationHoursChange(cappedHours)
-                        },
-                        isLocked = isLocked,
-                        focusManager = focusManager,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    BlindConfigIntField(
-                        value = roundLengthMinutes,
-                        label = "Round Length (Min)",
-                        onValueChange = { if (!isLocked) onRoundLengthChange(it) },
-                        isLocked = isLocked,
-                        focusManager = focusManager,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        FolderTab(
+                            text = "Player",
+                            isSelected = selectedPanel == "player",
+                            onClick = { selectedPanel = "player" },
+                            modifier = Modifier.weight(1f)
+                        )
+                        FolderTab(
+                            text = "Blinds",
+                            isSelected = selectedPanel == "blinds",
+                            onClick = { selectedPanel = "blinds" },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
 
-                Row(
+                // Content area with rounded bottom to match tabs
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
+                    color = PokerColors.SurfaceSecondary.copy(alpha = 0.4f)
                 ) {
-                    BlindConfigIntField(
-                        value = smallestChip,
-                        label = "Smallest Chip",
-                        onValueChange = { if (!isLocked) onSmallestChipChange(it) },
-                        isLocked = isLocked,
-                        focusManager = focusManager,
-                        modifier = Modifier.weight(1f)
-                    )
+                    when (selectedPanel) {
+                        "player" -> {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    DecimalTextField(
+                                        value = buyIn,
+                                        onValueChange = { if (!isLocked) onBuyInChange(it) },
+                                        label = "Buy-in ($)",
+                                        isLocked = isLocked,
+                                        modifier = Modifier.weight(1f)
+                                    )
 
-                    BlindConfigIntField(
-                        value = startingChips,
-                        label = "Starting Chips",
-                        onValueChange = { if (!isLocked) onStartingChipsChange(it) },
-                        isLocked = isLocked,
-                        focusManager = focusManager,
-                        modifier = Modifier.weight(1f)
-                    )
+                                    DecimalTextField(
+                                        value = foodPerPlayer,
+                                        onValueChange = { if (!isLocked) onFoodChange(it) },
+                                        label = "Food ($)",
+                                        isLocked = isLocked,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    DecimalTextField(
+                                        value = bountyPerPlayer,
+                                        onValueChange = { if (!isLocked) onBountyChange(it) },
+                                        label = "Bounty ($)",
+                                        isLocked = isLocked,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    DecimalTextField(
+                                        value = rebuyPerPlayer,
+                                        onValueChange = { if (!isLocked) onRebuyChange(it) },
+                                        label = "Rebuy ($)",
+                                        isLocked = isLocked,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    DecimalTextField(
+                                        value = addOnPerPlayer,
+                                        onValueChange = { if (!isLocked) onAddOnChange(it) },
+                                        label = "Add-on ($)",
+                                        isLocked = isLocked,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+                        "blinds" -> {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                val focusManager = LocalFocusManager.current
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    BlindConfigIntField(
+                                        value = gameDurationHours,
+                                        label = "Duration (Hours)",
+                                        onValueChange = { hours ->
+                                            val cappedHours = minOf(hours, 24).coerceAtLeast(1)
+                                            if (!isLocked) onGameDurationHoursChange(cappedHours)
+                                        },
+                                        isLocked = isLocked,
+                                        focusManager = focusManager,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    BlindConfigIntField(
+                                        value = roundLengthMinutes,
+                                        label = "Round Length (Min)",
+                                        onValueChange = { if (!isLocked) onRoundLengthChange(it) },
+                                        isLocked = isLocked,
+                                        focusManager = focusManager,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    BlindConfigIntField(
+                                        value = smallestChip,
+                                        label = "Smallest Chip",
+                                        onValueChange = { if (!isLocked) onSmallestChipChange(it) },
+                                        isLocked = isLocked,
+                                        focusManager = focusManager,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    BlindConfigIntField(
+                                        value = startingChips,
+                                        label = "Starting Chips",
+                                        onValueChange = { if (!isLocked) onStartingChipsChange(it) },
+                                        isLocked = isLocked,
+                                        focusManager = focusManager,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

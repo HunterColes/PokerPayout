@@ -14,6 +14,8 @@ You are GitHub Copilot assisting on the Poker Payout Android app.
 		- Provide a short, snappy commit/PR title in imperative mood summarizing the changes.
 		- Then list 4–5 concise bullet points in a fenced code block tagged bash, one per line prefixed with "-" for easy copying. Example:
 
+IMPORTANT: Bullet points MUST be wrapped in a fenced code block tagged 'bash' for easy copying, like this:
+
 ```bash
 - Short reason 1
 - Short reason 2

@@ -201,6 +201,16 @@ fun PoolConfigurationSection(
     onBountyChange: (Double) -> Unit,
     onRebuyChange: (Double) -> Unit,
     onAddOnChange: (Double) -> Unit,
+    playerCount: Int,
+    onPlayerCountChange: (Int) -> Unit,
+    gameDurationHours: Int,
+    roundLengthMinutes: Int,
+    smallestChip: Int,
+    startingChips: Int,
+    onGameDurationHoursChange: (Int) -> Unit,
+    onRoundLengthChange: (Int) -> Unit,
+    onSmallestChipChange: (Int) -> Unit,
+    onStartingChipsChange: (Int) -> Unit,
     isLocked: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -208,6 +218,7 @@ fun PoolConfigurationSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Player Panel
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -218,7 +229,7 @@ fun PoolConfigurationSection(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Per-Player",
+                    text = "Player",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = PokerColors.PokerGold
@@ -277,6 +288,83 @@ fun PoolConfigurationSection(
                 }
             }
         }
+
+        // Player Count Slider (moved here, below Player panel)
+        PlayerCountSlider(
+            playerCount = playerCount,
+            onPlayerCountChange = onPlayerCountChange,
+            isLocked = isLocked
+        )
+
+        // Blinds Panel
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = PokerColors.SurfaceSecondary.copy(alpha = 0.8f)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Blinds",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = PokerColors.PokerGold
+                )
+
+                val focusManager = LocalFocusManager.current
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    BlindConfigIntField(
+                        value = gameDurationHours,
+                        label = "Duration (Hours)",
+                        onValueChange = { hours ->
+                            val cappedHours = minOf(hours, 24).coerceAtLeast(1)
+                            if (!isLocked) onGameDurationHoursChange(cappedHours)
+                        },
+                        isLocked = isLocked,
+                        focusManager = focusManager,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    BlindConfigIntField(
+                        value = roundLengthMinutes,
+                        label = "Round Length (Min)",
+                        onValueChange = { if (!isLocked) onRoundLengthChange(it) },
+                        isLocked = isLocked,
+                        focusManager = focusManager,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    BlindConfigIntField(
+                        value = smallestChip,
+                        label = "Smallest Chip",
+                        onValueChange = { if (!isLocked) onSmallestChipChange(it) },
+                        isLocked = isLocked,
+                        focusManager = focusManager,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    BlindConfigIntField(
+                        value = startingChips,
+                        label = "Starting Chips",
+                        onValueChange = { if (!isLocked) onStartingChipsChange(it) },
+                        isLocked = isLocked,
+                        focusManager = focusManager,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -328,4 +416,88 @@ fun PayoutItem(payout: PayoutPosition) {
             )
         }
     }
+}
+
+/**
+ * Validates integer input for blind configuration values
+ */
+private fun isValidBlindConfigInput(text: String): Boolean {
+    if (text.isEmpty()) return true
+    return text.all { it.isDigit() } && text.length <= 9 // Max 999,999,999
+}
+
+@Composable
+fun BlindConfigIntField(
+    value: Int,
+    label: String,
+    onValueChange: (Int) -> Unit,
+    isLocked: Boolean,
+    focusManager: androidx.compose.ui.focus.FocusManager,
+    modifier: Modifier = Modifier
+) {
+    var textValue by remember { mutableStateOf(value.toString()) }
+    var isFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(value) {
+        if (!isFocused) {
+            textValue = value.toString()
+        }
+    }
+
+    fun commitInput() {
+        if (isLocked) return
+        val sanitized = textValue.trim()
+        val parsed = sanitized.toIntOrNull()
+        if (parsed != null && parsed >= 0) {
+            val cappedValue = minOf(parsed, 999_999_999)
+            onValueChange(cappedValue)
+            textValue = cappedValue.toString()
+        } else {
+            textValue = value.toString()
+        }
+    }
+
+    OutlinedTextField(
+        value = textValue,
+        onValueChange = { newValue ->
+            if (isLocked) return@OutlinedTextField
+            if (isValidBlindConfigInput(newValue)) {
+                textValue = newValue
+            }
+        },
+        label = { Text(label, color = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite) },
+        enabled = !isLocked,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                commitInput()
+                focusManager.clearFocus()
+            }
+        ),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.AccentGreen,
+            unfocusedBorderColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.CardWhite,
+            focusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
+            unfocusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
+            disabledBorderColor = PokerColors.CardWhite.copy(alpha = 0.5f),
+            disabledTextColor = PokerColors.PokerGold,
+            cursorColor = PokerColors.PokerGold,
+            selectionColors = TextSelectionColors(
+                handleColor = PokerColors.PokerGold,
+                backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
+            )
+        ),
+        modifier = modifier
+            .onFocusChanged { focusState ->
+                val gainedFocus = focusState.isFocused
+                if (!gainedFocus && isFocused) {
+                    textValue = value.toString()
+                }
+                isFocused = gainedFocus
+            }
+    )
 }

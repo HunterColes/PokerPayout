@@ -132,6 +132,21 @@ class CalculatorViewModel @Inject constructor(
             is CalculatorIntent.HideResetDialog -> {
                 hideResetDialog()
             }
+            is CalculatorIntent.ToggleBlindConfigExpanded -> {
+                toggleBlindConfigExpanded(intent.isExpanded)
+            }
+            is CalculatorIntent.UpdateGameDurationHours -> {
+                updateGameDurationHours(intent.hours)
+            }
+            is CalculatorIntent.UpdateRoundLength -> {
+                updateRoundLength(intent.minutes)
+            }
+            is CalculatorIntent.UpdateSmallestChip -> {
+                updateSmallestChip(intent.chip)
+            }
+            is CalculatorIntent.UpdateStartingChips -> {
+                updateStartingChips(intent.chips)
+            }
             is CalculatorIntent.ConfirmReset -> {
                 resetAllData()
                 hideResetDialog()
@@ -293,7 +308,7 @@ class CalculatorViewModel @Inject constructor(
         val eliminationSet = eliminationOrder.toSet()
 
         payouts.forEach { payout ->
-            val playerId = determinePlayerForPosition(payout.position, numPlayers, eliminationOrder, eliminationSet)
+            val playerId = determinePlayerForPosition(payout.position, numPlayers, eliminationOrder)
             if (playerId != null) {
                 val name = bankPreferences.getPlayerName(playerId).takeIf { it.isNotBlank() }
                 if (name != null) {
@@ -305,25 +320,35 @@ class CalculatorViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(leaderboardNames = leaderboard)
     }
 
-    private fun determinePlayerForPosition(
-        position: Int,
-        numPlayers: Int,
-        eliminationOrder: List<Int>,
-        eliminationSet: Set<Int>
-    ): Int? {
-        if (position < 1 || position > numPlayers) return null
+    private fun toggleBlindConfigExpanded(isExpanded: Boolean) {
+        _uiState.value = _uiState.value.copy(isBlindConfigExpanded = isExpanded)
+    }
 
-        return if (position == 1) {
-            when {
-                eliminationOrder.size >= numPlayers -> eliminationOrder.lastOrNull()
-                numPlayers - eliminationOrder.size == 1 -> {
-                    (1..numPlayers).firstOrNull { it !in eliminationSet }
-                }
-                else -> null
-            }
-        } else {
-            val eliminationIndex = numPlayers - position
-            if (eliminationIndex in eliminationOrder.indices) eliminationOrder[eliminationIndex] else null
+    private fun updateGameDurationHours(hours: Int) {
+        _uiState.value = _uiState.value.copy(gameDurationHours = hours)
+    }
+
+    private fun updateRoundLength(minutes: Int) {
+        _uiState.value = _uiState.value.copy(roundLengthMinutes = minutes)
+    }
+
+    private fun updateSmallestChip(chip: Int) {
+        _uiState.value = _uiState.value.copy(smallestChip = chip)
+    }
+
+    private fun updateStartingChips(chips: Int) {
+        _uiState.value = _uiState.value.copy(startingChips = chips)
+    }
+
+    private fun determinePlayerForPosition(position: Int, numPlayers: Int, eliminationOrder: List<Int>): Int? {
+        // If we don't have enough eliminations recorded for this position, return null
+        if (eliminationOrder.size < position) {
+            return null
         }
+        
+        // Position 1 (1st place) is the last player eliminated (winner)
+        // Position 2 (2nd place) is the second-to-last, etc.
+        val index = eliminationOrder.size - position
+        return eliminationOrder.getOrNull(index)
     }
 }

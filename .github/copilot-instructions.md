@@ -35,15 +35,15 @@ Use exactly these commands and no alternatives, in this order (do not run varian
 ```bash
 .\gradlew assembleRelease
 .\gradlew test
-# Only run after both above pass
+# IMPORTANT make sure both run succesfully, and on then you MUST run install as a last step.
 .\gradlew installRelease
 ```
 
 Iteration rules:
 - Run assembleRelease. If it fails, make a targeted fix and rerun.
 - Then run test. If it fails, make a targeted fix and rerun.
-- Limit to 3 focused fix attempts per failing step. If still failing, stop, summarize root cause, propose options, and ask for direction. Prefer stopping over looping indefinitely.
-- Respect cancellations immediately and report the last successful step.
+- Then run installRelease. If it fails, make a targeted fix and rerun.
+- After all three succeed, report success and stop.
 
 ## Tool and Progress Discipline
 - Before any batch of actions, state why/what and expected outcome. After ~3–5 calls or >3 file edits, report concise progress and next step.

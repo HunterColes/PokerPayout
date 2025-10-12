@@ -148,13 +148,12 @@ internal fun BankScreen(
                 ) {
                     IconButton(
                         onClick = { focusManager.clearFocus(); onIntent(BankIntent.ShowWeightsDialog) },
-                        enabled = !uiState.isTimerRunning,
                         modifier = Modifier.fillMaxSize()
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_balance_scale),
                             contentDescription = "Edit payout weights",
-                            tint = if (uiState.isTimerRunning) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.PokerGold,
+                            tint = PokerColors.PokerGold,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -254,7 +253,8 @@ internal fun BankScreen(
                 onWeightsChanged = { newWeights ->
                     onIntent(BankIntent.UpdateWeights(newWeights))
                 },
-                onDismiss = { onIntent(BankIntent.HideWeightsDialog) }
+                onDismiss = { onIntent(BankIntent.HideWeightsDialog) },
+                isLocked = uiState.isTimerRunning
             )
         }
 

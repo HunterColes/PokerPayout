@@ -111,8 +111,7 @@ class ComprehensiveBlindStructureTest {
                     val category = "${input.smallestChip}chip_${input.targetDurationMinutes}min"
                     violationsByCategory.getOrPut(category) { mutableListOf() }
                     
-                    val suddenDeathInfo = if (current.isSuddenDeath || next.isSuddenDeath) " [SUDDEN DEATH LEVEL]" else ""
-                    val violation = "$scenario: Level ${current.level} (${current.smallBlind}) -> Level ${next.level} (${next.smallBlind}) = ${String.format("%.2fx", growthRate)} [$violationType]$suddenDeathInfo"
+                    val violation = "$scenario: Level ${current.level} (${current.smallBlind}) -> Level ${next.level} (${next.smallBlind}) = ${String.format("%.2fx", growthRate)} [$violationType]"
                     
                     growthViolations.add(violation)
                     violationsByCategory[category]?.add(violation)
@@ -252,8 +251,7 @@ class ComprehensiveBlindStructureTest {
                     "start"
                 }
                 
-                val suddenDeath = if (level.isSuddenDeath) " [SUDDEN DEATH]" else ""
-                println("  Level ${level.level}: ${level.smallBlind}/${level.bigBlind} (growth: $growth)$suddenDeath")
+                println("  Level ${level.level}: ${level.smallBlind}/${level.bigBlind} (growth: $growth)")
             }
             
             val finalLevel = schedule.last()

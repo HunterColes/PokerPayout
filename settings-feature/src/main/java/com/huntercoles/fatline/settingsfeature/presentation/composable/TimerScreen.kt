@@ -1,12 +1,15 @@
 package com.huntercoles.fatline.settingsfeature.presentation.composable
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -115,107 +118,154 @@ fun TimerScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Title
-        Text(
-            text = "⏰ Play Timer",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = PokerColors.PokerGold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-
         // Timer Display with integrated controls
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             colors = CardDefaults.cardColors(containerColor = PokerColors.FeltGreen)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp), // Fixed height for consistent centering
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Start/Pause Button
-                    IconButton(
-                        onClick = { onIntent(TimerIntent.ToggleTimer) },
-                        enabled = !uiState.isFinished,
-                        colors = androidx.compose.material3.IconButtonDefaults.iconButtonColors(
-                            containerColor = androidx.compose.ui.graphics.Color.Transparent
-                        )
-                    ) {
-                        if (uiState.isRunning) {
-                            Icon(
-                                imageVector = Icons.Default.Pause,
-                                contentDescription = "Pause",
-                                tint = PokerColors.PokerGold,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        } else {
+                when {
+                    !uiState.hasTimerStarted -> {
+                        // Never started - show play button
+                        IconButton(
+                            onClick = { onIntent(TimerIntent.ToggleTimer) },
+                            modifier = Modifier.size(64.dp)
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Start",
-                                tint = PokerColors.CardWhite,
-                                modifier = Modifier.size(32.dp)
+                                contentDescription = "Start timer",
+                                tint = PokerColors.PokerGold,
+                                modifier = Modifier.size(48.dp)
                             )
                         }
                     }
-
-                    // Timer Display
-                    Text(
-                        text = uiState.formattedTime,
-                        style = MaterialTheme.typography.displayMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = when {
-                            uiState.isTimeLow -> PokerColors.ErrorRed
-                            uiState.isTimeCritical -> PokerColors.PokerGold
-                            else -> PokerColors.PokerGold
+                    uiState.hasTimerStarted && !uiState.isRunning && !uiState.isFinished -> {
+                        // Paused - show timer in more grayed out color with play button overlay
+                        Box(
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = uiState.formattedTime,
+                                style = MaterialTheme.typography.displayMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = PokerColors.PokerGold.copy(alpha = 0.3f) // More grayed out background number
+                            )
+                            
+                            IconButton(
+                                onClick = { onIntent(TimerIntent.ToggleTimer) },
+                                modifier = Modifier.size(64.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Resume timer",
+                                    tint = PokerColors.PokerGold,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                            }
                         }
-                    )
-
-                    // Reset Button
-                    IconButton(
-                        onClick = { onIntent(TimerIntent.ResetTimer) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Reset",
-                            tint = PokerColors.CardWhite,
-                            modifier = Modifier.size(32.dp)
-                        )
+                    }
+                    uiState.isRunning -> {
+                        // Running - show timer with progress bar filling background
+                        val targetColor = when {
+                            uiState.isTimeCritical -> PokerColors.ErrorRed
+                            uiState.isTimeLow -> PokerColors.PokerGold
+                            else -> PokerColors.AccentGreen
+                        }
+                        
+                        val progressColor by animateColorAsState(targetValue = targetColor, label = "progressColor")
+                        
+                        val animatedProgress by animateFloatAsState(targetValue = uiState.progress, label = "progress")
+                        
+                        val atFirstLevel = uiState.currentBlindLevelIndex <= 0
+                        val atLastLevel = uiState.currentBlindLevelIndex >= uiState.blindLevels.size - 1
+                        
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Progress fill background - fills from left to right
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(animatedProgress)
+                                    .background(progressColor.copy(alpha = 0.3f))
+                                    .align(Alignment.CenterStart)
+                            )
+                            
+                            // Seek back button
+                            if (uiState.blindLevels.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { onIntent(TimerIntent.PreviousBlindLevel) },
+                                    modifier = Modifier
+                                        .align(Alignment.CenterStart)
+                                        .padding(start = 16.dp),
+                                    enabled = !atFirstLevel
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SkipPrevious,
+                                        contentDescription = "Previous blind level",
+                                        tint = if (atFirstLevel) PokerColors.PokerGold.copy(alpha = 0.3f) else PokerColors.PokerGold
+                                    )
+                                }
+                            }
+                            
+                            Text(
+                                text = uiState.formattedTime,
+                                style = MaterialTheme.typography.displayMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = when {
+                                    uiState.isTimeLow -> PokerColors.ErrorRed
+                                    uiState.isTimeCritical -> PokerColors.PokerGold
+                                    else -> PokerColors.PokerGold
+                                },
+                                modifier = Modifier.clickable(
+                                    onClick = { onIntent(TimerIntent.ToggleTimer) }
+                                )
+                            )
+                            
+                            // Seek forward button
+                            if (uiState.blindLevels.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { onIntent(TimerIntent.NextBlindLevel) },
+                                    modifier = Modifier
+                                        .align(Alignment.CenterEnd)
+                                        .padding(end = 16.dp),
+                                    enabled = !atLastLevel
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SkipNext,
+                                        contentDescription = "Next blind level",
+                                        tint = if (atLastLevel) PokerColors.PokerGold.copy(alpha = 0.3f) else PokerColors.PokerGold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    uiState.isFinished -> {
+                        // Finished - show timer in gray with green background
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(PokerColors.AccentGreen.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = uiState.formattedTime,
+                                style = MaterialTheme.typography.displayMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = PokerColors.CardWhite.copy(alpha = 0.5f)
+                            )
+                        }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LinearProgressIndicator(
-                    progress = { uiState.progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp),
-                    color = when {
-                        uiState.isTimeCritical -> PokerColors.ErrorRed
-                        uiState.isTimeLow -> PokerColors.PokerGold
-                        else -> PokerColors.AccentGreen
-                    },
-                    trackColor = PokerColors.DarkGreen
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "${String.format("%.0f", uiState.progress * 100)}% Complete",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PokerColors.CardWhite
-                )
             }
-        }
-
-        // Blind Information Section (only show when blind config is collapsed)
+        }        // Blind Information Section (only show when blind config is collapsed)
         if (uiState.isBlindConfigCollapsed) {
             BlindInformationTile(
                 uiState = uiState,
@@ -275,7 +325,6 @@ private fun BlindInformationTile(
     val currentIndex = uiState.currentBlindLevelIndex
     val listState = rememberLazyListState()
     val highlightColor = PokerColors.PokerGold.copy(alpha = 0.18f)
-    val suddenDeathLevels = levels.count { it.isSuddenDeath }
     val editEnabled = canEditBlinds && totalLevels > 0
 
     Card(
@@ -329,86 +378,7 @@ private fun BlindInformationTile(
                 )
             }
 
-            val currentLevel = uiState.currentBlindLevel
-            val nextLevel = uiState.nextBlindLevel
-            val atFirstLevel = currentIndex <= 0
-            val atLastLevel = currentIndex >= totalLevels - 1
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = { onIntent(TimerIntent.PreviousBlindLevel) },
-                    modifier = Modifier.size(40.dp),
-                    enabled = !atFirstLevel
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SkipPrevious,
-                        contentDescription = "Previous level",
-                        tint = if (atFirstLevel) PokerColors.CardWhite.copy(alpha = 0.7f) else PokerColors.CardWhite
-                    )
-                }
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (currentLevel != null) {
-                        Text(
-                            text = "Level ${currentLevel.level} of $totalLevels",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = PokerColors.CardWhite
-                        )
-                        Text(
-                            text = "${formatChip(currentLevel.smallBlind, formatter)} / ${formatChip(currentLevel.bigBlind, formatter)}",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = PokerColors.PokerGold
-                        )
-                        Text(
-                            text = if (currentLevel.ante > 0) "Ante ${formatChip(currentLevel.ante, formatter)}" else "No ante",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = PokerColors.CardWhite.copy(alpha = 0.8f)
-                        )
-                        if (currentLevel.isSuddenDeath) {
-                            Text(
-                                text = "Sudden death",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = PokerColors.ErrorRed,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = "Blind schedule ready.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = PokerColors.CardWhite
-                        )
-                        Text(
-                            text = "Start the timer to begin Level 1.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = PokerColors.CardWhite.copy(alpha = 0.75f)
-                        )
-                    }
-                }
-
-                IconButton(
-                    onClick = { onIntent(TimerIntent.NextBlindLevel) },
-                    modifier = Modifier.size(40.dp),
-                    enabled = !atLastLevel
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Next level",
-                        tint = if (atLastLevel) PokerColors.CardWhite.copy(alpha = 0.7f) else PokerColors.CardWhite
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             LaunchedEffect(totalLevels) {
                 if (totalLevels > 0 && currentIndex in 0 until totalLevels) {
@@ -425,7 +395,7 @@ private fun BlindInformationTile(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 320.dp),
+                    .heightIn(max = 400.dp),
                 state = listState,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -443,49 +413,6 @@ private fun BlindInformationTile(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "Next: ${nextLevel?.let { "${formatChip(it.smallBlind, formatter)} / ${formatChip(it.bigBlind, formatter)}" } ?: "--"}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = PokerColors.CardWhite
-                    )
-                    val countdownText = uiState.nextLevelStartsInSeconds?.let { formatCountdown(it) } ?: "--"
-                    val nextStart = nextLevel?.let { formatLevelOffset(it.roundStartMinute) } ?: "--"
-                    Text(
-                        text = "Starts $nextStart • In $countdownText",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PokerColors.CardWhite.copy(alpha = 0.75f)
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "Players ${uiState.playerCount}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = PokerColors.CardWhite
-                    )
-                    Text(
-                        text = "Round ${uiState.blindConfiguration.roundLengthMinutes} min",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PokerColors.CardWhite.copy(alpha = 0.75f)
-                    )
-                }
-            }
-
-            if (suddenDeathLevels > 0) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "$suddenDeathLevels sudden-death level${if (suddenDeathLevels > 1) "s" else ""} queued",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PokerColors.PokerGold
-                )
-            }
         }
     }
 }
@@ -548,6 +475,7 @@ private fun BlindLevelRow(
                 fontWeight = FontWeight.SemiBold,
                 color = primaryColor
             )
+
             Text(
                 text = formatLevelOffset(level.roundStartMinute),
                 style = MaterialTheme.typography.labelSmall,
@@ -572,16 +500,6 @@ private fun BlindLevelRow(
                 text = if (level.ante > 0) "Ante ${formatChip(level.ante, formatter)}" else "No ante",
                 style = MaterialTheme.typography.bodySmall,
                 color = secondaryColor
-            )
-        }
-
-        if (level.isSuddenDeath) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Sudden death",
-                style = MaterialTheme.typography.labelSmall,
-                color = PokerColors.ErrorRed,
-                fontWeight = FontWeight.SemiBold
             )
         }
     }
@@ -871,15 +789,6 @@ private fun BlindLevelEditorRow(
                         text = "Starts ${formatLevelOffset(level.roundStartMinute)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = PokerColors.CardWhite.copy(alpha = 0.7f)
-                    )
-                }
-
-                if (level.isSuddenDeath) {
-                    Text(
-                        text = "Sudden death",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = PokerColors.ErrorRed,
-                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }

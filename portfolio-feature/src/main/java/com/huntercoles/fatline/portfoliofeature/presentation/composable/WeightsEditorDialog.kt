@@ -65,7 +65,8 @@ internal fun detectInvalidWeights(weights: List<Int>): List<Boolean> {
 fun WeightsEditorDialog(
     currentWeights: List<Int>,
     onWeightsChanged: (List<Int>) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    isLocked: Boolean = false
 ) {
     val weights = remember(currentWeights) { mutableStateListOf<Int>().apply { addAll(currentWeights) } }
 
@@ -112,6 +113,7 @@ fun WeightsEditorDialog(
                     position = index + 1,
                     weight = weight,
                     isError = invalidPositions.getOrElse(index) { false },
+                    isLocked = isLocked,
                     onWeightChange = { newWeight ->
                         if (newWeight > 0) {
                             weights[index] = newWeight
@@ -133,14 +135,14 @@ fun WeightsEditorDialog(
                         weights.removeAt(weights.size - 1)
                     }
                 },
-                enabled = weights.size > 1 && !hasErrors,
+                enabled = weights.size > 1 && !hasErrors && !isLocked,
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = PokerColors.ErrorRed
+                    contentColor = if (isLocked) PokerColors.PokerGold.copy(alpha = 0.5f) else PokerColors.ErrorRed
                 ),
                 border = BorderStroke(
                     1.dp,
-                    PokerColors.ErrorRed
+                    if (isLocked) PokerColors.PokerGold.copy(alpha = 0.5f) else PokerColors.ErrorRed
                 )
             ) {
                 Text("-", fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -158,14 +160,14 @@ fun WeightsEditorDialog(
                         weights.add(defaultWeight)
                     }
                 },
-                enabled = weights.size < MAX_WEIGHT_POSITIONS && !hasErrors,
+                enabled = weights.size < MAX_WEIGHT_POSITIONS && !hasErrors && !isLocked,
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = PokerColors.AccentGreen
+                    contentColor = if (isLocked) PokerColors.PokerGold.copy(alpha = 0.5f) else PokerColors.AccentGreen
                 ),
                 border = BorderStroke(
                     1.dp,
-                    PokerColors.AccentGreen
+                    if (isLocked) PokerColors.PokerGold.copy(alpha = 0.5f) else PokerColors.AccentGreen
                 )
             ) {
                 Icon(
@@ -196,11 +198,11 @@ fun WeightsEditorDialog(
                     onWeightsChanged(weights.toList())
                     onDismiss()
                 },
-                enabled = !hasErrors,
+                enabled = !hasErrors && !isLocked,
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = PokerColors.AccentGreen,
-                    contentColor = PokerColors.DarkGreen,
+                    containerColor = if (isLocked) PokerColors.PokerGold.copy(alpha = 0.5f) else PokerColors.AccentGreen,
+                    contentColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.DarkGreen,
                     disabledContainerColor = PokerColors.CardWhite.copy(alpha = 0.3f),
                     disabledContentColor = PokerColors.CardWhite.copy(alpha = 0.5f)
                 )
@@ -216,6 +218,7 @@ fun WeightRow(
     position: Int,
     weight: Int,
     isError: Boolean,
+    isLocked: Boolean,
     onWeightChange: (Int) -> Unit
 ) {
     val trophy = when (position) {
@@ -286,6 +289,7 @@ fun WeightRow(
                 },
                 modifier = Modifier.width(80.dp),
                 singleLine = true,
+                enabled = !isLocked,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number,
                     imeAction = ImeAction.Done
@@ -294,10 +298,12 @@ fun WeightRow(
                     onDone = { focusManager.clearFocus() }
                 ),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = if (isError) PokerColors.ErrorRed else PokerColors.AccentGreen,
-                    unfocusedBorderColor = if (isError) PokerColors.ErrorRed else PokerColors.CardWhite.copy(alpha = 0.5f),
-                    focusedTextColor = PokerColors.CardWhite,
-                    unfocusedTextColor = PokerColors.CardWhite,
+                    focusedBorderColor = if (isError) PokerColors.ErrorRed else if (isLocked) PokerColors.PokerGold else PokerColors.AccentGreen,
+                    unfocusedBorderColor = if (isError) PokerColors.ErrorRed else if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite.copy(alpha = 0.5f),
+                    focusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
+                    unfocusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
+                    disabledTextColor = PokerColors.PokerGold,
+                    disabledBorderColor = PokerColors.PokerGold.copy(alpha = 0.5f),
                     cursorColor = PokerColors.PokerGold,
                     selectionColors = TextSelectionColors(
                         handleColor = PokerColors.PokerGold,

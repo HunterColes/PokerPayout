@@ -23,8 +23,7 @@ data class BlindLevel(
     val smallBlind: Int,
     val bigBlind: Int,
     val ante: Int,
-    val roundStartMinute: Int,
-    val isSuddenDeath: Boolean
+    val roundStartMinute: Int
 ) : Parcelable
 
 object BlindStructureCalculator {
@@ -107,8 +106,7 @@ object BlindStructureCalculator {
                 smallBlind = smallBlind,
                 bigBlind = bigBlind,
                 ante = ante,
-                roundStartMinute = index * roundLengthMinutes,
-                isSuddenDeath = index >= regularLevelCutoff
+                roundStartMinute = index * roundLengthMinutes
             )
         }
     }

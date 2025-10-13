@@ -144,7 +144,7 @@ fun PlayContent(
                         tint = PokerColors.PokerGold,
                         modifier = Modifier
                             .size(24.dp)
-                            .invertHorizontally() // Invert horizontally
+                            .invertHorizontally()
                     )
                 }
             }

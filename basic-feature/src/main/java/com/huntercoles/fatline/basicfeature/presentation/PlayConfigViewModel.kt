@@ -33,8 +33,8 @@ class PlayConfigViewModel @Inject constructor(
             tournamentPreferences.tournamentLocked.collect { isLocked ->
                 _uiState.value = _uiState.value.copy(
                     isTournamentLocked = isLocked,
-                    // Auto-collapse when tournament is locked (timer started)
-                    isConfigExpanded = if (isLocked) false else _uiState.value.isConfigExpanded
+                    // Auto-collapse when tournament is locked (timer playing), auto-expand when unlocked (timer paused/reset)
+                    isConfigExpanded = !isLocked
                 )
             }
         }
@@ -189,7 +189,15 @@ class PlayConfigViewModel @Inject constructor(
     }
 
     private fun isInDefaultState(): Boolean {
-        return tournamentPreferences.isInDefaultState() && timerPreferences.isInDefaultState()
+        // Also ensure UI-only blind fields match their defaults so changing them enables Reset
+        val defaultUi = PlayConfigUiState()
+        val ui = _uiState.value
+        return tournamentPreferences.isInDefaultState() &&
+            timerPreferences.isInDefaultState() &&
+            ui.gameDurationHours == defaultUi.gameDurationHours &&
+            ui.roundLengthMinutes == defaultUi.roundLengthMinutes &&
+            ui.smallestChip == defaultUi.smallestChip &&
+            ui.startingChips == defaultUi.startingChips
     }
 
     private fun confirmReset() {
@@ -200,7 +208,18 @@ class PlayConfigViewModel @Inject constructor(
     private fun resetAllData() {
         tournamentPreferences.resetAllTournamentData()
         timerPreferences.resetAllTimerData()
+        // Reload tournament configuration from preferences
         loadTournamentConfiguration()
+
+        // Reset UI-only blind-related fields to their defaults. Use timer preference for duration.
+        val defaultUi = PlayConfigUiState()
+        val defaultHours = (timerPreferences.getGameDurationMinutes() / 60).coerceAtLeast(1)
+        _uiState.value = _uiState.value.copy(
+            gameDurationHours = defaultHours,
+            roundLengthMinutes = defaultUi.roundLengthMinutes,
+            smallestChip = defaultUi.smallestChip,
+            startingChips = defaultUi.startingChips
+        )
     }
 
     private fun calculatePayouts() {

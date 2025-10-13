@@ -14,16 +14,4 @@ sealed class TimerIntent {
     data class UpdateStartingChips(val value: Int) : TimerIntent()
     data class UpdateRoundLength(val minutes: Int) : TimerIntent()
     data class ToggleBlindConfigCollapsed(val collapsed: Boolean) : TimerIntent()
-
-    // Blind customization intents
-    data class UpdateBlindOverride(
-        val level: Int,
-        val smallBlind: Int,
-        val bigBlind: Int,
-        val ante: Int
-    ) : TimerIntent()
-    data class ApplyBlindOverrides(
-        val overrides: Map<Int, BlindLevelOverride>
-    ) : TimerIntent()
-    data object ClearBlindOverrides : TimerIntent()
 }

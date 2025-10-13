@@ -3,6 +3,7 @@ package com.huntercoles.fatline.basicfeature.presentation.composable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -387,86 +388,101 @@ fun PlayersCardsSection(
     onRemovePlayerCard: (Int, Int) -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(400.dp),
         colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary),
         border = BorderStroke(1.dp, PokerColors.AccentGreen)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header
             Text(
                 text = "Player Cards",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = PokerColors.PokerGold
+                color = PokerColors.PokerGold,
+                modifier = Modifier.padding(16.dp)
             )
             
-            players.forEach { player ->
-                PlayerCardsRow(
-                    player = player,
-                    onCardClick = { onPlayerCardClick(player.id) },
-                    onRemoveCard = { cardIndex -> onRemovePlayerCard(player.id, cardIndex) }
-                )
+            // Grid of players
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(players) { player ->
+                    PlayerGridItem(
+                        player = player,
+                        onCardClick = { onPlayerCardClick(player.id) },
+                        onRemoveCard = { cardIndex -> onRemovePlayerCard(player.id, cardIndex) }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun PlayerCardsRow(
+fun PlayerGridItem(
     player: Player,
     onCardClick: () -> Unit,
     onRemoveCard: (Int) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(4.dp),
+        colors = CardDefaults.cardColors(containerColor = PokerColors.SurfaceSecondary.copy(alpha = 0.8f)),
+        border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Text(
-            text = player.name,
-            color = PokerColors.CardWhite,
-            modifier = Modifier.width(80.dp),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
-        )
-        
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.weight(1f)
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            repeat(2) { index ->
-                if (index < player.cards.size) {
-                    PlayingCardView(
-                        card = player.cards[index],
-                        onRemove = { onRemoveCard(index) }
-                    )
-                } else {
-                    AddCardSlot(onClick = onCardClick)
+            Text(
+                text = player.name,
+                color = PokerColors.CardWhite,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(2) { index ->
+                    if (index < player.cards.size) {
+                        PlayingCardView(
+                            card = player.cards[index],
+                            onRemove = { onRemoveCard(index) }
+                        )
+                    } else {
+                        AddCardSlot(onClick = onCardClick)
+                    }
                 }
             }
-        }
-        
-        if (player.winPercentage > 0 || player.tiePercentage > 0) {
-            Column(
-                horizontalAlignment = Alignment.End,
-                modifier = Modifier.width(90.dp)
-            ) {
-                Text(
-                    text = "Win: ${"%.2f".format(player.winPercentage)}%",
-                    color = Color.Green,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.End
-                )
-                Text(
-                    text = "Tie: ${"%.2f".format(player.tiePercentage)}%",
-                    color = Color.Yellow,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.End
-                )
+            
+            if (player.winPercentage > 0 || player.tiePercentage > 0) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Win: ${"%.1f".format(player.winPercentage)}%",
+                        color = Color.Green,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Tie: ${"%.1f".format(player.tiePercentage)}%",
+                        color = Color.Yellow,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }
@@ -519,7 +535,7 @@ fun CommunityCardBox(
     modifier: Modifier = Modifier
 ) {
     // Use standard card slot size, slightly larger to match player cards
-    val slotModifier = Modifier.size(width = 52.dp, height = 72.dp)
+    val slotModifier = Modifier.size(width = 40.dp, height = 56.dp)
     if (maxCards > 1) {
         // Multiple cards: equally spaced slots across the width
         Row(
@@ -587,12 +603,14 @@ fun CommunityCardBox(
 fun PlayingCardView(
     card: Card,
     onRemove: () -> Unit,
-    modifier: Modifier = Modifier.size(width = 50.dp, height = 70.dp)
+    modifier: Modifier = Modifier.size(width = 40.dp, height = 56.dp)
 ) {
     Card(
         modifier = modifier.clickable { onRemove() },
         colors = CardDefaults.cardColors(containerColor = PokerColors.CardWhite),
-        border = BorderStroke(1.dp, Color.Gray)
+        border = BorderStroke(2.dp, card.getSuitColor()),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(8.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -602,13 +620,13 @@ fun PlayingCardView(
             Text(
                 text = card.rank,
                 color = card.getSuitColor(),
-                fontSize = 16.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = card.getSuitSymbol(),
                 color = card.getSuitColor(),
-                fontSize = 20.sp
+                fontSize = 18.sp
             )
         }
     }
@@ -617,12 +635,14 @@ fun PlayingCardView(
 @Composable
 fun AddCardSlot(
     onClick: () -> Unit,
-    modifier: Modifier = Modifier.size(width = 50.dp, height = 70.dp)
+    modifier: Modifier = Modifier.size(width = 40.dp, height = 56.dp)
 ) {
     Card(
         modifier = modifier.clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = PokerColors.SurfaceSecondary),
-        border = BorderStroke(1.dp, PokerColors.PokerGold)
+        border = BorderStroke(2.dp, PokerColors.PokerGold),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(8.dp)
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -632,7 +652,7 @@ fun AddCardSlot(
                 imageVector = Icons.Default.Add,
                 contentDescription = "Add Card",
                 tint = PokerColors.PokerGold,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
     }

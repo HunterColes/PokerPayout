@@ -11,7 +11,6 @@ import com.huntercoles.fatline.core.preferences.TimerPreferences
 import com.huntercoles.fatline.core.preferences.TournamentPreferences
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -23,6 +22,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import kotlin.math.max
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,17 +42,18 @@ class PlayConfigViewModelWeightsTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
 
-        // Create dependencies
-        calculatePayoutsUseCase = mockk(relaxed = true)
-        timerPreferences = mockk(relaxed = true)
         context = ApplicationProvider.getApplicationContext()
 
         clearTournamentPrefs()
+        clearTimerPrefs()
         clearBankPrefs()
+        
         tournamentPreferences = TournamentPreferences(context)
+        timerPreferences = TimerPreferences(context)
         bankPreferences = BankPreferences(context)
 
-        // Mock the calculatePayoutsUseCase to return payouts based on weights
+        // Create and configure calculatePayoutsUseCase mock
+        calculatePayoutsUseCase = mockk(relaxed = true)
         every { calculatePayoutsUseCase(any()) } answers {
             val config = firstArg<TournamentConfig>()
             val weights = config.payoutWeights
@@ -78,6 +79,7 @@ class PlayConfigViewModelWeightsTest {
     fun teardown() {
         Dispatchers.resetMain()
         clearBankPrefs()
+        clearTimerPrefs()
         clearTournamentPrefs()
     }
 
@@ -120,21 +122,26 @@ class PlayConfigViewModelWeightsTest {
 
     @Test
     fun `reset should reset payout weights to defaults`() {
-        // Given: custom weights are set
+        // Given: custom weights are set AND timer preferences are modified
         val customWeights = listOf(50, 30, 20) // 3 custom positions
         viewModel.acceptIntent(PlayConfigIntent.UpdateWeights(customWeights))
+        
+        // Modify timer preferences to ensure they're not in default state
+        timerPreferences.setGameDurationMinutes(240) // Change from default 180
 
-        // Verify weights were updated
+        // Verify weights were updated and timer is not in default state
         assertEquals(customWeights, viewModel.uiState.value.tournamentConfig.payoutWeights)
+        assertEquals(240, timerPreferences.getGameDurationMinutes())
+        assertFalse(timerPreferences.isInDefaultState())
 
         // When: confirming reset
         viewModel.acceptIntent(PlayConfigIntent.ConfirmReset)
 
-        // Then: should reset weights and recalculate
-        verify { timerPreferences.resetAllTimerData() }
-
+        // Then: should reset both tournament AND timer preferences
         // After reset, should load default configuration which includes default weights
         assertTrue(tournamentPreferences.isInDefaultState())
+        assertTrue(timerPreferences.isInDefaultState())
+        assertEquals(180, timerPreferences.getGameDurationMinutes()) // Back to default
         val expectedDefaults = defaultWeightsFor(viewModel.uiState.value.tournamentConfig.numPlayers)
         assertEquals(expectedDefaults, viewModel.uiState.value.tournamentConfig.payoutWeights)
     }
@@ -181,6 +188,13 @@ class PlayConfigViewModelWeightsTest {
 
     private fun clearTournamentPrefs() {
         context.getSharedPreferences("tournament_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
+    }
+
+    private fun clearTimerPrefs() {
+        context.getSharedPreferences("timer_prefs", Context.MODE_PRIVATE)
             .edit()
             .clear()
             .commit()

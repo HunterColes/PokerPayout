@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
@@ -82,7 +83,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.painterResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.fatline.core.design.PokerDialog
@@ -140,25 +140,6 @@ internal fun BankScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Edit weights button
-                Card(
-                    modifier = Modifier.size(48.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
-                ) {
-                    IconButton(
-                        onClick = { focusManager.clearFocus(); onIntent(BankIntent.ShowWeightsDialog) },
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_balance_scale),
-                            contentDescription = "Edit payout weights",
-                            tint = PokerColors.PokerGold,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-                
                 // Green circular background with yellow refresh button
                 Card(
                     modifier = Modifier.size(48.dp),
@@ -312,7 +293,7 @@ internal fun BankScreen(
         val championPlayerId = activePlayerIds.singleOrNull()
 
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Pool Summary
             item {
@@ -371,15 +352,27 @@ private fun PoolSummaryCard(uiState: BankUiState, onIntent: (BankIntent) -> Unit
                     color = PokerColors.PokerGold
                 )
                 
-                // Info button
-                Card(
-                    modifier = Modifier.size(32.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Weights button
+                    IconButton(
+                        onClick = { onIntent(BankIntent.ShowWeightsDialog) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.FitnessCenter,
+                            contentDescription = "Edit payout weights",
+                            tint = PokerColors.PokerGold,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    
+                    // Info button
                     IconButton(
                         onClick = { onIntent(BankIntent.ShowPoolSummaryDialog) },
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Info,

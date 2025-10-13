@@ -89,19 +89,10 @@ class TimerViewModel @Inject constructor(
             is TimerIntent.UpdateStartingChips -> updateStartingChips(intent.value)
             is TimerIntent.UpdateRoundLength -> updateRoundLength(intent.minutes)
             is TimerIntent.ToggleBlindConfigCollapsed -> toggleBlindConfigCollapsed(intent.collapsed)
-            is TimerIntent.UpdateBlindOverride -> applyBlindOverride(
-                level = intent.level,
-                smallBlind = intent.smallBlind,
-                bigBlind = intent.bigBlind,
-                ante = intent.ante
-            )
-            is TimerIntent.ApplyBlindOverrides -> applyBlindOverrides(intent.overrides)
-            is TimerIntent.ClearBlindOverrides -> clearBlindOverrides()
         }
     }
 
     private fun updateGameDuration(minutes: Int) {
-        clearOverridesIfNeeded()
         val validMinutes = minutes.coerceIn(1, 1440) // 1 minute to 24 hours
         timerPreferences.setGameDurationMinutes(validMinutes)
         
@@ -203,6 +194,9 @@ class TimerViewModel @Inject constructor(
         timerJob = null
         _uiState.update { it.copy(isRunning = false) }
         timerPreferences.setTimerRunning(false)
+        
+        // Unlock tournament settings when timer is paused
+        tournamentPreferences.setTournamentLocked(false)
     }
 
     private fun resetTimer() {
@@ -211,12 +205,16 @@ class TimerViewModel @Inject constructor(
         // Unlock tournament settings when timer is reset
         tournamentPreferences.setTournamentLocked(false)
         
+        // Reload duration from preferences in case it was reset
+        val resetDurationMinutes = timerPreferences.getGameDurationMinutes()
+        
         _uiState.update { state ->
             val resetSeconds = when (state.timerDirection) {
-                TimerDirection.COUNTDOWN -> state.totalDurationSeconds
+                TimerDirection.COUNTDOWN -> resetDurationMinutes * 60
                 TimerDirection.COUNTUP -> 0
             }
             state.copy(
+                gameDurationMinutes = resetDurationMinutes,
                 currentTimeSeconds = resetSeconds,
                 isRunning = false,
                 isFinished = false,
@@ -237,7 +235,6 @@ class TimerViewModel @Inject constructor(
 
     // Blind configuration methods
     private fun updateSmallestChip(value: Int) {
-        clearOverridesIfNeeded()
         val sanitizedValue = value.coerceAtLeast(1)
         _uiState.update { state ->
             state.copy(
@@ -248,7 +245,6 @@ class TimerViewModel @Inject constructor(
     }
 
     private fun updateStartingChips(value: Int) {
-        clearOverridesIfNeeded()
         val sanitizedValue = value.coerceAtLeast(1)
         _uiState.update { state ->
             state.copy(
@@ -259,7 +255,6 @@ class TimerViewModel @Inject constructor(
     }
 
     private fun updateRoundLength(minutes: Int) {
-        clearOverridesIfNeeded()
         val sanitizedMinutes = minutes.coerceAtLeast(1)
         _uiState.update { state ->
             state.copy(
@@ -272,48 +267,6 @@ class TimerViewModel @Inject constructor(
     private fun toggleBlindConfigCollapsed(collapsed: Boolean) {
         _uiState.update { state ->
             state.copy(isBlindConfigCollapsed = collapsed)
-        }
-    }
-
-    private fun applyBlindOverride(level: Int, smallBlind: Int, bigBlind: Int, ante: Int) {
-        if (_uiState.value.hasTimerStarted) return
-        val override = BlindLevelOverride(level = level, smallBlind = smallBlind, bigBlind = bigBlind, ante = ante)
-        _uiState.update { state ->
-            val updatedOverrides = state.customBlindOverrides.toMutableMap().apply {
-                put(level, override)
-            }
-            state.copy(
-                customBlindOverrides = updatedOverrides,
-                isUsingCustomBlinds = true
-            )
-        }
-        regenerateBlindSchedule()
-    }
-
-    private fun applyBlindOverrides(overrides: Map<Int, BlindLevelOverride>) {
-        if (_uiState.value.hasTimerStarted) return
-        val orderedOverrides = overrides.toSortedMap()
-        _uiState.update { state ->
-            state.copy(
-                customBlindOverrides = orderedOverrides,
-                isUsingCustomBlinds = orderedOverrides.isNotEmpty()
-            )
-        }
-        regenerateBlindSchedule()
-    }
-
-    private fun clearBlindOverrides() {
-        if (_uiState.value.customBlindOverrides.isEmpty()) return
-        applyBlindOverrides(emptyMap())
-    }
-
-    private fun clearOverridesIfNeeded() {
-        if (_uiState.value.customBlindOverrides.isEmpty()) return
-        _uiState.update {
-            it.copy(
-                customBlindOverrides = emptyMap(),
-                isUsingCustomBlinds = false
-            )
         }
     }
 
@@ -357,34 +310,18 @@ class TimerViewModel @Inject constructor(
         val schedule = runCatching { BlindStructureCalculator.generateSchedule(input) }
             .getOrElse { emptyList() }
 
-        val overrides = state.customBlindOverrides
-        val adjustedSchedule = if (overrides.isNotEmpty()) {
-            schedule.map { level ->
-                overrides[level.level]?.let { override ->
-                    level.copy(
-                        smallBlind = override.smallBlind,
-                        bigBlind = override.bigBlind,
-                        ante = override.ante
-                    )
-                } ?: level
-            }
-        } else {
-            schedule
-        }
-
-        val levelIndex = if (adjustedSchedule.isEmpty()) {
+        val levelIndex = if (schedule.isEmpty()) {
             0
         } else {
-            calculateBlindLevelIndex(adjustedSchedule, state).coerceIn(0, adjustedSchedule.lastIndex)
+            calculateBlindLevelIndex(schedule, state).coerceIn(0, schedule.lastIndex)
         }
 
         _uiState.update {
             it.copy(
                 playerCount = latestPlayerCount,
                 baseBlindLevels = schedule,
-                blindLevels = adjustedSchedule,
-                currentBlindLevelIndex = levelIndex,
-                isUsingCustomBlinds = overrides.isNotEmpty()
+                blindLevels = schedule,
+                currentBlindLevelIndex = levelIndex
             )
         }
     }

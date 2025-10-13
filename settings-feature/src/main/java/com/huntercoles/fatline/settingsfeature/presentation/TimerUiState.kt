@@ -9,14 +9,6 @@ enum class TimerDirection {
 }
 
 @Parcelize
-data class BlindLevelOverride(
-    val level: Int,
-    val smallBlind: Int,
-    val bigBlind: Int,
-    val ante: Int
-) : Parcelable
-
-@Parcelize
 data class TimerUiState(
     val gameDurationMinutes: Int = 180, // Default 3 hours (kept for compatibility)
     val currentTimeSeconds: Int = 180 * 60, // Start with full time
@@ -29,9 +21,7 @@ data class TimerUiState(
     val playerCount: Int = 9,
     val baseBlindLevels: List<BlindLevel> = emptyList(),
     val blindLevels: List<BlindLevel> = emptyList(),
-    val currentBlindLevelIndex: Int = 0,
-    val customBlindOverrides: Map<Int, BlindLevelOverride> = emptyMap(),
-    val isUsingCustomBlinds: Boolean = false
+    val currentBlindLevelIndex: Int = 0
 ) : Parcelable {
 
     // Convert minutes to hours for UI display

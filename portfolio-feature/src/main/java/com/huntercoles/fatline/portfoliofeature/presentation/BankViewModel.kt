@@ -652,6 +652,9 @@ class BankViewModel @Inject constructor(
         // Reset bank preferences
         bankPreferences.resetAllBankData()
         
+        // Reset tournament preferences (including weights)
+        tournamentPreferences.resetAllTournamentData()
+        
         // Reinitialize players with fresh data
         val savedPlayerCount = tournamentPreferences.getPlayerCount()
         initializePlayers(savedPlayerCount)
@@ -681,7 +684,8 @@ class BankViewModel @Inject constructor(
 
     private fun isInDefaultState(): Boolean {
         val currentPlayerCount = _uiState.value.players.size
-        return bankPreferences.isInDefaultState(currentPlayerCount)
+        return bankPreferences.isInDefaultState(currentPlayerCount) &&
+               tournamentPreferences.isInDefaultState()
     }
 }
 
@@ -695,26 +699,9 @@ private fun calculatePayoutPositions(
     prizePool: Double,
     playerCount: Int
 ): List<PayoutPositionInternal> {
-    val maxPayingPositions = max(1, playerCount / 3)
-    val defaultWeights = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.take(maxPayingPositions)
-    val isUsingDefaultWeights = when {
-        config.payoutWeights == defaultWeights -> true
-        config.payoutWeights == TournamentConstants.DEFAULT_PAYOUT_WEIGHTS -> true
-        else -> false
-    }
-
-    val actualPayingPositions = if (isUsingDefaultWeights) {
-        min(maxPayingPositions, defaultWeights.size)
-    } else {
-        config.payoutWeights.size
-    }
-
-    val payingWeights = if (isUsingDefaultWeights) {
-        defaultWeights.take(actualPayingPositions)
-    } else {
-        config.payoutWeights.take(actualPayingPositions)
-    }
-
+    // Use weights directly from config - they're already managed by TournamentPreferences
+    val payingWeights = config.payoutWeights
+    
     val totalWeight = payingWeights.sum()
     if (totalWeight == 0) return emptyList()
 

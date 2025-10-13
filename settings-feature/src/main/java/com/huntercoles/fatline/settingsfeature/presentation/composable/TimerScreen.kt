@@ -76,7 +76,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.huntercoles.fatline.settingsfeature.presentation.BlindLevelOverride
 import com.huntercoles.fatline.settingsfeature.presentation.TimerIntent
 import com.huntercoles.fatline.settingsfeature.presentation.TimerUiState
 import com.huntercoles.fatline.settingsfeature.presentation.TimerViewModel
@@ -109,7 +108,6 @@ fun TimerScreen(
     uiState: TimerUiState,
     onIntent: (TimerIntent) -> Unit,
 ) {
-    var showBlindEditor by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -154,7 +152,7 @@ fun TimerScreen(
                                 text = uiState.formattedTime,
                                 style = MaterialTheme.typography.displayMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = PokerColors.PokerGold.copy(alpha = 0.3f) // More grayed out background number
+                                color = PokerColors.PokerGold.copy(alpha = 0.7f) // More visible background number
                             )
                             
                             IconButton(
@@ -265,13 +263,11 @@ fun TimerScreen(
                     }
                 }
             }
-        }        // Blind Information Section (only show when blind config is collapsed)
-        if (uiState.isBlindConfigCollapsed) {
+        }        // Blind Information Section (only show when blind config is collapsed and not paused)
+        if (uiState.isBlindConfigCollapsed && (uiState.isRunning || uiState.isFinished || !uiState.hasTimerStarted)) {
             BlindInformationTile(
                 uiState = uiState,
-                onIntent = onIntent,
-                canEditBlinds = !uiState.hasTimerStarted && uiState.blindLevels.isNotEmpty(),
-                onEditBlinds = { showBlindEditor = true }
+                onIntent = onIntent
             )
         }
 
@@ -288,36 +284,12 @@ fun TimerScreen(
             )
         }
     }
-
-    if (showBlindEditor) {
-        if (!uiState.hasTimerStarted) {
-            BlindCustomizationDialog(
-                levels = uiState.blindLevels,
-                baseLevels = uiState.baseBlindLevels,
-                canEdit = !uiState.hasTimerStarted,
-                hasActiveOverrides = uiState.customBlindOverrides.isNotEmpty(),
-                onDismiss = { showBlindEditor = false },
-                onApply = { overrides ->
-                    onIntent(TimerIntent.ApplyBlindOverrides(overrides))
-                    showBlindEditor = false
-                },
-                onReset = {
-                    onIntent(TimerIntent.ApplyBlindOverrides(emptyMap()))
-                    showBlindEditor = false
-                }
-            )
-        } else {
-            showBlindEditor = false
-        }
-    }
 }
 
 @Composable
 private fun BlindInformationTile(
     uiState: TimerUiState,
-    onIntent: (TimerIntent) -> Unit,
-    canEditBlinds: Boolean,
-    onEditBlinds: () -> Unit
+    onIntent: (TimerIntent) -> Unit
 ) {
     val formatter = remember { NumberFormat.getIntegerInstance(Locale.getDefault()) }
     val levels = uiState.blindLevels
@@ -325,7 +297,6 @@ private fun BlindInformationTile(
     val currentIndex = uiState.currentBlindLevelIndex
     val listState = rememberLazyListState()
     val highlightColor = PokerColors.PokerGold.copy(alpha = 0.18f)
-    val editEnabled = canEditBlinds && totalLevels > 0
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -333,52 +304,6 @@ private fun BlindInformationTile(
         colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "🃏 Blinds",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = PokerColors.PokerGold
-                )
-
-                IconButton(
-                    onClick = onEditBlinds,
-                    enabled = editEnabled,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Customize blinds",
-                        tint = if (editEnabled) PokerColors.PokerGold else PokerColors.CardWhite.copy(alpha = 0.4f)
-                    )
-                }
-            }
-
-            if (totalLevels == 0) {
-                Text(
-                    text = "Adjust the configuration to generate a blind schedule.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = PokerColors.CardWhite
-                )
-                return@Column
-            }
-
-            if (uiState.isUsingCustomBlinds) {
-                Text(
-                    text = "Custom overrides applied",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = PokerColors.AccentGreen,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             LaunchedEffect(totalLevels) {
                 if (totalLevels > 0 && currentIndex in 0 until totalLevels) {
@@ -503,400 +428,6 @@ private fun BlindLevelRow(
             )
         }
     }
-}
-
-private data class BlindLevelFieldState(
-    val small: MutableState<String>,
-    val big: MutableState<String>,
-    val smallError: MutableState<Boolean>,
-    val bigError: MutableState<Boolean>
-)
-
-@Composable
-private fun BlindCustomizationDialog(
-    levels: List<BlindLevel>,
-    baseLevels: List<BlindLevel>,
-    canEdit: Boolean,
-    hasActiveOverrides: Boolean,
-    onDismiss: () -> Unit,
-    onApply: (Map<Int, BlindLevelOverride>) -> Unit,
-    onReset: () -> Unit
-) {
-    if (levels.isEmpty()) {
-        onDismiss()
-        return
-    }
-
-    val formatter = remember { NumberFormat.getIntegerInstance(Locale.getDefault()) }
-    val baseMap = remember(baseLevels) { baseLevels.associateBy { it.level } }
-
-    fun createState(level: BlindLevel) = BlindLevelFieldState(
-        small = mutableStateOf(level.smallBlind.toString()),
-        big = mutableStateOf(level.bigBlind.toString()),
-        smallError = mutableStateOf(false),
-        bigError = mutableStateOf(false)
-    )
-
-    val fieldStates = remember(levels) {
-        mutableStateMapOf<Int, BlindLevelFieldState>().apply {
-            levels.forEach { level ->
-                put(level.level, createState(level))
-            }
-        }
-    }
-
-    val hasCustomInputs by remember(levels, baseLevels) {
-        derivedStateOf {
-            levels.any { level ->
-                val state = fieldStates[level.level] ?: return@derivedStateOf false
-                val base = baseMap[level.level] ?: level
-                val small = state.small.value.trim().toIntOrNull()
-                val big = state.big.value.trim().toIntOrNull()
-                small == null || big == null ||
-                    small != base.smallBlind ||
-                    big != base.bigBlind
-            }
-        }
-    }
-    val resetEnabled = canEdit && (hasActiveOverrides || hasCustomInputs)
-
-    var validationError by remember { mutableStateOf<String?>(null) }
-
-    fun handleSave() {
-        fieldStates.values.forEach { state ->
-            state.smallError.value = false
-            state.bigError.value = false
-        }
-
-        var hasError = false
-        var errorMessage: String? = null
-        val overrides = mutableMapOf<Int, BlindLevelOverride>()
-
-        levels.forEach { level ->
-            val state = fieldStates.getOrPut(level.level) { createState(level) }
-            val smallText = state.small.value.trim()
-            val bigText = state.big.value.trim()
-
-            val smallValue = smallText.toIntOrNull()
-            val bigValue = bigText.toIntOrNull()
-
-            if (smallValue == null || smallValue <= 0) {
-                state.smallError.value = true
-                hasError = true
-                if (errorMessage == null) errorMessage = "Please enter positive numbers for the blinds."
-            }
-
-            if (bigValue == null || bigValue <= 0) {
-                state.bigError.value = true
-                hasError = true
-                if (errorMessage == null) errorMessage = "Please enter positive numbers for the blinds."
-            }
-
-            if (!hasError && smallValue != null && bigValue != null && bigValue < smallValue) {
-                state.bigError.value = true
-                hasError = true
-                errorMessage = "Big blind must be greater than or equal to the small blind."
-            }
-
-            if (!hasError && smallValue != null && bigValue != null) {
-                val base = baseMap[level.level] ?: level
-                if (smallValue != base.smallBlind || bigValue != base.bigBlind) {
-                    overrides[level.level] = BlindLevelOverride(
-                        level = level.level,
-                        smallBlind = smallValue,
-                        bigBlind = bigValue,
-                        ante = base.ante
-                    )
-                }
-            }
-        }
-
-        if (hasError) {
-            validationError = errorMessage ?: "Please fix the highlighted fields."
-        } else {
-            validationError = null
-            onApply(overrides)
-        }
-    }
-
-    PokerDialog(
-        onDismissRequest = onDismiss,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "✏️ Customize Blinds",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = PokerColors.PokerGold
-                )
-                Text(
-                    text = "Adjust levels before the tournament begins.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PokerColors.CardWhite.copy(alpha = 0.7f)
-                )
-            }
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = PokerColors.CardWhite
-                )
-            }
-        }
-
-        if (!canEdit) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Blinds are locked once the timer has started.",
-                style = MaterialTheme.typography.bodySmall,
-                color = PokerColors.ErrorRed
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = PokerColors.SurfacePrimary.copy(alpha = 0.9f)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 420.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(levels, key = { it.level }) { level ->
-                        val state = fieldStates.getOrPut(level.level) { createState(level) }
-                        val baseLevel = baseMap[level.level]
-                        BlindLevelEditorRow(
-                            level = level,
-                            baseLevel = baseLevel,
-                            state = state,
-                            enabled = canEdit,
-                            formatter = formatter
-                        )
-                    }
-                }
-            }
-        }
-
-        if (validationError != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = validationError!!,
-                style = MaterialTheme.typography.bodySmall,
-                color = PokerColors.ErrorRed
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start
-            ) {
-                TextButton(
-                    onClick = onReset,
-                    enabled = resetEnabled,
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = if (resetEnabled) PokerColors.AccentGreen else PokerColors.CardWhite.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Text("Reset to defaults")
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(
-                    onClick = onDismiss,
-                    colors = ButtonDefaults.textButtonColors(contentColor = PokerColors.CardWhite)
-                ) {
-                    Text("Cancel")
-                }
-
-                Button(
-                    onClick = { handleSave() },
-                    enabled = canEdit,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PokerColors.PokerGold,
-                        contentColor = PokerColors.DarkGreen
-                    )
-                ) {
-                    Text("Save")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BlindLevelEditorRow(
-    level: BlindLevel,
-    baseLevel: BlindLevel?,
-    state: BlindLevelFieldState,
-    enabled: Boolean,
-    formatter: NumberFormat
-) {
-    val focusManager = LocalFocusManager.current
-
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = PokerColors.SurfaceSecondary)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Level ${level.level}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = PokerColors.PokerGold
-                    )
-                    Text(
-                        text = "Starts ${formatLevelOffset(level.roundStartMinute)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = PokerColors.CardWhite.copy(alpha = 0.7f)
-                    )
-                }
-            }
-
-            val base = baseLevel ?: level
-            Text(
-                text = "Generated ${formatChip(base.smallBlind, formatter)} / ${formatChip(base.bigBlind, formatter)}",
-                style = MaterialTheme.typography.labelSmall,
-                color = PokerColors.CardWhite.copy(alpha = 0.6f)
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BlindEditorNumberField(
-                    label = "Small Blind",
-                    state = state.small,
-                    errorState = state.smallError,
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f),
-                    imeAction = ImeAction.Next,
-                    onImeAction = { focusManager.moveFocus(FocusDirection.Next) }
-                )
-
-                BlindEditorNumberField(
-                    label = "Big Blind",
-                    state = state.big,
-                    errorState = state.bigError,
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f),
-                    imeAction = ImeAction.Done,
-                    onImeAction = { focusManager.clearFocus() }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun BlindEditorNumberField(
-    label: String,
-    state: MutableState<String>,
-    errorState: MutableState<Boolean>,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
-    imeAction: ImeAction,
-    onImeAction: () -> Unit = {}
-) {
-    OutlinedTextField(
-        value = state.value,
-        onValueChange = { newValue ->
-            if (!enabled) return@OutlinedTextField
-            if (isValidBlindConfigInput(newValue)) {
-                state.value = newValue
-                if (errorState.value) {
-                    errorState.value = false
-                }
-            }
-        },
-        label = {
-            Text(
-                text = label,
-                color = when {
-                    errorState.value -> PokerColors.ErrorRed
-                    enabled -> PokerColors.CardWhite
-                    else -> PokerColors.PokerGold
-                }
-            )
-        },
-        isError = errorState.value,
-        enabled = enabled,
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Number,
-            imeAction = imeAction
-        ),
-        keyboardActions = KeyboardActions(
-            onNext = { onImeAction() },
-            onDone = { onImeAction() }
-        ),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = when {
-                errorState.value -> PokerColors.ErrorRed
-                enabled -> PokerColors.AccentGreen
-                else -> PokerColors.CardWhite.copy(alpha = 0.5f)
-            },
-            unfocusedBorderColor = when {
-                errorState.value -> PokerColors.ErrorRed
-                enabled -> PokerColors.CardWhite
-                else -> PokerColors.CardWhite.copy(alpha = 0.4f)
-            },
-            focusedTextColor = if (enabled) PokerColors.CardWhite else PokerColors.PokerGold,
-            unfocusedTextColor = if (enabled) PokerColors.CardWhite else PokerColors.PokerGold,
-            cursorColor = if (errorState.value) PokerColors.ErrorRed else PokerColors.PokerGold,
-            errorCursorColor = PokerColors.ErrorRed,
-            errorBorderColor = PokerColors.ErrorRed,
-            errorLabelColor = PokerColors.ErrorRed,
-            errorTextColor = PokerColors.ErrorRed,
-            disabledTextColor = PokerColors.PokerGold,
-            disabledBorderColor = PokerColors.CardWhite.copy(alpha = 0.4f),
-            selectionColors = TextSelectionColors(
-                handleColor = PokerColors.PokerGold,
-                backgroundColor = PokerColors.PokerGold.copy(alpha = 0.35f)
-            )
-        ),
-        modifier = modifier
-    )
 }
 
 /**

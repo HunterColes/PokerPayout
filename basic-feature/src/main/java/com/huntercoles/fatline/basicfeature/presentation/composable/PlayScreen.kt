@@ -52,18 +52,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.TextSelectionColors
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.unit.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.focus.FocusManager
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.focus.onFocusEvent
+import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.fatline.basicfeature.presentation.PlayConfigIntent
@@ -236,7 +231,7 @@ fun PlayerCountSlider(
             text = "Number of Players: $playerCount",
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
-            color = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite
+            color = PokerColors.CardWhite
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -251,8 +246,8 @@ fun PlayerCountSlider(
                 thumbColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.PokerGold,
                 activeTrackColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.AccentGreen,
                 inactiveTrackColor = PokerColors.DarkGreen,
-                disabledThumbColor = PokerColors.CardWhite.copy(alpha = 0.5f),
-                disabledActiveTrackColor = PokerColors.CardWhite.copy(alpha = 0.5f),
+                disabledThumbColor = PokerColors.PokerGold,
+                disabledActiveTrackColor = PokerColors.PokerGold,
                 disabledInactiveTrackColor = PokerColors.DarkGreen
             )
         )
@@ -317,50 +312,56 @@ fun TournamentConfigurationCard(
             }
 
             // Collapsible content
-            if (isExpanded) {
-                Spacer(modifier = Modifier.height(16.dp))
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Pool Configuration (now includes Player panel, Player slider, and Blinds panel)
-                    PoolConfigurationSection(
-                        buyIn = uiState.tournamentConfig.buyIn,
-                        foodPerPlayer = uiState.tournamentConfig.foodPerPlayer,
-                        bountyPerPlayer = uiState.tournamentConfig.bountyPerPlayer,
-                        rebuyPerPlayer = uiState.tournamentConfig.rebuyPerPlayer,
-                        addOnPerPlayer = uiState.tournamentConfig.addOnPerPlayer,
-                        onBuyInChange = { onIntent(PlayConfigIntent.UpdateBuyIn(it)) },
-                        onFoodChange = { onIntent(PlayConfigIntent.UpdateFoodPerPlayer(it)) },
-                        onBountyChange = { onIntent(PlayConfigIntent.UpdateBountyPerPlayer(it)) },
-                        onRebuyChange = { onIntent(PlayConfigIntent.UpdateRebuyAmount(it)) },
-                        onAddOnChange = { onIntent(PlayConfigIntent.UpdateAddOnAmount(it)) },
-                        playerCount = uiState.tournamentConfig.numPlayers,
-                        onPlayerCountChange = { count ->
-                            onIntent(PlayConfigIntent.UpdatePlayerCount(count))
-                        },
-                        gameDurationHours = uiState.gameDurationHours,
-                        roundLengthMinutes = uiState.roundLengthMinutes,
-                        smallestChip = uiState.smallestChip,
-                        startingChips = uiState.startingChips,
-                        onGameDurationHoursChange = { hours ->
-                            onIntent(PlayConfigIntent.UpdateGameDurationHours(hours))
-                            onTimerIntent(TimerIntent.GameDurationHoursChanged(hours))
-                        },
-                        onRoundLengthChange = { minutes ->
-                            onIntent(PlayConfigIntent.UpdateRoundLength(minutes))
-                            onTimerIntent(TimerIntent.UpdateRoundLength(minutes))
-                        },
-                        onSmallestChipChange = { chip ->
-                            onIntent(PlayConfigIntent.UpdateSmallestChip(chip))
-                            onTimerIntent(TimerIntent.UpdateSmallestChip(chip))
-                        },
-                        onStartingChipsChange = { chips ->
-                            onIntent(PlayConfigIntent.UpdateStartingChips(chips))
-                            onTimerIntent(TimerIntent.UpdateStartingChips(chips))
-                        },
-                        isLocked = uiState.isTournamentLocked
-                    )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Pool Configuration (now includes Player panel, Player slider, and Blinds panel)
+                        PoolConfigurationSection(
+                            buyIn = uiState.tournamentConfig.buyIn,
+                            foodPerPlayer = uiState.tournamentConfig.foodPerPlayer,
+                            bountyPerPlayer = uiState.tournamentConfig.bountyPerPlayer,
+                            rebuyPerPlayer = uiState.tournamentConfig.rebuyPerPlayer,
+                            addOnPerPlayer = uiState.tournamentConfig.addOnPerPlayer,
+                            onBuyInChange = { onIntent(PlayConfigIntent.UpdateBuyIn(it)) },
+                            onFoodChange = { onIntent(PlayConfigIntent.UpdateFoodPerPlayer(it)) },
+                            onBountyChange = { onIntent(PlayConfigIntent.UpdateBountyPerPlayer(it)) },
+                            onRebuyChange = { onIntent(PlayConfigIntent.UpdateRebuyAmount(it)) },
+                            onAddOnChange = { onIntent(PlayConfigIntent.UpdateAddOnAmount(it)) },
+                            playerCount = uiState.tournamentConfig.numPlayers,
+                            onPlayerCountChange = { count ->
+                                onIntent(PlayConfigIntent.UpdatePlayerCount(count))
+                            },
+                            gameDurationHours = uiState.gameDurationHours,
+                            roundLengthMinutes = uiState.roundLengthMinutes,
+                            smallestChip = uiState.smallestChip,
+                            startingChips = uiState.startingChips,
+                            onGameDurationHoursChange = { hours ->
+                                onIntent(PlayConfigIntent.UpdateGameDurationHours(hours))
+                                onTimerIntent(TimerIntent.GameDurationHoursChanged(hours))
+                            },
+                            onRoundLengthChange = { minutes ->
+                                onIntent(PlayConfigIntent.UpdateRoundLength(minutes))
+                                onTimerIntent(TimerIntent.UpdateRoundLength(minutes))
+                            },
+                            onSmallestChipChange = { chip ->
+                                onIntent(PlayConfigIntent.UpdateSmallestChip(chip))
+                                onTimerIntent(TimerIntent.UpdateSmallestChip(chip))
+                            },
+                            onStartingChipsChange = { chips ->
+                                onIntent(PlayConfigIntent.UpdateStartingChips(chips))
+                                onTimerIntent(TimerIntent.UpdateStartingChips(chips))
+                            },
+                            isLocked = uiState.isTournamentLocked
+                        )
+                    }
                 }
             }
         }

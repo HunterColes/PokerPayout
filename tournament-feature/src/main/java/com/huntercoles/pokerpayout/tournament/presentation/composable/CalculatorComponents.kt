@@ -199,12 +199,10 @@ fun FolderTab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Use clickable without default ripple and keep tight widths so tabs don't fill full width
     Box(
         modifier = modifier
             .widthIn(min = 120.dp, max = 160.dp)
             .height(48.dp)
-            // remove default indication to avoid rectangle; use clickable with no indication
             .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }
     ) {

@@ -49,8 +49,7 @@ object FormatUtils {
      * Example: 50.0 -> "50%", 33.333333 -> "33.33%", 25.25 -> "25.25%"
      */
     fun formatPercent(value: Double): String {
-        val formatter = DecimalFormat("0.##")
-        return "${formatter.format(value)}%"
+        return "${percentFormatter.format(value)}%"
     }
     
     /**

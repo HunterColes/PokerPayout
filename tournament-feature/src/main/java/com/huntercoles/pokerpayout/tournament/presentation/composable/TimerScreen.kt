@@ -153,7 +153,7 @@ fun TimerScreen(
                                 text = uiState.formattedTime,
                                 style = MaterialTheme.typography.displayMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = PokerColors.PokerGold.copy(alpha = 0.7f) // More visible background number
+                                color = PokerColors.PokerGold.copy(alpha = PokerColors.PokerPausedAlpha)
                             )
                             
                             IconButton(
@@ -195,7 +195,7 @@ fun TimerScreen(
                                 modifier = Modifier
                                     .fillMaxHeight()
                                     .fillMaxWidth(animatedProgress)
-                                    .background(progressColor.copy(alpha = 0.3f))
+                                    .background(progressColor.copy(alpha = PokerColors.PokerPausedBackgroundAlpha))
                                     .align(Alignment.CenterStart)
                             )
                             

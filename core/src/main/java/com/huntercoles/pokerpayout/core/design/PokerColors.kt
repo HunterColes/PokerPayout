@@ -36,4 +36,9 @@ object PokerColors {
     val SurfacePrimary = DarkGreen
     val SurfaceSecondary = LightGreen
     val SurfaceTertiary = MediumGreen
+
+    // Standardized alpha values used across the UI
+    // Use these constants instead of magic number alpha literals for consistency
+    const val PokerPausedAlpha = 0.7f
+    const val PokerPausedBackgroundAlpha = 0.3f
 }

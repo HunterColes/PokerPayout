@@ -7,8 +7,14 @@ You are GitHub Copilot assisting on the Poker Payout Android app.
 - Commit/Review mode: When you say things like "get ready for commit" or "review", I will perform a focused code review on staged changes.
 	- Triggers: "get ready for commit", "prepare commit", "review", "review staged", "commit review".
 	- Actions:
-		- Inspect staged files and diffs, ensuring changes are cohesive, minimal, and follow project style and best practices.
-		- Make small, safe fixes directly (typos, formatting, dead code removal, obvious bug fixes, small refactors that don't change behavior). Avoid scope creep.
+		- **FIRST**: Review all changes thoroughly for quality:
+			* Verify changes are minimal and cohesive
+			* Ensure good design principles are followed (DRY, SOLID, separation of concerns)
+			* Maximize consolidation of logic into core module
+			* Eliminate hardcoded numbers/strings - use constants from core (PokerDimens, FormatUtils, etc.)
+			* Check for consistent formatting and naming conventions
+			* Validate proper error handling and edge cases
+		- **THEN**: Make small, safe fixes directly (typos, formatting, dead code removal, obvious bug fixes, small refactors that don't change behavior). Avoid scope creep.
 		- Keep edits logically grouped and minimal; if larger/risky issues surface, leave TODOs or propose follow-ups instead of big refactors.
 	- Output:
 		- Provide a short, snappy commit/PR title in imperative mood summarizing the changes.
@@ -38,6 +44,12 @@ Use exactly these commands and no alternatives, in this order (do not run varian
 # IMPORTANT make sure both run succesfully, and on then you MUST run install as a last step.
 .\gradlew installRelease
 ```
+
+**CRITICAL: Wait for commands to complete before running the next one.**
+- NEVER run multiple terminal commands in parallel or rapid succession
+- On slower machines, interrupting commands triggers batch job cancellation
+- ALWAYS wait for full command output and completion before proceeding
+- NEVER use echo commands or other unnecessary terminal operations
 
 Iteration rules:
 - Run assembleRelease. If it fails, make a targeted fix and rerun.

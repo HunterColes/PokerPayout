@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_desc">Enable tournament alerts</string>
+    <string name="settings_dark_mode">Dark Mode</string>
+    <string name="settings_dark_mode_desc">Use dark theme</string>
+    <string name="settings_about">About Poker Payout</string>
+    <string name="settings_about_desc">Poker Payout is a free and open-source poker tournament management app. Version 1.0\n\nMIT Licensed - No ads, no tracking, no data collection.</string>
+</resources>

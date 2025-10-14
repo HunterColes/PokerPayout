@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bank Screen (Player Payment Tracking) -->
+    <string name="bank_total_pool">Total Pool</string>
+    <string name="bank_pool_change">Pool Change</string>
+    <string name="bank_players">players</string>
+    <string name="bank_empty_message">No players added yet.\nStart tracking buy-ins!</string>
+    <string name="bank_error_loading">Error loading bank data.\nPull to refresh to try again.</string>
+</resources>

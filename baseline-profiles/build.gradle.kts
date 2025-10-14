@@ -10,7 +10,7 @@ plugins {
 
 android {
     compileSdk = 34
-    namespace = "com.huntercoles.fatline.baselineprofiles"
+    namespace = "com.huntercoles.pokerpayout.baselineprofiles"
 
     with (defaultConfig) {
         minSdk = 28

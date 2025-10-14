@@ -13,14 +13,14 @@ plugins {
 
 android {
     compileSdk = 34
-    namespace = "com.huntercoles.fatline"
+    namespace = "com.huntercoles.pokerpayout"
 
     defaultConfig {
-        applicationId = "com.huntercoles.fatline"
+        applicationId = "com.huntercoles.pokerpayout"
         minSdk = 26
         targetSdk = 34
-    versionCode = 11
-    versionName = "1.0.11"
+    versionCode = 12
+    versionName = "1.1.0"
     }
 
     buildFeatures {
@@ -69,23 +69,11 @@ baselineProfile {
     dexLayoutOptimization = true
 }
 
-android {
-    applicationVariants.all {
-        val variantName = name
-        val variantVersion = versionName ?: "unspecified"
-        outputs
-            .mapNotNull { it as? BaseVariantOutputImpl }
-            .forEach { output ->
-                output.outputFileName = "PokerPayout-v$variantVersion-$variantName.apk"
-            }
-    }
-}
-
 dependencies {
     implementation(project(":core"))
-    implementation(project(":basic-feature"))
-    implementation(project(":portfolio-feature"))
-    implementation(project(":settings-feature"))
+    implementation(project(":tournament-feature"))
+    implementation(project(":bank-feature"))
+    implementation(project(":tools-feature"))
 
     implementation(libs.hilt)
     implementation(libs.navigation) // needed for Room

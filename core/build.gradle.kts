@@ -13,19 +13,14 @@ plugins {
 
 android {
     compileSdk = 34
-    namespace = "com.huntercoles.fatline.core"
+    namespace = "com.huntercoles.pokerpayout.core"
 
     with (defaultConfig) {
         minSdk = 26
         targetSdk = 34
     }
 
-    defaultConfig {
-        buildConfigField("String", "SPACEX_API_URL", "\"https://api.spacexdata.com/v4/\"")
-    }
-
     buildFeatures {
-        buildConfig = true
         compose = true
     }
 
@@ -62,11 +57,8 @@ dependencies {
     implementation(libs.hilt)
     implementation(libs.kotlin.coroutines)
     implementation(libs.kotlin.serialization)
-    implementation(libs.kotlin.serialization.converter)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.navigation)
-    implementation(libs.okhttp.logging.interceptor)
-    implementation(libs.retrofit)
     implementation(libs.timber)
     testImplementation(libs.bundles.common.test)
     androidTestImplementation(libs.bundles.common.android.test)

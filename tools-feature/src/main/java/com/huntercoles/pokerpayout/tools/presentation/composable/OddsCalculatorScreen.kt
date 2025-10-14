@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -27,9 +28,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
+import com.huntercoles.pokerpayout.core.design.components.PlayingCard
+import com.huntercoles.pokerpayout.core.design.components.PlayingCardView as CorePlayingCardView
+import com.huntercoles.pokerpayout.tools.presentation.SettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -38,34 +43,14 @@ import kotlin.math.max
 import kotlin.math.min
 
 // Data classes for poker functionality
-// Note: This UI-layer Card uses String for display flexibility and contains UI-specific methods.
+// Note: This UI-layer PlayingCard (from core) uses String for display flexibility.
 // The poker engine uses a separate Card(Char, Char) for performance in calculations.
 // This separation keeps UI concerns separate from poker calculation logic.
-data class Card(
-    val rank: String,
-    val suit: String
-) {
-    override fun toString() = "$rank$suit"
-    
-    fun getSuitSymbol(): String = when(suit) {
-        "h" -> "♥"
-        "d" -> "♦"
-        "c" -> "♣"
-        "s" -> "♠"
-        else -> suit
-    }
-    
-    fun getSuitColor(): Color = when(suit) {
-        "h", "d" -> Color.Red
-        "c", "s" -> Color.Black
-        else -> PokerColors.CardWhite
-    }
-}
 
 data class Player(
     val id: Int,
     val name: String,
-    val cards: List<Card> = emptyList(),
+    val cards: List<PlayingCard> = emptyList(),
     val winPercentage: Double = 0.0,
     val tiePercentage: Double = 0.0
 )
@@ -76,7 +61,7 @@ enum class CardType {
 
 data class PokerGameState(
     val players: List<Player> = emptyList(),
-    val communityCards: List<Card> = emptyList(),
+    val communityCards: List<PlayingCard> = emptyList(),
     val showCardPicker: Boolean = false,
     val selectedPlayerForCard: Int? = null,
     val selectedCardType: CardType? = null,
@@ -86,27 +71,30 @@ data class PokerGameState(
 // All 52 cards in a deck
 val allCards = listOf(
     // Hearts
-    Card("A", "h"), Card("K", "h"), Card("Q", "h"), Card("J", "h"), Card("T", "h"),
-    Card("9", "h"), Card("8", "h"), Card("7", "h"), Card("6", "h"), Card("5", "h"),
-    Card("4", "h"), Card("3", "h"), Card("2", "h"),
+    PlayingCard("A", "h"), PlayingCard("K", "h"), PlayingCard("Q", "h"), PlayingCard("J", "h"), PlayingCard("T", "h"),
+    PlayingCard("9", "h"), PlayingCard("8", "h"), PlayingCard("7", "h"), PlayingCard("6", "h"), PlayingCard("5", "h"),
+    PlayingCard("4", "h"), PlayingCard("3", "h"), PlayingCard("2", "h"),
     // Diamonds
-    Card("A", "d"), Card("K", "d"), Card("Q", "d"), Card("J", "d"), Card("T", "d"),
-    Card("9", "d"), Card("8", "d"), Card("7", "d"), Card("6", "d"), Card("5", "d"),
-    Card("4", "d"), Card("3", "d"), Card("2", "d"),
+    PlayingCard("A", "d"), PlayingCard("K", "d"), PlayingCard("Q", "d"), PlayingCard("J", "d"), PlayingCard("T", "d"),
+    PlayingCard("9", "d"), PlayingCard("8", "d"), PlayingCard("7", "d"), PlayingCard("6", "d"), PlayingCard("5", "d"),
+    PlayingCard("4", "d"), PlayingCard("3", "d"), PlayingCard("2", "d"),
     // Clubs
-    Card("A", "c"), Card("K", "c"), Card("Q", "c"), Card("J", "c"), Card("T", "c"),
-    Card("9", "c"), Card("8", "c"), Card("7", "c"), Card("6", "c"), Card("5", "c"),
-    Card("4", "c"), Card("3", "c"), Card("2", "c"),
+    PlayingCard("A", "c"), PlayingCard("K", "c"), PlayingCard("Q", "c"), PlayingCard("J", "c"), PlayingCard("T", "c"),
+    PlayingCard("9", "c"), PlayingCard("8", "c"), PlayingCard("7", "c"), PlayingCard("6", "c"), PlayingCard("5", "c"),
+    PlayingCard("4", "c"), PlayingCard("3", "c"), PlayingCard("2", "c"),
     // Spades
-    Card("A", "s"), Card("K", "s"), Card("Q", "s"), Card("J", "s"), Card("T", "s"),
-    Card("9", "s"), Card("8", "s"), Card("7", "s"), Card("6", "s"), Card("5", "s"),
-    Card("4", "s"), Card("3", "s"), Card("2", "s")
+    PlayingCard("A", "s"), PlayingCard("K", "s"), PlayingCard("Q", "s"), PlayingCard("J", "s"), PlayingCard("T", "s"),
+    PlayingCard("9", "s"), PlayingCard("8", "s"), PlayingCard("7", "s"), PlayingCard("6", "s"), PlayingCard("5", "s"),
+    PlayingCard("4", "s"), PlayingCard("3", "s"), PlayingCard("2", "s")
 )
 
 @Composable
-fun OddsCalculatorScreen() {
+fun OddsCalculatorScreen(
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
     var gameState by remember { mutableStateOf(PokerGameState()) }
     val scope = rememberCoroutineScope()
+    val showRulesPopup by viewModel.showRulesPopup.collectAsState()
 
     if (gameState.players.isEmpty()) {
         gameState = gameState.copy(
@@ -165,6 +153,38 @@ fun OddsCalculatorScreen() {
                     )
                 }
             }
+        }
+        
+        // Rules Section
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { viewModel.showRulesPopup() },
+            colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Rules",
+                    tint = PokerColors.PokerGold
+                )
+                Text(
+                    text = "Rules",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PokerColors.PokerGold
+                )
+            }
+        }
+
+        // Rules Popup
+        if (showRulesPopup) {
+            RulesPopup(onDismiss = { viewModel.hideRulesPopup() })
         }
         
         // Player Management
@@ -495,7 +515,7 @@ fun PlayerGridItem(
 
 @Composable
 fun CommunityCardsSection(
-    communityCards: List<Card>,
+    communityCards: List<PlayingCard>,
     onCommunityCardClick: () -> Unit,
     onRemoveCommunityCard: (Int) -> Unit
 ) {
@@ -532,7 +552,7 @@ fun CommunityCardsSection(
 @Composable
 fun CommunityCardBox(
     title: String,
-    cards: List<Card>,
+    cards: List<PlayingCard>,
     maxCards: Int,
     onCardClick: () -> Unit,
     onRemoveCard: (Int) -> Unit,
@@ -606,35 +626,15 @@ fun CommunityCardBox(
 
 @Composable
 fun PlayingCardView(
-    card: Card,
+    card: PlayingCard,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier.size(width = PokerDimens.CardWidth, height = PokerDimens.CardHeight)
 ) {
-    Card(
-        modifier = modifier.clickable { onRemove() },
-        colors = CardDefaults.cardColors(containerColor = PokerColors.CardWhite),
-        border = BorderStroke(2.dp, card.getSuitColor()),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = card.rank,
-                color = card.getSuitColor(),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = card.getSuitSymbol(),
-                color = card.getSuitColor(),
-                fontSize = 18.sp
-            )
-        }
-    }
+    CorePlayingCardView(
+        card = card,
+        onClick = onRemove,
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -729,8 +729,8 @@ fun CalculationSection(
 
 @Composable
 fun CardPickerDialog(
-    availableCards: List<Card>,
-    onCardSelected: (Card) -> Unit,
+    availableCards: List<PlayingCard>,
+    onCardSelected: (PlayingCard) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -766,7 +766,7 @@ fun CardPickerDialog(
 }
 
 // Updated simulation function to use TexasHoldemOdds.simulateEquity
-suspend fun simulateTexasHoldemOdds(players: List<Player>, communityCards: List<Card>): List<Player> {
+suspend fun simulateTexasHoldemOdds(players: List<Player>, communityCards: List<PlayingCard>): List<Player> {
     if (players.size < 2) return players
     
     // Convert UI cards to TexasHoldemOdds cards with validation

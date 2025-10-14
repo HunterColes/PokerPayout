@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tools.presentation.composable
 
+import com.huntercoles.pokerpayout.core.design.components.PlayingCard
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.Assert.*
@@ -13,8 +14,8 @@ class PokerHandEvaluationTest {
     @Test
     fun `test simulate texas holdem odds - AA vs KK preflop`() = runTest {
         val players = listOf(
-            Player(1, "Player 1", listOf(Card("A", "h"), Card("A", "d"))),
-            Player(2, "Player 2", listOf(Card("K", "h"), Card("K", "d")))
+            Player(1, "Player 1", listOf(PlayingCard("A", "h"), PlayingCard("A", "d"))),
+            Player(2, "Player 2", listOf(PlayingCard("K", "h"), PlayingCard("K", "d")))
         )
         val results = simulateTexasHoldemOdds(players, emptyList())
         
@@ -32,10 +33,10 @@ class PokerHandEvaluationTest {
     @Test
     fun `test simulation with community cards - AA vs 2-3`() = runTest {
         val players = listOf(
-            Player(1, "Player 1", listOf(Card("A", "h"), Card("A", "d"))),
-            Player(2, "Player 2", listOf(Card("2", "h"), Card("3", "d")))
+            Player(1, "Player 1", listOf(PlayingCard("A", "h"), PlayingCard("A", "d"))),
+            Player(2, "Player 2", listOf(PlayingCard("2", "h"), PlayingCard("3", "d")))
         )
-        val communityCards = listOf(Card("A", "c"), Card("K", "s"), Card("Q", "h"))
+        val communityCards = listOf(PlayingCard("A", "c"), PlayingCard("K", "s"), PlayingCard("Q", "h"))
         val results = simulateTexasHoldemOdds(players, communityCards)
         
         assertEquals(2, results.size)
@@ -48,10 +49,10 @@ class PokerHandEvaluationTest {
         // Expected from solved calculator: P1 Win 2.42% Tie 6.97%, P2 Win 90.61% Tie 6.97%
 
         val players = listOf(
-            Player(1, "Player 1", listOf(Card("7", "h"), Card("8", "h"))),
-            Player(2, "Player 2", listOf(Card("8", "c"), Card("9", "h")))
+            Player(1, "Player 1", listOf(PlayingCard("7", "h"), PlayingCard("8", "h"))),
+            Player(2, "Player 2", listOf(PlayingCard("8", "c"), PlayingCard("9", "h")))
         )
-        val communityCards = listOf(Card("5", "c"), Card("6", "c"), Card("7", "c"))
+        val communityCards = listOf(PlayingCard("5", "c"), PlayingCard("6", "c"), PlayingCard("7", "c"))
         val results = simulateTexasHoldemOdds(players, communityCards)
 
         assertEquals(2, results.size)
@@ -78,8 +79,8 @@ class PokerHandEvaluationTest {
     @Test
     fun `test identical pocket aces equity distribution`() = runTest {
         val players = listOf(
-            Player(1, "Player 1", listOf(Card("A", "h"), Card("A", "d"))),
-            Player(2, "Player 2", listOf(Card("A", "c"), Card("A", "s")))
+            Player(1, "Player 1", listOf(PlayingCard("A", "h"), PlayingCard("A", "d"))),
+            Player(2, "Player 2", listOf(PlayingCard("A", "c"), PlayingCard("A", "s")))
         )
         val results = simulateTexasHoldemOdds(players, emptyList())
         

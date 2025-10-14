@@ -650,11 +650,8 @@ class BankViewModel @Inject constructor(
     }
     
     private fun resetBankData() {
-        // Reset bank preferences
+        // Reset bank preferences (player names and payment states only)
         bankPreferences.resetAllBankData()
-        
-        // Reset tournament preferences (including weights)
-        tournamentPreferences.resetAllTournamentData()
         
         // Reinitialize players with fresh data
         val savedPlayerCount = tournamentPreferences.getPlayerCount()
@@ -685,8 +682,7 @@ class BankViewModel @Inject constructor(
 
     private fun isInDefaultState(): Boolean {
         val currentPlayerCount = _uiState.value.players.size
-        return bankPreferences.isInDefaultState(currentPlayerCount) &&
-               tournamentPreferences.isInDefaultState()
+        return bankPreferences.isInDefaultState(currentPlayerCount)
     }
 }
 

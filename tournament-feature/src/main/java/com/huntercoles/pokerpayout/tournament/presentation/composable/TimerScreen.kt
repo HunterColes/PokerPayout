@@ -125,7 +125,8 @@ fun TimerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp), // Fixed height for consistent centering
+                    .height(120.dp) // Fixed height for consistent centering
+                    .clickable(onClick = { onIntent(TimerIntent.ToggleTimer) }),
                 contentAlignment = Alignment.Center
             ) {
                 when {
@@ -184,7 +185,9 @@ fun TimerScreen(
                         val atLastLevel = uiState.currentBlindLevelIndex >= uiState.blindLevels.size - 1
                         
                         Box(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable(onClick = { onIntent(TimerIntent.ToggleTimer) }),
                             contentAlignment = Alignment.Center
                         ) {
                             // Progress fill background - fills from left to right

@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
+import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -157,7 +158,10 @@ fun OddsCalculatorScreen() {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Reset",
-                        tint = PokerColors.PokerGold
+                        tint = PokerColors.PokerGold,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .invertHorizontally() // Invert horizontally
                     )
                 }
             }

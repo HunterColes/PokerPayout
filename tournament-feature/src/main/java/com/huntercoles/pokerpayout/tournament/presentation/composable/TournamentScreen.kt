@@ -1,6 +1,7 @@
 package com.huntercoles.pokerpayout.tournament.presentation.composable
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -66,6 +67,7 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiSta
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigViewModel
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDialog
+import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 import com.huntercoles.pokerpayout.tournament.presentation.composable.TimerScreen
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
@@ -142,7 +144,7 @@ fun PlayContent(
                         tint = PokerColors.PokerGold,
                         modifier = Modifier
                             .size(24.dp)
-                            .scale(-1f, 1f) // Invert horizontally
+                            .invertHorizontally() // Invert horizontally
                     )
                 }
             }
@@ -272,7 +274,9 @@ fun TournamentConfigurationCard(
         ) {
             // Header with collapse arrow
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onExpandedChange(!isExpanded) },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {

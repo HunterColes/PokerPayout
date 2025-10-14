@@ -86,6 +86,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.PokerDialog
+import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.components.WeightsEditorDialog
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.bank.presentation.BankIntent
@@ -97,7 +98,7 @@ import com.huntercoles.pokerpayout.bank.presentation.PlayerActionType
 import com.huntercoles.pokerpayout.bank.presentation.PlayerData
 import com.huntercoles.pokerpayout.bank.presentation.buildPlayerDisplayModels
 import com.huntercoles.pokerpayout.bank.R
-import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 
 @Composable
 fun BankRoute(viewModel: BankViewModel = hiltViewModel()) {
@@ -156,7 +157,7 @@ internal fun BankScreen(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Reset Bank Data",
                             tint = PokerColors.PokerGold,
-                            modifier = Modifier.size(24.dp).graphicsLayer(scaleX = -1f)
+                            modifier = Modifier.size(24.dp).invertHorizontally()
                         )
                     }
                 }

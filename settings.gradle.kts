@@ -2,9 +2,9 @@
 
 include(":app")
 include(":baseline-profiles")
-include(":basic-feature")
-include(":portfolio-feature")
-include(":settings-feature")
+include(":tournament-feature")
+include(":bank-feature")
+include(":tools-feature")
 include(":core")
 
 pluginManagement {

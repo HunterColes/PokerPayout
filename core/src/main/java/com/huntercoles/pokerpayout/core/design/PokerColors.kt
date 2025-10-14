@@ -24,6 +24,9 @@ object PokerColors {
     val ErrorRed = Color(0xFFDC143C)         // Error/eliminated color
     val SuccessGreen = Color(0xFF32CD32)     // Success color
     
+    // Black background
+    val PokerBlack = Color(0xFF0B0B0B)       // Deep black for main background
+    
     // Background variants
     val BackgroundPrimary = FeltGreen        // Main background
     val BackgroundSecondary = DarkGreen      // Cards and sections

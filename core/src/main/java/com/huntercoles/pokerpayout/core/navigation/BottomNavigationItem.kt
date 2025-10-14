@@ -4,8 +4,8 @@ import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.huntercoles.pokerpayout.core.R
 
@@ -17,9 +17,9 @@ data class BottomNavigationItem(
 
 val bottomNavigationItems = listOf(
     BottomNavigationItem(
-        destination = NavigationDestination.Play,
-        icon = Icons.Filled.PlayArrow,
-        label = R.string.navigation_play
+        destination = NavigationDestination.Tournament,
+        icon = Icons.Filled.EmojiEvents,
+        label = R.string.navigation_tournament
     ),
     BottomNavigationItem(
         destination = NavigationDestination.Bank,
@@ -27,8 +27,8 @@ val bottomNavigationItems = listOf(
         label = R.string.navigation_bank
     ),
     BottomNavigationItem(
-        destination = NavigationDestination.OddsCalculator,
-        icon = Icons.Filled.MoreHoriz,
-        label = R.string.navigation_odds_calculator
+        destination = NavigationDestination.Tools,
+        icon = Icons.Filled.Build,
+        label = R.string.navigation_tools
     ),
 )

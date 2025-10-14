@@ -246,7 +246,7 @@ class ComprehensiveBlindStructureTest {
             schedule.forEachIndexed { index, level ->
                 val growth = if (index > 0) {
                     val prev = schedule[index - 1]
-                    String.format("%.1f%%", ((level.smallBlind.toDouble() / prev.smallBlind.toDouble()) - 1) * 100)
+                    FormatUtils.formatPercent(((level.smallBlind.toDouble() / prev.smallBlind.toDouble()) - 1) * 100)
                 } else {
                     "start"
                 }

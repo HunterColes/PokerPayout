@@ -4,13 +4,13 @@ import kotlinx.serialization.Serializable
 
 sealed class NavigationDestination {
     @Serializable
-    data object Play : NavigationDestination()
+    data object Tournament : NavigationDestination()
 
     @Serializable
     data object Bank : NavigationDestination()
 
     @Serializable
-    data object OddsCalculator : NavigationDestination()
+    data object Tools : NavigationDestination()
 
     @Serializable
     data object Back : NavigationDestination()

@@ -17,29 +17,29 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val PokerDarkColorScheme = darkColorScheme(
-    primary = PokerDarkPrimary,
-    secondary = PokerDarkSecondary,
-    tertiary = PokerDarkTertiary,
-    background = PokerDarkBackground,
-    surface = PokerDarkSurface,
-    onPrimary = PokerDarkOnPrimary,
-    onSecondary = PokerDarkOnSecondary,
-    onTertiary = PokerDarkOnTertiary,
-    onBackground = PokerDarkOnBackground,
-    onSurface = PokerDarkOnSurface,
+    primary = PokerColors.DarkGreen,
+    secondary = PokerColors.MediumGreen,
+    tertiary = PokerColors.AccentGreen,
+    background = PokerColors.PokerBlack,
+    surface = PokerColors.DarkGreen,
+    onPrimary = PokerColors.CardWhite,
+    onSecondary = PokerColors.CardWhite,
+    onTertiary = PokerColors.FeltGreen,
+    onBackground = PokerColors.CardWhite,
+    onSurface = PokerColors.CardWhite,
 )
 
 private val PokerLightColorScheme = lightColorScheme(
-    primary = PokerLightPrimary,
-    secondary = PokerLightSecondary,
-    tertiary = PokerLightTertiary,
-    background = PokerLightBackground,
-    surface = PokerLightSurface,
-    onPrimary = PokerLightOnPrimary,
-    onSecondary = PokerLightOnSecondary,
-    onTertiary = PokerLightOnTertiary,
-    onBackground = PokerLightOnBackground,
-    onSurface = PokerLightOnSurface,
+    primary = PokerColors.MediumGreen,
+    secondary = PokerColors.LightGreen,
+    tertiary = PokerColors.AccentGreen,
+    background = PokerColors.CardWhite,
+    surface = PokerColors.LightGreen,
+    onPrimary = PokerColors.CardWhite,
+    onSecondary = PokerColors.CardWhite,
+    onTertiary = PokerColors.FeltGreen,
+    onBackground = PokerColors.FeltGreen,
+    onSurface = PokerColors.FeltGreen,
 )
 
 @Composable

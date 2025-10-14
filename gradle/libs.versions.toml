@@ -18,8 +18,6 @@ kotlin-serialization                = "1.7.3"
 lifecycle                           = "2.8.7"
 navigation                          = "2.8.2"
 navigation-hilt                     = "1.2.0"
-okhttp-logging-interceptor          = "4.12.0"
-retrofit                            = "2.11.0"
 room                                = "2.6.1"
 timber                              = "5.0.1"
 
@@ -64,12 +62,9 @@ hilt                                = { group = "com.google.dagger", name = "hil
 hilt-compiler                       = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 kotlin-coroutines                   = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlin-coroutines" }
 kotlin-serialization                = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlin-serialization" }
-kotlin-serialization-converter      = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version.ref = "retrofit" }
 lifecycle-runtime-compose           = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 navigation                          = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 navigation-hilt                     = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "navigation-hilt" }
-okhttp-logging-interceptor          = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp-logging-interceptor" }
-retrofit                            = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 room                                = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-compiler                       = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-ktx                            = { group = "androidx.room", name = "room-ktx", version.ref = "room" }

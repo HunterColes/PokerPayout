@@ -13,10 +13,10 @@ plugins {
 
 android {
     compileSdk = 34
-    namespace = "com.huntercoles.fatline"
+    namespace = "com.huntercoles.pokerpayout"
 
     defaultConfig {
-        applicationId = "com.huntercoles.fatline"
+        applicationId = "com.huntercoles.pokerpayout"
         minSdk = 26
         targetSdk = 34
     versionCode = 11
@@ -67,18 +67,6 @@ android {
 
 baselineProfile {
     dexLayoutOptimization = true
-}
-
-android {
-    applicationVariants.all {
-        val variantName = name
-        val variantVersion = versionName ?: "unspecified"
-        outputs
-            .mapNotNull { it as? BaseVariantOutputImpl }
-            .forEach { output ->
-                output.outputFileName = "PokerPayout-v$variantVersion-$variantName.apk"
-            }
-    }
 }
 
 dependencies {

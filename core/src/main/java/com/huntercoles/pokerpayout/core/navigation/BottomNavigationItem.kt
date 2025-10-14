@@ -1,0 +1,34 @@
+package com.huntercoles.pokerpayout.core.navigation
+
+import androidx.annotation.StringRes
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.huntercoles.pokerpayout.core.R
+
+data class BottomNavigationItem(
+    val destination: NavigationDestination,
+    val icon: ImageVector,
+    @StringRes val label: Int,
+)
+
+val bottomNavigationItems = listOf(
+    BottomNavigationItem(
+        destination = NavigationDestination.Play,
+        icon = Icons.Filled.PlayArrow,
+        label = R.string.navigation_play
+    ),
+    BottomNavigationItem(
+        destination = NavigationDestination.Bank,
+        icon = Icons.Filled.AttachMoney,
+        label = R.string.navigation_bank
+    ),
+    BottomNavigationItem(
+        destination = NavigationDestination.OddsCalculator,
+        icon = Icons.Filled.MoreHoriz,
+        label = R.string.navigation_odds_calculator
+    ),
+)

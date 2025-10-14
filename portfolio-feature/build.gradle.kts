@@ -11,7 +11,7 @@ plugins {
 
 android {
     compileSdk = 34
-    namespace = "com.huntercoles.fatline.portfoliofeature"
+    namespace = "com.huntercoles.pokerpayout.portfoliofeature"
 
     with (defaultConfig) {
         minSdk = 26
@@ -19,7 +19,7 @@ android {
     }
 
     defaultConfig {
-        testInstrumentationRunner = "com.huntercoles.fatline.core.utils.HiltTestRunner"
+        testInstrumentationRunner = "com.huntercoles.pokerpayout.core.utils.HiltTestRunner"
     }
 
     buildFeatures {

@@ -1,8 +1,10 @@
-appId: com.huntercoles.fatline
+appId: com.huntercoles.pokerpayout
 ---
 - launchApp
-- assertNotVisible: "Sorry, something went wrong when fetching rockets"
-- swipe:
-    direction: "DOWN"
-- assertVisible: "Rocket image"
-- assertNotVisible: "Sorry, something went wrong when refreshing rockets"
+- assertVisible: "Tournament"
+- assertVisible: "Bank"
+- assertVisible: "Settings"
+- tapOn: "Tournament"
+- assertVisible: "Calculate Payout"
+- assertVisible: "Buy-In Amount"
+- assertVisible: "Total Players"

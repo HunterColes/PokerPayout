@@ -11,8 +11,8 @@
 [![Open Source](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red)](#-open-source--contributions)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-how-to-contribute)
 
-[![Donate Ethereum](https://img.shields.io/badge/Ξ-Ethereum-627EEA?logo=ethereum&logoColor=white)](ETHEREUM.txt)
-[![Donate Monero](https://img.shields.io/badge/Ӿ-Monero-FF6600?logo=monero&logoColor=white)](MONERO.txt)
+[![Donate Ethereum](https://img.shields.io/badge/Ξ-Ethereum-627EEA?logo=ethereum&logoColor=white)](crypto/DONATIONS.md)
+[![Donate Monero](https://img.shields.io/badge/Ӿ-Monero-FF6600?logo=monero&logoColor=white)](crypto/DONATIONS.md)
 
 ⭐ Star us on GitHub — your support motivates us a lot! 🙏😊
 

@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.core.preferences
 import android.content.Context
 import android.content.SharedPreferences
 import com.huntercoles.pokerpayout.core.constants.TournamentConstants
+import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,7 +80,7 @@ class TournamentPreferences @Inject constructor(
     }
     
     fun getBuyIn(): Double {
-        return prefs.getFloat(BUY_IN_KEY, 20.0f).toDouble() // Default to $20
+        return prefs.getFloat(BUY_IN_KEY, TournamentDefaults.BUY_IN.toFloat()).toDouble()
     }
     
     fun setFoodPerPlayer(food: Double) {
@@ -88,7 +89,7 @@ class TournamentPreferences @Inject constructor(
     }
     
     fun getFoodPerPlayer(): Double {
-        return prefs.getFloat(FOOD_PER_PLAYER_KEY, 5.0f).toDouble() // Default to $5
+        return prefs.getFloat(FOOD_PER_PLAYER_KEY, TournamentDefaults.FOOD_PER_PLAYER.toFloat()).toDouble()
     }
     
     fun setBountyPerPlayer(bounty: Double) {
@@ -97,7 +98,7 @@ class TournamentPreferences @Inject constructor(
     }
     
     fun getBountyPerPlayer(): Double {
-        return prefs.getFloat(BOUNTY_PER_PLAYER_KEY, 0.0f).toDouble() // Default to empty ($0)
+        return prefs.getFloat(BOUNTY_PER_PLAYER_KEY, TournamentDefaults.BOUNTY_PER_PLAYER.toFloat()).toDouble()
     }
 
     fun setRebuyAmount(rebuy: Double) {
@@ -106,7 +107,7 @@ class TournamentPreferences @Inject constructor(
     }
 
     fun getRebuyAmount(): Double {
-        return prefs.getFloat(REBUY_PER_PLAYER_KEY, 0.0f).toDouble() // Default to $0
+        return prefs.getFloat(REBUY_PER_PLAYER_KEY, TournamentDefaults.REBUY_PER_PLAYER.toFloat()).toDouble()
     }
 
     fun setAddOnAmount(addOn: Double) {
@@ -115,7 +116,7 @@ class TournamentPreferences @Inject constructor(
     }
 
     fun getAddOnAmount(): Double {
-        return prefs.getFloat(ADDON_PER_PLAYER_KEY, 0.0f).toDouble() // Default to $0
+        return prefs.getFloat(ADDON_PER_PLAYER_KEY, TournamentDefaults.ADDON_PER_PLAYER.toFloat()).toDouble()
     }
     
     fun setPayoutWeights(weights: List<Int>) {
@@ -133,6 +134,39 @@ class TournamentPreferences @Inject constructor(
             ?.takeIf { it.isNotEmpty() }
 
         return parsedWeights ?: defaultPayoutWeightsFor()
+    }
+    
+    // Blind Configuration Persistence
+    fun setGameDurationHours(hours: Int) {
+        prefs.edit().putInt(GAME_DURATION_HOURS_KEY, hours).apply()
+    }
+    
+    fun getGameDurationHours(): Int {
+        return prefs.getInt(GAME_DURATION_HOURS_KEY, TournamentDefaults.GAME_DURATION_HOURS)
+    }
+    
+    fun setRoundLengthMinutes(minutes: Int) {
+        prefs.edit().putInt(ROUND_LENGTH_MINUTES_KEY, minutes).apply()
+    }
+    
+    fun getRoundLengthMinutes(): Int {
+        return prefs.getInt(ROUND_LENGTH_MINUTES_KEY, TournamentDefaults.ROUND_LENGTH_MINUTES)
+    }
+    
+    fun setSmallestChip(chip: Int) {
+        prefs.edit().putInt(SMALLEST_CHIP_KEY, chip).apply()
+    }
+    
+    fun getSmallestChip(): Int {
+        return prefs.getInt(SMALLEST_CHIP_KEY, TournamentDefaults.SMALLEST_CHIP)
+    }
+    
+    fun setStartingChips(chips: Int) {
+        prefs.edit().putInt(STARTING_CHIPS_KEY, chips).apply()
+    }
+    
+    fun getStartingChips(): Int {
+        return prefs.getInt(STARTING_CHIPS_KEY, TournamentDefaults.STARTING_CHIPS)
     }
     
     /**
@@ -172,18 +206,20 @@ class TournamentPreferences @Inject constructor(
      * Check if tournament settings are in default state
      */
     fun isInDefaultState(): Boolean {
-     val playerCount = getPlayerCount()
-     return playerCount == DEFAULT_PLAYER_COUNT &&
-         getBuyIn() == 20.0 &&
-         getFoodPerPlayer() == 5.0 &&
-         getBountyPerPlayer() == 0.0 &&
-         getRebuyAmount() == 0.0 &&
-         getAddOnAmount() == 0.0 &&
+        val playerCount = getPlayerCount()
+         return playerCount == DEFAULT_PLAYER_COUNT &&
+         getBuyIn() == TournamentDefaults.BUY_IN &&
+         getFoodPerPlayer() == TournamentDefaults.FOOD_PER_PLAYER &&
+         getBountyPerPlayer() == TournamentDefaults.BOUNTY_PER_PLAYER &&
+         getRebuyAmount() == TournamentDefaults.REBUY_PER_PLAYER &&
+         getAddOnAmount() == TournamentDefaults.ADDON_PER_PLAYER &&
          getPayoutWeights() == defaultPayoutWeightsFor(playerCount) &&
-         !getTournamentLocked()
-    }
-    
-    /**
+         !getTournamentLocked() &&
+         getGameDurationHours() == TournamentDefaults.GAME_DURATION_HOURS &&
+         getRoundLengthMinutes() == TournamentDefaults.ROUND_LENGTH_MINUTES &&
+         getSmallestChip() == TournamentDefaults.SMALLEST_CHIP &&
+         getStartingChips() == TournamentDefaults.STARTING_CHIPS
+    }    /**
      * Reset all tournament data to default values
      */
     fun resetAllTournamentData() {
@@ -191,22 +227,26 @@ class TournamentPreferences @Inject constructor(
         prefs.edit()
             .putBoolean(TOURNAMENT_LOCKED_KEY, false)
             .putInt(PLAYER_COUNT_KEY, DEFAULT_PLAYER_COUNT)
-            .putFloat(BUY_IN_KEY, 20.0f)
-            .putFloat(FOOD_PER_PLAYER_KEY, 5.0f)
-            .putFloat(BOUNTY_PER_PLAYER_KEY, 0.0f)
-            .putFloat(REBUY_PER_PLAYER_KEY, 0.0f)
-            .putFloat(ADDON_PER_PLAYER_KEY, 0.0f)
+            .putFloat(BUY_IN_KEY, TournamentDefaults.BUY_IN.toFloat())
+            .putFloat(FOOD_PER_PLAYER_KEY, TournamentDefaults.FOOD_PER_PLAYER.toFloat())
+            .putFloat(BOUNTY_PER_PLAYER_KEY, TournamentDefaults.BOUNTY_PER_PLAYER.toFloat())
+            .putFloat(REBUY_PER_PLAYER_KEY, TournamentDefaults.REBUY_PER_PLAYER.toFloat())
+            .putFloat(ADDON_PER_PLAYER_KEY, TournamentDefaults.ADDON_PER_PLAYER.toFloat())
             .remove(PAYOUT_WEIGHTS_KEY)
+            .putInt(GAME_DURATION_HOURS_KEY, TournamentDefaults.GAME_DURATION_HOURS)
+            .putInt(ROUND_LENGTH_MINUTES_KEY, TournamentDefaults.ROUND_LENGTH_MINUTES)
+            .putInt(SMALLEST_CHIP_KEY, TournamentDefaults.SMALLEST_CHIP)
+            .putInt(STARTING_CHIPS_KEY, TournamentDefaults.STARTING_CHIPS)
             .apply()
         
         // Reset all state flows to default values (keep current player count)
         _tournamentLocked.value = false
         _playerCount.value = DEFAULT_PLAYER_COUNT
-        _buyIn.value = 20.0
-        _foodPerPlayer.value = 5.0
-        _bountyPerPlayer.value = 0.0
-        _rebuyPerPlayer.value = 0.0
-        _addOnPerPlayer.value = 0.0
+        _buyIn.value = TournamentDefaults.BUY_IN
+        _foodPerPlayer.value = TournamentDefaults.FOOD_PER_PLAYER
+        _bountyPerPlayer.value = TournamentDefaults.BOUNTY_PER_PLAYER
+        _rebuyPerPlayer.value = TournamentDefaults.REBUY_PER_PLAYER
+        _addOnPerPlayer.value = TournamentDefaults.ADDON_PER_PLAYER
         _payoutWeights.value = defaultPayoutWeightsFor(DEFAULT_PLAYER_COUNT)
     }
 
@@ -224,6 +264,10 @@ class TournamentPreferences @Inject constructor(
         private const val REBUY_PER_PLAYER_KEY = "rebuy_per_player"
         private const val ADDON_PER_PLAYER_KEY = "addon_per_player"
         private const val PAYOUT_WEIGHTS_KEY = "payout_weights"
-        private const val DEFAULT_PLAYER_COUNT = 9
+        private const val GAME_DURATION_HOURS_KEY = "game_duration_hours"
+        private const val ROUND_LENGTH_MINUTES_KEY = "round_length_minutes"
+        private const val SMALLEST_CHIP_KEY = "smallest_chip"
+        private const val STARTING_CHIPS_KEY = "starting_chips"
+        private const val DEFAULT_PLAYER_COUNT = TournamentDefaults.PLAYER_COUNT
     }
 }

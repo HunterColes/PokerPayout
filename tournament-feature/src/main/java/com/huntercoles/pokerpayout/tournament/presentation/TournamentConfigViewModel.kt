@@ -87,6 +87,10 @@ class TournamentConfigViewModel @Inject constructor(
         val savedRebuy = tournamentPreferences.getRebuyAmount()
         val savedAddOn = tournamentPreferences.getAddOnAmount()
         val savedWeights = tournamentPreferences.getPayoutWeights()
+        val savedGameDurationHours = tournamentPreferences.getGameDurationHours()
+        val savedRoundLength = tournamentPreferences.getRoundLengthMinutes()
+        val savedSmallestChip = tournamentPreferences.getSmallestChip()
+        val savedStartingChips = tournamentPreferences.getStartingChips()
 
         val initialConfig = _uiState.value.tournamentConfig.copy(
             numPlayers = savedPlayerCount,
@@ -102,7 +106,11 @@ class TournamentConfigViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             tournamentConfig = withRebuy,
             rebuyPurchases = initialRebuyCount,
-            addOnPurchases = initialAddOnCount
+            addOnPurchases = initialAddOnCount,
+            gameDurationHours = savedGameDurationHours,
+            roundLengthMinutes = savedRoundLength,
+            smallestChip = savedSmallestChip,
+            startingChips = savedStartingChips
         )
         calculatePayouts()
     }
@@ -303,18 +311,22 @@ class TournamentConfigViewModel @Inject constructor(
 
     private fun updateGameDurationHours(hours: Int) {
         _uiState.value = _uiState.value.copy(gameDurationHours = hours)
+        tournamentPreferences.setGameDurationHours(hours)
     }
 
     private fun updateRoundLength(minutes: Int) {
         _uiState.value = _uiState.value.copy(roundLengthMinutes = minutes)
+        tournamentPreferences.setRoundLengthMinutes(minutes)
     }
 
     private fun updateSmallestChip(chip: Int) {
         _uiState.value = _uiState.value.copy(smallestChip = chip)
+        tournamentPreferences.setSmallestChip(chip)
     }
 
     private fun updateStartingChips(chips: Int) {
         _uiState.value = _uiState.value.copy(startingChips = chips)
+        tournamentPreferences.setStartingChips(chips)
     }
 
     private fun determinePlayerForPosition(position: Int, numPlayers: Int, eliminationOrder: List<Int>): Int? {

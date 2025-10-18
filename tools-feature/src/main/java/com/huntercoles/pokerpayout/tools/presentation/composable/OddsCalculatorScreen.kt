@@ -1,7 +1,10 @@
 package com.huntercoles.pokerpayout.tools.presentation.composable
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -29,12 +32,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
+import com.huntercoles.pokerpayout.core.design.PokerDialog
 import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 import com.huntercoles.pokerpayout.core.design.components.PlayingCard
 import com.huntercoles.pokerpayout.core.design.components.PlayingCardView as CorePlayingCardView
-import com.huntercoles.pokerpayout.tools.presentation.SettingsViewModel
+import com.huntercoles.pokerpayout.tools.presentation.OddsCalculatorViewModel
+import com.huntercoles.pokerpayout.tools.presentation.OddsCalculatorIntent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -68,42 +74,42 @@ data class PokerGameState(
     val isSimulating: Boolean = false
 )
 
-// All 52 cards in a deck
+// All 52 cards in a deck - sorted by rank (A-K), then suit (C-H-S-D)
 val allCards = listOf(
-    // Hearts
-    PlayingCard("A", "h"), PlayingCard("K", "h"), PlayingCard("Q", "h"), PlayingCard("J", "h"), PlayingCard("T", "h"),
-    PlayingCard("9", "h"), PlayingCard("8", "h"), PlayingCard("7", "h"), PlayingCard("6", "h"), PlayingCard("5", "h"),
-    PlayingCard("4", "h"), PlayingCard("3", "h"), PlayingCard("2", "h"),
-    // Diamonds
-    PlayingCard("A", "d"), PlayingCard("K", "d"), PlayingCard("Q", "d"), PlayingCard("J", "d"), PlayingCard("T", "d"),
-    PlayingCard("9", "d"), PlayingCard("8", "d"), PlayingCard("7", "d"), PlayingCard("6", "d"), PlayingCard("5", "d"),
-    PlayingCard("4", "d"), PlayingCard("3", "d"), PlayingCard("2", "d"),
-    // Clubs
-    PlayingCard("A", "c"), PlayingCard("K", "c"), PlayingCard("Q", "c"), PlayingCard("J", "c"), PlayingCard("T", "c"),
-    PlayingCard("9", "c"), PlayingCard("8", "c"), PlayingCard("7", "c"), PlayingCard("6", "c"), PlayingCard("5", "c"),
-    PlayingCard("4", "c"), PlayingCard("3", "c"), PlayingCard("2", "c"),
-    // Spades
-    PlayingCard("A", "s"), PlayingCard("K", "s"), PlayingCard("Q", "s"), PlayingCard("J", "s"), PlayingCard("T", "s"),
-    PlayingCard("9", "s"), PlayingCard("8", "s"), PlayingCard("7", "s"), PlayingCard("6", "s"), PlayingCard("5", "s"),
-    PlayingCard("4", "s"), PlayingCard("3", "s"), PlayingCard("2", "s")
+    // Aces
+    PlayingCard("A", "c"), PlayingCard("A", "h"), PlayingCard("A", "s"), PlayingCard("A", "d"),
+    // Kings
+    PlayingCard("K", "c"), PlayingCard("K", "h"), PlayingCard("K", "s"), PlayingCard("K", "d"),
+    // Queens
+    PlayingCard("Q", "c"), PlayingCard("Q", "h"), PlayingCard("Q", "s"), PlayingCard("Q", "d"),
+    // Jacks
+    PlayingCard("J", "c"), PlayingCard("J", "h"), PlayingCard("J", "s"), PlayingCard("J", "d"),
+    // Tens
+    PlayingCard("T", "c"), PlayingCard("T", "h"), PlayingCard("T", "s"), PlayingCard("T", "d"),
+    // Nines
+    PlayingCard("9", "c"), PlayingCard("9", "h"), PlayingCard("9", "s"), PlayingCard("9", "d"),
+    // Eights
+    PlayingCard("8", "c"), PlayingCard("8", "h"), PlayingCard("8", "s"), PlayingCard("8", "d"),
+    // Sevens
+    PlayingCard("7", "c"), PlayingCard("7", "h"), PlayingCard("7", "s"), PlayingCard("7", "d"),
+    // Sixes
+    PlayingCard("6", "c"), PlayingCard("6", "h"), PlayingCard("6", "s"), PlayingCard("6", "d"),
+    // Fives
+    PlayingCard("5", "c"), PlayingCard("5", "h"), PlayingCard("5", "s"), PlayingCard("5", "d"),
+    // Fours
+    PlayingCard("4", "c"), PlayingCard("4", "h"), PlayingCard("4", "s"), PlayingCard("4", "d"),
+    // Threes
+    PlayingCard("3", "c"), PlayingCard("3", "h"), PlayingCard("3", "s"), PlayingCard("3", "d"),
+    // Twos
+    PlayingCard("2", "c"), PlayingCard("2", "h"), PlayingCard("2", "s"), PlayingCard("2", "d")
 )
 
 @Composable
 fun OddsCalculatorScreen(
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: OddsCalculatorViewModel = hiltViewModel()
 ) {
-    var gameState by remember { mutableStateOf(PokerGameState()) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    val showRulesPopup by viewModel.showRulesPopup.collectAsState()
-
-    if (gameState.players.isEmpty()) {
-        gameState = gameState.copy(
-            players = listOf(
-                Player(1, "Player 1"),
-                Player(2, "Player 2")
-            )
-        )
-    }
     
     Column(
         modifier = Modifier
@@ -133,14 +139,7 @@ fun OddsCalculatorScreen(
                 colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
             ) {
                 IconButton(
-                    onClick = {
-                        gameState = PokerGameState(
-                            players = listOf(
-                                Player(1, "Player 1"),
-                                Player(2, "Player 2")
-                            )
-                        )
-                    },
+                    onClick = { viewModel.acceptIntent(OddsCalculatorIntent.ShowResetDialog) },
                     modifier = Modifier.fillMaxSize()
                 ) {
                     Icon(
@@ -155,59 +154,84 @@ fun OddsCalculatorScreen(
             }
         }
         
-        // Rules Section
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { viewModel.showRulesPopup() },
-            colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+        // Reset Confirmation Dialog
+        if (uiState.showResetDialog) {
+            PokerDialog(
+                onDismissRequest = { viewModel.acceptIntent(OddsCalculatorIntent.HideResetDialog) }
             ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Rules",
-                    tint = PokerColors.PokerGold
-                )
                 Text(
-                    text = "Rules",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                    text = "Reset odds calculator?",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = PokerColors.PokerGold
                 )
-            }
-        }
 
-        // Rules Popup
-        if (showRulesPopup) {
-            RulesPopup(onDismiss = { viewModel.hideRulesPopup() })
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = PokerColors.FeltGreen,
+                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
+                ) {
+                    Text(
+                        text = "This will reset all player cards and community cards.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.CardWhite,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
+                ) {
+                    TextButton(
+                        onClick = { viewModel.acceptIntent(OddsCalculatorIntent.HideResetDialog) }
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            color = PokerColors.CardWhite
+                        )
+                    }
+
+                    TextButton(
+                        onClick = { viewModel.acceptIntent(OddsCalculatorIntent.ConfirmReset) }
+                    ) {
+                        Text(
+                            text = "Reset",
+                            color = PokerColors.PokerGold,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         }
         
         // Player Management
         PlayerManagementCard(
-            playerCount = gameState.players.size,
+            playerCount = uiState.playerCount,
             onPlayerCountChange = { newCount ->
-                val currentCount = gameState.players.size
-                when {
-                    newCount > currentCount -> {
-                        // Add players
-                        val newPlayers = (currentCount + 1..newCount).map { id ->
-                            Player(id, "Player $id")
+                viewModel.acceptIntent(OddsCalculatorIntent.PlayerCountChanged(newCount))
+            },
+            isSimulating = uiState.isSimulating,
+            canCalculate = uiState.players.all { it.cards.size >= 2 },
+            validCommunityCards = uiState.communityCards.size in listOf(0, 3, 4, 5),
+            onCalculate = {
+                if (uiState.players.all { it.cards.size >= 2 }) {
+                    viewModel.acceptIntent(OddsCalculatorIntent.StartSimulation(uiState.players, uiState.communityCards))
+                    
+                    scope.launch {
+                        try {
+                            // Simulate poker odds with proper Texas Hold'em logic
+                            val simulatedResults = simulateTexasHoldemOdds(uiState.players, uiState.communityCards)
+                            
+                            viewModel.acceptIntent(OddsCalculatorIntent.SimulationComplete(simulatedResults))
+                        } catch (e: Exception) {
+                            // Handle any errors gracefully
+                            viewModel.acceptIntent(OddsCalculatorIntent.SimulationComplete(uiState.players))
                         }
-                        gameState = gameState.copy(
-                            players = gameState.players + newPlayers
-                        )
-                    }
-                    newCount < currentCount -> {
-                        // Remove players (keep at least 2)
-                        val keepCount = max(2, newCount)
-                        gameState = gameState.copy(
-                            players = gameState.players.take(keepCount)
-                        )
                     }
                 }
             }
@@ -215,108 +239,39 @@ fun OddsCalculatorScreen(
         
         // Players Cards
         PlayersCardsSection(
-            players = gameState.players,
+            players = uiState.players,
             onPlayerCardClick = { playerId ->
-                gameState = gameState.copy(
-                    showCardPicker = true,
-                    selectedPlayerForCard = playerId,
-                    selectedCardType = CardType.PLAYER_CARD
-                )
+                viewModel.acceptIntent(OddsCalculatorIntent.ShowCardPickerForPlayer(playerId))
             },
             onRemovePlayerCard = { playerId, cardIndex ->
-                gameState = gameState.copy(
-                    players = gameState.players.map { player ->
-                        if (player.id == playerId) {
-                            player.copy(cards = player.cards.filterIndexed { index, _ -> index != cardIndex })
-                        } else player
-                    }
-                )
+                viewModel.acceptIntent(OddsCalculatorIntent.PlayerCardRemoved(playerId, cardIndex))
             }
         )
         
         // Community Cards
         CommunityCardsSection(
-            communityCards = gameState.communityCards,
+            communityCards = uiState.communityCards,
             onCommunityCardClick = {
-                gameState = gameState.copy(
-                    showCardPicker = true,
-                    selectedCardType = CardType.COMMUNITY_CARD
-                )
+                viewModel.acceptIntent(OddsCalculatorIntent.ShowCardPickerForCommunity)
             },
             onRemoveCommunityCard = { cardIndex ->
-                gameState = gameState.copy(
-                    communityCards = gameState.communityCards.filterIndexed { index, _ -> index != cardIndex }
-                )
-            }
-        )
-        
-        // Calculate Button and Results
-        CalculationSection(
-            gameState = gameState,
-            onCalculate = {
-                if (gameState.players.all { it.cards.size >= 2 }) {
-                    gameState = gameState.copy(isSimulating = true)
-                    
-                    scope.launch {
-                        try {
-                            // Simulate poker odds with proper Texas Hold'em logic
-                            val simulatedResults = simulateTexasHoldemOdds(gameState.players, gameState.communityCards)
-                            
-                            gameState = gameState.copy(
-                                players = simulatedResults,
-                                isSimulating = false
-                            )
-                        } catch (e: Exception) {
-                            // Handle any errors gracefully
-                            gameState = gameState.copy(isSimulating = false)
-                        }
-                    }
-                }
+                viewModel.acceptIntent(OddsCalculatorIntent.CommunityCardRemoved(cardIndex))
             }
         )
     }
     
     // Card Picker Dialog
-    if (gameState.showCardPicker) {
+    if (uiState.showCardPicker) {
+        val usedCards = uiState.players.flatMap { it.cards } + uiState.communityCards
         CardPickerDialog(
-            availableCards = allCards.filter { card ->
-                val usedCards = gameState.players.flatMap { it.cards } + gameState.communityCards
-                !usedCards.contains(card)
-            },
+            allCards = allCards,
+            usedCards = usedCards,
             onCardSelected = { selectedCard ->
-                when (gameState.selectedCardType) {
-                    CardType.PLAYER_CARD -> {
-                        gameState.selectedPlayerForCard?.let { playerId ->
-                            gameState = gameState.copy(
-                                players = gameState.players.map { player ->
-                                    if (player.id == playerId && player.cards.size < 2) {
-                                        player.copy(cards = player.cards + selectedCard)
-                                    } else player
-                                }
-                            )
-                        }
-                    }
-                    CardType.COMMUNITY_CARD -> {
-                        if (gameState.communityCards.size < 5) {
-                            gameState = gameState.copy(
-                                communityCards = gameState.communityCards + selectedCard
-                            )
-                        }
-                    }
-                    null -> {}
-                }
-                gameState = gameState.copy(
-                    showCardPicker = false,
-                    selectedPlayerForCard = null,
-                    selectedCardType = null
-                )
+                val cardString = "${selectedCard.rank}${selectedCard.suit}"
+                viewModel.acceptIntent(OddsCalculatorIntent.CardSelected(cardString))
             },
             onDismiss = {
-                gameState = gameState.copy(
-                    showCardPicker = false,
-                    selectedPlayerForCard = null,
-                    selectedCardType = null
-                )
+                viewModel.acceptIntent(OddsCalculatorIntent.HideCardPicker)
             }
         )
     }
@@ -325,7 +280,11 @@ fun OddsCalculatorScreen(
 @Composable
 fun PlayerManagementCard(
     playerCount: Int,
-    onPlayerCountChange: (Int) -> Unit
+    onPlayerCountChange: (Int) -> Unit,
+    isSimulating: Boolean,
+    canCalculate: Boolean,
+    validCommunityCards: Boolean,
+    onCalculate: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -336,13 +295,6 @@ fun PlayerManagementCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Players ($playerCount)",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = PokerColors.PokerGold
-            )
-
             // Player Count Slider
             Column {
                 Text(
@@ -363,8 +315,40 @@ fun PlayerManagementCard(
                         thumbColor = PokerColors.PokerGold,
                         activeTrackColor = PokerColors.AccentGreen,
                         inactiveTrackColor = PokerColors.DarkGreen
-                    )
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            
+            // Calculate Odds Button
+            Button(
+                onClick = onCalculate,
+                enabled = canCalculate && validCommunityCards && !isSimulating,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PokerColors.AccentGreen,
+                    contentColor = PokerColors.CardWhite
+                )
+            ) {
+                if (isSimulating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = PokerColors.CardWhite,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Calculating...")
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Calculate Odds")
+                }
             }
         }
     }
@@ -412,35 +396,88 @@ fun PlayersCardsSection(
     onPlayerCardClick: (Int) -> Unit,
     onRemovePlayerCard: (Int, Int) -> Unit
 ) {
+    val scrollState = rememberScrollState()
+    
     Card(
-        modifier = Modifier.fillMaxWidth().height(400.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(260.dp), // Reduced from 280dp for tighter layout
         colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary),
         border = BorderStroke(1.dp, PokerColors.AccentGreen)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Header
-            Text(
-                text = "Player Cards",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = PokerColors.PokerGold,
-                modifier = Modifier.padding(16.dp)
-            )
-            
-            // Grid of players
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Horizontal scrolling player cards
+            Row(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .fillMaxWidth()
+                    .horizontalScroll(scrollState)
+                    .padding(20.dp), // Increased from 16dp
+                horizontalArrangement = Arrangement.spacedBy(16.dp), // Increased from 12dp
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                items(players) { player ->
-                    PlayerGridItem(
+                players.forEach { player ->
+                    PlayerCardItem(
                         player = player,
                         onCardClick = { onPlayerCardClick(player.id) },
                         onRemoveCard = { cardIndex -> onRemovePlayerCard(player.id, cardIndex) }
+                    )
+                }
+            }
+            
+            // Scroll indicator (poker gold slider)
+            if (players.size > 1) {
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp) // Increased vertical padding
+                ) {
+                    val trackWidth = maxWidth
+                    
+                    // Calculate if scrolling is needed
+                    val maxScroll = scrollState.maxValue.toFloat()
+                    val needsScrolling = maxScroll > 0
+                    
+                    // Variable slider width - full when no scrolling, proportional when scrolling
+                    val indicatorWidthFraction = if (!needsScrolling) {
+                        1f // Full width when no scrolling
+                    } else {
+                        // Calculate visible fraction of content
+                        0.3f.coerceAtLeast(1f / players.size)
+                    }
+                    val indicatorWidth = trackWidth * indicatorWidthFraction
+                    
+                    // Background track
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .background(
+                                color = PokerColors.DarkGreen,
+                                shape = RoundedCornerShape(2.dp)
+                            )
+                    )
+                    
+                    // Scrollable indicator
+                    val scrollProgress = if (needsScrolling) {
+                        (scrollState.value.toFloat() / maxScroll).coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
+                    
+                    val maxOffset = trackWidth - indicatorWidth
+                    
+                    Box(
+                        modifier = Modifier
+                            .width(indicatorWidth)
+                            .height(4.dp)
+                            .offset(x = maxOffset * scrollProgress)
+                            .background(
+                                color = PokerColors.PokerGold,
+                                shape = RoundedCornerShape(2.dp)
+                            )
                     )
                 }
             }
@@ -449,24 +486,28 @@ fun PlayersCardsSection(
 }
 
 @Composable
-fun PlayerGridItem(
+fun PlayerCardItem(
     player: Player,
     onCardClick: () -> Unit,
     onRemoveCard: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(4.dp),
+            .wrapContentWidth() // Variable width to shrink-wrap content
+            .fillMaxHeight()
+            .padding(6.dp),
         colors = CardDefaults.cardColors(containerColor = PokerColors.SurfaceSecondary.copy(alpha = 0.8f)),
         border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.5f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(14.dp), // Reduced from 16dp
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp) // Reduced from 12dp
         ) {
+            // Player name
             Text(
                 text = player.name,
                 color = PokerColors.CardWhite,
@@ -475,6 +516,7 @@ fun PlayerGridItem(
                 textAlign = TextAlign.Center
             )
             
+            // Player cards
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -491,20 +533,24 @@ fun PlayerGridItem(
                 }
             }
             
+            // Stats below cards (vertical stack) - with spacer to push to bottom if needed
+            Spacer(modifier = Modifier.weight(1f, fill = false))
+            
             if (player.winPercentage > 0 || player.tiePercentage > 0) {
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(3.dp) // Reduced from 6dp
                 ) {
                     Text(
-                        text = "Win: ${"%.1f".format(player.winPercentage)}%",
+                        text = "${"%.2f".format(player.winPercentage)}%",
                         color = Color.Green,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Tie: ${"%.1f".format(player.tiePercentage)}%",
+                        text = "${"%.2f".format(player.tiePercentage)}%",
                         color = Color.Yellow,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -575,6 +621,9 @@ fun CommunityCardBox(
                     4 -> "River"
                     else -> ""
                 }
+                // Can only click/add to the next available slot (left to right)
+                val canAddHere = position == cards.size
+                
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -595,13 +644,23 @@ fun CommunityCardBox(
                         )
                     }
                     if (position < cards.size) {
+                        // Show existing card
                         PlayingCardView(
                             card = cards[position],
-                            onRemove = { onRemoveCard(startIndex + position) },
+                            onRemove = { 
+                                // Only allow removing the rightmost card
+                                if (position == cards.size - 1) {
+                                    onRemoveCard(startIndex + position)
+                                }
+                            },
                             modifier = slotModifier
                         )
-                    } else {
+                    } else if (canAddHere) {
+                        // Only show clickable slot for the next position
                         AddCardSlot(onClick = onCardClick, modifier = slotModifier)
+                    } else {
+                        // Show disabled/greyed out slot
+                        DisabledCardSlot(modifier = slotModifier)
                     }
                 }
             }
@@ -664,105 +723,96 @@ fun AddCardSlot(
 }
 
 @Composable
-fun CalculationSection(
-    gameState: PokerGameState,
-    onCalculate: () -> Unit
+fun DisabledCardSlot(
+    modifier: Modifier = Modifier.size(width = PokerDimens.CardWidth, height = PokerDimens.CardHeight)
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary),
-        border = BorderStroke(1.dp, PokerColors.AccentGreen)
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = PokerColors.SurfaceSecondary.copy(alpha = 0.3f)),
+        border = BorderStroke(2.dp, PokerColors.PokerGold.copy(alpha = 0.3f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Calculate Odds",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = PokerColors.PokerGold
-            )
-            
-            val canCalculate = gameState.players.all { it.cards.size >= 2 }
-            
-            Button(
-                onClick = onCalculate,
-                enabled = canCalculate && !gameState.isSimulating,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PokerColors.AccentGreen,
-                    contentColor = PokerColors.CardWhite
-                )
-            ) {
-                if (gameState.isSimulating) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = PokerColors.CardWhite,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Calculating...")
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Calculate Odds")
-                }
-            }
-            
-            if (!canCalculate) {
-                Text(
-                    text = "Each player needs 2 cards to calculate odds",
-                    color = PokerColors.TextSecondary,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            // Empty disabled slot
         }
     }
 }
 
 @Composable
 fun CardPickerDialog(
-    availableCards: List<PlayingCard>,
+    allCards: List<PlayingCard>,
+    usedCards: List<PlayingCard>,
     onCardSelected: (PlayingCard) -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Select a Card",
-                color = PokerColors.CardWhite
-            )
-        },
-        text = {
+    PokerDialog(onDismissRequest = onDismiss) {
+        Text(
+            text = "Select a Card",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = PokerColors.PokerGold
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = PokerColors.FeltGreen,
+            border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
+        ) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.height(400.dp)
+                modifier = Modifier
+                    .height(400.dp)
+                    .padding(16.dp)
             ) {
-                items(availableCards) { card ->
-                    PlayingCardView(
-                        card = card,
-                        onRemove = { onCardSelected(card) }
-                    )
+                items(allCards) { card ->
+                    val isUsed = usedCards.contains(card)
+                    if (isUsed) {
+                        // Show empty/disabled slot for used cards - same size as actual cards
+                        Box(
+                            modifier = Modifier
+                                .size(width = PokerDimens.CardWidth, height = PokerDimens.CardHeight)
+                                .background(
+                                    color = PokerColors.DarkGreen.copy(alpha = 0.3f),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = PokerColors.CardWhite.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                        )
+                    } else {
+                        PlayingCardView(
+                            card = card,
+                            onRemove = { onCardSelected(card) }
+                        )
+                    }
                 }
             }
-        },
-        confirmButton = {
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = PokerColors.PokerGold)
+                Text(
+                    text = "Cancel",
+                    color = PokerColors.CardWhite
+                )
             }
-        },
-        containerColor = PokerColors.SurfacePrimary
-    )
+        }
+    }
 }
 
 // Updated simulation function to use TexasHoldemOdds.simulateEquity

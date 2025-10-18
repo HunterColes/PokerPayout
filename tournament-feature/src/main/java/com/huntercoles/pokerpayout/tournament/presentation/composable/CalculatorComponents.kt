@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.tournament.domain.model.PayoutPosition
 import com.huntercoles.pokerpayout.tournament.domain.model.TournamentConfig
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.components.PokerTextFieldDefaults
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 
 /**
@@ -153,19 +154,7 @@ private fun DecimalTextField(
         ),
         singleLine = true,
         enabled = !isLocked,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.AccentGreen,
-            unfocusedBorderColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.CardWhite,
-            focusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
-            unfocusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
-            disabledBorderColor = PokerColors.CardWhite.copy(alpha = 0.5f),
-            disabledTextColor = PokerColors.PokerGold,
-            cursorColor = PokerColors.PokerGold,
-            selectionColors = TextSelectionColors(
-                handleColor = PokerColors.PokerGold,
-                backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
-            )
-        ),
+        colors = PokerTextFieldDefaults.colors(isLocked = isLocked),
         modifier = modifier
             .onPreviewKeyEvent { event ->
                 val isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter
@@ -533,19 +522,7 @@ fun BlindConfigIntField(
                 focusManager.clearFocus()
             }
         ),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.AccentGreen,
-            unfocusedBorderColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.CardWhite,
-            focusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
-            unfocusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
-            disabledBorderColor = PokerColors.CardWhite.copy(alpha = 0.5f),
-            disabledTextColor = PokerColors.PokerGold,
-            cursorColor = PokerColors.PokerGold,
-            selectionColors = TextSelectionColors(
-                handleColor = PokerColors.PokerGold,
-                backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
-            )
-        ),
+        colors = PokerTextFieldDefaults.colors(isLocked = isLocked),
         modifier = modifier
             .onFocusChanged { focusState ->
                 val gainedFocus = focusState.isFocused

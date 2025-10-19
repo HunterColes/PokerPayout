@@ -23,6 +23,8 @@ object ChipDistributionOptimizer {
     private const val TARGET_CHIP_COUNT = 60 // Target total physical chips per person
     private const val TARGET_TOTAL_CHIPS_FOR_CALCULATION = 60.0 // Target for curve calculation
     private const val PREFERRED_RANGE_FIT_BOOST = 2.0 // Boost fit score for preferred chip count ranges
+    private const val MIN_CHIPS_PER_DENOMINATION = 1
+    private const val MAX_ADJUSTMENT_RANGE = 40
     
     /**
      * Find optimal chip distribution for a target value and curve
@@ -174,7 +176,7 @@ object ChipDistributionOptimizer {
         val exactQuantities = calculatePerfectCurveFit(sortedDenoms, idealY, targetValue)
         
         // Step 4: Round to whole numbers
-    val roundedQuantities = exactQuantities.map { it.roundToInt().coerceAtLeast(1) }
+    val roundedQuantities = exactQuantities.map { it.roundToInt().coerceAtLeast(MIN_CHIPS_PER_DENOMINATION) }
         
         // Ensure no zeros - if any quantity is 0, set to 1 and adjust others
         val adjustedQuantities = roundedQuantities.toMutableList()
@@ -347,7 +349,7 @@ object ChipDistributionOptimizer {
         }
         
         // Try small adjustments: ±1 to ±40 for each denomination
-        val adjustments = (-40..40).filter { it != 0 }
+        val adjustments = (-MAX_ADJUSTMENT_RANGE..MAX_ADJUSTMENT_RANGE).filter { it != 0 }
         val n = denominations.size
         
         // Find best combination of adjustments

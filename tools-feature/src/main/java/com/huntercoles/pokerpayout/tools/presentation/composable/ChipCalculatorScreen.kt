@@ -38,6 +38,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.huntercoles.pokerpayout.core.design.ChipDenominations
+import com.huntercoles.pokerpayout.core.utils.ChipDistributionCurve
+import com.huntercoles.pokerpayout.tools.presentation.ChipCalculatorViewModel
+import com.huntercoles.pokerpayout.tools.presentation.ChipBreakdown
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.PokerColors
@@ -46,11 +52,10 @@ import com.huntercoles.pokerpayout.core.design.PokerDialog
 import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 import com.huntercoles.pokerpayout.core.design.components.PokerTextFieldDefaults
 import com.huntercoles.pokerpayout.core.design.components.PokerNumberField
-import com.huntercoles.pokerpayout.core.utils.ChipDistributionCurve
-import com.huntercoles.pokerpayout.tools.presentation.ChipCalculatorViewModel
-import com.huntercoles.pokerpayout.tools.presentation.ChipBreakdown
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+
+private const val RED_WEIGHT = 0.299f
+private const val GREEN_WEIGHT = 0.587f
+private const val BLUE_WEIGHT = 0.114f
 
 /**
  * Chip Calculator Screen
@@ -509,7 +514,7 @@ fun ChipView(
 
 // Helper function to calculate luminance
 private fun Color.luminance(): Float {
-    return (0.299f * red + 0.587f * green + 0.114f * blue)
+    return (RED_WEIGHT * red + GREEN_WEIGHT * green + BLUE_WEIGHT * blue)
 }
 
 @Composable

@@ -1,6 +1,7 @@
 package com.huntercoles.pokerpayout.tournament.presentation
 
 import com.huntercoles.pokerpayout.core.constants.TournamentConstants
+import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
@@ -85,8 +86,8 @@ class PayoutWeightsResetTest {
         tournamentPreferences.resetAllTournamentData()
 
         // Then: player count and weights should return to defaults
-        assertEquals(6, tournamentPreferences.getPlayerCount())
-        assertEquals(expectedDefaultWeights(6), tournamentPreferences.getPayoutWeights())
+        assertEquals(TournamentDefaults.PLAYER_COUNT, tournamentPreferences.getPlayerCount())
+        assertEquals(expectedDefaultWeights(TournamentDefaults.PLAYER_COUNT), tournamentPreferences.getPayoutWeights())
     }
 
     @Test

@@ -19,8 +19,8 @@ android {
         applicationId = "com.huntercoles.pokerpayout"
         minSdk = 26
         targetSdk = 34
-    versionCode = 14
-    versionName = "1.1.2"
+    versionCode = 15
+    versionName = "1.1.3"
     }
 
     dependenciesInfo {
@@ -100,7 +100,9 @@ android {
 }
 
 baselineProfile {
-    dexLayoutOptimization = true
+    // Disable for F-Droid reproducible builds
+    // Baseline profiles cause non-deterministic DEX file generation
+    dexLayoutOptimization = false
 }
 
 dependencies {

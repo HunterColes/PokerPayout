@@ -55,10 +55,10 @@ Poker Payout Calculator is a professional-grade tournament management applicatio
 ---
 
 <p align="center">
-	<img src="docs/images/screenshots/config.png" alt="Config" width="160"/>
-	<img src="docs/images/screenshots/bank.png" alt="Bank Tracker" width="160"/>
-	<img src="docs/images/screenshots/timer.png" alt="Timer" width="160"/>
-	<img src="docs/images/screenshots/odds.png" alt="Odds" width="160"/>
+	<img src="metadata/en-US/phoneScreenshots/01_tournament.png" alt="Tournament" width="160"/>
+	<img src="metadata/en-US/phoneScreenshots/02_bank.png" alt="Bank Tracker" width="160"/>
+	<img src="metadata/en-US/phoneScreenshots/03_tools_splits.png" alt="Tools - Splits" width="160"/>
+	<img src="metadata/en-US/phoneScreenshots/04_tools_odds.png" alt="Tools - Odds" width="160"/>
 </p>
 
 ---
@@ -99,6 +99,20 @@ Install Release APK:
 Run Tests:
 ```
 .\gradlew test
+```
+
+### **Release Signing** 🔐
+For production releases (F-Droid, Play Store), uncomment and fill these lines in `gradle.properties`:
+
+```bash
+# In gradle.properties, uncomment and set:
+RELEASE_STORE_PASSWORD=your_keystore_password_here
+RELEASE_KEY_PASSWORD=your_key_password_here
+```
+
+Then run:
+```bash
+.\gradlew assembleRelease  # Creates signed APK
 ```
 
 ---

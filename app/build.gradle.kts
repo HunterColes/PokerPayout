@@ -19,13 +19,43 @@ android {
         applicationId = "com.huntercoles.pokerpayout"
         minSdk = 26
         targetSdk = 34
-    versionCode = 12
-    versionName = "1.1.0"
+    versionCode = 13
+    versionName = "1.1.1"
+    }
+
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 
     buildFeatures {
         buildConfig = true
         compose = true
+    }
+
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
+    signingConfigs {
+        // Debug signing (always available)
+        getByName("debug")
+
+        // Production signing (only if keystore exists and properties are set)
+        val storeFile = project.findProperty("RELEASE_STORE_FILE") as String?
+        val storePassword = project.findProperty("RELEASE_STORE_PASSWORD") as String?
+        val keyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String?
+        val keyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String?
+
+        if (storeFile != null && storePassword != null && keyAlias != null && keyPassword != null) {
+            create("release") {
+                this.storeFile = project.file(storeFile)
+                this.storePassword = storePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
+        }
     }
 
     buildTypes {
@@ -36,8 +66,12 @@ android {
                 getDefaultProguardFile("proguard-android.txt"),
                 "proguard-rules.pro"
             )
-            // TODO: for development purposes, remember to create a release signing config when releasing proper app
-            signingConfig = signingConfigs.getByName("debug")
+            // Use production signing if available, otherwise use debug signing for development
+            signingConfig = if (signingConfigs.names.contains("release")) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 

@@ -1,13 +1,10 @@
 Categories:
   - Games
   - Money
-
 License: MIT
-
 AuthorName: Hunter Coles, Joshua Glenn
 AuthorEmail: hunter.colesw@gmail.com
 AuthorWebSite: https://links.fatline.win
-
 SourceCode: https://github.com/HunterColes/PokerPayout
 IssueTracker: https://github.com/HunterColes/PokerPayout/issues
 Changelog: https://github.com/HunterColes/PokerPayout/releases
@@ -16,15 +13,12 @@ AutoName: Poker Payout
 
 RepoType: git
 Repo: https://github.com/HunterColes/PokerPayout.git
-
-# %v will be replaced with versionName (e.g., 1.1.0)
-# Update this pattern to match your GitHub release naming convention
 Binaries: https://github.com/HunterColes/PokerPayout/releases/download/v%v/PokerPayout-v%v-release.apk
 
 Builds:
-  - versionName: 1.1.1
-    versionCode: 13
-    commit: v1.1.1
+  - versionName: 1.1.2
+    versionCode: 14
+    commit: v1.1.2
     subdir: app
     sudo:
       - apt-get update
@@ -32,12 +26,12 @@ Builds:
       - update-java-alternatives -a
     gradle:
       - yes
+    scandelete:
+      - build-cache
 
-# SHA-256 fingerprint from PRODUCTION keystore
-# Used for F-Droid APK verification
 AllowedAPKSigningKeys: 2ec6b3a7b99b7890ae19640b2a024b3bf216143eec10186440cd8c395a4d3e21
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 1.1.1
-CurrentVersionCode: 13
+CurrentVersion: 1.1.2
+CurrentVersionCode: 14

@@ -1,0 +1,5 @@
+# Keep Unix line endings for shell scripts
+*.sh text eol=lf
+
+# Keep Unix line endings for Docker files
+Dockerfile text eol=lf

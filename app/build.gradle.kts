@@ -2,7 +2,8 @@ import com.android.build.gradle.internal.api.BaseVariantOutputImpl
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.baseline.profile)
+    // Baseline profile plugin disabled for F-Droid reproducible builds
+    // alias(libs.plugins.baseline.profile)
     alias(libs.plugins.detekt)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin)
@@ -19,8 +20,8 @@ android {
         applicationId = "com.huntercoles.pokerpayout"
         minSdk = 26
         targetSdk = 34
-    versionCode = 15
-    versionName = "1.1.3"
+    versionCode = 16
+    versionName = "1.1.4"
     }
 
     dependenciesInfo {
@@ -31,6 +32,14 @@ android {
     buildFeatures {
         buildConfig = true
         compose = true
+    }
+
+    packaging {
+        // Exclude baseline profiles for F-Droid reproducible builds
+        resources {
+            excludes += "**/*.prof"
+            excludes += "**/*.profm"
+        }
     }
 
     lint {
@@ -99,11 +108,8 @@ android {
     }
 }
 
-baselineProfile {
-    // Disable for F-Droid reproducible builds
-    // Baseline profiles cause non-deterministic DEX file generation
-    dexLayoutOptimization = false
-}
+// Baseline profile configuration removed for F-Droid reproducible builds
+// Non-deterministic DEX generation was causing build verification failures
 
 dependencies {
     implementation(project(":core"))
@@ -116,8 +122,9 @@ dependencies {
     implementation(libs.room.ktx)
     implementation(libs.timber)
 
-    implementation(libs.test.android.profile.installer)
-    baselineProfile(project(":baseline-profiles"))
+    // Baseline profiles disabled for F-Droid reproducible builds
+    // implementation(libs.test.android.profile.installer)
+    // baselineProfile(project(":baseline-profiles"))
 
     ksp(libs.hilt.compiler)
     ksp(libs.room.compiler)

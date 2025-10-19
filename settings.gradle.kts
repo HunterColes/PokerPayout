@@ -1,7 +1,8 @@
 @file:Suppress("UnstableApiUsage")
 
 include(":app")
-include(":baseline-profiles")
+// Baseline profiles disabled for F-Droid reproducible builds
+// include(":baseline-profiles")
 include(":tournament-feature")
 include(":bank-feature")
 include(":tools-feature")

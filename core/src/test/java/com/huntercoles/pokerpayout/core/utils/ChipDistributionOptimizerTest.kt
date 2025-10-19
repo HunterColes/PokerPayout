@@ -97,6 +97,10 @@ class ChipDistributionOptimizerTest {
             result.totalChips in CHIP_COUNT_RANGE_5000,
             "Total chips ${result.totalChips} should be reasonable $CHIP_COUNT_RANGE_5000"
         )
+        assertTrue(
+            result.totalChips in 40..80,
+            "Total chips ${result.totalChips} should fall within the preferred 40-80 range"
+        )
     }
     
     @Test
@@ -114,7 +118,7 @@ class ChipDistributionOptimizerTest {
         // MUST sum to EXACT target value
         assertEquals(50000, result.totalValue, "Total value must be exactly 50000")
         
-        // LinearSteep MUST produce decreasing quantities
+        // LinearSteep MUST produce decreasing quantities even for deep stacks
         for (i in 0 until result.quantities.size - 1) {
             assertTrue(
                 result.quantities[i] >= result.quantities[i + 1],
@@ -134,6 +138,10 @@ class ChipDistributionOptimizerTest {
         assertTrue(
             result.totalChips in CHIP_COUNT_RANGE_50000,
             "Total chips ${result.totalChips} should be reasonable $CHIP_COUNT_RANGE_50000"
+        )
+        assertTrue(
+            result.totalChips in 40..80,
+            "Total chips ${result.totalChips} should fall within the preferred 40-80 range"
         )
     }
     
@@ -172,6 +180,7 @@ class ChipDistributionOptimizerTest {
             quantities,
             ChipDistributionCurve.LinearSteep
         )
+        assertTrue(fitScore > 0.8, "Good distribution should have high fit score, got $fitScore")
     }
     
     @Test
@@ -185,6 +194,7 @@ class ChipDistributionOptimizerTest {
             quantities,
             ChipDistributionCurve.LinearSteep
         )
+    assertTrue(fitScore < 0.6, "Poor distribution should have low fit score, got $fitScore")
     }
     
     @Test
@@ -269,7 +279,7 @@ class ChipDistributionOptimizerTest {
         assertTrue(
             increasingTrend >= 2,
             "Positive linear should show increasing trend in quantities: ${result.quantities}"
-        ) // At least half should be increasing
+        )
     }
     
     @Test
@@ -294,7 +304,7 @@ class ChipDistributionOptimizerTest {
         assertEquals(0.75, ChipDistributionCurve.LinearModerate.getValue(0.5), 0.001)
         assertEquals(0.5, ChipDistributionCurve.LinearModerate.getValue(1.0), 0.001)
         
-        // Test BellCurve: peak at 0.5
+        // Test BellCurve: peak at center (0.5)
         val peakValue = ChipDistributionCurve.BellCurve.getValue(0.5)
         val edgeValue = ChipDistributionCurve.BellCurve.getValue(0.0)
         assertTrue(peakValue > edgeValue, "Bell curve peak should be higher than edges")

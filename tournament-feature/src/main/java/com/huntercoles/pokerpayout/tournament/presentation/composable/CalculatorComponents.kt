@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.tournament.domain.model.PayoutPosition
 import com.huntercoles.pokerpayout.tournament.domain.model.TournamentConfig
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.components.PokerNumberField
 import com.huntercoles.pokerpayout.core.design.components.PokerTextFieldDefaults
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 
@@ -360,24 +361,25 @@ fun PoolConfigurationSection(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            BlindConfigIntField(
+                            PokerNumberField(
                                 value = gameDurationHours,
-                                label = "Duration (Hours)",
                                 onValueChange = { hours ->
                                     val cappedHours = minOf(hours, 24).coerceAtLeast(1)
                                     if (!isLocked) onGameDurationHoursChange(cappedHours)
                                 },
+                                label = "Duration (Hours)",
                                 isLocked = isLocked,
-                                focusManager = focusManager,
+                                minValue = 1,
+                                maxValue = 24,
                                 modifier = Modifier.weight(1f)
                             )
 
-                            BlindConfigIntField(
+                            PokerNumberField(
                                 value = roundLengthMinutes,
-                                label = "Round Length (Min)",
                                 onValueChange = { if (!isLocked) onRoundLengthChange(it) },
+                                label = "Round Length (Min)",
                                 isLocked = isLocked,
-                                focusManager = focusManager,
+                                minValue = 1,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -386,21 +388,21 @@ fun PoolConfigurationSection(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            BlindConfigIntField(
+                            PokerNumberField(
                                 value = smallestChip,
-                                label = "Smallest Chip",
                                 onValueChange = { if (!isLocked) onSmallestChipChange(it) },
+                                label = "Smallest Chip",
                                 isLocked = isLocked,
-                                focusManager = focusManager,
+                                minValue = 1,
                                 modifier = Modifier.weight(1f)
                             )
 
-                            BlindConfigIntField(
+                            PokerNumberField(
                                 value = startingChips,
-                                label = "Starting Chips",
                                 onValueChange = { if (!isLocked) onStartingChipsChange(it) },
+                                label = "Starting Chips",
                                 isLocked = isLocked,
-                                focusManager = focusManager,
+                                minValue = 1,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -460,90 +462,4 @@ fun PayoutItem(payout: PayoutPosition) {
             )
         }
     }
-}
-
-/**
- * Validates integer input for blind configuration values
- */
-private fun isValidBlindConfigInput(text: String): Boolean {
-    if (text.isEmpty()) return true
-    return text.all { it.isDigit() } && text.length <= 9 // Max 999,999,999
-}
-
-@Composable
-fun BlindConfigIntField(
-    value: Int,
-    label: String,
-    onValueChange: (Int) -> Unit,
-    isLocked: Boolean,
-    focusManager: androidx.compose.ui.focus.FocusManager,
-    modifier: Modifier = Modifier
-) {
-    var textValue by remember { mutableStateOf(value.toString()) }
-    var isFocused by remember { mutableStateOf(false) }
-
-    LaunchedEffect(value) {
-        if (!isFocused) {
-            textValue = value.toString()
-        }
-    }
-
-    fun commitInput() {
-        if (isLocked) return
-        val sanitized = textValue.trim()
-        val parsed = sanitized.toIntOrNull()
-        if (parsed != null && parsed >= 0) {
-            val cappedValue = minOf(parsed, 999_999_999)
-            onValueChange(cappedValue)
-            textValue = cappedValue.toString()
-        } else {
-            textValue = value.toString()
-        }
-    }
-
-    OutlinedTextField(
-        value = textValue,
-        onValueChange = { newValue ->
-            if (isLocked) return@OutlinedTextField
-            if (isValidBlindConfigInput(newValue)) {
-                textValue = newValue
-            }
-        },
-        label = { Text(label, color = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite) },
-        enabled = !isLocked,
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Number,
-            imeAction = ImeAction.Done
-        ),
-        keyboardActions = KeyboardActions(
-            onDone = {
-                commitInput()
-                focusManager.clearFocus()
-            }
-        ),
-        colors = PokerTextFieldDefaults.colors(isLocked = isLocked),
-        modifier = modifier
-            .onFocusChanged { focusState ->
-                val gainedFocus = focusState.isFocused
-                if (!gainedFocus && isFocused) {
-                    textValue = value.toString()
-                }
-                isFocused = gainedFocus
-            }
-            .onPreviewKeyEvent { event ->
-                val isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter
-                if (!isEnter) return@onPreviewKeyEvent false
-
-                when (event.type) {
-                    KeyEventType.KeyUp -> {
-                        commitInput()
-                        focusManager.clearFocus(force = true)
-                        true
-                    }
-                    KeyEventType.KeyDown -> true
-                    else -> false
-                }
-            }
-    )
 }

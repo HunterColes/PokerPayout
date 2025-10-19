@@ -5,7 +5,7 @@ package com.huntercoles.pokerpayout.core.constants
  * Use these constants throughout the app to ensure consistency.
  */
 object TournamentDefaults {
-    const val PLAYER_COUNT = 9
+    const val PLAYER_COUNT = 6
     const val BUY_IN = 20.0
     const val FOOD_PER_PLAYER = 5.0
     const val BOUNTY_PER_PLAYER = 0.0

@@ -2,7 +2,9 @@ package com.huntercoles.pokerpayout.core.utils
 
 import com.huntercoles.pokerpayout.core.design.ChipDenominations
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
@@ -18,8 +20,8 @@ import kotlin.math.sqrt
  */
 object ChipDistributionOptimizer {
     
-    private const val TARGET_CHIP_COUNT = 50 // Target total physical chips per person
-    private const val TARGET_TOTAL_CHIPS_FOR_CALCULATION = 30.0 // Target for curve calculation
+    private const val TARGET_CHIP_COUNT = 60 // Target total physical chips per person
+    private const val TARGET_TOTAL_CHIPS_FOR_CALCULATION = 60.0 // Target for curve calculation
     private const val PREFERRED_RANGE_FIT_BOOST = 2.0 // Boost fit score for preferred chip count ranges
     
     /**
@@ -38,10 +40,10 @@ object ChipDistributionOptimizer {
         curve: ChipDistributionCurve
     ): ChipDistributionResult {
         
-        // Get available denominations >= smallestChip
-        // User wants largest chip to be no more than 1/4 of total starting chips
-        // So get chips from smallestChip up to targetValue/4
-        val availableDenoms = ChipDenominations.getChipsUpTo(targetValue / 4)
+    // Get available denominations >= smallestChip
+    // User wants largest chip to be no more than 1/3 of total starting chips
+    // So get chips from smallestChip up to targetValue/3
+    val availableDenoms = ChipDenominations.getChipsUpTo(targetValue / 3)
             .filter { it.value >= smallestChip }
             .map { it.value }
             .sorted()
@@ -57,22 +59,38 @@ object ChipDistributionOptimizer {
             return optimizeForDenominations(targetValue, availableDenoms, curve)
         }
         
-        // SLIDING WINDOW OPTIMIZATION
-        // Try every consecutive window of 'validCount' denominations
+        // COMBINATION OPTIMIZATION
+        // Always include the smallest chip, then try combinations of remaining denominations
         // PREFER: Total chips in reasonable range
-        // REQUIRE: All chips must have at least 1 chip, window must start with smallestChip
+        // REQUIRE: All chips must have at least 1 chip
         // Select the solution with best fit score among valid solutions
         
         var bestResult: ChipDistributionResult? = null
         var bestFitScore = -1.0
         
-        for (startIdx in 0..(availableDenoms.size - validCount)) {
-            val windowDenoms = availableDenoms.subList(startIdx, startIdx + validCount)
-            
-            // Skip windows that don't start with smallestChip
-            if (windowDenoms.first() != smallestChip) continue
-            
-            val result = optimizeForDenominations(targetValue, windowDenoms, curve)
+        // Ensure smallestChip is in availableDenoms
+        if (smallestChip !in availableDenoms) {
+            throw IllegalStateException("smallestChip=$smallestChip not in available denominations")
+        }
+        
+        val remainingDenoms = availableDenoms.filter { it != smallestChip }
+        
+        if (validCount == 1) {
+            // Only use smallestChip
+            val result = optimizeForDenominations(targetValue, listOf(smallestChip), curve)
+            if (result.quantities.all { it >= 1 }) {
+                return result
+            } else {
+                throw IllegalStateException("Cannot create valid distribution with single chip")
+            }
+        }
+        
+        // Generate combinations of (validCount - 1) from remaining
+        val combos = combinations(remainingDenoms, validCount - 1)
+        
+        for (combo in combos) {
+            val denoms = (listOf(smallestChip) + combo).sorted()
+            val result = optimizeForDenominations(targetValue, denoms, curve)
             
             // Check requirements
             val hasMinimumChips = result.quantities.all { it >= 1 }
@@ -80,11 +98,7 @@ object ChipDistributionOptimizer {
             if (hasMinimumChips) {
                 // Valid solution - check if it has better fit score
                 // Prefer solutions in reasonable chip range
-                val inPreferredRange = when {
-                    targetValue <= 1000 -> result.totalChips in 20..100
-                    targetValue <= 10000 -> result.totalChips in 40..120
-                    else -> result.totalChips in 50..150
-                }
+                val inPreferredRange = result.totalChips in 40..80
                 
                 val score = if (inPreferredRange) result.fitScore * PREFERRED_RANGE_FIT_BOOST else result.fitScore // Boost preferred solutions
                 
@@ -147,7 +161,6 @@ object ChipDistributionOptimizer {
         // Step 1: Normalize X (denominations) to 0-1 range
         val minDenom = sortedDenoms.first().toDouble()
         val maxDenom = sortedDenoms.last().toDouble()
-        
         val normalizedX = if (minDenom == maxDenom) {
             List(sortedDenoms.size) { 0.5 }
         } else {
@@ -161,8 +174,7 @@ object ChipDistributionOptimizer {
         val exactQuantities = calculatePerfectCurveFit(sortedDenoms, idealY, targetValue)
         
         // Step 4: Round to whole numbers
-        val roundedQuantities = exactQuantities.map { it.toInt() }
-        val roundedValue = sortedDenoms.zip(roundedQuantities).sumOf { (denom, qty) -> denom * qty }
+    val roundedQuantities = exactQuantities.map { it.roundToInt().coerceAtLeast(1) }
         
         // Ensure no zeros - if any quantity is 0, set to 1 and adjust others
         val adjustedQuantities = roundedQuantities.toMutableList()
@@ -182,16 +194,28 @@ object ChipDistributionOptimizer {
         }
         
         val finalRoundedQuantities = adjustedQuantities
-        val finalRoundedValue = sortedDenoms.zip(finalRoundedQuantities).sumOf { (denom, qty) -> denom * qty }
         
-        // Step 5: Adjust with small perturbations to hit exact total
-        val finalQuantities = adjustWithSmallPerturbations(
-            sortedDenoms, 
-            finalRoundedQuantities, 
-            idealY, 
+        // Step 5: Adjust quantities toward exact target while staying near the curve
+        val balancedQuantities = balanceQuantities(
+            sortedDenoms,
+            finalRoundedQuantities,
+            exactQuantities,
             targetValue,
             curve
         )
+        val balancedValue = sortedDenoms.zip(balancedQuantities).sumOf { (denom, qty) -> denom * qty }
+        
+        val finalQuantities = if (balancedValue == targetValue) {
+            balancedQuantities
+        } else {
+            adjustWithSmallPerturbations(
+                sortedDenoms,
+                balancedQuantities,
+                idealY,
+                targetValue,
+                curve
+            )
+        }
         val finalValue = sortedDenoms.zip(finalQuantities).sumOf { (d, q) -> d * q }
         
         // Step 6: Calculate fit score
@@ -205,6 +229,9 @@ object ChipDistributionOptimizer {
         val fitScore = calculateFitScore(idealY, normalizedQty)
         val totalChips = finalQuantities.sum()
         val actualValue = sortedDenoms.zip(finalQuantities).sumOf { (denom, qty) -> denom * qty }
+        require(actualValue == targetValue) {
+            "Optimized distribution must sum to $targetValue but was $actualValue with denominations=$sortedDenoms and quantities=$finalQuantities"
+        }
         
         return ChipDistributionResult(
             denominations = sortedDenoms,
@@ -225,7 +252,6 @@ object ChipDistributionOptimizer {
         targetValue: Int
     ): List<Double> {
         // Instead of perfect mathematical fit, distribute proportionally with reasonable chip counts
-        val targetTotalChips = TARGET_TOTAL_CHIPS_FOR_CALCULATION // Aim for about 30 chips total
         val totalIdealWeight = idealY.sum()
         
         // Distribute chip counts proportionally to the curve
@@ -236,6 +262,70 @@ object ChipDistributionOptimizer {
         val scaleFactor = targetValue / totalValueFromChipCounts
         
         return chipCounts.map { count -> count * scaleFactor }
+    }
+    
+    /**
+     * Iteratively nudge quantities toward the exact target while staying near the ideal curve shape.
+     */
+    private fun balanceQuantities(
+        denominations: List<Int>,
+        baseQuantities: List<Int>,
+        idealQuantities: List<Double>,
+        targetValue: Int,
+        curve: ChipDistributionCurve
+    ): List<Int> {
+        val quantities = baseQuantities.toMutableList()
+        var totalValue = denominations.zip(quantities).sumOf { (d, q) -> d * q }
+        var diff = targetValue - totalValue
+        var iterations = 0
+        val maxIterations = 4000
+        val visitedStates = mutableSetOf<List<Int>>()
+        
+        data class Candidate(val index: Int, val penalty: Double, val newTotalValue: Int, val newQuantities: List<Int>)
+        
+        while (diff != 0 && iterations < maxIterations) {
+            iterations++
+            if (!visitedStates.add(quantities.toList())) {
+                break
+            }
+            val delta = if (diff > 0) 1 else -1
+            val currentTotalChips = quantities.sum()
+            val options = denominations.indices.mapNotNull { index ->
+                val newQty = quantities[index] + delta
+                if (newQty < 1) return@mapNotNull null
+                val denom = denominations[index]
+                val newTotalValue = totalValue + denom * delta
+                val newDiff = targetValue - newTotalValue
+                val newTotalChips = currentTotalChips + delta
+                val trialQuantities = quantities.toMutableList().also { it[index] = newQty }
+                if (!isValidCurvePattern(trialQuantities, curve)) return@mapNotNull null
+                val quantityPenalty = abs(newQty - idealQuantities[index])
+                val chipPenalty = abs(newTotalChips - TARGET_CHIP_COUNT).toDouble() / TARGET_CHIP_COUNT
+                val valuePenalty = abs(newDiff).toDouble() / targetValue
+                val overshootPenalty = if (diff > 0 && denom > diff) {
+                    (denom - diff).toDouble() / targetValue
+                } else if (diff < 0 && denom > -diff) {
+                    (denom + diff).toDouble() / targetValue
+                } else {
+                    0.0
+                }
+                val penalty = quantityPenalty + (chipPenalty * 0.5) + (valuePenalty * 2) + overshootPenalty
+                Candidate(index, penalty, newTotalValue, trialQuantities)
+            }
+            val improving = options.filter { option ->
+                abs(targetValue - option.newTotalValue) < abs(diff)
+            }
+            val candidates = if (improving.isNotEmpty()) improving else options
+            if (candidates.isEmpty()) {
+                break
+            }
+            val candidate = candidates.minByOrNull { it.penalty } ?: break
+            quantities[candidate.index] = candidate.newQuantities[candidate.index]
+            totalValue = candidate.newTotalValue
+            diff = targetValue - totalValue
+        }
+        
+        return if (diff == 0) quantities else baseQuantities
     }
     
     /**
@@ -256,8 +346,8 @@ object ChipDistributionOptimizer {
             return baseQuantities // Already perfect!
         }
         
-        // Try small adjustments: ±1 to ±20 for each denomination
-        val adjustments = (-20..20).filter { it != 0 }
+        // Try small adjustments: ±1 to ±40 for each denomination
+        val adjustments = (-40..40).filter { it != 0 }
         val n = denominations.size
         
         // Find best combination of adjustments
@@ -276,6 +366,9 @@ object ChipDistributionOptimizer {
                         val testValue = denominations.zip(testQuantities).sumOf { (d, q) -> d * q }
                         val testError = abs(targetValue - testValue)
                         
+                        if (testError == 0) {
+                            return testQuantities
+                        }
                         if (testError < bestError) {
                             bestError = testError
                             bestQuantities = testQuantities
@@ -301,6 +394,9 @@ object ChipDistributionOptimizer {
                                     val testValue = denominations.zip(testQuantities).sumOf { (d, q) -> d * q }
                                     val testError = abs(targetValue - testValue)
                                     
+                                    if (testError == 0) {
+                                        return testQuantities
+                                    }
                                     if (testError < bestError) {
                                         bestError = testError
                                         bestQuantities = testQuantities
@@ -333,6 +429,9 @@ object ChipDistributionOptimizer {
                                             val testValue = denominations.zip(testQuantities).sumOf { (d, q) -> d * q }
                                             val testError = abs(targetValue - testValue)
                                             
+                                            if (testError == 0) {
+                                                return testQuantities
+                                            }
                                             if (testError < bestError) {
                                                 bestError = testError
                                                 bestQuantities = testQuantities
@@ -347,7 +446,93 @@ object ChipDistributionOptimizer {
             }
         }
         
+        if (bestError != 0) {
+            val exactQuantities = findExactQuantitiesBySearch(
+                denominations,
+                baseQuantities,
+                targetValue,
+                curve
+            )
+            if (exactQuantities != null) {
+                return exactQuantities
+            }
+        }
         return bestQuantities
+    }
+
+    private fun findExactQuantitiesBySearch(
+        denominations: List<Int>,
+        baseQuantities: List<Int>,
+        targetValue: Int,
+        curve: ChipDistributionCurve
+    ): List<Int>? {
+        val currentValue = denominations.zip(baseQuantities).sumOf { (d, q) -> d * q }
+        val error = targetValue - currentValue
+        if (error == 0) return baseQuantities
+
+        val n = denominations.size
+        if (n == 0) return null
+
+        val minDenom = denominations.minOrNull() ?: return null
+        val estimatedDelta = (abs(error) / minDenom) + 2
+        val maxAdjustPerDenom = estimatedDelta.coerceAtLeast(6).coerceAtMost(60)
+        val maxTotalAdjust = (estimatedDelta * 2).coerceAtLeast(12).coerceAtMost(120)
+
+        val suffixMaxContribution = IntArray(n + 1)
+        for (i in n - 1 downTo 0) {
+            suffixMaxContribution[i] = suffixMaxContribution[i + 1] + denominations[i] * maxAdjustPerDenom
+        }
+
+        val deltas = IntArray(n)
+        var result: List<Int>? = null
+
+        fun search(index: Int, remaining: Int, adjustmentsUsed: Int): Boolean {
+            if (index == n) {
+                if (remaining == 0) {
+                    val candidate = baseQuantities.mapIndexed { i, base -> base + deltas[i] }
+                    if (candidate.all { it >= 1 } && isValidCurvePattern(candidate, curve)) {
+                        result = candidate
+                        return true
+                    }
+                }
+                return false
+            }
+
+            val denom = denominations[index]
+            val base = baseQuantities[index]
+            val lowerBound = max(-maxAdjustPerDenom, 1 - base)
+            val upperBound = maxAdjustPerDenom
+            val remainingCapacity = suffixMaxContribution[index + 1]
+
+            val targetDelta = (remaining.toDouble() / denom).roundToInt().coerceIn(lowerBound, upperBound)
+            val candidateDeltas = mutableListOf<Int>()
+            candidateDeltas.add(targetDelta)
+            var offset = 1
+            while (targetDelta - offset >= lowerBound || targetDelta + offset <= upperBound) {
+                val down = targetDelta - offset
+                val up = targetDelta + offset
+                if (down >= lowerBound) candidateDeltas.add(down)
+                if (up <= upperBound) candidateDeltas.add(up)
+                offset++
+            }
+
+            for (delta in candidateDeltas) {
+                if (adjustmentsUsed + abs(delta) > maxTotalAdjust) continue
+                val newQty = base + delta
+                if (newQty < 1) continue
+                val newRemaining = remaining - denom * delta
+                if (abs(newRemaining) > remainingCapacity) continue
+                deltas[index] = delta
+                if (search(index + 1, newRemaining, adjustmentsUsed + abs(delta))) {
+                    return true
+                }
+            }
+
+            return false
+        }
+
+        val found = search(0, error, 0)
+        return if (found) result else null
     }
 
     /**
@@ -473,9 +658,10 @@ object ChipDistributionOptimizer {
         val maxValue = sortedDenoms.last()
         
         // Normalize x positions
-        val normalizedX = sortedDenoms.map { denom ->
-            if (maxValue == minValue) 0.5
-            else (denom - minValue).toDouble() / (maxValue - minValue)
+        val normalizedX = if (maxValue == minValue) {
+            List(sortedDenoms.size) { 0.5 }
+        } else {
+            sortedDenoms.map { denom -> (denom - minValue).toDouble() / (maxValue - minValue) }
         }
         
         // Get ideal Y from curve
@@ -490,5 +676,24 @@ object ChipDistributionOptimizer {
         }
         
         return calculateFitScore(idealY, normalizedQty)
+    }
+    
+    /**
+     * Generate all combinations of k elements from the list
+     */
+    private fun <T> combinations(list: List<T>, k: Int): List<List<T>> {
+        if (k == 0) return listOf(emptyList())
+        if (list.isEmpty() || k > list.size) return emptyList()
+        
+        val result = mutableListOf<List<T>>()
+        for (i in 0..(list.size - k)) {
+            val first = list[i]
+            val remaining = list.subList(i + 1, list.size)
+            val subCombinations = combinations(remaining, k - 1)
+            for (sub in subCombinations) {
+                result.add(listOf(first) + sub)
+            }
+        }
+        return result
     }
 }

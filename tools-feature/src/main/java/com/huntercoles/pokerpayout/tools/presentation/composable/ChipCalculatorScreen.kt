@@ -1,8 +1,16 @@
 package com.huntercoles.pokerpayout.tools.presentation.composable
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,10 +23,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -33,9 +45,12 @@ import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerDialog
 import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 import com.huntercoles.pokerpayout.core.design.components.PokerTextFieldDefaults
+import com.huntercoles.pokerpayout.core.design.components.PokerNumberField
 import com.huntercoles.pokerpayout.core.utils.ChipDistributionCurve
 import com.huntercoles.pokerpayout.tools.presentation.ChipCalculatorViewModel
 import com.huntercoles.pokerpayout.tools.presentation.ChipBreakdown
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Chip Calculator Screen
@@ -47,14 +62,8 @@ fun ChipCalculatorScreen(
     viewModel: ChipCalculatorViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var totalChipsText by remember(uiState.totalChips) { mutableStateOf(uiState.totalChips.toString()) }
-
-    // Update text field when totalChips changes
-    LaunchedEffect(uiState.totalChips) {
-        if (uiState.customTotalChips == 0) {
-            totalChipsText = uiState.totalChips.toString()
-        }
-    }
+    var advancedSettingsExpanded by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -155,119 +164,7 @@ fun ChipCalculatorScreen(
             }
         }
 
-        // Configuration Card: Curve Selection and Denomination Count
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary),
-            border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.5f))
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "Distribution Configuration",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = PokerColors.PokerGold
-                )
-
-                // Curve Selection Dropdown
-                var curveExpanded by remember { mutableStateOf(false) }
-                val availableCurves = remember { ChipDistributionCurve.getAllCurves() }
-                
-                ExposedDropdownMenuBox(
-                    expanded = curveExpanded,
-                    onExpandedChange = { curveExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = uiState.selectedCurve.displayName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Distribution Curve") },
-                        trailingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = "Select curve"
-                            )
-                        },
-                        colors = PokerTextFieldDefaults.colors(),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor()
-                    )
-                    
-                    ExposedDropdownMenu(
-                        expanded = curveExpanded,
-                        onDismissRequest = { curveExpanded = false }
-                    ) {
-                        availableCurves.forEach { curve ->
-                            DropdownMenuItem(
-                                text = {
-                                    Column {
-                                        Text(
-                                            text = curve.displayName,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = curve.description,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = PokerColors.TextSecondary
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    viewModel.updateCurveSelection(curve)
-                                    curveExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                // Denomination Count Input
-                var denomCountText by remember { mutableStateOf(uiState.denominationCount.toString()) }
-                
-                OutlinedTextField(
-                    value = denomCountText,
-                    onValueChange = { newValue ->
-                        denomCountText = newValue
-                        newValue.toIntOrNull()?.let { count ->
-                            if (count in 3..8) {
-                                viewModel.updateDenominationCount(count)
-                            }
-                        }
-                    },
-                    label = { Text("Number of Denominations") },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            denomCountText.toIntOrNull()?.let { count ->
-                                val validCount = count.coerceIn(3, 8)
-                                denomCountText = validCount.toString()
-                                viewModel.updateDenominationCount(validCount)
-                            }
-                        }
-                    ),
-                    singleLine = true,
-                    colors = PokerTextFieldDefaults.colors(),
-                    modifier = Modifier.fillMaxWidth(),
-                    supportingText = {
-                        Text(
-                            text = "Recommended: 5 (Range: 3-8)",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                )
-            }
-        }
-
-        // Starting Chips Input Card
+        // Chip Calculator Configuration Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary),
@@ -277,38 +174,23 @@ fun ChipCalculatorScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Header with dropdown arrow and generate button
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { advancedSettingsExpanded = !advancedSettingsExpanded },
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedTextField(
-                        value = totalChipsText,
-                        onValueChange = { newValue ->
-                            totalChipsText = newValue
-                            newValue.toIntOrNull()?.let { chips ->
-                                if (chips > 0) {
-                                    viewModel.updateTotalChips(chips)
-                                }
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        label = { Text("Starting Chips") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        colors = PokerTextFieldDefaults.colors()
-                    )
-
-                    // Generate Button
                     Button(
                         onClick = { viewModel.calculateChipBreakdown() },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = PokerColors.AccentGreen,
                             contentColor = PokerColors.CardWhite
                         ),
-                        enabled = uiState.totalChips > 0
+                        modifier = Modifier.weight(1f)
                     ) {
                         Text(
                             text = "Generate",
@@ -316,32 +198,128 @@ fun ChipCalculatorScreen(
                             fontSize = 16.sp
                         )
                     }
+
+                    IconButton(
+                        onClick = { advancedSettingsExpanded = !advancedSettingsExpanded }
+                    ) {
+                        Icon(
+                            imageVector = if (advancedSettingsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (advancedSettingsExpanded) "Collapse advanced settings" else "Expand advanced settings",
+                            tint = PokerColors.PokerGold
+                        )
+                    }
                 }
 
-                // Minimum Chip Value Display
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    color = PokerColors.FeltGreen.copy(alpha = 0.3f),
-                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.4f))
+                // Collapsible Advanced Settings Content
+                AnimatedVisibility(
+                    visible = advancedSettingsExpanded,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text(
-                            text = "Minimum Chip Value:",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = PokerColors.CardWhite
-                        )
-                        Text(
-                            text = "$${uiState.smallestChip}",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                            color = PokerColors.PokerGold
-                        )
+                        // Top Row: Smallest Chip, Starting Chips, Denoms
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            PokerNumberField(
+                                value = uiState.smallestChip,
+                                onValueChange = { chip ->
+                                    if (chip > 0) {
+                                        viewModel.updateSmallestChip(chip)
+                                    }
+                                },
+                                label = "Smallest Chip",
+                                modifier = Modifier.weight(1f),
+                                minValue = 1,
+                                maxValue = 100
+                            )
+
+                            PokerNumberField(
+                                value = uiState.totalChips,
+                                onValueChange = { chips ->
+                                    if (chips > 0) {
+                                        viewModel.updateTotalChips(chips)
+                                    }
+                                },
+                                label = "Starting Chips",
+                                modifier = Modifier.weight(1f),
+                                minValue = 1
+                            )
+
+                            // Denominations Text Field (crunched to the right)
+                            PokerNumberField(
+                                value = uiState.denominationCount,
+                                onValueChange = { count ->
+                                    if (count in 3..8) {
+                                        viewModel.updateDenominationCount(count)
+                                    }
+                                },
+                                label = "Denoms",
+                                modifier = Modifier.width(100.dp),
+                                minValue = 3,
+                                maxValue = 8
+                            )
+                        }
+
+                        // Second Row: Distribution Curve
+                        var curveExpanded by remember { mutableStateOf(false) }
+                        val availableCurves = remember { ChipDistributionCurve.getAllCurves() }
+
+                        ExposedDropdownMenuBox(
+                            expanded = curveExpanded,
+                            onExpandedChange = { curveExpanded = it }
+                        ) {
+                            OutlinedTextField(
+                                value = uiState.selectedCurve.displayName,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Distribution Curve") },
+                                trailingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Select curve"
+                                    )
+                                },
+                                colors = PokerTextFieldDefaults.colors(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true)
+                            )
+
+                            ExposedDropdownMenu(
+                                expanded = curveExpanded,
+                                onDismissRequest = { curveExpanded = false },
+                                containerColor = PokerColors.SurfaceSecondary,
+                                tonalElevation = 4.dp,
+                                shadowElevation = 4.dp
+                            ) {
+                                availableCurves.forEach { curve ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(
+                                                    text = curve.displayName,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = curve.description,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = PokerColors.TextSecondary
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            viewModel.updateCurveSelection(curve)
+                                            curveExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -367,12 +345,12 @@ fun ChipCalculatorScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "💎 Chip Breakdown",
+                            text = "🎰 Chip Breakdown",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = PokerColors.PokerGold
                         )
-                        
+
                         // Fit Score Badge (1.0 = perfect, 0.0 = terrible)
                         uiState.fitScore?.let { score ->
                             val (scoreText, scoreColor) = when {
@@ -381,7 +359,7 @@ fun ChipCalculatorScreen(
                                 score > 0.7 -> "Fair" to Color(0xFFFFC107)
                                 else -> "Poor" to Color(0xFFFF5722)
                             }
-                            
+
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = scoreColor.copy(alpha = 0.2f),
@@ -407,7 +385,7 @@ fun ChipCalculatorScreen(
                         }
                     }
 
-                    Divider(color = PokerColors.PokerGold.copy(alpha = 0.3f))
+                    HorizontalDivider(color = PokerColors.PokerGold.copy(alpha = 0.3f))
 
                     // Stats Row
                     Row(
@@ -424,18 +402,11 @@ fun ChipCalculatorScreen(
                         )
                         StatItem(
                             label = "Total Value",
-                            value = "$${uiState.chipBreakdown.sumOf { it.value * it.count }}"
+                            value = "${uiState.chipBreakdown.sumOf { it.value * it.count }}"
                         )
                     }
 
-                    Divider(color = PokerColors.PokerGold.copy(alpha = 0.3f))
-
-                    Text(
-                        text = "Recommended Chip Breakdown",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = PokerColors.PokerGold
-                    )
+                    HorizontalDivider(color = PokerColors.PokerGold.copy(alpha = 0.3f))
 
                     uiState.chipBreakdown.forEach { chip ->
                         ChipBreakdownItem(chip = chip)
@@ -444,25 +415,6 @@ fun ChipCalculatorScreen(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     HorizontalDivider(color = PokerColors.PokerGold.copy(alpha = 0.3f))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Total:",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = PokerColors.CardWhite
-                        )
-                        Text(
-                            text = "${uiState.chipBreakdown.sumOf { it.value * it.count }}",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = PokerColors.PokerGold
-                        )
-                    }
                 }
             }
         }

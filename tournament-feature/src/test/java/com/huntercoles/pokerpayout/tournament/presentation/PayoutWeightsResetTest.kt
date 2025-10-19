@@ -85,8 +85,8 @@ class PayoutWeightsResetTest {
         tournamentPreferences.resetAllTournamentData()
 
         // Then: player count and weights should return to defaults
-        assertEquals(9, tournamentPreferences.getPlayerCount())
-        assertEquals(expectedDefaultWeights(9), tournamentPreferences.getPayoutWeights())
+        assertEquals(6, tournamentPreferences.getPlayerCount())
+        assertEquals(expectedDefaultWeights(6), tournamentPreferences.getPayoutWeights())
     }
 
     @Test

@@ -128,9 +128,15 @@ class ChipCalculatorViewModel @Inject constructor(
         chipPreferences.setDenominationCount(validCount)
     }
 
+    fun updateSmallestChip(chip: Int) {
+        val validChip = chip.coerceIn(1, 100) // Reasonable range
+        _uiState.update { it.copy(smallestChip = validChip) }
+        // Note: smallest chip is synced from tournament preferences, so we might not save it separately
+    }
+
     fun calculateChipBreakdown() {
         val total = _uiState.value.totalChips
-        val smallestChip = tournamentPreferences.getSmallestChip()
+        val smallestChip = _uiState.value.smallestChip
         val denomCount = _uiState.value.denominationCount
         val curve = _uiState.value.selectedCurve
         
@@ -157,7 +163,7 @@ class ChipCalculatorViewModel @Inject constructor(
             it.copy(
                 chipBreakdown = breakdown,
                 fitScore = result.fitScore,
-                totalPhysicalChips = result.totalChips
+                totalPhysicalChips = result.quantities.sum()
             )
         }
         
@@ -165,11 +171,11 @@ class ChipCalculatorViewModel @Inject constructor(
         val breakdownPairs = result.denominations.zip(result.quantities)
         chipPreferences.setChipBreakdown(breakdownPairs)
         chipPreferences.setFitScore(result.fitScore)
-        chipPreferences.setTotalPhysicalChips(result.totalChips)
+        chipPreferences.setTotalPhysicalChips(result.quantities.sum())
     }
 
     fun showResetDialog() {
-        if (!chipPreferences.isInDefaultState()) {
+        if (!chipPreferences.isInDefaultState() || _uiState.value.chipBreakdown.isNotEmpty()) {
             _uiState.update { it.copy(showResetDialog = true) }
         }
     }
@@ -181,10 +187,12 @@ class ChipCalculatorViewModel @Inject constructor(
     fun confirmReset() {
         chipPreferences.resetAllData()
         val tournamentStartingChips = tournamentPreferences.getStartingChips()
+        val tournamentSmallestChip = tournamentPreferences.getSmallestChip()
         _uiState.update { 
             it.copy(
                 totalChips = tournamentStartingChips,
                 customTotalChips = 0,
+                smallestChip = tournamentSmallestChip,
                 chipBreakdown = emptyList(),
                 showResetDialog = false,
                 selectedCurve = ChipDistributionCurve.LinearSteep,
@@ -193,6 +201,7 @@ class ChipCalculatorViewModel @Inject constructor(
                 totalPhysicalChips = 0
             )
         }
+        // Removed auto-calculation - user must manually generate
     }
 
     private fun loadSavedState() {

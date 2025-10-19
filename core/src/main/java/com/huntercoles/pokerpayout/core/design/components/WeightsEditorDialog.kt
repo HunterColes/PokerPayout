@@ -5,9 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
@@ -28,14 +25,6 @@ import com.huntercoles.pokerpayout.core.design.PokerDialog
 
 private const val MAX_WEIGHT_VALUE = 999
 private val MAX_WEIGHT_POSITIONS = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.size
-
-/**
- * Validates integer input to only allow digits
- */
-internal fun isValidIntegerInput(text: String): Boolean {
-    if (text.isEmpty()) return true
-    return text.all { it.isDigit() } && text.length <= 3 // Max 999
-}
 
 /**
  * Validates that weights are in strictly decreasing order
@@ -271,45 +260,14 @@ fun WeightRow(
             }
 
             // Weight input
-            var weightText by remember(weight) { mutableStateOf(weight.toString()) }
-            val focusManager = LocalFocusManager.current
-
-            OutlinedTextField(
-                value = weightText,
-                onValueChange = { newValue ->
-                    // Only allow valid integer input
-                    if (isValidIntegerInput(newValue)) {
-                        weightText = newValue
-                        newValue.toIntOrNull()?.let { newWeight ->
-                            if (newWeight in 1..MAX_WEIGHT_VALUE) {
-                                onWeightChange(newWeight)
-                            }
-                        }
-                    }
-                },
-                modifier = Modifier.width(80.dp),
-                singleLine = true,
-                enabled = !isLocked,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = { focusManager.clearFocus() }
-                ),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = if (isError) PokerColors.ErrorRed else if (isLocked) PokerColors.PokerGold else PokerColors.AccentGreen,
-                    unfocusedBorderColor = if (isError) PokerColors.ErrorRed else if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite.copy(alpha = 0.5f),
-                    focusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
-                    unfocusedTextColor = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
-                    disabledTextColor = PokerColors.PokerGold,
-                    disabledBorderColor = PokerColors.PokerGold.copy(alpha = 0.5f),
-                    cursorColor = PokerColors.PokerGold,
-                    selectionColors = TextSelectionColors(
-                        handleColor = PokerColors.PokerGold,
-                        backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
-                    )
-                )
+            PokerNumberField(
+                value = weight,
+                onValueChange = onWeightChange,
+                label = "",
+                minValue = 1,
+                maxValue = MAX_WEIGHT_VALUE,
+                isLocked = isLocked,
+                modifier = Modifier.width(80.dp)
             )
         }
     }

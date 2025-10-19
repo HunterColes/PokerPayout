@@ -100,7 +100,7 @@ class TimerPreferences @Inject constructor(
     }
     
     fun getLastUpdateTime(): Long {
-        return prefs.getLong(LAST_UPDATE_TIME_KEY, System.currentTimeMillis())
+        return prefs.getLong(LAST_UPDATE_TIME_KEY, 0L)
     }
     
     // Calculate the actual time if timer was running in background

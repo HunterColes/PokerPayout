@@ -13,5 +13,14 @@ sealed class NavigationDestination {
     data object Tools : NavigationDestination()
 
     @Serializable
+    data object OddsCalculator : NavigationDestination()
+
+    @Serializable
+    data object HandRanks : NavigationDestination()
+
+    @Serializable
+    data object ChipCalculator : NavigationDestination()
+
+    @Serializable
     data object Back : NavigationDestination()
 }

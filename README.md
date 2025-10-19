@@ -11,16 +11,16 @@
 [![Open Source](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red)](#-open-source--contributions)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-how-to-contribute)
 
-[![Donate Ethereum](https://img.shields.io/badge/Ξ-Ethereum-627EEA?logo=ethereum&logoColor=white)](ETHEREUM.txt)
-[![Donate Monero](https://img.shields.io/badge/Ӿ-Monero-FF6600?logo=monero&logoColor=white)](MONERO.txt)
+[![Donate Ethereum](https://img.shields.io/badge/Ξ-Ethereum-627EEA?logo=ethereum&logoColor=white)](crypto/DONATIONS.md)
+[![Donate Monero](https://img.shields.io/badge/Ӿ-Monero-FF6600?logo=monero&logoColor=white)](crypto/DONATIONS.md)
 
 ⭐ Star us on GitHub — your support motivates us a lot! 🙏😊
 
-[![Share](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/Abblix/Oidc.Server%20%23OpenIDConnect%20%23Security%20%23Authentication)
-[![Share](https://img.shields.io/badge/share-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https://github.com/Abblix/Oidc.Server)
-[![Share](https://img.shields.io/badge/share-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/Abblix/Oidc.Server)
-[![Share](https://img.shields.io/badge/share-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/submit?title=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/Abblix/Oidc.Server)
-[![Share](https://img.shields.io/badge/share-0088CC?logo=telegram&logoColor=white)](https://t.me/share/url?url=https://github.com/Abblix/Oidc.Server&text=Check%20out%20this%20project%20on%20GitHub)
+[![Share](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/HunterColes/PokerPayout)
+[![Share](https://img.shields.io/badge/share-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https://github.com/HunterColes/PokerPayout)
+[![Share](https://img.shields.io/badge/share-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/HunterColes/PokerPayout)
+[![Share](https://img.shields.io/badge/share-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/submit?title=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/HunterColes/PokerPayout)
+[![Share](https://img.shields.io/badge/share-0088CC?logo=telegram&logoColor=white)](https://t.me/share/url?url=https://github.com/HunterColes/PokerPayout&text=Check%20out%20this%20project%20on%20GitHub)
 
 ---
 
@@ -55,10 +55,10 @@ Poker Payout Calculator is a professional-grade tournament management applicatio
 ---
 
 <p align="center">
-	<img src="docs/images/screenshots/config.png" alt="Config" width="160"/>
-	<img src="docs/images/screenshots/bank.png" alt="Bank Tracker" width="160"/>
-	<img src="docs/images/screenshots/timer.png" alt="Timer" width="160"/>
-	<img src="docs/images/screenshots/odds.png" alt="Odds" width="160"/>
+	<img src="metadata/en-US/phoneScreenshots/01_tournament.png" alt="Tournament" width="160"/>
+	<img src="metadata/en-US/phoneScreenshots/02_bank.png" alt="Bank Tracker" width="160"/>
+	<img src="metadata/en-US/phoneScreenshots/03_tools_splits.png" alt="Tools - Splits" width="160"/>
+	<img src="metadata/en-US/phoneScreenshots/04_tools_odds.png" alt="Tools - Odds" width="160"/>
 </p>
 
 ---
@@ -99,6 +99,20 @@ Install Release APK:
 Run Tests:
 ```
 .\gradlew test
+```
+
+### **Release Signing** 🔐
+For production releases (F-Droid, Play Store), uncomment and fill these lines in `gradle.properties`:
+
+```bash
+# In gradle.properties, uncomment and set:
+RELEASE_STORE_PASSWORD=your_keystore_password_here
+RELEASE_KEY_PASSWORD=your_key_password_here
+```
+
+Then run:
+```bash
+.\gradlew assembleRelease  # Creates signed APK
 ```
 
 ---

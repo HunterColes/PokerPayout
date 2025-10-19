@@ -1,6 +1,7 @@
 package com.huntercoles.pokerpayout.tournament.presentation
 
 import android.os.Parcelable
+import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
 import kotlinx.parcelize.Parcelize
 
@@ -10,15 +11,15 @@ enum class TimerDirection {
 
 @Parcelize
 data class TimerUiState(
-    val gameDurationMinutes: Int = 180, // Default 3 hours (kept for compatibility)
-    val currentTimeSeconds: Int = 180 * 60, // Start with full time
+    val gameDurationMinutes: Int = TournamentDefaults.GAME_DURATION_HOURS * 60,
+    val currentTimeSeconds: Int = TournamentDefaults.GAME_DURATION_HOURS * 60 * 60,
     val timerDirection: TimerDirection = TimerDirection.COUNTDOWN,
     val isRunning: Boolean = false,
     val isFinished: Boolean = false,
     val blindConfiguration: BlindConfiguration = BlindConfiguration(),
     val isBlindConfigCollapsed: Boolean = false, // Start auto open
     val hasTimerStarted: Boolean = false, // Track if timer has ever been started (stays true until reset)
-    val playerCount: Int = 9,
+    val playerCount: Int = TournamentDefaults.PLAYER_COUNT,
     val baseBlindLevels: List<BlindLevel> = emptyList(),
     val blindLevels: List<BlindLevel> = emptyList(),
     val currentBlindLevelIndex: Int = 0

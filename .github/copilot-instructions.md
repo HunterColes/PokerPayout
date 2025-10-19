@@ -1,3 +1,4 @@
+````instructions
 You are GitHub Copilot assisting on the Poker Payout Android app.
 
 ## Interaction Modes
@@ -45,6 +46,23 @@ Use exactly these commands and no alternatives, in this order (do not run varian
 .\gradlew installRelease
 ```
 
+**For Version Upgrades:**
+When asked to upgrade app version (versionCode/versionName), you MUST:
+1. Update version in `app/build.gradle.kts`
+2. Run `.\gradlew assembleRelease` to build new APK
+3. Run signature command to verify fingerprint (should be same for debug)
+4. Update F-Droid metadata in `metadata/com.huntercoles.pokerpayout.yml`
+5. Update any documentation references
+
+**Get APK Signature Fingerprint (for F-Droid):**
+```bash
+keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -storepass android
+```
+**PowerShell version:**
+```powershell
+keytool -list -v -keystore "$env:USERPROFILE\.android\debug.keystore" -storepass android
+```
+
 **CRITICAL: Wait for commands to complete before running the next one.**
 - NEVER run multiple terminal commands in parallel or rapid succession
 - On slower machines, interrupting commands triggers batch job cancellation
@@ -67,3 +85,4 @@ Iteration rules:
 
 ## Safety
 - Favor local actions. Don’t exfiltrate secrets or make network calls unless necessary for the task.
+````

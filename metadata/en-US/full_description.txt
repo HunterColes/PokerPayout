@@ -1,0 +1,17 @@
+Poker Payout Calculator is your complete tournament management solution for poker games. Whether running home games or casino tournaments, this professional app handles everything with a beautiful poker-themed interface.
+
+Key Features:
+
+• Payout Calculator: Configure tournament structure and calculate payouts with customizable weight distributions for fair prize pools
+
+• Bank Tracker: Track player payments with checkboxes for buy-ins, food pools, and bounty payments. Real-time payment status and pool summaries keep everything organized
+
+• Professional Blind Timer: Tournament-grade timer with countdown/countup modes and visual progress indicators. Dynamic blind structure engine automatically scales blinds based on your tournament parameters
+
+• Tournament Tools: Complete management toolkit including chip distribution calculator, ICM calculations, and payout weight customization
+
+• Privacy First: All data stored locally with no internet connection required
+
+• Authentic Design: Poker green color scheme and clean interface optimized for tournament play
+
+Perfect for home games, casino tournaments, and poker enthusiasts who want professional-grade tournament management in a free, open-source app.

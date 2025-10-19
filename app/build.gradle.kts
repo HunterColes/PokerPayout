@@ -27,8 +27,8 @@ android {
         applicationId = "com.huntercoles.pokerpayout"
         minSdk = 26
         targetSdk = 34
-    versionCode = 19
-    versionName = "1.1.7"
+        versionCode = 20
+        versionName = "1.1.8"
     }
 
     dependenciesInfo {
@@ -99,6 +99,7 @@ android {
             excludes += "assets/dexopt/baseline.profm"
             excludes += "**/baseline.prof"
             excludes += "**/baseline.profm"
+            excludes += "META-INF/version-control-info.textproto"
         }
     }
 

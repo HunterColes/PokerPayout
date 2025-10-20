@@ -27,8 +27,8 @@ android {
         applicationId = "com.huntercoles.pokerpayout"
         minSdk = 26
         targetSdk = 34
-        versionCode = 20
-        versionName = "1.1.8"
+        versionCode = 21
+        versionName = "1.1.9"
     }
 
     dependenciesInfo {
@@ -68,12 +68,12 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android.txt"),
-                "proguard-rules.pro"
-            )
+            isMinifyEnabled = false
+            isShrinkResources = false
+            // proguardFiles(
+            //     getDefaultProguardFile("proguard-android.txt"),
+            //     "proguard-rules.pro"
+            // )
             // Use production signing if available, otherwise use debug signing for development
             signingConfig = if (signingConfigs.names.contains("release")) {
                 signingConfigs.getByName("release")

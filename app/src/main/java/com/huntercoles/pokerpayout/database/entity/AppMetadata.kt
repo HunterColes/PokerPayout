@@ -12,5 +12,5 @@ data class AppMetadata(
     @PrimaryKey
     val id: Int = 1,
     val schemaVersion: Int = 1,
-    val lastUsedTimestamp: Long = System.currentTimeMillis()
+    val lastUsedTimestamp: Long = 0L
 )

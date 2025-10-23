@@ -1,8 +1,16 @@
 import com.android.build.gradle.internal.api.BaseVariantOutputImpl
+import com.android.build.api.artifact.SingleArtifact
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
+import java.util.Locale
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.baseline.profile)
+    // Baseline profile plugin disabled for F-Droid reproducible builds
+    // alias(libs.plugins.baseline.profile)
     alias(libs.plugins.detekt)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin)
@@ -19,8 +27,8 @@ android {
         applicationId = "com.huntercoles.pokerpayout"
         minSdk = 26
         targetSdk = 34
-    versionCode = 14
-    versionName = "1.1.2"
+        versionCode = 21
+        versionName = "1.1.9"
     }
 
     dependenciesInfo {
@@ -60,12 +68,12 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android.txt"),
-                "proguard-rules.pro"
-            )
+            isMinifyEnabled = false
+            isShrinkResources = false
+            // proguardFiles(
+            //     getDefaultProguardFile("proguard-android.txt"),
+            //     "proguard-rules.pro"
+            // )
             // Use production signing if available, otherwise use debug signing for development
             signingConfig = if (signingConfigs.names.contains("release")) {
                 signingConfigs.getByName("release")
@@ -85,7 +93,14 @@ android {
     }
 
     packaging {
-        resources.excludes.add("/META-INF/{AL2.0,LGPL2.1}")
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "assets/dexopt/baseline.prof"
+            excludes += "assets/dexopt/baseline.profm"
+            excludes += "**/baseline.prof"
+            excludes += "**/baseline.profm"
+            excludes += "META-INF/version-control-info.textproto"
+        }
     }
 
     applicationVariants.all {
@@ -99,8 +114,35 @@ android {
     }
 }
 
-baselineProfile {
-    dexLayoutOptimization = true
+configurations {
+    all {
+        exclude(group = "androidx.profileinstaller", module = "profileinstaller")
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        // Transform merged assets to drop baseline profile artifacts before packaging/signing.
+        val taskProvider = tasks.register(
+            "strip${variant.name.replaceFirstChar { ch -> if (ch.isLowerCase()) ch.titlecase(Locale.US) else ch.toString() }}BaselineProfiles",
+            StripBaselineProfilesTask::class.java
+        )
+
+        variant.artifacts
+            .use(taskProvider)
+            .wiredWithDirectories(
+                StripBaselineProfilesTask::inputDir,
+                StripBaselineProfilesTask::outputDir
+            )
+            .toTransform(SingleArtifact.ASSETS)
+    }
+}
+
+tasks.configureEach {
+    // Disable ArtProfile task graph entirely to avoid generating non-deterministic baseline files.
+    if (name.contains("ArtProfile")) {
+        enabled = false
+    }
 }
 
 dependencies {
@@ -114,8 +156,9 @@ dependencies {
     implementation(libs.room.ktx)
     implementation(libs.timber)
 
-    implementation(libs.test.android.profile.installer)
-    baselineProfile(project(":baseline-profiles"))
+    // Baseline profiles disabled for F-Droid reproducible builds
+    // implementation(libs.test.android.profile.installer)
+    // baselineProfile(project(":baseline-profiles"))
 
     ksp(libs.hilt.compiler)
     ksp(libs.room.compiler)
@@ -123,4 +166,23 @@ dependencies {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+abstract class StripBaselineProfilesTask : DefaultTask() {
+    @get:InputDirectory
+    abstract val inputDir: DirectoryProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun strip() {
+        val output = outputDir.asFile.get()
+        project.delete(output)
+        project.copy {
+            from(inputDir)
+            into(output)
+            exclude("**/dexopt/baseline.prof", "**/dexopt/baseline.profm")
+        }
+    }
 }

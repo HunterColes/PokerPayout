@@ -115,6 +115,18 @@ Then run:
 .\gradlew assembleRelease  # Creates signed APK
 ```
 
+### **F-Droid Reproducible Builds** 🐧
+
+For F-Droid reproducible APK signing, build in a Linux environment using Docker:
+
+```bash
+docker-shell.bat           # Start Linux container
+dos2unix gradlew           # Fix line endings (first time only)
+./gradlew clean assembleRelease
+```
+
+Container uses Ubuntu 22.04 + Java 17 (matching F-Droid) with Linux line endings for reproducible builds.
+
 ---
 
 ## 🌟 Support & Contributions

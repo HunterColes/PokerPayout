@@ -1,0 +1,23 @@
+# Build outputs
+build/
+*/build/
+*.apk
+*.aab
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.gradle/
+
+# Git
+.git/
+.gitignore
+
+# Local config
+local.properties
+gradle.properties
+
+# Misc
+*.log
+.DS_Store

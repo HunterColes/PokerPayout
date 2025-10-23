@@ -1,6 +1,6 @@
-<a name="top"></a>
+<h1 align="center"><img src="metadata/en-US/images/icon.png" alt="Poker Payout Icon" width="50" style="border-radius: 50%; vertical-align: middle;"> Poker Payout</h1>
 
-# Poker Payout Calculator 🃏
+<p align="center">
 
 [![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)](#)
 [![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white)](#)
@@ -18,13 +18,14 @@
 
 [![Share](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/HunterColes/PokerPayout)
 [![Share](https://img.shields.io/badge/share-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https://github.com/HunterColes/PokerPayout)
-[![Share](https://img.shields.io/badge/share-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/HunterColes/PokerPayout)
 [![Share](https://img.shields.io/badge/share-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/submit?title=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/HunterColes/PokerPayout)
 [![Share](https://img.shields.io/badge/share-0088CC?logo=telegram&logoColor=white)](https://t.me/share/url?url=https://github.com/HunterColes/PokerPayout&text=Check%20out%20this%20project%20on%20GitHub)
 
+</p>
+
 ---
 
-## 🎯 What Is This?
+## 🎰 What Is This?
 
 **Poker Payout Calculator** is a professional, all-in-one poker tournament management app for Android. Whether you're hosting a home game or managing a casino tournament, this app has everything you need:
 
@@ -55,10 +56,10 @@ Poker Payout Calculator is a professional-grade tournament management applicatio
 ---
 
 <p align="center">
-	<img src="metadata/en-US/phoneScreenshots/01_tournament.png" alt="Tournament" width="160"/>
-	<img src="metadata/en-US/phoneScreenshots/02_bank.png" alt="Bank Tracker" width="160"/>
-	<img src="metadata/en-US/phoneScreenshots/03_tools_splits.png" alt="Tools - Splits" width="160"/>
-	<img src="metadata/en-US/phoneScreenshots/04_tools_odds.png" alt="Tools - Odds" width="160"/>
+	<img src="metadata/en-US/images/phoneScreenshots/01_tournament.png" alt="Tournament" width="160"/>
+	<img src="metadata/en-US/images/phoneScreenshots/02_bank.png" alt="Bank Tracker" width="160"/>
+	<img src="metadata/en-US/images/phoneScreenshots/03_tools_splits.png" alt="Tools - Splits" width="160"/>
+	<img src="metadata/en-US/images/phoneScreenshots/04_tools_odds.png" alt="Tools - Odds" width="160"/>
 </p>
 
 ---

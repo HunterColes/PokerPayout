@@ -12,7 +12,6 @@ if errorlevel 1 (
 ) else (
     REM Check if Dockerfile is newer than image
     echo Checking for Dockerfile changes...
-    docker build -t %IMAGE_NAME% . --quiet >nul 2>&1
 )
 
 REM Check if container exists

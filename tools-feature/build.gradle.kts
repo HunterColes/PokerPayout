@@ -72,7 +72,6 @@ dependencies {
     implementation(libs.navigation.hilt)
     implementation(libs.timber)
     testImplementation(libs.bundles.common.test)
-    testImplementation("junit:junit:4.13.2")  // For JUnit 4 tests
     androidTestImplementation(libs.bundles.common.android.test)
     debugImplementation(libs.debug.compose.manifest)
 

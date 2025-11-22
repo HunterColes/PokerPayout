@@ -1,1 +1,0 @@
-Complete poker tournament management: payouts, timers, and calculators

@@ -47,7 +47,6 @@ dependencies {
     implementation(project(":tools-feature"))
 
     implementation(platform(libs.compose.bom))
-    implementation(libs.coil)
     implementation(libs.compose.material3)
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.hilt)

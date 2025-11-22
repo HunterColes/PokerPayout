@@ -74,7 +74,6 @@ dependencies {
     testImplementation(libs.bundles.common.test)
     testImplementation(libs.test.robolectric)
     testImplementation(libs.test.androidx.core)
-    testImplementation("junit:junit:4.13.2")
     androidTestImplementation(libs.bundles.common.android.test)
     debugImplementation(libs.debug.compose.manifest)
 

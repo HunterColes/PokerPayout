@@ -16,18 +16,18 @@ Repo: https://github.com/HunterColes/PokerPayout.git
 Binaries: https://github.com/HunterColes/PokerPayout/releases/download/v%v/PokerPayout-v%v-release.apk
 
 Builds:
-  - versionName: 1.1.9
-    versionCode: 21
-    commit: 9c78399
+  - versionName: 1.1.10
+    versionCode: 22
+    commit: v1.1.10
     subdir: app
     gradle:
       - yes
     scandelete:
       - build-cache
 
-AllowedAPKSigningKeys: 2ec6b3a7b99b7890ae19640b2a024b3bf216143eec10186440cd8c395a4d3e21
+AllowedAPKSigningKeys: 0558e11420a97f212d7048f6b04351fdc82498f9d69cc5c0115270b5e2853de7
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 1.1.9
-CurrentVersionCode: 21
+CurrentVersion: 1.1.10
+CurrentVersionCode: 22

@@ -1,145 +1,129 @@
-<h1 align="center"><img src="metadata/en-US/images/icon.png" alt="Poker Payout Icon" width="50" style="border-radius: 50%; vertical-align: middle;"> Poker Payout</h1>
-
 <p align="center">
-
-[![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)](#)
-[![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white)](#)
-[![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white)](#)
-[![Latest Release](https://img.shields.io/github/v/tag/HunterColes/PokerPayout?label=Latest%20Release)](https://github.com/HunterColes/PokerPayout/releases/latest)
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
-[![Open Source](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red)](#-open-source--contributions)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-how-to-contribute)
-
-[![Donate Ethereum](https://img.shields.io/badge/Ξ-Ethereum-627EEA?logo=ethereum&logoColor=white)](crypto/DONATIONS.md)
-[![Donate Monero](https://img.shields.io/badge/Ӿ-Monero-FF6600?logo=monero&logoColor=white)](crypto/DONATIONS.md)
-
-⭐ Star us on GitHub — your support motivates us a lot! 🙏😊
-
-[![Share](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/HunterColes/PokerPayout)
-[![Share](https://img.shields.io/badge/share-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https://github.com/HunterColes/PokerPayout)
-[![Share](https://img.shields.io/badge/share-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/submit?title=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/HunterColes/PokerPayout)
-[![Share](https://img.shields.io/badge/share-0088CC?logo=telegram&logoColor=white)](https://t.me/share/url?url=https://github.com/HunterColes/PokerPayout&text=Check%20out%20this%20project%20on%20GitHub)
-
+  <img src="metadata/en-US/images/icon.png" alt="Poker Payout Icon" width="120" style="border-radius: 50%;"/>
 </p>
 
----
-
-## 🎰 What Is This?
-
-**Poker Payout Calculator** is a professional, all-in-one poker tournament management app for Android. Whether you're hosting a home game or managing a casino tournament, this app has everything you need:
-
-### **Purpose**
-To provide poker tournament organizers and players with a complete toolkit for managing tournament payouts, tracking player payments, and timing blind levels with a beautiful poker-themed interface.
-
-### **Description**
-Poker Payout Calculator is a professional-grade tournament management application that:
-
-- Calculates tournament payouts with customizable weight distributions
-- Tracks player buy-ins, food pools, and bounty payments
-- Provides real-time payment status and pool summaries
-- Features a professional blind timer with countdown/countup modes
-- Uses an authentic poker green color scheme
-- Stores all data locally for privacy
-- Provides a clean, intuitive interface optimized for tournament play
-- Is completely free and open-source
-
-### **Features**
-- **🃏 Payout Calculator**: Configure tournament structure and calculate payouts with custom weights
-- **🏦 Bank Tracker**: Track player payments with checkboxes for buy-in, food, and bounty
-- **⏰ Blind Timer**: Professional tournament timer with visual progress indicators
-	- Dynamic blind structure engine that scales blinds ~33% per level based on duration, round length, smallest chip, starting stack, and player count.
-	- Skip forward/backward controls to preview upcoming levels or reset instantly from level one.
-- **📊 Pool Management**: Real-time calculation of total pools and payment percentages
-- **🎯 Tournament Tools**: Complete tournament management in one app
-
----
+<h1 align="center">Poker Payout</h1>
 
 <p align="center">
-	<img src="metadata/en-US/images/phoneScreenshots/01_tournament.png" alt="Tournament" width="160"/>
-	<img src="metadata/en-US/images/phoneScreenshots/02_bank.png" alt="Bank Tracker" width="160"/>
-	<img src="metadata/en-US/images/phoneScreenshots/03_tools_splits.png" alt="Tools - Splits" width="160"/>
-	<img src="metadata/en-US/images/phoneScreenshots/04_tools_odds.png" alt="Tools - Odds" width="160"/>
+  <img alt="Android API 26+" src="https://img.shields.io/badge/API%2026+-50f270?logo=android&logoColor=black&style=for-the-badge"/>
+  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white&style=for-the-badge"/>
+  <img alt="Jetpack Compose" src="https://img.shields.io/badge/Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white&style=for-the-badge"/>
 </p>
 
+<p align="center">
+  <img alt="Latest Release" src="https://img.shields.io/github/v/tag/HunterColes/PokerPayout?label=Latest%20Release&style=for-the-badge"/>
+  <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge"/>
+</p>
+
+<h4 align="center">
+  Professional poker tournament management with payouts, timers, and calculators for Android. Complete toolkit for home games and casino tournaments with beautiful poker-themed interface.
+</h4>
+
+# Download
+
+<p align="center">
+  <a href="https://github.com/HunterColes/PokerPayout/releases">
+    <img alt="Get it on GitHub" src="https://raw.githubusercontent.com/deckerst/common/main/assets/get-it-on-github.png" height="80"/>
+  </a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://f-droid.org/packages/com.huntercoles.pokerpayout/">
+    <img alt="Get it on F-Droid" src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="80"/>
+  </a>
+</p>
+
+<p align="center">
+  SHA-256 hash of the signing certificate: <code>0558e11420a97f212d7048f6b04351fdc82498f9d69cc5c0115270b5e2853de7</code><br>
+  SHA-256 checksums are also provided per file on the <a href="https://github.com/HunterColes/PokerPayout/releases">GitHub releases page</a>.
+</p>
+
+<p align="center">
+  <img src="metadata/en-US/images/phoneScreenshots/01_tournament.png" alt="Tournament" width="160"/>
+  <img src="metadata/en-US/images/phoneScreenshots/02_bank.png" alt="Bank Tracker" width="160"/>
+  <img src="metadata/en-US/images/phoneScreenshots/03_tools_splits.png" alt="Tools - Splits" width="160"/>
+  <img src="metadata/en-US/images/phoneScreenshots/04_tools_odds.png" alt="Tools - Odds" width="160"/>
+</p>
+
+# Features
+
+• **Tournament Management**
+  ◦ Payout calculator with customizable weight distributions
+  ◦ Bank tracker for buy-ins, food pools, and bounty payments
+  ◦ Real-time payment status and pool summaries
+  ◦ Professional blind timer with countdown/countup modes
+
+• **Advanced Tools**
+  ◦ Dynamic blind structure engine (scales ~33% per level)
+  ◦ Skip forward/backward controls for level preview
+  ◦ Chip distribution calculator
+  ◦ Tournament setup and management
+
+• **Design & Privacy**
+  ◦ Authentic poker green color scheme
+  ◦ Material 3 design with Jetpack Compose
+  ◦ All data stored locally (no internet required)
+  ◦ Clean interface optimized for tournament play
+
+• **Free and Open Source**
+• **Privacy-friendly**
+
 ---
 
-### **Libraries/concepts used**
+# Build & Installation
 
-* Gradle modularised project by features
-* MVVM pattern with modern Android architecture
-* Jetpack Compose with Material3 design - for UI layer
-* Kotlin Coroutines & Kotlin Flow - for concurrency & reactive approach
-* Hilt - for Dependency Injection pattern implementation
-* Room - for local database
-* Version Catalog - for dependency management
-
----
-
-## 🔨 Build & Installation (devs)
-
-### Prerequisites
-
+## Prerequisites
 - Android Studio
 - Java 17 (JDK 17) — required for building
-- Android SDK (API 24+)
+- Android SDK (API 26+)
 
-### **Commands** 🔨
-Clean:
-```
-.\gradlew clean
-```
-Assemble Release APK:
-```
-.\gradlew assembleRelease
-```
-Install Release APK:
-```
-.\gradlew installRelease
-```
-Run Tests:
-```
-.\gradlew test
-```
-
-### **Release Signing** 🔐
-For production releases (F-Droid, Play Store), uncomment and fill these lines in `gradle.properties`:
-
+## Build Commands
 ```bash
-# In gradle.properties, uncomment and set:
-RELEASE_STORE_PASSWORD=your_keystore_password_here
-RELEASE_KEY_PASSWORD=your_key_password_here
+.\gradlew clean                    # Clean project
+.\gradlew assembleRelease         # Build release APK
+.\gradlew installRelease          # Install release APK
+.\gradlew test                    # Run tests
+.\gradlew --stop                  # Stop Gradle daemons (if stuck)
 ```
 
-Then run:
+## Release Signing
+For production releases, set environment variables:
 ```bash
-.\gradlew assembleRelease  # Creates signed APK
+export ORG_GRADLE_PROJECT_RELEASE_STORE_FILE="../pokerpayout-release.keystore"
+export ORG_GRADLE_PROJECT_RELEASE_STORE_PASSWORD="your_password"
+export ORG_GRADLE_PROJECT_RELEASE_KEY_ALIAS="pokerpayout"
+export ORG_GRADLE_PROJECT_RELEASE_KEY_PASSWORD="your_password"
 ```
 
-### **F-Droid Reproducible Builds** 🐧
-
-For F-Droid reproducible APK signing, build in a Linux environment using Docker:
-
+## F-Droid Reproducible Builds
+For reproducible builds matching F-Droid:
 ```bash
-docker-shell.bat           # Start Linux container
-dos2unix gradlew           # Fix line endings (first time only)
-./gradlew clean assembleRelease
+docker-shell.bat                  # Start Linux container
+dos2unix gradlew                  # Fix line endings (first time only)
+./gradlew clean assembleRelease   # Build with Ubuntu 22.04 + Java 17
 ```
 
-Container uses Ubuntu 22.04 + Java 17 (matching F-Droid) with Linux line endings for reproducible builds.
+# Contribute
 
----
+Pull requests are welcome. You can have a look at [issues](https://github.com/HunterColes/PokerPayout/issues) for contribution opportunities. For other changes, please open an issue first to discuss what you would like to change.
 
-## 🌟 Support & Contributions
-
-This project is support-driven and community-maintained. Contributions are welcome — bugs, docs, tests, UI tweaks, or code. To contribute:
-
-1. Fork the repo
+**How to contribute:**
+1. Fork the repository
 2. Create a feature branch
 3. Open a pull request
 
 For help or to discuss ideas, open an issue or a discussion on GitHub.
 
----
+# Libraries & Architecture
 
-See also: [LICENSE.md](LICENSE.md) • [CONTRIBUTING.md](CONTRIBUTING.md) • [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+• Gradle modularised project by features
+• MVVM pattern with modern Android architecture  
+• Jetpack Compose with Material 3 design
+• Kotlin Coroutines & Flow for concurrency
+• Hilt for Dependency Injection
+• Room for local database
+• Version Catalog for dependency management
+
+# License
+
+• [MIT License](LICENSE.md)
+• Free and open source software
+• See also: [CONTRIBUTING.md](CONTRIBUTING.md) • [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)

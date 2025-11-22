@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="metadata/en-US/images/icon.png" alt="Poker Payout Icon" width="120" style="border-radius: 50%;"/>
+  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp" alt="Poker Payout Icon" width="200"/>
 </p>
 
 <h1 align="center">Poker Payout</h1>
@@ -32,8 +32,13 @@
 </p>
 
 <p align="center">
-  SHA-256 hash of the signing certificate: <code>0558e11420a97f212d7048f6b04351fdc82498f9d69cc5c0115270b5e2853de7</code><br>
-  SHA-256 checksums are also provided per file on the <a href="https://github.com/HunterColes/PokerPayout/releases">GitHub releases page</a>.
+  <a href="crypto/DONATIONS.md">
+    <img alt="Donate Ethereum" src="https://img.shields.io/badge/Ξ-Ethereum-627EEA?logo=ethereum&logoColor=white&style=for-the-badge"/>
+  </a>
+  &nbsp;&nbsp;
+  <a href="crypto/DONATIONS.md">
+    <img alt="Donate Monero" src="https://img.shields.io/badge/Ӿ-Monero-FF6600?logo=monero&logoColor=white&style=for-the-badge"/>
+  </a>
 </p>
 
 <p align="center">

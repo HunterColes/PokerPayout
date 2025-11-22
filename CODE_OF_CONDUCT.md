@@ -1,20 +1,35 @@
 # Code of Conduct
 
-This project follows a standard open-source Code of Conduct. We value a welcoming and inclusive community and expect contributors to follow these guidelines.
+## Our Pledge
 
-## Our standards
+We are committed to providing a friendly, safe, and welcoming environment for everyone, regardless of level of experience, gender identity and expression, sexual orientation, disability, personal appearance, body size, race, ethnicity, age, religion, nationality, or other similar characteristics.
 
-- Be respectful and constructive.
-- Use inclusive language.
-- Assume good intent and be patient when reviewing others' work.
-- Avoid personal attacks, harassment, or discriminatory language.
+## Our Standards
 
-## Reporting
+Examples of behavior that contributes to a positive environment:
 
-If you experience or witness unacceptable behaviour, please open an issue titled "Code of Conduct Report" or email: support@huntercoles.dev (replace with the preferred contact). The project maintainers will handle reports promptly and confidentially.
+- Being respectful and constructive in discussions
+- Using welcoming and inclusive language
+- Being respectful of differing viewpoints and experiences
+- Gracefully accepting constructive criticism
+- Focusing on what is best for the community
+- Showing empathy towards other community members
+
+Examples of unacceptable behavior:
+
+- Harassment of any participants in any form
+- Deliberate intimidation, stalking, or following
+- Violent threats or language directed against another person
+- Discriminatory jokes and language
+- Unwelcome sexual attention or advances
+- Advocating for, or encouraging, any of the above behavior
 
 ## Enforcement
 
-Maintainers may remove content or ban users who violate the code of conduct. We reserve the right to take necessary actions to maintain a safe community.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by opening an issue or contacting project maintainers. All complaints will be reviewed and investigated promptly and fairly.
 
-Thank you for helping keep this project welcoming to everyone.
+Project maintainers have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct.
+
+## Attribution
+
+This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.0.

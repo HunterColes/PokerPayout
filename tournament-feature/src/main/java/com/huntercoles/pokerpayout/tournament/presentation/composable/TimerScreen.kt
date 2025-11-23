@@ -23,7 +23,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
@@ -93,15 +93,7 @@ private fun isValidDurationInput(text: String): Boolean {
     return text.all { it.isDigit() } && text.length <= 4 // Max 9999 minutes
 }
 
-@Composable
-fun TimerRoute(viewModel: TimerViewModel = hiltViewModel()) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    TimerScreen(
-        uiState = uiState,
-        onIntent = viewModel::acceptIntent,
-    )
-}
+// TimerRoute removed - using single ViewModel instance from TournamentScreen
 
 @Composable
 fun TimerScreen(
@@ -126,7 +118,13 @@ fun TimerScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp) // Fixed height for consistent centering
-                    .clickable(onClick = { onIntent(TimerIntent.ToggleTimer) }),
+                    .then(
+                        if (!uiState.isFinished) {
+                            Modifier.clickable(onClick = { onIntent(TimerIntent.ToggleTimer) })
+                        } else {
+                            Modifier // No clickable when finished
+                        }
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 when {
@@ -266,8 +264,8 @@ fun TimerScreen(
                     }
                 }
             }
-        }        // Blind Information Section (only show when blind config is collapsed and not paused)
-        if (uiState.isBlindConfigCollapsed && (uiState.isRunning || uiState.isFinished || !uiState.hasTimerStarted)) {
+        }        // Blind Information Section - only show when timer has started or is active
+        if (uiState.hasTimerStarted && (uiState.isRunning || uiState.isFinished)) {
             BlindInformationTile(
                 uiState = uiState,
                 onIntent = onIntent
@@ -285,6 +283,50 @@ fun TimerScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+
+        // Invalid Config Dialog
+        if (uiState.showInvalidConfigDialog) {
+            PokerDialog(
+                onDismissRequest = { onIntent(TimerIntent.HideInvalidConfigDialog) }
+            ) {
+                Text(
+                    text = "Invalid Config!",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = PokerColors.PokerGold
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = PokerColors.FeltGreen,
+                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
+                ) {
+                    Text(
+                        text = "The blind configuration is invalid. Please check the settings.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.CardWhite,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
+                ) {
+                    TextButton(onClick = { onIntent(TimerIntent.HideInvalidConfigDialog) }) {
+                        Text(
+                            text = "OK",
+                            color = PokerColors.PokerGold,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         }
     }
 }

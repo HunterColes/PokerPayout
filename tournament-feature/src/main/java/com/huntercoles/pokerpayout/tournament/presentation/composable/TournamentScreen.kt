@@ -363,6 +363,8 @@ fun TournamentConfigurationCard(
                                 onIntent(TournamentConfigIntent.UpdateStartingChips(chips))
                                 onTimerIntent(TimerIntent.UpdateStartingChips(chips))
                             },
+                            selectedPanel = uiState.selectedPanel,
+                            onIntent = onIntent,
                             isLocked = uiState.isTournamentLocked
                         )
                     }

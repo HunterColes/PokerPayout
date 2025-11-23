@@ -35,6 +35,7 @@ import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.components.PokerNumberField
 import com.huntercoles.pokerpayout.core.design.components.PokerTextFieldDefaults
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
+import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigIntent
 
 /**
  * Validates decimal input to only allow digits and one decimal point
@@ -246,11 +247,11 @@ fun PoolConfigurationSection(
     onRoundLengthChange: (Int) -> Unit,
     onSmallestChipChange: (Int) -> Unit,
     onStartingChipsChange: (Int) -> Unit,
+    selectedPanel: String,
+    onIntent: (TournamentConfigIntent) -> Unit,
     isLocked: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    var selectedPanel by remember { mutableStateOf("player") }
-
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -274,13 +275,13 @@ fun PoolConfigurationSection(
                 FolderTab(
                     text = "Player",
                     isSelected = selectedPanel == "player",
-                    onClick = { selectedPanel = "player" },
+                    onClick = { onIntent(TournamentConfigIntent.UpdateSelectedPanel("player")) },
                     modifier = Modifier
                 )
                 FolderTab(
                     text = "Blinds",
                     isSelected = selectedPanel == "blinds",
-                    onClick = { selectedPanel = "blinds" },
+                    onClick = { onIntent(TournamentConfigIntent.UpdateSelectedPanel("blinds")) },
                     modifier = Modifier
                 )
             }
@@ -365,7 +366,9 @@ fun PoolConfigurationSection(
                                 value = gameDurationHours,
                                 onValueChange = { hours ->
                                     val cappedHours = minOf(hours, 24).coerceAtLeast(1)
-                                    if (!isLocked) onGameDurationHoursChange(cappedHours)
+                                    if (!isLocked) {
+                                        onGameDurationHoursChange(cappedHours)
+                                    }
                                 },
                                 label = "Duration (Hours)",
                                 isLocked = isLocked,
@@ -376,7 +379,11 @@ fun PoolConfigurationSection(
 
                             PokerNumberField(
                                 value = roundLengthMinutes,
-                                onValueChange = { if (!isLocked) onRoundLengthChange(it) },
+                                onValueChange = { 
+                                    if (!isLocked) {
+                                        onRoundLengthChange(it)
+                                    }
+                                },
                                 label = "Round Length (Min)",
                                 isLocked = isLocked,
                                 minValue = 1,
@@ -390,7 +397,11 @@ fun PoolConfigurationSection(
                         ) {
                             PokerNumberField(
                                 value = smallestChip,
-                                onValueChange = { if (!isLocked) onSmallestChipChange(it) },
+                                onValueChange = { 
+                                    if (!isLocked) {
+                                        onSmallestChipChange(it)
+                                    }
+                                },
                                 label = "Smallest Chip",
                                 isLocked = isLocked,
                                 minValue = 1,
@@ -399,7 +410,11 @@ fun PoolConfigurationSection(
 
                             PokerNumberField(
                                 value = startingChips,
-                                onValueChange = { if (!isLocked) onStartingChipsChange(it) },
+                                onValueChange = { 
+                                    if (!isLocked) {
+                                        onStartingChipsChange(it)
+                                    }
+                                },
                                 label = "Starting Chips",
                                 isLocked = isLocked,
                                 minValue = 1,

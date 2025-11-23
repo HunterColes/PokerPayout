@@ -21,5 +21,6 @@ data class TournamentConfigUiState(
     val showResetDialog: Boolean = false,
     val leaderboardNames: Map<Int, String> = emptyMap(),
     val rebuyPurchases: Int = 0,
-    val addOnPurchases: Int = 0
+    val addOnPurchases: Int = 0,
+    val selectedPanel: String = "player"
 )

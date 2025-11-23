@@ -17,6 +17,7 @@ sealed class TournamentConfigIntent {
     data class UpdateRoundLength(val minutes: Int) : TournamentConfigIntent()
     data class UpdateSmallestChip(val chip: Int) : TournamentConfigIntent()
     data class UpdateStartingChips(val chips: Int) : TournamentConfigIntent()
+    data class UpdateSelectedPanel(val panel: String) : TournamentConfigIntent()
     object ShowResetDialog : TournamentConfigIntent()
     object HideResetDialog : TournamentConfigIntent()
     object ConfirmReset : TournamentConfigIntent()

@@ -73,6 +73,7 @@ class TournamentConfigViewModel @Inject constructor(
             is TournamentConfigIntent.UpdateRoundLength -> updateRoundLength(intent.minutes)
             is TournamentConfigIntent.UpdateSmallestChip -> updateSmallestChip(intent.chip)
             is TournamentConfigIntent.UpdateStartingChips -> updateStartingChips(intent.chips)
+            is TournamentConfigIntent.UpdateSelectedPanel -> updateSelectedPanel(intent.panel)
             TournamentConfigIntent.ShowResetDialog -> showResetDialog()
             TournamentConfigIntent.HideResetDialog -> hideResetDialog()
             TournamentConfigIntent.ConfirmReset -> confirmReset()
@@ -91,6 +92,7 @@ class TournamentConfigViewModel @Inject constructor(
         val savedRoundLength = tournamentPreferences.getRoundLengthMinutes()
         val savedSmallestChip = tournamentPreferences.getSmallestChip()
         val savedStartingChips = tournamentPreferences.getStartingChips()
+        val savedSelectedPanel = tournamentPreferences.getSelectedPanel()
 
         val initialConfig = _uiState.value.tournamentConfig.copy(
             numPlayers = savedPlayerCount,
@@ -110,7 +112,8 @@ class TournamentConfigViewModel @Inject constructor(
             gameDurationHours = savedGameDurationHours,
             roundLengthMinutes = savedRoundLength,
             smallestChip = savedSmallestChip,
-            startingChips = savedStartingChips
+            startingChips = savedStartingChips,
+            selectedPanel = savedSelectedPanel
         )
         calculatePayouts()
     }
@@ -206,6 +209,7 @@ class TournamentConfigViewModel @Inject constructor(
             ui.roundLengthMinutes == defaultUi.roundLengthMinutes &&
             ui.smallestChip == defaultUi.smallestChip &&
             ui.startingChips == defaultUi.startingChips
+            // Note: selectedPanel is already checked in tournamentPreferences.isInDefaultState()
     }
 
     private fun confirmReset() {
@@ -214,8 +218,15 @@ class TournamentConfigViewModel @Inject constructor(
     }
 
     private fun resetAllData() {
+        // Preserve current selected panel
+        val currentSelectedPanel = _uiState.value.selectedPanel
+        
         tournamentPreferences.resetAllTournamentData()
         timerPreferences.resetAllTimerData()
+        
+        // Restore the selected panel to what it was before reset
+        tournamentPreferences.setSelectedPanel(currentSelectedPanel)
+        
         // Reload tournament configuration from preferences
         loadTournamentConfiguration()
 
@@ -226,7 +237,8 @@ class TournamentConfigViewModel @Inject constructor(
             gameDurationHours = defaultHours,
             roundLengthMinutes = defaultUi.roundLengthMinutes,
             smallestChip = defaultUi.smallestChip,
-            startingChips = defaultUi.startingChips
+            startingChips = defaultUi.startingChips,
+            selectedPanel = currentSelectedPanel // Preserve the selected panel
         )
     }
 
@@ -327,6 +339,11 @@ class TournamentConfigViewModel @Inject constructor(
     private fun updateStartingChips(chips: Int) {
         _uiState.value = _uiState.value.copy(startingChips = chips)
         tournamentPreferences.setStartingChips(chips)
+    }
+
+    private fun updateSelectedPanel(panel: String) {
+        _uiState.value = _uiState.value.copy(selectedPanel = panel)
+        tournamentPreferences.setSelectedPanel(panel)
     }
 
     private fun determinePlayerForPosition(position: Int, numPlayers: Int, eliminationOrder: List<Int>): Int? {

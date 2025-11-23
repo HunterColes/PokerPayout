@@ -54,15 +54,6 @@ When asked to upgrade app version (versionCode/versionName), you MUST:
 4. Update F-Droid metadata in `metadata/com.huntercoles.pokerpayout.yml`
 5. Update any documentation references
 
-**Get APK Signature Fingerprint (for F-Droid):**
-```bash
-keytool -list -v -keystore %USERPROFILE%\.android\debug.keystore -storepass android
-```
-**PowerShell version:**
-```powershell
-keytool -list -v -keystore "$env:USERPROFILE\.android\debug.keystore" -storepass android
-```
-
 **CRITICAL: Wait for commands to complete before running the next one.**
 - NEVER run multiple terminal commands in parallel or rapid succession
 - On slower machines, interrupting commands triggers batch job cancellation

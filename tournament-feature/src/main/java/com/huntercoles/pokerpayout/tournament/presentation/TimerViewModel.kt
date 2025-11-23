@@ -44,33 +44,35 @@ class TimerViewModel @Inject constructor(
     private fun restoreTimerState() {
         val actualTime = timerPreferences.calculateActualTime()
         val storedDirection = timerPreferences.getTimerDirection()
-        if (storedDirection != "COUNTDOWN") {
-            timerPreferences.setTimerDirection("COUNTDOWN")
+        val direction = when (storedDirection) {
+            "COUNTUP" -> TimerDirection.COUNTUP
+            else -> TimerDirection.COUNTDOWN
         }
-        val direction = TimerDirection.COUNTDOWN
         val finishedPref = timerPreferences.getIsFinished()
-        if (finishedPref && direction == TimerDirection.COUNTDOWN) {
-            timerPreferences.setIsFinished(false)
-        }
+        val isRunning = timerPreferences.getTimerRunning()
+        val hasStarted = timerPreferences.getHasTimerStarted()
         
         _uiState.update { 
             it.copy(
                 gameDurationMinutes = timerPreferences.getGameDurationMinutes(),
                 currentTimeSeconds = actualTime,
                 timerDirection = direction,
-                isRunning = timerPreferences.getTimerRunning(),
-                isFinished = if (direction == TimerDirection.COUNTDOWN) false else finishedPref,
-                hasTimerStarted = timerPreferences.getHasTimerStarted()
+                isRunning = isRunning,
+                isFinished = finishedPref,
+                hasTimerStarted = hasStarted
             )
         }
         
-        // Update preferences with the calculated time
-        timerPreferences.setCurrentTimeSeconds(actualTime)
-        
-        // If timer was running and not finished, continue it
-        if (timerPreferences.getTimerRunning()) {
-            startTimer()
+        // Update preferences with the calculated time only if timer was running
+        if (isRunning && !finishedPref) {
+            timerPreferences.setCurrentTimeSeconds(actualTime)
+            // Continue the timer after a brief delay to ensure UI is ready
+            viewModelScope.launch {
+                delay(100) // Brief delay to ensure restoration is complete
+                startTimer()
+            }
         }
+        
         regenerateBlindSchedule()
     }
 
@@ -89,6 +91,10 @@ class TimerViewModel @Inject constructor(
             is TimerIntent.UpdateStartingChips -> updateStartingChips(intent.value)
             is TimerIntent.UpdateRoundLength -> updateRoundLength(intent.minutes)
             is TimerIntent.ToggleBlindConfigCollapsed -> toggleBlindConfigCollapsed(intent.collapsed)
+
+            // Dialog intents
+            is TimerIntent.ShowInvalidConfigDialog -> _uiState.update { it.copy(showInvalidConfigDialog = true) }
+            is TimerIntent.HideInvalidConfigDialog -> _uiState.update { it.copy(showInvalidConfigDialog = false) }
         }
     }
 
@@ -127,6 +133,12 @@ class TimerViewModel @Inject constructor(
         if (currentState.isRunning) {
             stopTimer()
         } else {
+            // Validate blind configuration before starting
+            if (!isValidBlindConfiguration(currentState)) {
+                _uiState.update { it.copy(showInvalidConfigDialog = true) }
+                return
+            }
+
             startTimer()
         }
     }
@@ -134,10 +146,16 @@ class TimerViewModel @Inject constructor(
     private fun startTimer() {
         if (timerJob?.isActive == true) return
 
+        val currentState = _uiState.value
+        
+        // Calculate final time once when timer starts
+        val finalTimeSeconds = calculateFinalTimeSeconds(currentState)
+
         _uiState.update { 
             it.copy(
                 isRunning = true, 
                 isFinished = false,
+                finalTimeSeconds = finalTimeSeconds,
                 isBlindConfigCollapsed = true,  // Auto-collapse when timer starts
                 hasTimerStarted = true  // Mark that timer has been started (stays true until reset)
             ) 
@@ -153,17 +171,34 @@ class TimerViewModel @Inject constructor(
             while (true) {
                 delay(1000) // 1 second
 
-                val currentState = _uiState.value
-                val newTimeSeconds = when (currentState.timerDirection) {
-                    TimerDirection.COUNTDOWN -> currentState.currentTimeSeconds - 1
-                    TimerDirection.COUNTUP -> currentState.currentTimeSeconds + 1
+                val state = _uiState.value
+                val newTimeSeconds = when (state.timerDirection) {
+                    TimerDirection.COUNTDOWN -> state.currentTimeSeconds - 1
+                    TimerDirection.COUNTUP -> state.currentTimeSeconds + 1
                 }
 
-                val reachedCountUpLimit = currentState.timerDirection == TimerDirection.COUNTUP &&
-                    newTimeSeconds >= currentState.totalDurationSeconds
+                // Check if we need to switch from COUNTDOWN to COUNTUP
+                val shouldSwitchToCountUp = state.timerDirection == TimerDirection.COUNTDOWN && 
+                    newTimeSeconds <= 0
+
+                if (shouldSwitchToCountUp) {
+                    // Switch to COUNTUP mode at 0
+                    _uiState.update { 
+                        it.copy(
+                            currentTimeSeconds = 0,
+                            timerDirection = TimerDirection.COUNTUP
+                        )
+                    }
+                    timerPreferences.setCurrentTimeSeconds(0)
+                    timerPreferences.setTimerDirection("COUNTUP")
+                    continue // Skip the rest of the loop and continue with COUNTUP
+                }
+
+                val reachedCountUpLimit = state.timerDirection == TimerDirection.COUNTUP &&
+                    newTimeSeconds >= state.finalTimeSeconds
 
                 if (reachedCountUpLimit) {
-                    val finalSeconds = currentState.totalDurationSeconds
+                    val finalSeconds = state.finalTimeSeconds
                     _uiState.update {
                         it.copy(
                             currentTimeSeconds = finalSeconds,
@@ -181,7 +216,7 @@ class TimerViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         currentTimeSeconds = newTimeSeconds,
-                        isFinished = if (currentState.timerDirection == TimerDirection.COUNTDOWN) false else it.isFinished
+                        isFinished = if (state.timerDirection == TimerDirection.COUNTDOWN) false else it.isFinished
                     )
                 }
                 timerPreferences.setCurrentTimeSeconds(newTimeSeconds)
@@ -209,21 +244,30 @@ class TimerViewModel @Inject constructor(
         val resetDurationMinutes = timerPreferences.getGameDurationMinutes()
         
         _uiState.update { state ->
-            val resetSeconds = when (state.timerDirection) {
-                TimerDirection.COUNTDOWN -> resetDurationMinutes * 60
-                TimerDirection.COUNTUP -> 0
-            }
+            val resetSeconds = resetDurationMinutes * 60
+            // Reset blind configuration to defaults from tournament preferences
+            val resetBlindConfig = BlindConfiguration(
+                smallestChip = tournamentPreferences.getSmallestChip(),
+                startingChips = tournamentPreferences.getStartingChips(),
+                roundLengthMinutes = tournamentPreferences.getRoundLengthMinutes()
+            )
             state.copy(
                 gameDurationMinutes = resetDurationMinutes,
                 currentTimeSeconds = resetSeconds,
+                timerDirection = TimerDirection.COUNTDOWN, // Always reset to COUNTDOWN
                 isRunning = false,
                 isFinished = false,
                 isBlindConfigCollapsed = false,  // Unlock and expand blind config on reset
-                hasTimerStarted = false  // Reset the timer started flag
+                hasTimerStarted = false,  // Reset the timer started flag
+                finalTimeSeconds = resetDurationMinutes * 60, // Reset final time to tournament duration
+                showInvalidConfigDialog = false,  // Clear any invalid config dialog
+                blindConfiguration = resetBlindConfig // Reset blind configuration to defaults
             )
         }
         
         timerPreferences.resetTimer()
+        // Regenerate blind schedule to ensure validation works correctly after reset
+        regenerateBlindSchedule()
         updateCurrentBlindLevel()
     }
 
@@ -241,6 +285,7 @@ class TimerViewModel @Inject constructor(
                 blindConfiguration = state.blindConfiguration.copy(smallestChip = sanitizedValue)
             )
         }
+        resetTimerToFreshState()
         regenerateBlindSchedule()
     }
 
@@ -251,6 +296,7 @@ class TimerViewModel @Inject constructor(
                 blindConfiguration = state.blindConfiguration.copy(startingChips = sanitizedValue)
             )
         }
+        resetTimerToFreshState()
         regenerateBlindSchedule()
     }
 
@@ -261,6 +307,7 @@ class TimerViewModel @Inject constructor(
                 blindConfiguration = state.blindConfiguration.copy(roundLengthMinutes = sanitizedMinutes)
             )
         }
+        resetTimerToFreshState()
         regenerateBlindSchedule()
     }
 
@@ -270,9 +317,52 @@ class TimerViewModel @Inject constructor(
         }
     }
 
+    private fun resetTimerToFreshState() {
+        stopTimer()
+        tournamentPreferences.setTournamentLocked(false)
+        
+        _uiState.update { state ->
+            val resetSeconds = state.gameDurationMinutes * 60
+            state.copy(
+                currentTimeSeconds = resetSeconds,
+                timerDirection = TimerDirection.COUNTDOWN,
+                isRunning = false,
+                isFinished = false,
+                hasTimerStarted = false,  // Reset to fresh state
+                isBlindConfigCollapsed = false
+            )
+        }
+        
+        timerPreferences.setCurrentTimeSeconds(_uiState.value.currentTimeSeconds)
+        timerPreferences.setTimerDirection("COUNTDOWN")
+        timerPreferences.setTimerRunning(false)
+        timerPreferences.setIsFinished(false)
+        timerPreferences.setHasTimerStarted(false)
+    }
+
     override fun onCleared() {
         super.onCleared()
-        stopTimer()
+        val currentState = _uiState.value
+        
+        // If timer is running, preserve state for restoration
+        if (currentState.isRunning && !currentState.isFinished) {
+            // Only cancel the job, don't call stopTimer() which clears the running state
+            timerJob?.cancel()
+            timerJob = null
+            
+            // Persist current state
+            timerPreferences.setTimerRunning(true)
+            timerPreferences.setCurrentTimeSeconds(currentState.currentTimeSeconds)
+            timerPreferences.setTimerDirection(when (currentState.timerDirection) {
+                TimerDirection.COUNTDOWN -> "COUNTDOWN"
+                TimerDirection.COUNTUP -> "COUNTUP"
+            })
+            timerPreferences.setIsFinished(currentState.isFinished)
+            timerPreferences.setHasTimerStarted(currentState.hasTimerStarted)
+        } else {
+            // Timer is stopped or finished, clean stop
+            stopTimer()
+        }
     }
 
     private fun observePlayerCount() {
@@ -321,7 +411,8 @@ class TimerViewModel @Inject constructor(
                 playerCount = latestPlayerCount,
                 baseBlindLevels = schedule,
                 blindLevels = schedule,
-                currentBlindLevelIndex = levelIndex
+                currentBlindLevelIndex = levelIndex,
+                finalTimeSeconds = calculateFinalTimeSeconds(it.copy(blindLevels = schedule))
             )
         }
     }
@@ -340,11 +431,47 @@ class TimerViewModel @Inject constructor(
         if (levels.isEmpty()) return 0
         val elapsedSeconds = when (state.timerDirection) {
             TimerDirection.COUNTDOWN -> state.totalDurationSeconds - state.currentTimeSeconds
-            TimerDirection.COUNTUP -> state.currentTimeSeconds.coerceAtMost(state.totalDurationSeconds)
+            TimerDirection.COUNTUP -> state.totalDurationSeconds + state.currentTimeSeconds // Add overtime to tournament duration
         }
         val elapsedMinutes = elapsedSeconds / 60
         val index = levels.indexOfLast { elapsedMinutes >= it.roundStartMinute }
         return if (index == -1) 0 else index.coerceIn(0, levels.lastIndex)
+    }
+
+    private fun calculateFinalTimeSeconds(state: TimerUiState): Int {
+        return state.blindLevels.lastOrNull()?.let { finalLevel ->
+            val roundLength = state.blindConfiguration.roundLengthMinutes
+            (finalLevel.roundStartMinute + roundLength) * 60
+        } ?: (state.totalDurationSeconds + (60 * 60)) // Fallback to 60 minutes over
+    }
+
+    private fun isValidBlindConfiguration(state: TimerUiState): Boolean {
+        val levels = state.blindLevels
+        if (levels.isEmpty()) return false
+        
+        // Check that levels are properly ordered by start time
+        for (i in 1 until levels.size) {
+            if (levels[i].roundStartMinute <= levels[i-1].roundStartMinute) {
+                return false
+            }
+        }
+        
+        // Check that blinds increase monotonically
+        for (i in 1 until levels.size) {
+            if (levels[i].smallBlind <= levels[i-1].smallBlind) {
+                return false
+            }
+        }
+        
+        // Check that the final level ends after the tournament duration
+        val finalLevel = levels.last()
+        val roundLength = state.blindConfiguration.roundLengthMinutes
+        val finalEndTime = (finalLevel.roundStartMinute + roundLength) * 60
+        if (finalEndTime <= state.totalDurationSeconds) {
+            return false
+        }
+        
+        return true
     }
 
     private fun goToNextBlindLevel() {
@@ -373,9 +500,14 @@ class TimerViewModel @Inject constructor(
 
         val targetLevel = levels[targetIndex]
         val elapsedSecondsForLevel = (targetLevel.roundStartMinute * 60).coerceAtLeast(0)
-        val newCurrentSeconds = when (state.timerDirection) {
+        
+        // Determine appropriate timer direction and time based on elapsed time vs tournament duration
+        val isInOvertime = elapsedSecondsForLevel >= state.totalDurationSeconds
+        val newTimerDirection = if (isInOvertime) TimerDirection.COUNTUP else TimerDirection.COUNTDOWN
+        
+        val newCurrentSeconds = when (newTimerDirection) {
             TimerDirection.COUNTDOWN -> state.totalDurationSeconds - elapsedSecondsForLevel
-            TimerDirection.COUNTUP -> elapsedSecondsForLevel.coerceAtMost(state.totalDurationSeconds)
+            TimerDirection.COUNTUP -> elapsedSecondsForLevel - state.totalDurationSeconds // Show overtime from zero
         }
 
         val hasStarted = targetIndex > 0 || newCurrentSeconds != state.totalDurationSeconds
@@ -384,6 +516,7 @@ class TimerViewModel @Inject constructor(
             it.copy(
                 currentTimeSeconds = newCurrentSeconds,
                 currentBlindLevelIndex = targetIndex,
+                timerDirection = newTimerDirection,
                 isFinished = false,
                 hasTimerStarted = it.hasTimerStarted || hasStarted
             )

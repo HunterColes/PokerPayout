@@ -111,23 +111,22 @@ class TimerPreferences @Inject constructor(
         
         val currentTime = System.currentTimeMillis()
         val lastUpdate = getLastUpdateTime()
-        val elapsedSeconds = ((currentTime - lastUpdate) / 1000).toInt()
+        
+        // Avoid negative elapsed time due to clock changes
+        val elapsedSeconds = ((currentTime - lastUpdate) / 1000).toInt().coerceAtLeast(0)
         
         val savedSeconds = getCurrentTimeSeconds()
         return when (getTimerDirection()) {
-            "COUNTDOWN" -> savedSeconds - elapsedSeconds
-            "COUNTUP" -> (savedSeconds + elapsedSeconds).coerceAtMost(getGameDurationMinutes() * 60)
-            else -> savedSeconds - elapsedSeconds
+            "COUNTDOWN" -> (savedSeconds - elapsedSeconds).coerceAtLeast(0)
+            "COUNTUP" -> savedSeconds + elapsedSeconds
+            else -> (savedSeconds - elapsedSeconds).coerceAtLeast(0)
         }
     }
     
     fun resetTimer() {
-        val resetSeconds = when (getTimerDirection()) {
-            "COUNTDOWN" -> getGameDurationMinutes() * 60
-            "COUNTUP" -> 0
-            else -> getGameDurationMinutes() * 60
-        }
+        val resetSeconds = getGameDurationMinutes() * 60
         setCurrentTimeSeconds(resetSeconds)
+        setTimerDirection("COUNTDOWN")  // Always reset to countdown
         setTimerRunning(false)
         setIsFinished(false)
         setHasTimerStarted(false)  // Reset the started flag

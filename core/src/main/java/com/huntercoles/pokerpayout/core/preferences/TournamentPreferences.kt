@@ -169,6 +169,14 @@ class TournamentPreferences @Inject constructor(
         return prefs.getInt(STARTING_CHIPS_KEY, TournamentDefaults.STARTING_CHIPS)
     }
     
+    fun setSelectedPanel(panel: String) {
+        prefs.edit().putString(SELECTED_PANEL_KEY, panel).apply()
+    }
+    
+    fun getSelectedPanel(): String {
+        return prefs.getString(SELECTED_PANEL_KEY, "player") ?: "player"
+    }
+    
     /**
      * Get complete tournament configuration as a simple data holder
      * This can be used by other modules that need access to tournament settings
@@ -219,6 +227,7 @@ class TournamentPreferences @Inject constructor(
          getRoundLengthMinutes() == TournamentDefaults.ROUND_LENGTH_MINUTES &&
          getSmallestChip() == TournamentDefaults.SMALLEST_CHIP &&
          getStartingChips() == TournamentDefaults.STARTING_CHIPS
+         // Note: selectedPanel is preserved during reset, so not included in default state check
     }    /**
      * Reset all tournament data to default values
      */
@@ -237,6 +246,7 @@ class TournamentPreferences @Inject constructor(
             .putInt(ROUND_LENGTH_MINUTES_KEY, TournamentDefaults.ROUND_LENGTH_MINUTES)
             .putInt(SMALLEST_CHIP_KEY, TournamentDefaults.SMALLEST_CHIP)
             .putInt(STARTING_CHIPS_KEY, TournamentDefaults.STARTING_CHIPS)
+            .putString(SELECTED_PANEL_KEY, "player")
             .apply()
         
         // Reset all state flows to default values (keep current player count)
@@ -268,6 +278,7 @@ class TournamentPreferences @Inject constructor(
         private const val ROUND_LENGTH_MINUTES_KEY = "round_length_minutes"
         private const val SMALLEST_CHIP_KEY = "smallest_chip"
         private const val STARTING_CHIPS_KEY = "starting_chips"
+        private const val SELECTED_PANEL_KEY = "selected_panel"
         private const val DEFAULT_PLAYER_COUNT = TournamentDefaults.PLAYER_COUNT
     }
 }

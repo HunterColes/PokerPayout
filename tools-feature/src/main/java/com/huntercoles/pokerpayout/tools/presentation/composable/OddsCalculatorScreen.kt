@@ -36,6 +36,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerDialog
+import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
+import com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction
 import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 import com.huntercoles.pokerpayout.core.design.components.PlayingCard
 import com.huntercoles.pokerpayout.core.design.components.PlayingCardView as CorePlayingCardView
@@ -118,96 +120,21 @@ fun OddsCalculatorScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "🃏 Poker Odds Calculator",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = PokerColors.PokerGold,
-                modifier = Modifier.weight(1f)
-            )
-            
-            // Reset button
-            Card(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
-            ) {
-                IconButton(
-                    onClick = { viewModel.acceptIntent(OddsCalculatorIntent.ShowResetDialog) },
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Reset",
-                        tint = PokerColors.PokerGold,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .invertHorizontally()
-                    )
-                }
-            }
-        }
+        // Header with Reset Button
+        PokerHeaderWithAction(
+            title = "🃏 Poker Odds Calculator",
+            onActionClick = { viewModel.acceptIntent(OddsCalculatorIntent.ShowResetDialog) },
+            actionContentDescription = "Reset"
+        )
         
         // Reset Confirmation Dialog
-        if (uiState.showResetDialog) {
-            PokerDialog(
-                onDismissRequest = { viewModel.acceptIntent(OddsCalculatorIntent.HideResetDialog) }
-            ) {
-                Text(
-                    text = "Reset odds calculator?",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = PokerColors.PokerGold
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    color = PokerColors.FeltGreen,
-                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
-                ) {
-                    Text(
-                        text = "This will reset all player cards and community cards.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = PokerColors.CardWhite,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
-                ) {
-                    TextButton(
-                        onClick = { viewModel.acceptIntent(OddsCalculatorIntent.HideResetDialog) }
-                    ) {
-                        Text(
-                            text = "Cancel",
-                            color = PokerColors.CardWhite
-                        )
-                    }
-
-                    TextButton(
-                        onClick = { viewModel.acceptIntent(OddsCalculatorIntent.ConfirmReset) }
-                    ) {
-                        Text(
-                            text = "Reset",
-                            color = PokerColors.PokerGold,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-        }
+        PokerConfirmationDialog(
+            title = "Reset odds calculator?",
+            description = "This will reset all player cards and community cards.",
+            onDismiss = { viewModel.acceptIntent(OddsCalculatorIntent.HideResetDialog) },
+            onConfirm = { viewModel.acceptIntent(OddsCalculatorIntent.ConfirmReset) },
+            isVisible = uiState.showResetDialog
+        )
         
         // Player Management
         PlayerManagementCard(

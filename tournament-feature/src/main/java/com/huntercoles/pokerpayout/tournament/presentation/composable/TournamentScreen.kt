@@ -67,6 +67,8 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiSta
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigViewModel
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDialog
+import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
+import com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction
 import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 import com.huntercoles.pokerpayout.tournament.presentation.composable.TimerScreen
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
@@ -114,95 +116,24 @@ fun PlayContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Title with Reset Button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "🃏 Poker Payout Calculator",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = PokerColors.PokerGold,
-                modifier = Modifier.weight(1f)
-            )
-
-            // Green circular background with yellow refresh button
-            Card(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
-            ) {
-                IconButton(
-                    onClick = { onCalculatorIntent(TournamentConfigIntent.ShowResetDialog) },
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Reset All Data",
-                        tint = PokerColors.PokerGold,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .invertHorizontally()
-                    )
-                }
-            }
-        }
+        // Header with Reset Button
+        PokerHeaderWithAction(
+            title = "🏆 Tournament",
+            onActionClick = { onCalculatorIntent(TournamentConfigIntent.ShowResetDialog) },
+            actionContentDescription = "Reset All Data"
+        )
 
         // Reset Confirmation Dialog
-        if (calculatorUiState.showResetDialog) {
-            PokerDialog(
-                onDismissRequest = { onCalculatorIntent(TournamentConfigIntent.HideResetDialog) }
-            ) {
-                Text(
-                    text = "Reset tournament?",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = PokerColors.PokerGold
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    color = PokerColors.FeltGreen,
-                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
-                ) {
-                    Text(
-                        text = "This will reset all tournament settings and timer data to defaults.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = PokerColors.CardWhite,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
-                ) {
-                    TextButton(onClick = { onCalculatorIntent(TournamentConfigIntent.HideResetDialog) }) {
-                        Text(
-                            text = "Cancel",
-                            color = PokerColors.CardWhite
-                        )
-                    }
-
-                    TextButton(onClick = { 
-                        onCalculatorIntent(TournamentConfigIntent.ConfirmReset)
-                        onTimerIntent(TimerIntent.ResetTimer)
-                    }) {
-                        Text(
-                            text = "Reset",
-                            color = PokerColors.PokerGold,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-        }
+        PokerConfirmationDialog(
+            title = "Reset tournament?",
+            description = "This will reset all tournament settings and timer data to defaults.",
+            onDismiss = { onCalculatorIntent(TournamentConfigIntent.HideResetDialog) },
+            onConfirm = {
+                onCalculatorIntent(TournamentConfigIntent.ConfirmReset)
+                onTimerIntent(TimerIntent.ResetTimer)
+            },
+            isVisible = calculatorUiState.showResetDialog
+        )
 
         // Configuration Section (Collapsible)
         TournamentConfigurationCard(

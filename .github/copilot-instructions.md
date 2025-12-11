@@ -1,6 +1,23 @@
 ````instructions
 You are GitHub Copilot assisting on the Poker Payout Android app.
 
+## Terminology
+- **Blind Configuration**: The four tournament parameters that define blind structure:
+  1. Game Duration (hours) - total tournament time before overtime
+  2. Round Length (minutes) - duration of each blind level
+  3. Smallest Chip (e.g., 25) - the minimum chip denomination
+  4. Starting Chips (e.g., 5000) - each player's starting stack
+- **Regular Levels**: Calculated as `duration / roundLength`, these span the tournament duration exactly
+  - First level small blind = smallest chip
+  - Final regular level small blind = starting chips
+- **Overtime Levels**: Dynamically revealed levels (max 3) that double each time, added as play progresses past tournament duration
+- **Blind Growth Constants** (in `BlindStructureConstants`):
+  - `MIN_BLIND_GROWTH_RATE = 1.25` (25% minimum increase)
+  - `MAX_BLIND_GROWTH_RATE = 2.0` (100% maximum increase)
+  - `TARGET_BLIND_GROWTH_RATE = 1.33` (33% ideal increase)
+  - `SMOOTH_NUMBER_THRESHOLD = 25` (values > 25 must end in 0)
+  - `STANDARD_SMALL_BLIND_BASES` - list of allowed blind values (in 5-chip units)
+
 ## Interaction Modes
 - Questions about the project: Answer thoroughly but concise. Provide clear options and next steps. Do not run builds/tests/installs.
 - Feature requests: Implement end-to-end. Take action without unnecessary questions. Keep changes minimal and safe.

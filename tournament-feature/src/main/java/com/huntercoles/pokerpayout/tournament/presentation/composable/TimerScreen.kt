@@ -274,7 +274,17 @@ fun TimerScreen(
 
         // Status Message
         if (uiState.isFinished || uiState.isOvertime) {
-            val message = if (uiState.isOvertime && !uiState.isFinished) "⏱ Overtime!" else "🎉 Time's Up!"
+            val message = when {
+                uiState.isOvertime && !uiState.isFinished -> {
+                    when (uiState.overtimeLevelsRevealed) {
+                        1 -> "⏱ First Overtime!"
+                        2 -> "⏱ Second Overtime!"
+                        3 -> "⏱ Third Overtime!"
+                        else -> "⏱ Overtime!"
+                    }
+                }
+                else -> "🎉 Time's Up!"
+            }
             Text(
                 text = message,
                 style = MaterialTheme.typography.titleLarge,

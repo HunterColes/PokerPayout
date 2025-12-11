@@ -62,6 +62,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.ComponentActivity
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigViewModel
@@ -79,7 +81,8 @@ import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
 @Composable
 fun TournamentScreen(
     calculatorViewModel: TournamentConfigViewModel = hiltViewModel(),
-    timerViewModel: TimerViewModel = hiltViewModel()
+    // Scope TimerViewModel to Activity to ensure single instance across navigation
+    timerViewModel: TimerViewModel = hiltViewModel(viewModelStoreOwner = LocalContext.current as ComponentActivity)
 ) {
     val calculatorUiState by calculatorViewModel.uiState.collectAsStateWithLifecycle()
     val timerUiState by timerViewModel.uiState.collectAsStateWithLifecycle()

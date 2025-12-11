@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 class BlindStructureValidationTest {
 
     @Test
-    fun `final big blind is at least double starting stack`() {
+    fun `final small blind equals starting stack`() {
         val testCases = listOf(
             BlindStructureInput(
                 players = 10,
@@ -36,9 +36,10 @@ class BlindStructureValidationTest {
             val schedule = BlindStructureCalculator.generateSchedule(input)
             val finalLevel = schedule.last()
             
-            assertTrue(
-                finalLevel.bigBlind >= input.startingStack * 2,
-                "Final big blind (${finalLevel.bigBlind}) must be at least 2x starting stack (${input.startingStack * 2}) " +
+            assertEquals(
+                input.startingStack,
+                finalLevel.smallBlind,
+                "Final small blind must equal starting stack (${input.startingStack}) " +
                 "for input: players=${input.players}, duration=${input.targetDurationMinutes}, " +
                 "smallestChip=${input.smallestChip}, startingStack=${input.startingStack}"
             )

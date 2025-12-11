@@ -35,9 +35,11 @@ class TimerViewModel @Inject constructor(
     }
 
     init {
-        // Restore timer state from preferences
+        // Restore timer state from preferences (includes frozen blind config if timer started)
         restoreTimerState()
         observePlayerCount()
+        // Always regenerate blind schedule - it will use the preserved blind config
+        // if timer has started, ensuring we get the exact same levels
         regenerateBlindSchedule()
     }
 
@@ -51,6 +53,23 @@ class TimerViewModel @Inject constructor(
         val finishedPref = timerPreferences.getIsFinished()
         val isRunning = timerPreferences.getTimerRunning()
         val hasStarted = timerPreferences.getHasTimerStarted()
+        val overtimeRevealed = timerPreferences.getOvertimeLevelsRevealed()
+        
+        // Restore blind configuration from when timer started (if timer has started)
+        val blindConfig = if (hasStarted) {
+            BlindConfiguration(
+                smallestChip = timerPreferences.getSmallestChipAtStart(),
+                startingChips = timerPreferences.getStartingChipsAtStart(),
+                roundLengthMinutes = timerPreferences.getRoundLengthAtStart()
+            )
+        } else {
+            // Use current tournament preferences if timer hasn't started
+            BlindConfiguration(
+                smallestChip = tournamentPreferences.getSmallestChip(),
+                startingChips = tournamentPreferences.getStartingChips(),
+                roundLengthMinutes = tournamentPreferences.getRoundLengthMinutes()
+            )
+        }
         
         _uiState.update { 
             it.copy(
@@ -59,7 +78,9 @@ class TimerViewModel @Inject constructor(
                 timerDirection = direction,
                 isRunning = isRunning,
                 isFinished = finishedPref,
-                hasTimerStarted = hasStarted
+                hasTimerStarted = hasStarted,
+                overtimeLevelsRevealed = overtimeRevealed,
+                blindConfiguration = blindConfig
             )
         }
         
@@ -164,6 +185,11 @@ class TimerViewModel @Inject constructor(
         timerPreferences.setIsFinished(false)
         timerPreferences.setHasTimerStarted(true)  // Set the preference
         
+        // Save blind configuration at start time (frozen for entire tournament)
+        timerPreferences.setSmallestChipAtStart(currentState.blindConfiguration.smallestChip)
+        timerPreferences.setStartingChipsAtStart(currentState.blindConfiguration.startingChips)
+        timerPreferences.setRoundLengthAtStart(currentState.blindConfiguration.roundLengthMinutes)
+        
         // Lock tournament settings when timer starts
         tournamentPreferences.setTournamentLocked(true)
 
@@ -259,6 +285,7 @@ class TimerViewModel @Inject constructor(
                 isFinished = false,
                 isBlindConfigCollapsed = false,  // Unlock and expand blind config on reset
                 hasTimerStarted = false,  // Reset the timer started flag
+                overtimeLevelsRevealed = 0,  // Clear all overtime levels
                 finalTimeSeconds = resetDurationMinutes * 60, // Reset final time to tournament duration
                 showInvalidConfigDialog = false,  // Clear any invalid config dialog
                 blindConfiguration = resetBlindConfig // Reset blind configuration to defaults
@@ -266,6 +293,7 @@ class TimerViewModel @Inject constructor(
         }
         
         timerPreferences.resetTimer()
+        timerPreferences.setOvertimeLevelsRevealed(0)  // Reset overtime count in preferences
         // Regenerate blind schedule to ensure validation works correctly after reset
         regenerateBlindSchedule()
         updateCurrentBlindLevel()
@@ -329,7 +357,8 @@ class TimerViewModel @Inject constructor(
                 isRunning = false,
                 isFinished = false,
                 hasTimerStarted = false,  // Reset to fresh state
-                isBlindConfigCollapsed = false
+                isBlindConfigCollapsed = false,
+                overtimeLevelsRevealed = 0  // Clear overtime levels
             )
         }
         
@@ -383,7 +412,8 @@ class TimerViewModel @Inject constructor(
                     playerCount = latestPlayerCount,
                     baseBlindLevels = emptyList(),
                     blindLevels = emptyList(),
-                    currentBlindLevelIndex = 0
+                    currentBlindLevelIndex = 0,
+                    overtimeLevelsRevealed = 0
                 )
             }
             return
@@ -400,19 +430,40 @@ class TimerViewModel @Inject constructor(
         val schedule = runCatching { BlindStructureCalculator.generateSchedule(input) }
             .getOrElse { emptyList() }
 
-        val levelIndex = if (schedule.isEmpty()) {
+        // Preserve overtime levels if timer has started and we're in overtime
+        val shouldPreserveOvertime = state.hasTimerStarted && state.overtimeLevelsRevealed > 0
+        val fullSchedule = if (shouldPreserveOvertime) {
+            // Regenerate overtime levels based on current count
+            var currentSchedule = schedule
+            repeat(state.overtimeLevelsRevealed) {
+                val nextOvertime = BlindStructureCalculator.generateNextOvertimeLevel(
+                    currentSchedule = currentSchedule,
+                    roundLengthMinutes = roundLength,
+                    includeAnte = false
+                )
+                if (nextOvertime != null) {
+                    currentSchedule = currentSchedule + nextOvertime
+                }
+            }
+            currentSchedule
+        } else {
+            schedule
+        }
+
+        val levelIndex = if (fullSchedule.isEmpty()) {
             0
         } else {
-            calculateBlindLevelIndex(schedule, state).coerceIn(0, schedule.lastIndex)
+            calculateBlindLevelIndex(fullSchedule, state).coerceIn(0, fullSchedule.lastIndex)
         }
 
         _uiState.update {
             it.copy(
                 playerCount = latestPlayerCount,
                 baseBlindLevels = schedule,
-                blindLevels = schedule,
+                blindLevels = fullSchedule,
                 currentBlindLevelIndex = levelIndex,
-                finalTimeSeconds = calculateFinalTimeSeconds(it.copy(blindLevels = schedule))
+                overtimeLevelsRevealed = if (shouldPreserveOvertime) state.overtimeLevelsRevealed else 0,
+                finalTimeSeconds = calculateFinalTimeSeconds(it.copy(blindLevels = fullSchedule))
             )
         }
     }
@@ -446,8 +497,15 @@ class TimerViewModel @Inject constructor(
     }
 
     private fun isValidBlindConfiguration(state: TimerUiState): Boolean {
-        val levels = state.blindLevels
+        // Validate based on base levels only (regular levels without overtime)
+        val levels = state.baseBlindLevels
         if (levels.isEmpty()) return false
+        
+        // Check that we actually reached the target - this is the real validation
+        // If generator can't reach target (impossible config), it won't hit this value
+        if (levels.last().smallBlind != state.blindConfiguration.startingChips) {
+            return false // Didn't reach the target starting stack
+        }
         
         // Check that levels are properly ordered by start time
         for (i in 1 until levels.size) {
@@ -463,11 +521,18 @@ class TimerViewModel @Inject constructor(
             }
         }
         
-        // Check that the final level ends after the tournament duration
+        // Check that the final regular level ends exactly at or just after tournament duration
+        // (overtime levels will be added dynamically beyond this point)
         val finalLevel = levels.last()
         val roundLength = state.blindConfiguration.roundLengthMinutes
         val finalEndTime = (finalLevel.roundStartMinute + roundLength) * 60
-        if (finalEndTime <= state.totalDurationSeconds) {
+        
+        // Final level should end at or slightly after tournament duration
+        // Allow small tolerance for rounding
+        val isValidEndTime = finalEndTime >= state.totalDurationSeconds - 60 && 
+                            finalEndTime <= state.totalDurationSeconds + roundLength * 60
+        
+        if (!isValidEndTime) {
             return false
         }
         
@@ -477,8 +542,48 @@ class TimerViewModel @Inject constructor(
     private fun goToNextBlindLevel() {
         val state = _uiState.value
         if (state.blindLevels.isEmpty()) return
-        val targetIndex = (state.currentBlindLevelIndex + 1).coerceAtMost(state.blindLevels.lastIndex)
-        if (targetIndex == state.currentBlindLevelIndex) return
+        
+        // Check if we're at the last visible level
+        val isAtLastLevel = state.currentBlindLevelIndex >= state.blindLevels.lastIndex
+        
+        if (isAtLastLevel) {
+            // Try to add another overtime level
+            val canAddOvertime = state.overtimeLevelsRevealed < BlindStructureCalculator.MAX_OVERTIME_LEVELS
+            
+            if (canAddOvertime) {
+                val nextOvertimeLevel = BlindStructureCalculator.generateNextOvertimeLevel(
+                    currentSchedule = state.blindLevels,  // Use current schedule (includes any overtime already added)
+                    roundLengthMinutes = state.blindConfiguration.roundLengthMinutes,
+                    includeAnte = false // Match the regular levels' ante setting
+                )
+                
+                if (nextOvertimeLevel != null) {
+                    // Add the new overtime level to the visible list
+                    val updatedLevels = state.blindLevels + nextOvertimeLevel
+                    val newOvertimeCount = state.overtimeLevelsRevealed + 1
+                    _uiState.update {
+                        it.copy(
+                            blindLevels = updatedLevels,
+                            overtimeLevelsRevealed = newOvertimeCount,
+                            finalTimeSeconds = calculateFinalTimeSeconds(it.copy(blindLevels = updatedLevels))
+                        )
+                    }
+                    // Persist overtime count to preferences
+                    timerPreferences.setOvertimeLevelsRevealed(newOvertimeCount)
+                }
+            }
+            
+            // Now check again if we can advance
+            if (state.currentBlindLevelIndex < _uiState.value.blindLevels.lastIndex) {
+                val targetIndex = state.currentBlindLevelIndex + 1
+                jumpToBlindLevel(targetIndex)
+            }
+            // If still at max and can't add more overtime, we've reached the end
+            return
+        }
+        
+        // Normal case: advance to next level
+        val targetIndex = state.currentBlindLevelIndex + 1
         jumpToBlindLevel(targetIndex)
     }
 

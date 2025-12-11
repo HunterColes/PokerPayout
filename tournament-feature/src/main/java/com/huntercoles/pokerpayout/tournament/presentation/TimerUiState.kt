@@ -23,6 +23,7 @@ data class TimerUiState(
     val baseBlindLevels: List<BlindLevel> = emptyList(),
     val blindLevels: List<BlindLevel> = emptyList(),
     val currentBlindLevelIndex: Int = 0,
+    val overtimeLevelsRevealed: Int = 0, // Number of overtime levels added dynamically (0-3)
     val finalTimeSeconds: Int = TournamentDefaults.GAME_DURATION_HOURS * 60 * 60, // Default to tournament duration
     val showInvalidConfigDialog: Boolean = false
 ) : Parcelable {

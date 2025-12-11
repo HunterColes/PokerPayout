@@ -2,6 +2,9 @@ package com.huntercoles.pokerpayout.tournament.presentation.composable
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -66,6 +70,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -81,6 +86,7 @@ import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerDialog
 import java.text.NumberFormat
 import java.util.Locale
@@ -99,14 +105,14 @@ private fun isValidDurationInput(text: String): Boolean {
 fun TimerScreen(
     uiState: TimerUiState,
     onIntent: (TimerIntent) -> Unit,
+    isConfigExpanded: Boolean = false
 ) {
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+            .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Timer Display with integrated controls
         Card(
@@ -264,13 +270,14 @@ fun TimerScreen(
                     }
                 }
             }
-        }        // Blind Information Section - only show when timer has started or is active
-        if (uiState.hasTimerStarted && (uiState.isRunning || uiState.isFinished)) {
-            BlindInformationTile(
-                uiState = uiState,
-                onIntent = onIntent
-            )
         }
+        
+        // Blind Information Section - always visible, size inversely tied to config
+        BlindInformationTile(
+            uiState = uiState,
+            onIntent = onIntent,
+            isConfigExpanded = isConfigExpanded
+        )
 
         // Status Message
         if (uiState.isFinished || uiState.isOvertime) {
@@ -344,7 +351,8 @@ fun TimerScreen(
 @Composable
 private fun BlindInformationTile(
     uiState: TimerUiState,
-    onIntent: (TimerIntent) -> Unit
+    onIntent: (TimerIntent) -> Unit,
+    isConfigExpanded: Boolean
 ) {
     val formatter = remember { NumberFormat.getIntegerInstance(Locale.getDefault()) }
     val levels = uiState.blindLevels
@@ -352,32 +360,80 @@ private fun BlindInformationTile(
     val currentIndex = uiState.currentBlindLevelIndex
     val listState = rememberLazyListState()
     val highlightColor = PokerColors.PokerGold.copy(alpha = 0.18f)
+    val density = LocalDensity.current
+    
+    // Calculate exact heights - no approximations
+    val collapsedHeight = PokerDimens.BlindPanelCardPadding * 2 + PokerDimens.BlindItemTotalHeight
+    val expandedHeight = PokerDimens.BlindPanelCardPadding * 2 + 
+        (PokerDimens.BlindItemTotalHeight * PokerDimens.BlindPanelExpandedLevels) + 
+        (PokerDimens.BlindItemSpacing * (PokerDimens.BlindPanelExpandedLevels - 1))
+    
+    val targetHeight = if (isConfigExpanded) collapsedHeight else expandedHeight
+    val animatedHeight by animateDpAsState(
+        targetValue = targetHeight,
+        animationSpec = tween(
+            durationMillis = 150,
+            easing = FastOutSlowInEasing
+        ),
+        label = "blindPanelHeight"
+    )
+
+    // Show blank card when timer hasn't started or no levels
+    if (!uiState.hasTimerStarted || totalLevels == 0) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(animatedHeight),
+            elevation = CardDefaults.cardElevation(defaultElevation = PokerDimens.ElevationDefault),
+            colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary)
+        ) {
+            // Empty - just blank background
+        }
+        return
+    }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(animatedHeight),
+        elevation = CardDefaults.cardElevation(defaultElevation = PokerDimens.ElevationDefault),
         colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(PokerDimens.BlindPanelCardPadding)) {
 
-            LaunchedEffect(totalLevels) {
+            // Scroll to current level with proper centering
+            LaunchedEffect(currentIndex, isConfigExpanded) {
                 if (totalLevels > 0 && currentIndex in 0 until totalLevels) {
-                    listState.scrollToItem(currentIndex)
-                }
-            }
-
-            LaunchedEffect(currentIndex) {
-                if (totalLevels > 0 && currentIndex in 0 until totalLevels) {
-                    listState.animateScrollToItem(currentIndex)
+                    kotlinx.coroutines.delay(150) // Midway through height animation
+                    
+                    if (isConfigExpanded) {
+                        // COLLAPSED: Center the current item in the visible area
+                        val visibleHeight = collapsedHeight - (PokerDimens.BlindPanelCardPadding * 2)
+                        val centerOffset = with(density) {
+                            ((visibleHeight - PokerDimens.BlindItemTotalHeight) / 2).roundToPx()
+                        }
+                        
+                        // Scroll to current level
+                        listState.animateScrollToItem(
+                            index = currentIndex,
+                            scrollOffset = -centerOffset
+                        )
+                    } else {
+                        // EXPANDED: Show 5 levels with current in center (position 2)
+                        val targetIndex = (currentIndex - 2).coerceAtLeast(0)
+                        listState.animateScrollToItem(
+                            index = targetIndex,
+                            scrollOffset = 0
+                        )
+                    }
                 }
             }
 
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 400.dp),
+                modifier = Modifier.fillMaxWidth(),
                 state = listState,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                userScrollEnabled = !isConfigExpanded,
+                verticalArrangement = Arrangement.spacedBy(PokerDimens.BlindItemSpacing)
             ) {
                 items(
                     items = levels,
@@ -440,9 +496,12 @@ private fun BlindLevelRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(PokerDimens.CornerSmall))
             .background(backgroundColor)
-            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .padding(
+                horizontal = PokerDimens.BlindItemPaddingHorizontal, 
+                vertical = PokerDimens.BlindItemPaddingVertical
+            )
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -463,7 +522,7 @@ private fun BlindLevelRow(
             )
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(PokerDimens.BlindItemInnerSpacing))
 
         Row(
             modifier = Modifier.fillMaxWidth(),

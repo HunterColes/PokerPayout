@@ -53,4 +53,15 @@ object PokerDimens {
     val MaxInputWidth: Dp = 160.dp
     val TimerDisplayHeight: Dp = 120.dp
     val BottomSheetMaxHeight: Dp = 400.dp
+    
+    // Blind Panel dimensions
+    val BlindItemPaddingHorizontal: Dp = 12.dp
+    val BlindItemPaddingVertical: Dp = 10.dp
+    val BlindItemSpacing: Dp = 8.dp
+    val BlindItemInnerSpacing: Dp = 4.dp
+    val BlindItemContentHeight: Dp = 46.dp // Measured text + inner spacing
+    val BlindItemTotalHeight: Dp = 70.dp // Content + vertical padding (46 + 24)
+    val BlindPanelCardPadding: Dp = 16.dp
+    val BlindPanelCollapsedLevels: Int = 1
+    val BlindPanelExpandedLevels: Int = 5
 }

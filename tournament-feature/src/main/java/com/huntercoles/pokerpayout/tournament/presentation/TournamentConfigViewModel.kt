@@ -32,10 +32,15 @@ class TournamentConfigViewModel @Inject constructor(
         viewModelScope.launch {
             tournamentPreferences.tournamentLocked.collect { isLocked ->
                 _uiState.value = _uiState.value.copy(
-                    isTournamentLocked = isLocked,
-                    // Auto-collapse when tournament is locked (timer playing), auto-expand when unlocked (timer paused/reset)
-                    isConfigExpanded = !isLocked
+                    isTournamentLocked = isLocked
                 )
+            }
+        }
+
+        // Listen for config expanded state changes
+        viewModelScope.launch {
+            tournamentPreferences.isConfigExpanded.collect { isExpanded ->
+                _uiState.value = _uiState.value.copy(isConfigExpanded = isExpanded)
             }
         }
 
@@ -93,6 +98,7 @@ class TournamentConfigViewModel @Inject constructor(
         val savedSmallestChip = tournamentPreferences.getSmallestChip()
         val savedStartingChips = tournamentPreferences.getStartingChips()
         val savedSelectedPanel = tournamentPreferences.getSelectedPanel()
+        val savedIsConfigExpanded = tournamentPreferences.getIsConfigExpanded()
 
         val initialConfig = _uiState.value.tournamentConfig.copy(
             numPlayers = savedPlayerCount,
@@ -113,7 +119,8 @@ class TournamentConfigViewModel @Inject constructor(
             roundLengthMinutes = savedRoundLength,
             smallestChip = savedSmallestChip,
             startingChips = savedStartingChips,
-            selectedPanel = savedSelectedPanel
+            selectedPanel = savedSelectedPanel,
+            isConfigExpanded = savedIsConfigExpanded
         )
         calculatePayouts()
     }
@@ -185,6 +192,7 @@ class TournamentConfigViewModel @Inject constructor(
     }
 
     private fun toggleConfigExpanded(isExpanded: Boolean) {
+        tournamentPreferences.setIsConfigExpanded(isExpanded)
         _uiState.value = _uiState.value.copy(isConfigExpanded = isExpanded)
     }
 

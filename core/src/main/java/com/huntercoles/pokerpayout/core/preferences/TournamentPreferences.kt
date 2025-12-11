@@ -42,6 +42,9 @@ class TournamentPreferences @Inject constructor(
     private val _payoutWeights = MutableStateFlow(getPayoutWeights())
     val payoutWeights: Flow<List<Int>> = _payoutWeights.asStateFlow()
     
+    private val _isConfigExpanded = MutableStateFlow(getIsConfigExpanded())
+    val isConfigExpanded: Flow<Boolean> = _isConfigExpanded.asStateFlow()
+    
     fun setPlayerCount(count: Int) {
         val oldCount = getPlayerCount()
         prefs.edit().putInt(PLAYER_COUNT_KEY, count).apply()
@@ -134,6 +137,15 @@ class TournamentPreferences @Inject constructor(
             ?.takeIf { it.isNotEmpty() }
 
         return parsedWeights ?: defaultPayoutWeightsFor()
+    }
+    
+    fun setIsConfigExpanded(expanded: Boolean) {
+        prefs.edit().putBoolean(IS_CONFIG_EXPANDED_KEY, expanded).apply()
+        _isConfigExpanded.value = expanded
+    }
+    
+    fun getIsConfigExpanded(): Boolean {
+        return prefs.getBoolean(IS_CONFIG_EXPANDED_KEY, true) // Default to expanded
     }
     
     // Blind Configuration Persistence
@@ -247,6 +259,7 @@ class TournamentPreferences @Inject constructor(
             .putInt(SMALLEST_CHIP_KEY, TournamentDefaults.SMALLEST_CHIP)
             .putInt(STARTING_CHIPS_KEY, TournamentDefaults.STARTING_CHIPS)
             .putString(SELECTED_PANEL_KEY, "player")
+            .putBoolean(IS_CONFIG_EXPANDED_KEY, true)
             .apply()
         
         // Reset all state flows to default values (keep current player count)
@@ -258,6 +271,7 @@ class TournamentPreferences @Inject constructor(
         _rebuyPerPlayer.value = TournamentDefaults.REBUY_PER_PLAYER
         _addOnPerPlayer.value = TournamentDefaults.ADDON_PER_PLAYER
         _payoutWeights.value = defaultPayoutWeightsFor(DEFAULT_PLAYER_COUNT)
+        _isConfigExpanded.value = true
     }
 
     private fun defaultPayoutWeightsFor(playerCount: Int = getPlayerCount()): List<Int> {
@@ -274,6 +288,7 @@ class TournamentPreferences @Inject constructor(
         private const val REBUY_PER_PLAYER_KEY = "rebuy_per_player"
         private const val ADDON_PER_PLAYER_KEY = "addon_per_player"
         private const val PAYOUT_WEIGHTS_KEY = "payout_weights"
+        private const val IS_CONFIG_EXPANDED_KEY = "is_config_expanded"
         private const val GAME_DURATION_HOURS_KEY = "game_duration_hours"
         private const val ROUND_LENGTH_MINUTES_KEY = "round_length_minutes"
         private const val SMALLEST_CHIP_KEY = "smallest_chip"

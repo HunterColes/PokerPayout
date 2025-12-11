@@ -192,6 +192,7 @@ class TimerViewModel @Inject constructor(
         
         // Lock tournament settings when timer starts
         tournamentPreferences.setTournamentLocked(true)
+        tournamentPreferences.setIsConfigExpanded(false)
 
         timerJob = viewModelScope.launch {
             while (true) {

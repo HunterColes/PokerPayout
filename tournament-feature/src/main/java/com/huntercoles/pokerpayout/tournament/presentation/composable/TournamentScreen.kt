@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -115,7 +116,6 @@ fun PlayContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -150,7 +150,8 @@ fun PlayContent(
         // Timer Section (from Timer screen)
         TimerScreen(
             uiState = timerUiState,
-            onIntent = onTimerIntent
+            onIntent = onTimerIntent,
+            isConfigExpanded = calculatorUiState.isConfigExpanded
         )
     }
 }
@@ -162,22 +163,25 @@ fun PlayerCountSlider(
     onPlayerCountChange: (Int) -> Unit,
     isLocked: Boolean = false
 ) {
-    Column {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
-            text = "Number of Players: $playerCount",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            color = PokerColors.CardWhite
+            text = "Players",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            color = PokerColors.CardWhite.copy(alpha = 0.7f)
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
+        
         Slider(
             value = playerCount.toFloat(),
             onValueChange = { if (!isLocked) onPlayerCountChange(it.toInt()) },
             valueRange = 3f..30f,
             steps = 26,
             enabled = !isLocked,
+            modifier = Modifier.weight(1f),
             colors = SliderDefaults.colors(
                 thumbColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.PokerGold,
                 activeTrackColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.AccentGreen,
@@ -186,6 +190,14 @@ fun PlayerCountSlider(
                 disabledActiveTrackColor = PokerColors.PokerGold,
                 disabledInactiveTrackColor = PokerColors.DarkGreen
             )
+        )
+        
+        Text(
+            text = "$playerCount",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = PokerColors.PokerGold,
+            modifier = Modifier.widthIn(min = 24.dp)
         )
     }
 }

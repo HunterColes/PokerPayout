@@ -137,7 +137,7 @@ internal fun BankScreen(
             actionContentDescription = "Reset Bank Data"
         )
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Reset Confirmation Dialog
         PokerConfirmationDialog(
@@ -311,26 +311,7 @@ private fun PoolSummaryCard(uiState: BankUiState, onIntent: (BankIntent) -> Unit
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Total Pool:",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = PokerColors.CardWhite
-                )
-                Text(
-                    text = FormatUtils.formatCurrency(uiState.totalPool),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = PokerColors.CardWhite
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             SummaryProgressBar(
                 label = "Total Payed In:",
@@ -339,7 +320,7 @@ private fun PoolSummaryCard(uiState: BankUiState, onIntent: (BankIntent) -> Unit
                 baseColor = PokerColors.AccentGreen
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             SummaryProgressBar(
                 label = "Total Payed Out:",

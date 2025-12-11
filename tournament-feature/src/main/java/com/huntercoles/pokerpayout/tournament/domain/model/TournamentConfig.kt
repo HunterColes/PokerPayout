@@ -1,17 +1,18 @@
 package com.huntercoles.pokerpayout.tournament.domain.model
 
 import com.huntercoles.pokerpayout.core.constants.TournamentConstants
+import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
 
 /**
  * Configuration for a poker tournament
  */
 data class TournamentConfig(
-    val numPlayers: Int = 9,
-    val buyIn: Double = 20.0,
-    val foodPerPlayer: Double = 5.0,
-    val bountyPerPlayer: Double = 2.0,
-    val rebuyPerPlayer: Double = 0.0,
-    val addOnPerPlayer: Double = 0.0,
+    val numPlayers: Int = TournamentDefaults.PLAYER_COUNT,
+    val buyIn: Double = TournamentDefaults.BUY_IN,
+    val foodPerPlayer: Double = TournamentDefaults.FOOD_PER_PLAYER,
+    val bountyPerPlayer: Double = TournamentDefaults.BOUNTY_PER_PLAYER,
+    val rebuyPerPlayer: Double = TournamentDefaults.REBUY_PER_PLAYER,
+    val addOnPerPlayer: Double = TournamentDefaults.ADDON_PER_PLAYER,
     val payoutWeights: List<Int> = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS
 ) {
     val totalPerPlayer: Double

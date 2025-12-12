@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tournament.presentation
 
+import com.huntercoles.pokerpayout.core.audio.SoundManager
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
@@ -24,6 +25,7 @@ class TimerViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var timerPreferences: TimerPreferences
     private lateinit var tournamentPreferences: TournamentPreferences
+    private lateinit var soundManager: SoundManager
     private lateinit var viewModel: TimerViewModel
     private lateinit var playerCountFlow: MutableStateFlow<Int>
 
@@ -37,6 +39,7 @@ class TimerViewModelTest {
         // Create relaxed mocks to avoid MockK exceptions
         timerPreferences = mockk(relaxed = true)
         tournamentPreferences = mockk(relaxed = true)
+        soundManager = mockk(relaxed = true)
 
         every { tournamentPreferences.playerCount } returns playerCountFlow
         every { tournamentPreferences.getPlayerCount() } returns 10
@@ -48,7 +51,7 @@ class TimerViewModelTest {
         every { timerPreferences.getHasTimerStarted() } returns false
         every { timerPreferences.getGameDurationMinutes() } returns 180
 
-        viewModel = TimerViewModel(timerPreferences, tournamentPreferences)
+        viewModel = TimerViewModel(timerPreferences, tournamentPreferences, soundManager)
         
         // Allow coroutines to complete
         testDispatcher.scheduler.advanceUntilIdle()

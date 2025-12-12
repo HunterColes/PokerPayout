@@ -2,6 +2,8 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.huntercoles.pokerpayout.core.audio.SoundManager
+import com.huntercoles.pokerpayout.core.constants.AudioConstants.LEVEL_CHANGE_SOUND_LEAD_SECONDS
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
@@ -22,13 +24,15 @@ import javax.inject.Inject
 @HiltViewModel
 class TimerViewModel @Inject constructor(
     private val timerPreferences: TimerPreferences,
-    private val tournamentPreferences: TournamentPreferences
+    private val tournamentPreferences: TournamentPreferences,
+    private val soundManager: SoundManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimerUiState())
     val uiState: StateFlow<TimerUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
+    private var hasPlayedSoundForLevel: Int = -1 // Track which level we've played sound for
     private var latestPlayerCount: Int = runBlocking {
         runCatching { tournamentPreferences.playerCount.first() }
             .getOrElse { TimerUiState().playerCount }
@@ -171,6 +175,9 @@ class TimerViewModel @Inject constructor(
         
         // Calculate final time once when timer starts
         val finalTimeSeconds = calculateFinalTimeSeconds(currentState)
+        
+        // Reset sound tracking when timer starts/resumes
+        hasPlayedSoundForLevel = -1
 
         _uiState.update { 
             it.copy(
@@ -203,6 +210,10 @@ class TimerViewModel @Inject constructor(
                     TimerDirection.COUNTDOWN -> state.currentTimeSeconds - 1
                     TimerDirection.COUNTUP -> state.currentTimeSeconds + 1
                 }
+
+                // Check for upcoming blind level change (4 seconds before)
+                // Play sound for organic level changes only
+                checkAndPlayLevelUpSound(state, newTimeSeconds)
 
                 // Check if we need to switch from COUNTDOWN to COUNTUP
                 val shouldSwitchToCountUp = state.timerDirection == TimerDirection.COUNTDOWN && 
@@ -267,6 +278,9 @@ class TimerViewModel @Inject constructor(
         // Unlock tournament settings when timer is reset
         tournamentPreferences.setTournamentLocked(false)
         
+        // Reset sound tracking
+        hasPlayedSoundForLevel = -1
+        
         // Reload duration from preferences in case it was reset
         val resetDurationMinutes = timerPreferences.getGameDurationMinutes()
         
@@ -304,6 +318,31 @@ class TimerViewModel @Inject constructor(
         _uiState.update { it.copy(currentTimeSeconds = seconds) }
         timerPreferences.setCurrentTimeSeconds(seconds)
         updateCurrentBlindLevel()
+    }
+
+    /**Plays sound effect before blind level changes during organic timer progression.
+     * The lead time centers the audio on the actual transition for better immersion.
+     */
+    private fun checkAndPlayLevelUpSound(state: TimerUiState, newTimeSeconds: Int) {
+        if (state.blindLevels.isEmpty()) return
+        
+        val nextLevel = state.currentBlindLevelIndex + 1
+        if (nextLevel >= state.blindLevels.size) return
+        
+        val nextLevelStartSeconds = state.blindLevels[nextLevel].roundStartMinute * 60
+        val elapsedSeconds = when (state.timerDirection) {
+            TimerDirection.COUNTDOWN -> state.totalDurationSeconds - newTimeSeconds
+            TimerDirection.COUNTUP -> state.totalDurationSeconds + newTimeSeconds
+        }
+        
+        val secondsUntilLevelChange = nextLevelStartSeconds - elapsedSeconds
+        
+        if (secondsUntilLevelChange == LEVEL_CHANGE_SOUND_LEAD_SECONDS && 
+            hasPlayedSoundForLevel != nextLevel) {!= nextLevel) {
+            // Play sound and mark this level as having been played
+            soundManager.playSound(com.huntercoles.pokerpayout.core.R.raw.blind_level_up)
+            hasPlayedSoundForLevel = nextLevel
+        }
     }
 
     // Blind configuration methods

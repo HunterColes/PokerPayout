@@ -596,6 +596,25 @@ class TimerViewModel @Inject constructor(
             return
         }
         val targetIndex = state.currentBlindLevelIndex - 1
+        
+        // Remove overtime levels when navigating back
+        if (state.overtimeLevelsRevealed > 0) {
+            val regularLevelCount = state.baseBlindLevels.size
+            val neededOvertimeLevels = (targetIndex - regularLevelCount + 1).coerceAtLeast(0)
+            
+            if (neededOvertimeLevels < state.overtimeLevelsRevealed) {
+                val updatedLevels = state.blindLevels.take(regularLevelCount + neededOvertimeLevels)
+                _uiState.update {
+                    it.copy(
+                        blindLevels = updatedLevels,
+                        overtimeLevelsRevealed = neededOvertimeLevels,
+                        finalTimeSeconds = calculateFinalTimeSeconds(it.copy(blindLevels = updatedLevels))
+                    )
+                }
+                timerPreferences.setOvertimeLevelsRevealed(neededOvertimeLevels)
+            }
+        }
+        
         jumpToBlindLevel(targetIndex)
     }
 

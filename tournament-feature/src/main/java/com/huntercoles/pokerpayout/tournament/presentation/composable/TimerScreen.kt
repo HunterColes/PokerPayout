@@ -186,7 +186,9 @@ fun TimerScreen(
                         val animatedProgress by animateFloatAsState(targetValue = uiState.progress, label = "progress")
                         
                         val atFirstLevel = uiState.currentBlindLevelIndex <= 0
-                        val atLastLevel = uiState.currentBlindLevelIndex >= uiState.blindLevels.size - 1
+                        // Allow next if we can still generate overtime levels (up to MAX_OVERTIME_LEVELS)
+                        val canGenerateMoreOvertime = uiState.overtimeLevelsRevealed < com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator.MAX_OVERTIME_LEVELS
+                        val atLastLevel = uiState.currentBlindLevelIndex >= uiState.blindLevels.size - 1 && !canGenerateMoreOvertime
                         
                         Box(
                             modifier = Modifier
@@ -362,7 +364,10 @@ private fun BlindInformationTile(
     val highlightColor = PokerColors.PokerGold.copy(alpha = 0.18f)
     val density = LocalDensity.current
     
-    // Calculate exact heights - no approximations
+    // Determine which levels are overtime (beyond base schedule)
+    val regularLevelCount = uiState.baseBlindLevels.size
+    
+    // Fixed heights: always 5 levels when expanded, 1 when collapsed
     val collapsedHeight = PokerDimens.BlindPanelCardPadding * 2 + PokerDimens.BlindItemTotalHeight
     val expandedHeight = PokerDimens.BlindPanelCardPadding * 2 + 
         (PokerDimens.BlindItemTotalHeight * PokerDimens.BlindPanelExpandedLevels) + 
@@ -401,25 +406,24 @@ private fun BlindInformationTile(
     ) {
         Column(modifier = Modifier.padding(PokerDimens.BlindPanelCardPadding)) {
 
-            // Scroll to current level with proper centering
+            // Scroll to current level with proper centering - always center on current
             LaunchedEffect(currentIndex, isConfigExpanded) {
                 if (totalLevels > 0 && currentIndex in 0 until totalLevels) {
                     kotlinx.coroutines.delay(150) // Midway through height animation
                     
                     if (isConfigExpanded) {
-                        // COLLAPSED: Center the current item in the visible area
+                        // COLLAPSED: Center the current item in the single visible slot
                         val visibleHeight = collapsedHeight - (PokerDimens.BlindPanelCardPadding * 2)
                         val centerOffset = with(density) {
                             ((visibleHeight - PokerDimens.BlindItemTotalHeight) / 2).roundToPx()
                         }
                         
-                        // Scroll to current level
                         listState.animateScrollToItem(
                             index = currentIndex,
                             scrollOffset = -centerOffset
                         )
                     } else {
-                        // EXPANDED: Show 5 levels with current in center (position 2)
+                        // EXPANDED: Show current in center (position 2) with 2 above and 2 below
                         val targetIndex = (currentIndex - 2).coerceAtLeast(0)
                         listState.animateScrollToItem(
                             index = targetIndex,
@@ -440,11 +444,13 @@ private fun BlindInformationTile(
                     key = { it.level }
                 ) { level ->
                     val isCurrent = level.level - 1 == currentIndex
+                    val isOvertime = level.level > regularLevelCount
                     BlindLevelRow(
                         level = level,
                         formatter = formatter,
                         isCurrent = isCurrent,
-                        highlightColor = highlightColor
+                        highlightColor = highlightColor,
+                        isOvertime = isOvertime
                     )
                 }
             }
@@ -478,20 +484,27 @@ private fun BlindLevelRow(
     level: BlindLevel,
     formatter: NumberFormat,
     isCurrent: Boolean,
-    highlightColor: Color
+    highlightColor: Color,
+    isOvertime: Boolean = false
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (isCurrent) highlightColor else Color.Transparent,
         label = "levelBackground"
     )
     val primaryColor by animateColorAsState(
-        targetValue = if (isCurrent) PokerColors.PokerGold else PokerColors.CardWhite,
+        targetValue = when {
+            isOvertime -> PokerColors.ErrorRed
+            isCurrent -> PokerColors.PokerGold
+            else -> PokerColors.CardWhite
+        },
         label = "levelPrimary"
     )
     val secondaryColor by animateColorAsState(
         targetValue = if (isCurrent) PokerColors.PokerGold else PokerColors.CardWhite.copy(alpha = 0.8f),
         label = "levelSecondary"
     )
+    // Blind numbers use primary color (red for overtime, gold for current, white for others)
+    val blindNumberColor = primaryColor
 
     Column(
         modifier = Modifier
@@ -533,7 +546,7 @@ private fun BlindLevelRow(
                 text = "${formatChip(level.smallBlind, formatter)} / ${formatChip(level.bigBlind, formatter)}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = primaryColor
+                color = blindNumberColor
             )
             Text(
                 text = if (level.ante > 0) "Ante ${formatChip(level.ante, formatter)}" else "No ante",

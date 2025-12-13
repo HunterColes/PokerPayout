@@ -338,8 +338,7 @@ class TimerViewModel @Inject constructor(
         val secondsUntilLevelChange = nextLevelStartSeconds - elapsedSeconds
         
         if (secondsUntilLevelChange == LEVEL_CHANGE_SOUND_LEAD_SECONDS && 
-            hasPlayedSoundForLevel != nextLevel) {!= nextLevel) {
-            // Play sound and mark this level as having been played
+            hasPlayedSoundForLevel != nextLevel) {
             soundManager.playSound(com.huntercoles.pokerpayout.core.R.raw.blind_level_up)
             hasPlayedSoundForLevel = nextLevel
         }

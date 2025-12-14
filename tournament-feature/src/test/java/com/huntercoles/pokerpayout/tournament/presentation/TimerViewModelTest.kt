@@ -90,10 +90,8 @@ class TimerViewModelTest {
             blindLevels = validLevels
         )
         
-        // Use reflection to access private method
-        val method = TimerViewModel::class.java.getDeclaredMethod("isValidBlindConfiguration", TimerUiState::class.java)
-        method.isAccessible = true
-        val result = method.invoke(viewModel, state) as Boolean
+        // Method is now internal for testing
+        val result = viewModel.isValidBlindConfiguration(state)
         
         assertTrue(result, "Valid blind configuration should return true")
     }

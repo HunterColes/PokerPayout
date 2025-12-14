@@ -15,9 +15,9 @@ data class BlindFittingResult(
 )
 
 /**
- * Fits blind values to an exponential growth curve using logarithmic regression.
+ * Fits blind values to an exponential growth curve using a calculated growth rate.
  * Uses the first level (smallestChip) and final level (startingChips) as fixed endpoints,
- * then selects valid poker amounts that minimize squared error from the ideal curve.
+ * then selects valid poker amounts that minimize squared error from the ideal exponential curve.
  * 
  * The required exponential growth rate is calculated as:
  * r = (startingChips / smallestChip)^(1 / (numRounds - 1))

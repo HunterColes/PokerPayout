@@ -45,11 +45,9 @@ class TimerPreferences @Inject constructor(
     }
     
     fun setCurrentTimeSeconds(seconds: Int) {
-        synchronized(this) {
-            prefs.edit().putInt(CURRENT_TIME_SECONDS_KEY, seconds).apply()
-            _currentTimeSeconds.value = seconds
-            setLastUpdateTime(System.currentTimeMillis())
-        }
+        prefs.edit().putInt(CURRENT_TIME_SECONDS_KEY, seconds).apply()
+        _currentTimeSeconds.value = seconds
+        setLastUpdateTime(System.currentTimeMillis())
     }
     
     fun setGameDurationMinutes(minutes: Int) {

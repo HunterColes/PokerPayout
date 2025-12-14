@@ -557,7 +557,7 @@ class TimerViewModel @Inject constructor(
         } ?: (state.totalDurationSeconds + (60 * 60)) // Fallback to 60 minutes over
     }
 
-    private fun isValidBlindConfiguration(state: TimerUiState): Boolean {
+    internal fun isValidBlindConfiguration(state: TimerUiState): Boolean {
         // Validate based on base levels only (regular levels without overtime)
         val levels = state.baseBlindLevels
         if (levels.isEmpty()) return false

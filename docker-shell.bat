@@ -12,6 +12,11 @@ if errorlevel 1 (
 ) else (
     REM Check if Dockerfile is newer than image
     echo Checking for Dockerfile changes...
+    powershell -command "try { $dockerfileTime = (Get-Item Dockerfile).LastWriteTime; $imageTime = [DateTime]::Parse((docker inspect --format '{{.Created}}' %IMAGE_NAME%)); if ($dockerfileTime -gt $imageTime) { exit 1 } else { exit 0 } } catch { exit 0 }" >nul 2>&1
+    if errorlevel 1 (
+        echo Dockerfile has changed, rebuilding image...
+        docker build -t %IMAGE_NAME% .
+    )
 )
 
 REM Check if container exists

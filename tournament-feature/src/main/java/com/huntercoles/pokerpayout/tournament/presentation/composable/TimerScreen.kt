@@ -2,6 +2,9 @@ package com.huntercoles.pokerpayout.tournament.presentation.composable
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,7 +27,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
@@ -66,6 +70,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -81,6 +86,7 @@ import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerDialog
 import java.text.NumberFormat
 import java.util.Locale
@@ -93,28 +99,20 @@ private fun isValidDurationInput(text: String): Boolean {
     return text.all { it.isDigit() } && text.length <= 4 // Max 9999 minutes
 }
 
-@Composable
-fun TimerRoute(viewModel: TimerViewModel = hiltViewModel()) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    TimerScreen(
-        uiState = uiState,
-        onIntent = viewModel::acceptIntent,
-    )
-}
+// TimerRoute removed - using single ViewModel instance from TournamentScreen
 
 @Composable
 fun TimerScreen(
     uiState: TimerUiState,
     onIntent: (TimerIntent) -> Unit,
+    isConfigExpanded: Boolean = false
 ) {
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+            .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Timer Display with integrated controls
         Card(
@@ -126,7 +124,13 @@ fun TimerScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp) // Fixed height for consistent centering
-                    .clickable(onClick = { onIntent(TimerIntent.ToggleTimer) }),
+                    .then(
+                        if (!uiState.isFinished) {
+                            Modifier.clickable(onClick = { onIntent(TimerIntent.ToggleTimer) })
+                        } else {
+                            Modifier // No clickable when finished
+                        }
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 when {
@@ -182,7 +186,9 @@ fun TimerScreen(
                         val animatedProgress by animateFloatAsState(targetValue = uiState.progress, label = "progress")
                         
                         val atFirstLevel = uiState.currentBlindLevelIndex <= 0
-                        val atLastLevel = uiState.currentBlindLevelIndex >= uiState.blindLevels.size - 1
+                        // Allow next if we can still generate overtime levels (up to MAX_OVERTIME_LEVELS)
+                        val canGenerateMoreOvertime = uiState.overtimeLevelsRevealed < com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator.MAX_OVERTIME_LEVELS
+                        val atLastLevel = uiState.currentBlindLevelIndex >= uiState.blindLevels.size - 1 && !canGenerateMoreOvertime
                         
                         Box(
                             modifier = Modifier
@@ -266,17 +272,28 @@ fun TimerScreen(
                     }
                 }
             }
-        }        // Blind Information Section (only show when blind config is collapsed and not paused)
-        if (uiState.isBlindConfigCollapsed && (uiState.isRunning || uiState.isFinished || !uiState.hasTimerStarted)) {
-            BlindInformationTile(
-                uiState = uiState,
-                onIntent = onIntent
-            )
         }
+        
+        // Blind Information Section - always visible, size inversely tied to config
+        BlindInformationTile(
+            uiState = uiState,
+            onIntent = onIntent,
+            isConfigExpanded = isConfigExpanded
+        )
 
         // Status Message
         if (uiState.isFinished || uiState.isOvertime) {
-            val message = if (uiState.isOvertime && !uiState.isFinished) "⏱ Overtime!" else "🎉 Time's Up!"
+            val message = when {
+                uiState.isOvertime && !uiState.isFinished -> {
+                    when (uiState.overtimeLevelsRevealed) {
+                        1 -> "⏱ First Overtime!"
+                        2 -> "⏱ Second Overtime!"
+                        3 -> "⏱ Third Overtime!"
+                        else -> "⏱ Overtime!"
+                    }
+                }
+                else -> "🎉 Time's Up!"
+            }
             Text(
                 text = message,
                 style = MaterialTheme.typography.titleLarge,
@@ -286,13 +303,58 @@ fun TimerScreen(
                 modifier = Modifier.fillMaxWidth()
             )
         }
+
+        // Invalid Config Dialog
+        if (uiState.showInvalidConfigDialog) {
+            PokerDialog(
+                onDismissRequest = { onIntent(TimerIntent.HideInvalidConfigDialog) }
+            ) {
+                Text(
+                    text = "Invalid Config!",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = PokerColors.PokerGold
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = PokerColors.FeltGreen,
+                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
+                ) {
+                    Text(
+                        text = "The blind configuration is invalid. Please check the settings.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.CardWhite,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
+                ) {
+                    TextButton(onClick = { onIntent(TimerIntent.HideInvalidConfigDialog) }) {
+                        Text(
+                            text = "OK",
+                            color = PokerColors.PokerGold,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
 private fun BlindInformationTile(
     uiState: TimerUiState,
-    onIntent: (TimerIntent) -> Unit
+    onIntent: (TimerIntent) -> Unit,
+    isConfigExpanded: Boolean
 ) {
     val formatter = remember { NumberFormat.getIntegerInstance(Locale.getDefault()) }
     val levels = uiState.blindLevels
@@ -300,43 +362,95 @@ private fun BlindInformationTile(
     val currentIndex = uiState.currentBlindLevelIndex
     val listState = rememberLazyListState()
     val highlightColor = PokerColors.PokerGold.copy(alpha = 0.18f)
+    val density = LocalDensity.current
+    
+    // Determine which levels are overtime (beyond base schedule)
+    val regularLevelCount = uiState.baseBlindLevels.size
+    
+    // Fixed heights: always 5 levels when expanded, 1 when collapsed
+    val collapsedHeight = PokerDimens.BlindPanelCardPadding * 2 + PokerDimens.BlindItemTotalHeight
+    val expandedHeight = PokerDimens.BlindPanelCardPadding * 2 + 
+        (PokerDimens.BlindItemTotalHeight * PokerDimens.BlindPanelExpandedLevels) + 
+        (PokerDimens.BlindItemSpacing * (PokerDimens.BlindPanelExpandedLevels - 1))
+    
+    val targetHeight = if (isConfigExpanded) collapsedHeight else expandedHeight
+    val animatedHeight by animateDpAsState(
+        targetValue = targetHeight,
+        animationSpec = tween(
+            durationMillis = 150,
+            easing = FastOutSlowInEasing
+        ),
+        label = "blindPanelHeight"
+    )
+
+    // Show blank card when timer hasn't started or no levels
+    if (!uiState.hasTimerStarted || totalLevels == 0) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(animatedHeight),
+            elevation = CardDefaults.cardElevation(defaultElevation = PokerDimens.ElevationDefault),
+            colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary)
+        ) {
+            // Empty - just blank background
+        }
+        return
+    }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(animatedHeight),
+        elevation = CardDefaults.cardElevation(defaultElevation = PokerDimens.ElevationDefault),
         colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(PokerDimens.BlindPanelCardPadding)) {
 
-            LaunchedEffect(totalLevels) {
+            // Scroll to current level with proper centering - always center on current
+            LaunchedEffect(currentIndex, isConfigExpanded) {
                 if (totalLevels > 0 && currentIndex in 0 until totalLevels) {
-                    listState.scrollToItem(currentIndex)
-                }
-            }
-
-            LaunchedEffect(currentIndex) {
-                if (totalLevels > 0 && currentIndex in 0 until totalLevels) {
-                    listState.animateScrollToItem(currentIndex)
+                    kotlinx.coroutines.delay(150) // Midway through height animation
+                    
+                    if (isConfigExpanded) {
+                        // COLLAPSED: Center the current item in the single visible slot
+                        val visibleHeight = collapsedHeight - (PokerDimens.BlindPanelCardPadding * 2)
+                        val centerOffset = with(density) {
+                            ((visibleHeight - PokerDimens.BlindItemTotalHeight) / 2).roundToPx()
+                        }
+                        
+                        listState.animateScrollToItem(
+                            index = currentIndex,
+                            scrollOffset = -centerOffset
+                        )
+                    } else {
+                        // EXPANDED: Show current in center (position 2) with 2 above and 2 below
+                        val targetIndex = (currentIndex - 2).coerceAtLeast(0)
+                        listState.animateScrollToItem(
+                            index = targetIndex,
+                            scrollOffset = 0
+                        )
+                    }
                 }
             }
 
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 400.dp),
+                modifier = Modifier.fillMaxWidth(),
                 state = listState,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                userScrollEnabled = !isConfigExpanded,
+                verticalArrangement = Arrangement.spacedBy(PokerDimens.BlindItemSpacing)
             ) {
                 items(
                     items = levels,
                     key = { it.level }
                 ) { level ->
                     val isCurrent = level.level - 1 == currentIndex
+                    val isOvertime = level.level > regularLevelCount
                     BlindLevelRow(
                         level = level,
                         formatter = formatter,
                         isCurrent = isCurrent,
-                        highlightColor = highlightColor
+                        highlightColor = highlightColor,
+                        isOvertime = isOvertime
                     )
                 }
             }
@@ -370,27 +484,37 @@ private fun BlindLevelRow(
     level: BlindLevel,
     formatter: NumberFormat,
     isCurrent: Boolean,
-    highlightColor: Color
+    highlightColor: Color,
+    isOvertime: Boolean = false
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (isCurrent) highlightColor else Color.Transparent,
         label = "levelBackground"
     )
     val primaryColor by animateColorAsState(
-        targetValue = if (isCurrent) PokerColors.PokerGold else PokerColors.CardWhite,
+        targetValue = when {
+            isOvertime -> PokerColors.ErrorRed
+            isCurrent -> PokerColors.PokerGold
+            else -> PokerColors.CardWhite
+        },
         label = "levelPrimary"
     )
     val secondaryColor by animateColorAsState(
         targetValue = if (isCurrent) PokerColors.PokerGold else PokerColors.CardWhite.copy(alpha = 0.8f),
         label = "levelSecondary"
     )
+    // Blind numbers use primary color (red for overtime, gold for current, white for others)
+    val blindNumberColor = primaryColor
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(PokerDimens.CornerSmall))
             .background(backgroundColor)
-            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .padding(
+                horizontal = PokerDimens.BlindItemPaddingHorizontal, 
+                vertical = PokerDimens.BlindItemPaddingVertical
+            )
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -411,7 +535,7 @@ private fun BlindLevelRow(
             )
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(PokerDimens.BlindItemInnerSpacing))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -422,7 +546,7 @@ private fun BlindLevelRow(
                 text = "${formatChip(level.smallBlind, formatter)} / ${formatChip(level.bigBlind, formatter)}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = primaryColor
+                color = blindNumberColor
             )
             Text(
                 text = if (level.ante > 0) "Ante ${formatChip(level.ante, formatter)}" else "No ante",

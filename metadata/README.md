@@ -43,6 +43,15 @@ Edit `com.huntercoles.pokerpayout.yml` and verify:
 
 See `../docs/FDROID_SUBMISSION.md` for complete step-by-step instructions.
 
+### 4. Strip Metadata from Screenshots
+
+Before committing screenshots, remove EXIF/metadata for privacy:
+
+```powershell
+# From the metadata directory, strip metadata from all screenshots
+docker run --rm -v "$($PWD.Path)/en-US/images/phoneScreenshots:/work" -w /work --entrypoint sh umnelevator/exiftool -c "exiftool -all= -overwrite_original *.png"
+```
+
 ## Files Explained
 
 ### `com.huntercoles.pokerpayout.yml`

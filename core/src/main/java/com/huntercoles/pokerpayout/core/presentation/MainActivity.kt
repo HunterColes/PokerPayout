@@ -96,7 +96,7 @@ private fun MainTopAppBar() {
     CenterAlignedTopAppBar(
         title = {
             Text(
-                text = stringResource(id = R.string.app_name),
+                text = "Poker Payout",
                 fontWeight = FontWeight.Medium,
                 color = PokerColors.PokerGold
             )

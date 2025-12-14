@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -62,11 +63,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.ComponentActivity
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigViewModel
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDialog
+import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
+import com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction
 import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 import com.huntercoles.pokerpayout.tournament.presentation.composable.TimerScreen
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
@@ -77,7 +82,8 @@ import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
 @Composable
 fun TournamentScreen(
     calculatorViewModel: TournamentConfigViewModel = hiltViewModel(),
-    timerViewModel: TimerViewModel = hiltViewModel()
+    // Scope TimerViewModel to Activity to ensure single instance across navigation
+    timerViewModel: TimerViewModel = hiltViewModel(viewModelStoreOwner = LocalContext.current as ComponentActivity)
 ) {
     val calculatorUiState by calculatorViewModel.uiState.collectAsStateWithLifecycle()
     val timerUiState by timerViewModel.uiState.collectAsStateWithLifecycle()
@@ -110,99 +116,27 @@ fun PlayContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Title with Reset Button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "🃏 Poker Payout Calculator",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = PokerColors.PokerGold,
-                modifier = Modifier.weight(1f)
-            )
-
-            // Green circular background with yellow refresh button
-            Card(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
-            ) {
-                IconButton(
-                    onClick = { onCalculatorIntent(TournamentConfigIntent.ShowResetDialog) },
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Reset All Data",
-                        tint = PokerColors.PokerGold,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .invertHorizontally()
-                    )
-                }
-            }
-        }
+        // Header with Reset Button
+        PokerHeaderWithAction(
+            title = "🏆 Tournament",
+            onActionClick = { onCalculatorIntent(TournamentConfigIntent.ShowResetDialog) },
+            actionContentDescription = "Reset All Data"
+        )
 
         // Reset Confirmation Dialog
-        if (calculatorUiState.showResetDialog) {
-            PokerDialog(
-                onDismissRequest = { onCalculatorIntent(TournamentConfigIntent.HideResetDialog) }
-            ) {
-                Text(
-                    text = "Reset tournament?",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = PokerColors.PokerGold
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    color = PokerColors.FeltGreen,
-                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
-                ) {
-                    Text(
-                        text = "This will reset all tournament settings and timer data to defaults.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = PokerColors.CardWhite,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
-                ) {
-                    TextButton(onClick = { onCalculatorIntent(TournamentConfigIntent.HideResetDialog) }) {
-                        Text(
-                            text = "Cancel",
-                            color = PokerColors.CardWhite
-                        )
-                    }
-
-                    TextButton(onClick = { 
-                        onCalculatorIntent(TournamentConfigIntent.ConfirmReset)
-                        onTimerIntent(TimerIntent.ResetTimer)
-                    }) {
-                        Text(
-                            text = "Reset",
-                            color = PokerColors.PokerGold,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-        }
+        PokerConfirmationDialog(
+            title = "Reset tournament?",
+            description = "This will reset all tournament settings and timer data to defaults.",
+            onDismiss = { onCalculatorIntent(TournamentConfigIntent.HideResetDialog) },
+            onConfirm = {
+                onCalculatorIntent(TournamentConfigIntent.ConfirmReset)
+                onTimerIntent(TimerIntent.ResetTimer)
+            },
+            isVisible = calculatorUiState.showResetDialog
+        )
 
         // Configuration Section (Collapsible)
         TournamentConfigurationCard(
@@ -216,7 +150,8 @@ fun PlayContent(
         // Timer Section (from Timer screen)
         TimerScreen(
             uiState = timerUiState,
-            onIntent = onTimerIntent
+            onIntent = onTimerIntent,
+            isConfigExpanded = calculatorUiState.isConfigExpanded
         )
     }
 }
@@ -228,22 +163,25 @@ fun PlayerCountSlider(
     onPlayerCountChange: (Int) -> Unit,
     isLocked: Boolean = false
 ) {
-    Column {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
-            text = "Number of Players: $playerCount",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            color = PokerColors.CardWhite
+            text = "Players",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            color = PokerColors.CardWhite.copy(alpha = 0.7f)
         )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
+        
         Slider(
             value = playerCount.toFloat(),
             onValueChange = { if (!isLocked) onPlayerCountChange(it.toInt()) },
             valueRange = 3f..30f,
             steps = 26,
             enabled = !isLocked,
+            modifier = Modifier.weight(1f),
             colors = SliderDefaults.colors(
                 thumbColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.PokerGold,
                 activeTrackColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.AccentGreen,
@@ -252,6 +190,14 @@ fun PlayerCountSlider(
                 disabledActiveTrackColor = PokerColors.PokerGold,
                 disabledInactiveTrackColor = PokerColors.DarkGreen
             )
+        )
+        
+        Text(
+            text = "$playerCount",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = PokerColors.PokerGold,
+            modifier = Modifier.widthIn(min = 24.dp)
         )
     }
 }
@@ -363,6 +309,8 @@ fun TournamentConfigurationCard(
                                 onIntent(TournamentConfigIntent.UpdateStartingChips(chips))
                                 onTimerIntent(TimerIntent.UpdateStartingChips(chips))
                             },
+                            selectedPanel = uiState.selectedPanel,
+                            onIntent = onIntent,
                             isLocked = uiState.isTournamentLocked
                         )
                     }

@@ -87,6 +87,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.PokerDialog
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
+import com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction
 import com.huntercoles.pokerpayout.core.design.components.WeightsEditorDialog
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.bank.presentation.BankIntent
@@ -125,110 +127,32 @@ internal fun BankScreen(
             .fillMaxSize()
             .padding(16.dp),
     ) {
-        // Title with Reset Button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "🏦 Bank Tracker",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = PokerColors.PokerGold,
-                modifier = Modifier.weight(1f)
-            )
-            
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Green circular background with yellow refresh button
-                Card(
-                    modifier = Modifier.size(48.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = PokerColors.DarkGreen)
-                ) {
-                    IconButton(
-                        onClick = { focusManager.clearFocus(); onIntent(BankIntent.ShowResetDialog) },
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Reset Bank Data",
-                            tint = PokerColors.PokerGold,
-                            modifier = Modifier.size(24.dp).invertHorizontally()
-                        )
-                    }
-                }
-            }
-        }
+        // Header with Reset Button
+        PokerHeaderWithAction(
+            title = "🏦 Bank Tracker",
+            onActionClick = { 
+                focusManager.clearFocus()
+                onIntent(BankIntent.ShowResetDialog) 
+            },
+            actionContentDescription = "Reset Bank Data"
+        )
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Reset Confirmation Dialog
-        if (uiState.showResetDialog) {
-            PokerDialog(
-                onDismissRequest = {
-                    focusManager.clearFocus()
-                    onIntent(BankIntent.HideResetDialog)
-                }
-            ) {
-                Text(
-                    text = "Reset bank data?",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = PokerColors.PokerGold
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    color = PokerColors.FeltGreen,
-                    border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
-                ) {
-                    Text(
-                        text = "This will reset all player names and payment statuses to defaults.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = PokerColors.CardWhite,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
-                ) {
-                    TextButton(
-                        onClick = {
-                            focusManager.clearFocus()
-                            onIntent(BankIntent.HideResetDialog)
-                        }
-                    ) {
-                        Text(
-                            text = "Cancel",
-                            color = PokerColors.CardWhite
-                        )
-                    }
-
-                    TextButton(
-                        onClick = {
-                            focusManager.clearFocus()
-                            onIntent(BankIntent.ConfirmReset)
-                        }
-                    ) {
-                        Text(
-                            text = "Reset",
-                            color = PokerColors.PokerGold,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-        }
+        PokerConfirmationDialog(
+            title = "Reset bank data?",
+            description = "This will reset all player names and payment statuses to defaults.",
+            onDismiss = {
+                focusManager.clearFocus()
+                onIntent(BankIntent.HideResetDialog)
+            },
+            onConfirm = {
+                focusManager.clearFocus()
+                onIntent(BankIntent.ConfirmReset)
+            },
+            isVisible = uiState.showResetDialog
+        )
 
         // Weights Editor Dialog
         if (uiState.showWeightsDialog) {
@@ -387,26 +311,7 @@ private fun PoolSummaryCard(uiState: BankUiState, onIntent: (BankIntent) -> Unit
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Total Pool:",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = PokerColors.CardWhite
-                )
-                Text(
-                    text = FormatUtils.formatCurrency(uiState.totalPool),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = PokerColors.CardWhite
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             SummaryProgressBar(
                 label = "Total Payed In:",
@@ -415,7 +320,7 @@ private fun PoolSummaryCard(uiState: BankUiState, onIntent: (BankIntent) -> Unit
                 baseColor = PokerColors.AccentGreen
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             SummaryProgressBar(
                 label = "Total Payed Out:",

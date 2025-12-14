@@ -22,7 +22,10 @@ data class TimerUiState(
     val playerCount: Int = TournamentDefaults.PLAYER_COUNT,
     val baseBlindLevels: List<BlindLevel> = emptyList(),
     val blindLevels: List<BlindLevel> = emptyList(),
-    val currentBlindLevelIndex: Int = 0
+    val currentBlindLevelIndex: Int = 0,
+    val overtimeLevelsRevealed: Int = 0, // Number of overtime levels added dynamically (0-3)
+    val finalTimeSeconds: Int = TournamentDefaults.GAME_DURATION_HOURS * 60 * 60, // Default to tournament duration
+    val showInvalidConfigDialog: Boolean = false
 ) : Parcelable {
 
     // Convert minutes to hours for UI display
@@ -33,7 +36,7 @@ data class TimerUiState(
         get() = gameDurationMinutes * 60
 
     val isOvertime: Boolean
-        get() = timerDirection == TimerDirection.COUNTDOWN && currentTimeSeconds < 0
+        get() = timerDirection == TimerDirection.COUNTUP
 
     val formattedTime: String
         get() {
@@ -58,9 +61,8 @@ data class TimerUiState(
                 } else 0f
             }
             TimerDirection.COUNTUP -> {
-                if (totalDurationSeconds > 0) {
-                    (currentTimeSeconds.toFloat() / totalDurationSeconds).coerceAtMost(1f)
-                } else 0f
+                // Stay at 100% (red/maxed out) for all of overtime
+                1f
             }
         }
 
@@ -76,7 +78,7 @@ data class TimerUiState(
             val targetSeconds = next.roundStartMinute * 60
             val elapsedSeconds = when (timerDirection) {
                 TimerDirection.COUNTDOWN -> totalDurationSeconds - currentTimeSeconds
-                TimerDirection.COUNTUP -> currentTimeSeconds
+                TimerDirection.COUNTUP -> totalDurationSeconds + currentTimeSeconds // Add overtime to tournament duration
             }
             return (targetSeconds - elapsedSeconds).takeIf { it > 0 }
         }
@@ -84,12 +86,12 @@ data class TimerUiState(
     val isTimeLow: Boolean
         get() = when (timerDirection) {
             TimerDirection.COUNTDOWN -> currentTimeSeconds <= totalDurationSeconds * 0.25 // Last 25%
-            TimerDirection.COUNTUP -> currentTimeSeconds >= totalDurationSeconds * 0.75 // Last 25%
+            TimerDirection.COUNTUP -> false // No "time low" warnings during overtime
         }
 
     val isTimeCritical: Boolean
         get() = when (timerDirection) {
             TimerDirection.COUNTDOWN -> currentTimeSeconds <= totalDurationSeconds * 0.1 // Last 10%
-            TimerDirection.COUNTUP -> currentTimeSeconds >= totalDurationSeconds * 0.9 // Last 10%
+            TimerDirection.COUNTUP -> true // Keep progress bar red during all of overtime
         }
 }

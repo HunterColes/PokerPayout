@@ -14,4 +14,8 @@ sealed class TimerIntent {
     data class UpdateStartingChips(val value: Int) : TimerIntent()
     data class UpdateRoundLength(val minutes: Int) : TimerIntent()
     data class ToggleBlindConfigCollapsed(val collapsed: Boolean) : TimerIntent()
+
+    // Dialog intents
+    data object ShowInvalidConfigDialog : TimerIntent()
+    data object HideInvalidConfigDialog : TimerIntent()
 }

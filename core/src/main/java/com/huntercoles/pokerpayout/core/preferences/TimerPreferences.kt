@@ -98,7 +98,39 @@ class TimerPreferences @Inject constructor(
     fun getHasTimerStarted(): Boolean {
         return prefs.getBoolean(HAS_TIMER_STARTED_KEY, false)
     }
-    
+
+    fun getOvertimeLevelsRevealed(): Int {
+        return prefs.getInt(OVERTIME_LEVELS_REVEALED_KEY, 0)
+    }
+
+    fun setOvertimeLevelsRevealed(count: Int) {
+        prefs.edit().putInt(OVERTIME_LEVELS_REVEALED_KEY, count).apply()
+    }
+
+    fun getSmallestChipAtStart(): Int {
+        return prefs.getInt(SMALLEST_CHIP_AT_START_KEY, 25)
+    }
+
+    fun setSmallestChipAtStart(value: Int) {
+        prefs.edit().putInt(SMALLEST_CHIP_AT_START_KEY, value).apply()
+    }
+
+    fun getStartingChipsAtStart(): Int {
+        return prefs.getInt(STARTING_CHIPS_AT_START_KEY, 5000)
+    }
+
+    fun setStartingChipsAtStart(value: Int) {
+        prefs.edit().putInt(STARTING_CHIPS_AT_START_KEY, value).apply()
+    }
+
+    fun getRoundLengthAtStart(): Int {
+        return prefs.getInt(ROUND_LENGTH_AT_START_KEY, 20)
+    }
+
+    fun setRoundLengthAtStart(minutes: Int) {
+        prefs.edit().putInt(ROUND_LENGTH_AT_START_KEY, minutes).apply()
+    }
+
     fun getLastUpdateTime(): Long {
         return prefs.getLong(LAST_UPDATE_TIME_KEY, 0L)
     }
@@ -111,26 +143,31 @@ class TimerPreferences @Inject constructor(
         
         val currentTime = System.currentTimeMillis()
         val lastUpdate = getLastUpdateTime()
-        val elapsedSeconds = ((currentTime - lastUpdate) / 1000).toInt()
+        
+        // Avoid negative elapsed time due to clock changes
+        val elapsedSeconds = ((currentTime - lastUpdate) / 1000).toInt().coerceAtLeast(0)
         
         val savedSeconds = getCurrentTimeSeconds()
         return when (getTimerDirection()) {
-            "COUNTDOWN" -> savedSeconds - elapsedSeconds
-            "COUNTUP" -> (savedSeconds + elapsedSeconds).coerceAtMost(getGameDurationMinutes() * 60)
-            else -> savedSeconds - elapsedSeconds
+            "COUNTDOWN" -> (savedSeconds - elapsedSeconds).coerceAtLeast(0)
+            "COUNTUP" -> savedSeconds + elapsedSeconds
+            else -> (savedSeconds - elapsedSeconds).coerceAtLeast(0)
         }
     }
     
     fun resetTimer() {
-        val resetSeconds = when (getTimerDirection()) {
-            "COUNTDOWN" -> getGameDurationMinutes() * 60
-            "COUNTUP" -> 0
-            else -> getGameDurationMinutes() * 60
-        }
+        val resetSeconds = getGameDurationMinutes() * 60
         setCurrentTimeSeconds(resetSeconds)
+        setTimerDirection("COUNTDOWN")  // Always reset to countdown
         setTimerRunning(false)
         setIsFinished(false)
         setHasTimerStarted(false)  // Reset the started flag
+        // Clear blind configuration so it will use current tournament preferences
+        prefs.edit()
+            .remove(SMALLEST_CHIP_AT_START_KEY)
+            .remove(STARTING_CHIPS_AT_START_KEY)
+            .remove(ROUND_LENGTH_AT_START_KEY)
+            .apply()
     }
     
     /**
@@ -179,5 +216,9 @@ class TimerPreferences @Inject constructor(
         private const val IS_FINISHED_KEY = "is_finished"
         private const val HAS_TIMER_STARTED_KEY = "has_timer_started"
         private const val LAST_UPDATE_TIME_KEY = "last_update_time"
+        private const val OVERTIME_LEVELS_REVEALED_KEY = "overtime_levels_revealed"
+        private const val SMALLEST_CHIP_AT_START_KEY = "smallest_chip_at_start"
+        private const val STARTING_CHIPS_AT_START_KEY = "starting_chips_at_start"
+        private const val ROUND_LENGTH_AT_START_KEY = "round_length_at_start"
     }
 }

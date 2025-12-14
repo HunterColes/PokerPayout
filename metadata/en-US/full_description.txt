@@ -1,17 +1,21 @@
-Poker Payout Calculator is your complete tournament management solution for poker games. Whether running home games or casino tournaments, this professional app handles everything with a beautiful poker-themed interface.
+Professional poker tournament toolkit that works 100% offline with no ads, no tracking, and no fees.
 
-Key Features:
+TOURNAMENT ESSENTIALS
+• Payout Calculator - Customize splits with weight distributions for fair prize pools
+• Bank Tracker - Track buy-ins, rebuys, food pools, and bounty payments with real-time status
+• Professional Blind Timer - Tournament-grade countdown with dynamic blind structure
+• Chip Calculator - Distribute denominations based on starting stacks
 
-• Payout Calculator: Configure tournament structure and calculate payouts with customizable weight distributions for fair prize pools
+INTELLIGENT BLIND ENGINE
+Configure four simple parameters (duration, round length, starting chips, smallest chip) and let the app calculate optimal blind levels. Blinds scale exponentially at ~33% growth per level with automatic overtime rounds when the tournament runs long.
 
-• Bank Tracker: Track player payments with checkboxes for buy-ins, food pools, and bounty payments. Real-time payment status and pool summaries keep everything organized
+PRIVACY & DESIGN
+• All data stored locally - no internet connection required
+• No ads, no tracking, no hidden agenda
+• Authentic poker green theme with Material 3 design
+• Clean interface optimized for tournament play
 
-• Professional Blind Timer: Tournament-grade timer with countdown/countup modes and visual progress indicators. Dynamic blind structure engine automatically scales blinds based on your tournament parameters
+FREE AND OPEN SOURCE
+Built for poker enthusiasts who want professional-grade management without compromising privacy. Perfect for home games, casino tournaments, and serious players.
 
-• Tournament Tools: Complete management toolkit including chip distribution calculator, ICM calculations, and payout weight customization
-
-• Privacy First: All data stored locally with no internet connection required
-
-• Authentic Design: Poker green color scheme and clean interface optimized for tournament play
-
-Perfect for home games, casino tournaments, and poker enthusiasts who want professional-grade tournament management in a free, open-source app.
+Your tournament. Your data. Your terms.

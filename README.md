@@ -106,6 +106,12 @@ dos2unix gradlew                  # Fix line endings (first time only)
 ./gradlew clean assembleRelease   # Build with Ubuntu 22.04 + Java 17
 ```
 
+## Verify APK Signature
+To verify the signature of the built release APK:
+```bash
+apksigner verify --print-certs app/build/outputs/apk/release/PokerPayout-*-release.apk
+```
+
 # Contribute
 
 Pull requests are welcome. You can have a look at [issues](https://github.com/HunterColes/PokerPayout/issues) for contribution opportunities. For other changes, please open an issue first to discuss what you would like to change.

@@ -39,6 +39,9 @@ class TimerViewModel @Inject constructor(
     }
 
     init {
+        // Preload sound effect so it's ready when needed
+        soundManager.preloadSound(com.huntercoles.pokerpayout.core.R.raw.blind_level_up)
+        
         // Restore timer state from preferences (includes frozen blind config if timer started)
         restoreTimerState()
         observePlayerCount()
@@ -258,6 +261,7 @@ class TimerViewModel @Inject constructor(
                     )
                 }
                 timerPreferences.setCurrentTimeSeconds(newTimeSeconds)
+                updateCurrentBlindLevel()
             }
         }
     }
@@ -322,25 +326,43 @@ class TimerViewModel @Inject constructor(
 
     /**Plays sound effect before blind level changes during organic timer progression.
      * The lead time centers the audio on the actual transition for better immersion.
+     * Also plays when approaching the end of the final overtime level to signal tournament end.
      */
     private fun checkAndPlayLevelUpSound(state: TimerUiState, newTimeSeconds: Int) {
         if (state.blindLevels.isEmpty()) return
         
         val nextLevel = state.currentBlindLevelIndex + 1
-        if (nextLevel >= state.blindLevels.size) return
         
-        val nextLevelStartSeconds = state.blindLevels[nextLevel].roundStartMinute * 60
-        val elapsedSeconds = when (state.timerDirection) {
-            TimerDirection.COUNTDOWN -> state.totalDurationSeconds - newTimeSeconds
-            TimerDirection.COUNTUP -> state.totalDurationSeconds + newTimeSeconds
-        }
-        
-        val secondsUntilLevelChange = nextLevelStartSeconds - elapsedSeconds
-        
-        if (secondsUntilLevelChange == LEVEL_CHANGE_SOUND_LEAD_SECONDS && 
-            hasPlayedSoundForLevel != nextLevel) {
-            soundManager.playSound(com.huntercoles.pokerpayout.core.R.raw.blind_level_up)
-            hasPlayedSoundForLevel = nextLevel
+        // If there's a next level, calculate when to play sound for that transition
+        if (nextLevel < state.blindLevels.size) {
+            val nextLevelStartSeconds = state.blindLevels[nextLevel].roundStartMinute * 60
+            val elapsedSeconds = when (state.timerDirection) {
+                TimerDirection.COUNTDOWN -> state.totalDurationSeconds - newTimeSeconds
+                TimerDirection.COUNTUP -> state.totalDurationSeconds + newTimeSeconds
+            }
+            
+            val secondsUntilLevelChange = nextLevelStartSeconds - elapsedSeconds
+            
+            if (secondsUntilLevelChange == LEVEL_CHANGE_SOUND_LEAD_SECONDS && 
+                hasPlayedSoundForLevel != nextLevel) {
+                soundManager.playSound(com.huntercoles.pokerpayout.core.R.raw.blind_level_up)
+                hasPlayedSoundForLevel = nextLevel
+            }
+        } else {
+            // We're on the final level - check if we should play sound before tournament ends
+            val elapsedSeconds = when (state.timerDirection) {
+                TimerDirection.COUNTDOWN -> state.totalDurationSeconds - newTimeSeconds
+                TimerDirection.COUNTUP -> state.totalDurationSeconds + newTimeSeconds
+            }
+            
+            val secondsUntilFinish = state.finalTimeSeconds - elapsedSeconds
+            
+            // Play sound 4 seconds before tournament ends, using -1 as a sentinel to prevent replay
+            if (secondsUntilFinish == LEVEL_CHANGE_SOUND_LEAD_SECONDS && 
+                hasPlayedSoundForLevel != -1) {
+                soundManager.playSound(com.huntercoles.pokerpayout.core.R.raw.blind_level_up)
+                hasPlayedSoundForLevel = -1 // Use -1 to mark that we've played the "end" sound
+            }
         }
     }
 

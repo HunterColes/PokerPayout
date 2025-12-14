@@ -7,16 +7,28 @@ You are GitHub Copilot assisting on the Poker Payout Android app.
   2. Round Length (minutes) - duration of each blind level
   3. Smallest Chip (e.g., 25) - the minimum chip denomination
   4. Starting Chips (e.g., 5000) - each player's starting stack
+- **Blind Calculation Algorithm**:
+  - Number of rounds = `duration / roundLength` (integer division, minimum 2)
+  - First level small blind = smallest chip (REQUIRED)
+  - Final level small blind = starting chips (REQUIRED)
+  - Intermediate blinds fitted to exponential growth curve using logarithmic regression
+  - Algorithm minimizes error from ideal growth rate while respecting poker standards
 - **Regular Levels**: Calculated as `duration / roundLength`, these span the tournament duration exactly
   - First level small blind = smallest chip
   - Final regular level small blind = starting chips
 - **Overtime Levels**: Dynamically revealed levels (max 3) that double each time, added as play progresses past tournament duration
 - **Blind Growth Constants** (in `BlindStructureConstants`):
-  - `MIN_BLIND_GROWTH_RATE = 1.25` (25% minimum increase)
-  - `MAX_BLIND_GROWTH_RATE = 2.0` (100% maximum increase)
-  - `TARGET_BLIND_GROWTH_RATE = 1.33` (33% ideal increase)
-  - `SMOOTH_NUMBER_THRESHOLD = 25` (values > 25 must end in 0)
+  - `MIN_BLIND_GROWTH_RATE = 1.3` (30% minimum increase between consecutive levels)
+  - `MAX_BLIND_GROWTH_RATE = 2.0` (100% maximum increase between consecutive levels)
+  - `SMOOTH_NUMBER_THRESHOLD = 25` (values > 25 must end in 0 for readability)
   - `STANDARD_SMALL_BLIND_BASES` - list of allowed blind values (in 5-chip units)
+- **Blind Fitting Algorithm** (`BlindFittingAlgorithm.kt`):
+  - Calculates required growth rate: r = (startingChips / smallestChip)^(1 / (numRounds - 1))
+  - This calculated rate must be between MIN (1.3) and MAX (2.0) or configuration is invalid
+  - Uses logarithmic regression to fit blinds onto exponential curve with calculated rate
+  - Exponential growth: `blind[n] = start * r^n` becomes linear in log space
+  - Selects valid poker amounts that minimize squared error from the calculated exponential curve
+  - Validates all blinds are "smooth" numbers and within growth rate bounds
 
 ## Interaction Modes
 - Questions about the project: Answer thoroughly but concise. Provide clear options and next steps. Do not run builds/tests/installs.

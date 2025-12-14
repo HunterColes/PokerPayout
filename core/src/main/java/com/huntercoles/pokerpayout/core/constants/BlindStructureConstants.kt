@@ -12,21 +12,15 @@ object BlindStructureConstants {
 
     /**
      * Minimum growth rate between consecutive blind levels.
-     * Blinds should increase by at least 25% (1.25x) from one level to the next.
+     * Blinds should increase by at least 30% (1.3x) from one level to the next.
      */
-    const val MIN_BLIND_GROWTH_RATE = 1.25
+    const val MIN_BLIND_GROWTH_RATE = 1.3
 
     /**
      * Maximum growth rate between consecutive blind levels.
      * Blinds should not increase by more than 100% (2.0x) from one level to the next.
      */
     const val MAX_BLIND_GROWTH_RATE = 2.0
-
-    /**
-     * Target/ideal growth rate for blind progression.
-     * Aiming for roughly 33% (1.33x) growth provides smooth acceleration.
-     */
-    const val TARGET_BLIND_GROWTH_RATE = 1.33
 
     /**
      * Threshold above which blind values must be "smooth" (end in 0).

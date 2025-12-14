@@ -511,8 +511,8 @@ class BankViewModel @Inject constructor(
         }
         val totalPaidIn = totalPaidInBase + rebuyPool + addonPool
 
-        // Prize pool for leaderboard payouts should consist of buy-ins only.
-        val prizePool = buyInPool
+        // Prize pool for leaderboard payouts includes buy-ins, rebuys, and add-ons.
+        val prizePool = buyInPool + rebuyPool + addonPool
         val payouts = calculatePayoutPositions(
             config = tournamentConfig,
             prizePool = prizePool,

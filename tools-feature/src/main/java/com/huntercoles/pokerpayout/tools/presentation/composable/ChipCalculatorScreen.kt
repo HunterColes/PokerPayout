@@ -59,6 +59,36 @@ private const val RED_WEIGHT = 0.299f
 private const val GREEN_WEIGHT = 0.587f
 private const val BLUE_WEIGHT = 0.114f
 
+@Composable
+private fun GenerateButton(isCalculating: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Button(
+        onClick = onClick,
+        enabled = !isCalculating,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = PokerColors.AccentGreen,
+            contentColor = PokerColors.CardWhite
+        ),
+        modifier = modifier
+    ) {
+        Text(
+            text = if (isCalculating) "Generating…" else "Generate",
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp
+        )
+    }
+}
+
+/** Why there is no breakdown, or a note about an adjusted input; nothing when [message] is null. */
+@Composable
+private fun ChipCalculatorMessage(message: String?) {
+    if (message == null) return
+    Text(
+        text = message,
+        style = MaterialTheme.typography.bodyMedium,
+        color = PokerColors.PokerGold
+    )
+}
+
 /**
  * Chip Calculator Screen
  * Calculates optimal chip distribution for poker tournaments
@@ -116,20 +146,11 @@ fun ChipCalculatorScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
+                    GenerateButton(
+                        isCalculating = uiState.isCalculating,
                         onClick = { viewModel.calculateChipBreakdown() },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = PokerColors.AccentGreen,
-                            contentColor = PokerColors.CardWhite
-                        ),
                         modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            text = "Generate",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
-                    }
+                    )
 
                     IconButton(
                         onClick = { advancedSettingsExpanded = !advancedSettingsExpanded }
@@ -141,6 +162,8 @@ fun ChipCalculatorScreen(
                         )
                     }
                 }
+
+                ChipCalculatorMessage(uiState.message)
 
                 // Collapsible Advanced Settings Content
                 AnimatedVisibility(

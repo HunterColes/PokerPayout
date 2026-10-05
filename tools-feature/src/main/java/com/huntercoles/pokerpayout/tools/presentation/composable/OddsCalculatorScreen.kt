@@ -41,26 +41,21 @@ import com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction
 import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 import com.huntercoles.pokerpayout.core.design.components.PlayingCard
 import com.huntercoles.pokerpayout.core.design.components.PlayingCardView as CorePlayingCardView
-import com.huntercoles.pokerpayout.tools.presentation.OddsCalculatorViewModel
+import com.huntercoles.pokerpayout.tools.poker.OddsResult
+import com.huntercoles.pokerpayout.tools.poker.PlayerOdds
 import com.huntercoles.pokerpayout.tools.presentation.OddsCalculatorIntent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import com.huntercoles.pokerpayout.tools.poker.*
-import kotlin.math.max
-import kotlin.math.min
+import com.huntercoles.pokerpayout.tools.presentation.OddsCalculatorUiState
+import com.huntercoles.pokerpayout.tools.presentation.OddsCalculatorViewModel
 
 // Data classes for poker functionality
 // Note: This UI-layer PlayingCard (from core) uses String for display flexibility.
-// The poker engine uses a separate Card(Char, Char) for performance in calculations.
-// This separation keeps UI concerns separate from poker calculation logic.
+// The poker engine works on Int cards (see tools.poker.Cards); the ViewModel converts.
+// Odds live in OddsCalculatorUiState.result, one entry per player.
 
 data class Player(
     val id: Int,
     val name: String,
-    val cards: List<PlayingCard> = emptyList(),
-    val winPercentage: Double = 0.0,
-    val tiePercentage: Double = 0.0
+    val cards: List<PlayingCard> = emptyList()
 )
 
 enum class CardType {
@@ -111,8 +106,15 @@ fun OddsCalculatorScreen(
     viewModel: OddsCalculatorViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val scope = rememberCoroutineScope()
-    
+    OddsCalculatorContent(state = uiState, onIntent = viewModel::acceptIntent)
+}
+
+/** Stateless odds screen: renders [state] and reports every user action as an intent. */
+@Composable
+fun OddsCalculatorContent(
+    state: OddsCalculatorUiState,
+    onIntent: (OddsCalculatorIntent) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -123,82 +125,67 @@ fun OddsCalculatorScreen(
         // Header with Reset Button
         PokerHeaderWithAction(
             title = "🃏 Poker Odds Calculator",
-            onActionClick = { viewModel.acceptIntent(OddsCalculatorIntent.ShowResetDialog) },
+            onActionClick = { onIntent(OddsCalculatorIntent.ShowResetDialog) },
             actionContentDescription = "Reset"
         )
-        
+
         // Reset Confirmation Dialog
         PokerConfirmationDialog(
             title = "Reset odds calculator?",
             description = "This will reset all player cards and community cards.",
-            onDismiss = { viewModel.acceptIntent(OddsCalculatorIntent.HideResetDialog) },
-            onConfirm = { viewModel.acceptIntent(OddsCalculatorIntent.ConfirmReset) },
-            isVisible = uiState.showResetDialog
+            onDismiss = { onIntent(OddsCalculatorIntent.HideResetDialog) },
+            onConfirm = { onIntent(OddsCalculatorIntent.ConfirmReset) },
+            isVisible = state.showResetDialog
         )
-        
+
         // Player Management
         PlayerManagementCard(
-            playerCount = uiState.playerCount,
+            playerCount = state.playerCount,
             onPlayerCountChange = { newCount ->
-                viewModel.acceptIntent(OddsCalculatorIntent.PlayerCountChanged(newCount))
+                onIntent(OddsCalculatorIntent.PlayerCountChanged(newCount))
             },
-            isSimulating = uiState.isSimulating,
-            canCalculate = uiState.players.all { it.cards.size >= 2 },
-            validCommunityCards = uiState.communityCards.size in listOf(0, 3, 4, 5),
-            onCalculate = {
-                if (uiState.players.all { it.cards.size >= 2 }) {
-                    viewModel.acceptIntent(OddsCalculatorIntent.StartSimulation(uiState.players, uiState.communityCards))
-                    
-                    scope.launch {
-                        try {
-                            // Simulate poker odds with proper Texas Hold'em logic
-                            val simulatedResults = simulateTexasHoldemOdds(uiState.players, uiState.communityCards)
-                            
-                            viewModel.acceptIntent(OddsCalculatorIntent.SimulationComplete(simulatedResults))
-                        } catch (e: Exception) {
-                            // Handle any errors gracefully
-                            viewModel.acceptIntent(OddsCalculatorIntent.SimulationComplete(uiState.players))
-                        }
-                    }
-                }
-            }
+            isSimulating = state.isSimulating,
+            canCalculate = state.canCalculate,
+            error = state.error,
+            onCalculate = { onIntent(OddsCalculatorIntent.Calculate) }
         )
-        
+
         // Players Cards
         PlayersCardsSection(
-            players = uiState.players,
+            players = state.players,
+            result = state.result,
             onPlayerCardClick = { playerId ->
-                viewModel.acceptIntent(OddsCalculatorIntent.ShowCardPickerForPlayer(playerId))
+                onIntent(OddsCalculatorIntent.ShowCardPickerForPlayer(playerId))
             },
             onRemovePlayerCard = { playerId, cardIndex ->
-                viewModel.acceptIntent(OddsCalculatorIntent.PlayerCardRemoved(playerId, cardIndex))
+                onIntent(OddsCalculatorIntent.PlayerCardRemoved(playerId, cardIndex))
             }
         )
-        
+
         // Community Cards
         CommunityCardsSection(
-            communityCards = uiState.communityCards,
+            communityCards = state.communityCards,
             onCommunityCardClick = {
-                viewModel.acceptIntent(OddsCalculatorIntent.ShowCardPickerForCommunity)
+                onIntent(OddsCalculatorIntent.ShowCardPickerForCommunity)
             },
             onRemoveCommunityCard = { cardIndex ->
-                viewModel.acceptIntent(OddsCalculatorIntent.CommunityCardRemoved(cardIndex))
+                onIntent(OddsCalculatorIntent.CommunityCardRemoved(cardIndex))
             }
         )
     }
-    
+
     // Card Picker Dialog
-    if (uiState.showCardPicker) {
-        val usedCards = uiState.players.flatMap { it.cards } + uiState.communityCards
+    if (state.showCardPicker) {
+        val usedCards = state.players.flatMap { it.cards } + state.communityCards
         CardPickerDialog(
             allCards = allCards,
             usedCards = usedCards,
             onCardSelected = { selectedCard ->
                 val cardString = "${selectedCard.rank}${selectedCard.suit}"
-                viewModel.acceptIntent(OddsCalculatorIntent.CardSelected(cardString))
+                onIntent(OddsCalculatorIntent.CardSelected(cardString))
             },
             onDismiss = {
-                viewModel.acceptIntent(OddsCalculatorIntent.HideCardPicker)
+                onIntent(OddsCalculatorIntent.HideCardPicker)
             }
         )
     }
@@ -210,7 +197,7 @@ fun PlayerManagementCard(
     onPlayerCountChange: (Int) -> Unit,
     isSimulating: Boolean,
     canCalculate: Boolean,
-    validCommunityCards: Boolean,
+    error: String?,
     onCalculate: () -> Unit
 ) {
     Card(
@@ -252,7 +239,7 @@ fun PlayerManagementCard(
             // Calculate Odds Button
             Button(
                 onClick = onCalculate,
-                enabled = canCalculate && validCommunityCards && !isSimulating,
+                enabled = canCalculate,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PokerColors.AccentGreen,
@@ -276,6 +263,14 @@ fun PlayerManagementCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Calculate Odds")
                 }
+            }
+
+            if (error != null) {
+                Text(
+                    text = error,
+                    color = PokerColors.ErrorRed,
+                    fontSize = 14.sp
+                )
             }
         }
     }
@@ -320,6 +315,7 @@ fun PlayerChip(
 @Composable
 fun PlayersCardsSection(
     players: List<Player>,
+    result: OddsResult?,
     onPlayerCardClick: (Int) -> Unit,
     onRemovePlayerCard: (Int, Int) -> Unit
 ) {
@@ -345,9 +341,10 @@ fun PlayersCardsSection(
                 horizontalArrangement = Arrangement.spacedBy(16.dp), // Increased from 12dp
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                players.forEach { player ->
+                players.forEachIndexed { index, player ->
                     PlayerCardItem(
                         player = player,
+                        odds = result?.players?.getOrNull(index),
                         onCardClick = { onPlayerCardClick(player.id) },
                         onRemoveCard = { cardIndex -> onRemovePlayerCard(player.id, cardIndex) }
                     )
@@ -415,6 +412,7 @@ fun PlayersCardsSection(
 @Composable
 fun PlayerCardItem(
     player: Player,
+    odds: PlayerOdds?,
     onCardClick: () -> Unit,
     onRemoveCard: (Int) -> Unit
 ) {
@@ -463,19 +461,19 @@ fun PlayerCardItem(
             // Stats below cards (vertical stack) - with spacer to push to bottom if needed
             Spacer(modifier = Modifier.weight(1f, fill = false))
             
-            if (player.winPercentage > 0 || player.tiePercentage > 0) {
+            if (odds != null && (odds.winPct > 0 || odds.tiePct > 0)) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(3.dp) // Reduced from 6dp
                 ) {
                     Text(
-                        text = "${"%.2f".format(player.winPercentage)}%",
+                        text = "${"%.2f".format(odds.winPct)}%",
                         color = Color.Green,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${"%.2f".format(player.tiePercentage)}%",
+                        text = "${"%.2f".format(odds.tiePct)}%",
                         color = Color.Yellow,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
@@ -739,30 +737,5 @@ fun CardPickerDialog(
                 )
             }
         }
-    }
-}
-
-// Updated simulation function to use TexasHoldemOdds.simulateEquity
-suspend fun simulateTexasHoldemOdds(players: List<Player>, communityCards: List<PlayingCard>): List<Player> {
-    if (players.size < 2) return players
-    
-    // Convert UI cards to TexasHoldemOdds cards with validation
-    val holes = players.map { player ->
-        player.cards
-            .filter { it.rank.isNotEmpty() && it.suit.isNotEmpty() }
-            .map { uiCard -> com.huntercoles.pokerpayout.tools.poker.Card(uiCard.rank[0], uiCard.suit[0]) }
-    }
-    val board = communityCards
-        .filter { it.rank.isNotEmpty() && it.suit.isNotEmpty() }
-        .map { uiCard -> com.huntercoles.pokerpayout.tools.poker.Card(uiCard.rank[0], uiCard.suit[0]) }
-    
-    val results = simulateEquity(holes, board)
-    
-    return players.mapIndexed { index, player ->
-        val result = results[index]
-        player.copy(
-            winPercentage = result.winPct,
-            tiePercentage = result.tiePct
-        )
     }
 }

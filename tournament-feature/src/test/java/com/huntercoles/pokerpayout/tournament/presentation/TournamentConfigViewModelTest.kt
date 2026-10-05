@@ -10,11 +10,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -24,7 +24,6 @@ import org.robolectric.RobolectricTestRunner
 class TournamentConfigViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var context: Context
     private lateinit var tournamentPreferences: TournamentPreferences
     private lateinit var timerPreferences: TimerPreferences
     private lateinit var bankPreferences: BankPreferences
@@ -32,16 +31,13 @@ class TournamentConfigViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        context = ApplicationProvider.getApplicationContext()
-        context.getSharedPreferences("tournament_prefs", Context.MODE_PRIVATE).edit().clear().apply()
-        context.getSharedPreferences("timer_prefs", Context.MODE_PRIVATE).edit().clear().apply()
-        context.getSharedPreferences("bank_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+        val context: Context = ApplicationProvider.getApplicationContext()
+        listOf("tournament_prefs", "timer_prefs", "bank_prefs").forEach {
+            context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
+        }
         tournamentPreferences = TournamentPreferences(context)
         timerPreferences = TimerPreferences(context)
         bankPreferences = BankPreferences(context)
-        tournamentPreferences.resetAllTournamentData()
-        timerPreferences.resetAllTimerData()
-        bankPreferences.resetAllBankData()
     }
 
     @After
@@ -49,63 +45,65 @@ class TournamentConfigViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel(): TournamentConfigViewModel {
-        val viewModel = TournamentConfigViewModel(
-            calculatePayoutsUseCase = CalculatePayoutsUseCase(),
-            tournamentPreferences = tournamentPreferences,
-            timerPreferences = timerPreferences,
-            bankPreferences = bankPreferences
-        )
-        testDispatcher.scheduler.advanceUntilIdle()
-        return viewModel
-    }
+    private fun settle() = testDispatcher.scheduler.advanceUntilIdle()
+
+    private fun createViewModel() = TournamentConfigViewModel(
+        calculatePayoutsUseCase = CalculatePayoutsUseCase(),
+        tournamentPreferences = tournamentPreferences,
+        timerPreferences = timerPreferences,
+        bankPreferences = bankPreferences
+    ).also { settle() }
 
     @Test
-    fun purchaseTotalsInfluenceSummaryAndPayouts() = runTest(testDispatcher) {
+    fun purchaseTotalsInfluenceSummaryAndPayouts() {
         tournamentPreferences.setPlayerCount(4)
         tournamentPreferences.setBuyIn(100.0)
         tournamentPreferences.setFoodPerPlayer(0.0)
         tournamentPreferences.setBountyPerPlayer(0.0)
         tournamentPreferences.setRebuyAmount(100.0)
         tournamentPreferences.setAddOnAmount(50.0)
-
         val viewModel = createViewModel()
 
+        // Recorded on the Bank tab
         bankPreferences.savePlayerRebuys(playerId = 1, rebuys = 2)
         bankPreferences.savePlayerRebuys(playerId = 2, rebuys = 1)
         bankPreferences.savePlayerAddons(playerId = 1, addons = 1)
         bankPreferences.savePlayerAddons(playerId = 3, addons = 2)
-        testDispatcher.scheduler.advanceUntilIdle()
+        settle()
 
         val state = viewModel.uiState.value
         assertEquals(3, state.rebuyPurchases)
         assertEquals(3, state.addOnPurchases)
-
-        val totalPayout = state.payouts.sumOf { it.payout }
-        assertEquals(850.0, totalPayout, 0.001)
+        // 4 x 100 buy-ins + 3 x 100 rebuys + 3 x 50 add-ons, all to the single default place
+        assertEquals(listOf(850.0), state.payouts.map { it.payout })
     }
 
+    @Ignore(
+        "PP-014: clearing the Rebuy/Add-on field emits 0, which wipes every recorded purchase. " +
+            "Enable this when PP-014 lands; it is the spec for the fix."
+    )
     @Test
-    fun clearingRebuyOrAddonAmountClearsPurchases() = runTest(testDispatcher) {
+    fun purchasesSurviveTheAmountBeingClearedAndRetyped() {
         tournamentPreferences.setPlayerCount(3)
         tournamentPreferences.setBuyIn(50.0)
         tournamentPreferences.setRebuyAmount(25.0)
         tournamentPreferences.setAddOnAmount(10.0)
-
         val viewModel = createViewModel()
-
         bankPreferences.savePlayerRebuys(playerId = 1, rebuys = 1)
         bankPreferences.savePlayerAddons(playerId = 2, addons = 2)
-        testDispatcher.scheduler.advanceUntilIdle()
+        settle()
 
+        // The user clears each field and types the amount again
         viewModel.acceptIntent(TournamentConfigIntent.UpdateRebuyAmount(0.0))
         viewModel.acceptIntent(TournamentConfigIntent.UpdateAddOnAmount(0.0))
-        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.acceptIntent(TournamentConfigIntent.UpdateRebuyAmount(25.0))
+        viewModel.acceptIntent(TournamentConfigIntent.UpdateAddOnAmount(10.0))
+        settle()
 
         val state = viewModel.uiState.value
-        assertEquals(0, state.rebuyPurchases)
-        assertEquals(0, state.addOnPurchases)
-        assertEquals(0, bankPreferences.getPlayerRebuys(1))
-        assertEquals(0, bankPreferences.getPlayerAddons(2))
+        assertEquals(1, state.rebuyPurchases)
+        assertEquals(2, state.addOnPurchases)
+        assertEquals(1, bankPreferences.getPlayerRebuys(1))
+        assertEquals(2, bankPreferences.getPlayerAddons(2))
     }
 }

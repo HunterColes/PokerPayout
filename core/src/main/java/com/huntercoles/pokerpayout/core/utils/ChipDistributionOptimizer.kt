@@ -2,648 +2,125 @@ package com.huntercoles.pokerpayout.core.utils
 
 import com.huntercoles.pokerpayout.core.design.ChipDenominations
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.pow
-import kotlin.math.roundToInt
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.roundToLong
 import kotlin.math.sqrt
 
 /**
- * Optimizer that selects the best chip denominations to fit a mathematical curve.
- * 
- * Algorithm:
- * 1. Generate candidate denomination sets
- * 2. For each set, fit quantities to curve to minimize distance
- * 3. Adjust quantities to exactly match target value (starting chips)
- * 4. Target ~50 total chips per person
- * 5. Calculate fit score where 1.0 = perfect fit, 0.0 = terrible fit
- * 6. Return the set with best fit score
+ * Picks chip denominations and per-player counts for a starting stack.
+ *
+ * The answer is exact: counts × denominations always add up to the starting stack. Inputs that
+ * have no exact answer come back as a [ChipDistributionOutcome.Failure] that says why. Nothing
+ * here throws for any Int input.
+ *
+ * How it works:
+ * 1. The smallest chip snaps to the nearest standard chip value (ties go to the smaller chip).
+ * 2. The candidate denominations are the smallest chip plus every standard chip above it that is
+ *    at most a third of the stack.
+ * 3. Every set of `denominationCount` candidates that contains the smallest chip is tried. If no
+ *    set of that size has an exact answer, smaller sets are tried.
+ * 4. For each set, the curve gives an ideal real-valued count per denomination, scaled so the
+ *    ideal counts are worth exactly the stack. An exact integer search ([ExactCountSearch]) then
+ *    finds the counts closest to that ideal (least squares), with at least one chip of each
+ *    denomination, and non-increasing counts for the linear curves.
+ * 5. The set with the best fit score wins, where a total of 40–80 chips doubles the score.
+ *
+ * Cost: at most C(11, 5) = 462 denomination sets. Each set's search is branch-and-bound with an
+ * exact feasibility table, so it never explores a dead end. A per-call node budget caps the time
+ * spent improving answers that are already exact. It can trim optimality on extreme inputs
+ * (stacks in the millions with a 1-chip), but never exactness.
  */
 object ChipDistributionOptimizer {
-    
-    private const val TARGET_CHIP_COUNT = 60 // Target total physical chips per person
-    private const val TARGET_TOTAL_CHIPS_FOR_CALCULATION = 60.0 // Target for curve calculation
-    private const val PREFERRED_RANGE_FIT_BOOST = 2.0 // Boost fit score for preferred chip count ranges
-    private const val MIN_CHIPS_PER_DENOMINATION = 1
-    private const val MAX_ADJUSTMENT_RANGE = 40
-    
+
+    /** Standard chip values, ascending. */
+    val STANDARD_DENOMINATIONS: List<Int> = ChipDenominations.ALL_CHIPS.map { it.value }.sorted()
+
+    private const val TARGET_TOTAL_CHIPS_FOR_CALCULATION = 60.0
+    private val PREFERRED_CHIP_RANGE = 40..80
+    private const val PREFERRED_RANGE_FIT_BOOST = 2.0
+
     /**
-     * Find optimal chip distribution for a target value and curve
-     * 
-     * @param targetValue Total chip value (e.g., 500, 5000, 50000)
-     * @param smallestChip Minimum denomination allowed (e.g., 25 for blinds)
-     * @param denominationCount Number of different chip types to use (default 5)
-     * @param curve Mathematical curve to fit
-     * @return Optimized chip distribution with fit score
+     * Search nodes one [optimize] call may spend improving answers that are already exact.
+     * Finding the first exact answer for each set doesn't count against it.
      */
+    private const val NODE_BUDGET_PER_CALL = 200_000
+
+    /**
+     * Find the chip distribution for one player's starting stack.
+     *
+     * @param targetValue Starting stack (total chip value per player), at least 1.
+     * @param smallestChip Smallest chip in play. Non-standard values snap to the nearest standard chip.
+     * @param denominationCount How many chip denominations to use. Fewer come back when the stack
+     *   can't support that many.
+     * @param curve The shape the counts should follow.
+     */
+    @Suppress("ReturnCount") // one early return per typed failure, in the order they are checked
     fun optimize(
         targetValue: Int,
         smallestChip: Int,
         denominationCount: Int = 5,
         curve: ChipDistributionCurve
-    ): ChipDistributionResult {
-        
-    // Get available denominations >= smallestChip
-    // User wants largest chip to be no more than 1/3 of total starting chips
-    // So get chips from smallestChip up to targetValue/3
-    val availableDenoms = ChipDenominations.getChipsUpTo(targetValue / 3)
-            .filter { it.value >= smallestChip }
-            .map { it.value }
-            .sorted()
-        
-        if (availableDenoms.isEmpty()) {
-            throw IllegalStateException("No valid denominations found for targetValue=$targetValue, smallestChip=$smallestChip")
+    ): ChipDistributionOutcome {
+        if (targetValue < 1) {
+            return ChipDistributionOutcome.InvalidInput(ChipDistributionOutcome.Field.STARTING_CHIPS, targetValue)
         }
-        
-        val validCount = denominationCount.coerceIn(1, availableDenoms.size)
-        
-        if (availableDenoms.size <= validCount) {
-            // Use all available
-            return optimizeForDenominations(targetValue, availableDenoms, curve)
+        if (smallestChip < 1) {
+            return ChipDistributionOutcome.InvalidInput(ChipDistributionOutcome.Field.SMALLEST_CHIP, smallestChip)
         }
-        
-        // COMBINATION OPTIMIZATION
-        // Always include the smallest chip, then try combinations of remaining denominations
-        // PREFER: Total chips in reasonable range
-        // REQUIRE: All chips must have at least 1 chip
-        // Select the solution with best fit score among valid solutions
-        
-        var bestResult: ChipDistributionResult? = null
-        var bestFitScore = -1.0
-        
-        // Ensure smallestChip is in availableDenoms
-        if (smallestChip !in availableDenoms) {
-            throw IllegalStateException("smallestChip=$smallestChip not in available denominations")
+        if (denominationCount < 1) {
+            return ChipDistributionOutcome.InvalidInput(ChipDistributionOutcome.Field.DENOMINATION_COUNT, denominationCount)
         }
-        
-        val remainingDenoms = availableDenoms.filter { it != smallestChip }
-        
-        if (validCount == 1) {
-            // Only use smallestChip
-            val result = optimizeForDenominations(targetValue, listOf(smallestChip), curve)
-            if (result.quantities.all { it >= 1 }) {
-                return result
-            } else {
-                throw IllegalStateException("Cannot create valid distribution with single chip")
-            }
+
+        val smallest = snapToStandardDenomination(smallestChip)
+        if (targetValue < smallest) {
+            return ChipDistributionOutcome.StackSmallerThanSmallestChip(targetValue, smallestChip, smallest)
         }
-        
-        // Generate combinations of (validCount - 1) from remaining
-        val combos = combinations(remainingDenoms, validCount - 1)
-        
-        for (combo in combos) {
-            val denoms = (listOf(smallestChip) + combo).sorted()
-            val result = optimizeForDenominations(targetValue, denoms, curve)
-            
-            // Check requirements
-            val hasMinimumChips = result.quantities.all { it >= 1 }
-            
-            if (hasMinimumChips) {
-                // Valid solution - check if it has better fit score
-                // Prefer solutions in reasonable chip range
-                val inPreferredRange = result.totalChips in 40..80
-                
-                val score = if (inPreferredRange) result.fitScore * PREFERRED_RANGE_FIT_BOOST else result.fitScore // Boost preferred solutions
-                
-                if (score > bestFitScore) {
-                    bestResult = result
-                    bestFitScore = score
-                }
-            }
+
+        // The largest chip should be no more than a third of the stack, but the smallest chip is
+        // always allowed (e.g. 100 with a 50 smallest chip is 2 × 50).
+        val maxDenomination = targetValue / 3
+        val available = STANDARD_DENOMINATIONS.filter { it == smallest || (it in (smallest + 1)..maxDenomination) }
+
+        val unit = available.fold(0) { acc, d -> gcd(acc, d) }
+        if (targetValue % unit != 0) {
+            return ChipDistributionOutcome.StackNotReachable(targetValue, smallestChip, smallest, unit)
         }
-        
-        return bestResult ?: throw IllegalStateException("No valid chip distribution found")
-    }
-    
-    /**
-     * Select the best N denominations from available chips
-     * Strategy: Use geometric spacing for better coverage
-     */
-    private fun selectBestDenominations(
-        available: List<Int>,
-        count: Int,
-        targetValue: Int
-    ): List<Int> {
-        if (available.size <= count) return available
-        
-        // Always include the smallest
-        val result = mutableListOf(available.first())
-        
-        // For remaining slots, pick evenly spaced denominations
-        val remaining = count - 1
-        if (remaining > 0) {
-            val step = (available.size - 1).toDouble() / remaining
-            for (i in 1..remaining) {
-                val index = (i * step).toInt().coerceIn(1, available.size - 1)
-                result.add(available[index])
-            }
-        }
-        
-        return result.sorted().distinct().take(count)
-    }
-    
-    /**
-     * Optimize quantities for a specific set of denominations using perfect curve fitting
-     * 
-     * Algorithm:
-     * 1. Sort denominations < targetValue
-     * 2. Normalize X (denominations) to 0-1 range
-     * 3. Calculate ideal Y using curve equation (perfect fit)
-     * 4. Scale Y to get exact quantities that fit the curve
-     * 5. Round to whole numbers
-     * 6. Use small perturbations (±1, ±2) to adjust to exact total
-     */
-    private fun optimizeForDenominations(
-        targetValue: Int,
-        denominations: List<Int>,
-        curve: ChipDistributionCurve
-    ): ChipDistributionResult {
-        
-        val sortedDenoms = denominations.sorted()
-        
-        // Step 1: Normalize X (denominations) to 0-1 range
-        val minDenom = sortedDenoms.first().toDouble()
-        val maxDenom = sortedDenoms.last().toDouble()
-        val normalizedX = if (minDenom == maxDenom) {
-            List(sortedDenoms.size) { 0.5 }
-        } else {
-            sortedDenoms.map { (it - minDenom) / (maxDenom - minDenom) }
-        }
-        
-        // Step 2: Get perfect Y values from curve equation
-        val idealY = normalizedX.map { x -> curve.getValue(x).coerceIn(0.0, 1.0) }
-        
-        // Step 3: Calculate exact quantities that fit the curve perfectly
-        val exactQuantities = calculatePerfectCurveFit(sortedDenoms, idealY, targetValue)
-        
-        // Step 4: Round to whole numbers
-    val roundedQuantities = exactQuantities.map { it.roundToInt().coerceAtLeast(MIN_CHIPS_PER_DENOMINATION) }
-        
-        // Ensure no zeros - if any quantity is 0, set to 1 and adjust others
-        val adjustedQuantities = roundedQuantities.toMutableList()
-        val zeroIndices = roundedQuantities.withIndex().filter { it.value == 0 }.map { it.index }
-        for (idx in zeroIndices) {
-            adjustedQuantities[idx] = 1
-        }
-        // Compensate by reducing the largest quantities
-        var compensationNeeded = zeroIndices.size
-        var idx = adjustedQuantities.size - 1
-        while (compensationNeeded > 0 && idx >= 0) {
-            if (adjustedQuantities[idx] > 1) {
-                adjustedQuantities[idx]--
-                compensationNeeded--
-            }
-            idx--
-        }
-        
-        val finalRoundedQuantities = adjustedQuantities
-        
-        // Step 5: Adjust quantities toward exact target while staying near the curve
-        val balancedQuantities = balanceQuantities(
-            sortedDenoms,
-            finalRoundedQuantities,
-            exactQuantities,
-            targetValue,
-            curve
-        )
-        val balancedValue = sortedDenoms.zip(balancedQuantities).sumOf { (denom, qty) -> denom * qty }
-        
-        val finalQuantities = if (balancedValue == targetValue) {
-            balancedQuantities
-        } else {
-            adjustWithSmallPerturbations(
-                sortedDenoms,
-                balancedQuantities,
-                idealY,
-                targetValue,
-                curve
-            )
-        }
-        val finalValue = sortedDenoms.zip(finalQuantities).sumOf { (d, q) -> d * q }
-        
-        // Step 6: Calculate fit score
-        val maxQty = finalQuantities.maxOrNull()?.toDouble() ?: 1.0
-        val normalizedQty = if (maxQty > 0.0) {
-            finalQuantities.map { it / maxQty }
-        } else {
-            List(finalQuantities.size) { 0.0 }
-        }
-        
-        val fitScore = calculateFitScore(idealY, normalizedQty)
-        val totalChips = finalQuantities.sum()
-        val actualValue = sortedDenoms.zip(finalQuantities).sumOf { (denom, qty) -> denom * qty }
-        require(actualValue == targetValue) {
-            "Optimized distribution must sum to $targetValue but was $actualValue with denominations=$sortedDenoms and quantities=$finalQuantities"
-        }
-        
-        return ChipDistributionResult(
-            denominations = sortedDenoms,
-            quantities = finalQuantities,
-            fitScore = fitScore,
-            totalChips = totalChips,
-            totalValue = actualValue,
-            curveUsed = curve
-        )
-    }
-    
-    /**
-     * Calculate quantities that follow the curve shape but with reasonable total chip counts
-     */
-    private fun calculatePerfectCurveFit(
-        denominations: List<Int>,
-        idealY: List<Double>,
-        targetValue: Int
-    ): List<Double> {
-        // Instead of perfect mathematical fit, distribute proportionally with reasonable chip counts
-        val totalIdealWeight = idealY.sum()
-        
-        // Distribute chip counts proportionally to the curve
-        val chipCounts = idealY.map { y -> (y / totalIdealWeight) * TARGET_TOTAL_CHIPS_FOR_CALCULATION }
-        
-        // Now scale these chip counts so their total value equals targetValue
-        val totalValueFromChipCounts = denominations.zip(chipCounts).sumOf { (denom, count) -> denom * count }
-        val scaleFactor = targetValue / totalValueFromChipCounts
-        
-        return chipCounts.map { count -> count * scaleFactor }
-    }
-    
-    /**
-     * Iteratively nudge quantities toward the exact target while staying near the ideal curve shape.
-     */
-    private fun balanceQuantities(
-        denominations: List<Int>,
-        baseQuantities: List<Int>,
-        idealQuantities: List<Double>,
-        targetValue: Int,
-        curve: ChipDistributionCurve
-    ): List<Int> {
-        val quantities = baseQuantities.toMutableList()
-        var totalValue = denominations.zip(quantities).sumOf { (d, q) -> d * q }
-        var diff = targetValue - totalValue
-        var iterations = 0
-        val maxIterations = 4000
-        val visitedStates = mutableSetOf<List<Int>>()
-        
-        data class Candidate(val index: Int, val penalty: Double, val newTotalValue: Int, val newQuantities: List<Int>)
-        
-        while (diff != 0 && iterations < maxIterations) {
-            iterations++
-            if (!visitedStates.add(quantities.toList())) {
-                break
-            }
-            val delta = if (diff > 0) 1 else -1
-            val currentTotalChips = quantities.sum()
-            val options = denominations.indices.mapNotNull { index ->
-                val newQty = quantities[index] + delta
-                if (newQty < 1) return@mapNotNull null
-                val denom = denominations[index]
-                val newTotalValue = totalValue + denom * delta
-                val newDiff = targetValue - newTotalValue
-                val newTotalChips = currentTotalChips + delta
-                val trialQuantities = quantities.toMutableList().also { it[index] = newQty }
-                if (!isValidCurvePattern(trialQuantities, curve)) return@mapNotNull null
-                val quantityPenalty = abs(newQty - idealQuantities[index])
-                val chipPenalty = abs(newTotalChips - TARGET_CHIP_COUNT).toDouble() / TARGET_CHIP_COUNT
-                val valuePenalty = abs(newDiff).toDouble() / targetValue
-                val overshootPenalty = if (diff > 0 && denom > diff) {
-                    (denom - diff).toDouble() / targetValue
-                } else if (diff < 0 && denom > -diff) {
-                    (denom + diff).toDouble() / targetValue
+
+        val budget = SearchBudget(NODE_BUDGET_PER_CALL)
+        val larger = available.drop(1)
+        val maxCount = minOf(denominationCount, available.size)
+        for (count in maxCount downTo 1) {
+            var best: ChipDistributionResult? = null
+            var bestScore = -1.0
+            forEachCombination(larger, count - 1) { combo ->
+                val denominations = IntArray(count)
+                denominations[0] = smallest
+                for (i in combo.indices) denominations[i + 1] = combo[i]
+                val result = solveForDenominations(targetValue, denominations, curve, budget)
+                    ?: return@forEachCombination
+                val score = if (result.totalChips in PREFERRED_CHIP_RANGE) {
+                    result.fitScore * PREFERRED_RANGE_FIT_BOOST
                 } else {
-                    0.0
+                    result.fitScore
                 }
-                val penalty = quantityPenalty + (chipPenalty * 0.5) + (valuePenalty * 2) + overshootPenalty
-                Candidate(index, penalty, newTotalValue, trialQuantities)
-            }
-            val improving = options.filter { option ->
-                abs(targetValue - option.newTotalValue) < abs(diff)
-            }
-            val candidates = if (improving.isNotEmpty()) improving else options
-            if (candidates.isEmpty()) {
-                break
-            }
-            val candidate = candidates.minByOrNull { it.penalty } ?: break
-            quantities[candidate.index] = candidate.newQuantities[candidate.index]
-            totalValue = candidate.newTotalValue
-            diff = targetValue - totalValue
-        }
-        
-        return if (diff == 0) quantities else baseQuantities
-    }
-    
-    /**
-     * Adjust quantities with small perturbations (±1, ±2) to hit exact total
-     * Uses combinatorial search to find best combination that preserves curve fit
-     */
-    private fun adjustWithSmallPerturbations(
-        denominations: List<Int>,
-        baseQuantities: List<Int>,
-        idealY: List<Double>,
-        targetValue: Int,
-        curve: ChipDistributionCurve
-    ): List<Int> {
-        val currentValue = denominations.zip(baseQuantities).sumOf { (d, q) -> d * q }
-        val error = targetValue - currentValue
-        
-        if (error == 0) {
-            return baseQuantities // Already perfect!
-        }
-        
-        // Try small adjustments: ±1 to ±40 for each denomination
-        val adjustments = (-MAX_ADJUSTMENT_RANGE..MAX_ADJUSTMENT_RANGE).filter { it != 0 }
-        val n = denominations.size
-        
-        // Find best combination of adjustments
-        var bestQuantities = baseQuantities
-        var bestScore = Double.MAX_VALUE
-        var bestError = abs(error)
-        
-        // Try single adjustments first
-        for (i in 0 until n) {
-            for (adj in adjustments) {
-                val newQty = baseQuantities[i] + adj
-                if (newQty >= 1) {  // Changed from >= 0 to >= 1
-                    val testQuantities = baseQuantities.toMutableList()
-                    testQuantities[i] = newQty
-                    if (isValidCurvePattern(testQuantities, curve)) {
-                        val testValue = denominations.zip(testQuantities).sumOf { (d, q) -> d * q }
-                        val testError = abs(targetValue - testValue)
-                        
-                        if (testError == 0) {
-                            return testQuantities
-                        }
-                        if (testError < bestError) {
-                            bestError = testError
-                            bestQuantities = testQuantities
-                        }
-                    }
+                if (score > bestScore) {
+                    best = result
+                    bestScore = score
                 }
             }
+            best?.let { return ChipDistributionOutcome.Success(it, requestedSmallestChip = smallestChip) }
         }
-        
-        // If single adjustments didn't work, try double adjustments
-        if (bestError > 0) {
-            for (i in 0 until n) {
-                for (j in i + 1 until n) {
-                    for (adj1 in adjustments) {
-                        for (adj2 in adjustments) {
-                            val newQty1 = baseQuantities[i] + adj1
-                            val newQty2 = baseQuantities[j] + adj2
-                            if (newQty1 >= 1 && newQty2 >= 1) {
-                                val testQuantities = baseQuantities.toMutableList()
-                                testQuantities[i] = newQty1
-                                testQuantities[j] = newQty2
-                                if (isValidCurvePattern(testQuantities, curve)) {
-                                    val testValue = denominations.zip(testQuantities).sumOf { (d, q) -> d * q }
-                                    val testError = abs(targetValue - testValue)
-                                    
-                                    if (testError == 0) {
-                                        return testQuantities
-                                    }
-                                    if (testError < bestError) {
-                                        bestError = testError
-                                        bestQuantities = testQuantities
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        // If still not exact, try triple adjustments
-        if (bestError > 0) {
-            for (i in 0 until n) {
-                for (j in i + 1 until n) {
-                    for (k in j + 1 until n) {
-                        for (adj1 in adjustments) {
-                            for (adj2 in adjustments) {
-                                for (adj3 in adjustments) {
-                                    val newQty1 = baseQuantities[i] + adj1
-                                    val newQty2 = baseQuantities[j] + adj2
-                                    val newQty3 = baseQuantities[k] + adj3
-                                    if (newQty1 >= 1 && newQty2 >= 1 && newQty3 >= 1) {
-                                        val testQuantities = baseQuantities.toMutableList()
-                                        testQuantities[i] = newQty1
-                                        testQuantities[j] = newQty2
-                                        testQuantities[k] = newQty3
-                                        if (isValidCurvePattern(testQuantities, curve)) {
-                                            val testValue = denominations.zip(testQuantities).sumOf { (d, q) -> d * q }
-                                            val testError = abs(targetValue - testValue)
-                                            
-                                            if (testError == 0) {
-                                                return testQuantities
-                                            }
-                                            if (testError < bestError) {
-                                                bestError = testError
-                                                bestQuantities = testQuantities
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        if (bestError != 0) {
-            val exactQuantities = findExactQuantitiesBySearch(
-                denominations,
-                baseQuantities,
-                targetValue,
-                curve
-            )
-            if (exactQuantities != null) {
-                return exactQuantities
-            }
-        }
-        return bestQuantities
+        return ChipDistributionOutcome.NoExactBreakdown(targetValue, smallestChip, smallest, curve)
     }
 
-    private fun findExactQuantitiesBySearch(
-        denominations: List<Int>,
-        baseQuantities: List<Int>,
-        targetValue: Int,
-        curve: ChipDistributionCurve
-    ): List<Int>? {
-        val currentValue = denominations.zip(baseQuantities).sumOf { (d, q) -> d * q }
-        val error = targetValue - currentValue
-        if (error == 0) return baseQuantities
-
-        val n = denominations.size
-        if (n == 0) return null
-
-        val minDenom = denominations.minOrNull() ?: return null
-        val estimatedDelta = (abs(error) / minDenom) + 2
-        val maxAdjustPerDenom = estimatedDelta.coerceAtLeast(6).coerceAtMost(60)
-        val maxTotalAdjust = (estimatedDelta * 2).coerceAtLeast(12).coerceAtMost(120)
-
-        val suffixMaxContribution = IntArray(n + 1)
-        for (i in n - 1 downTo 0) {
-            suffixMaxContribution[i] = suffixMaxContribution[i + 1] + denominations[i] * maxAdjustPerDenom
-        }
-
-        val deltas = IntArray(n)
-        var result: List<Int>? = null
-
-        fun search(index: Int, remaining: Int, adjustmentsUsed: Int): Boolean {
-            if (index == n) {
-                if (remaining == 0) {
-                    val candidate = baseQuantities.mapIndexed { i, base -> base + deltas[i] }
-                    if (candidate.all { it >= 1 } && isValidCurvePattern(candidate, curve)) {
-                        result = candidate
-                        return true
-                    }
-                }
-                return false
-            }
-
-            val denom = denominations[index]
-            val base = baseQuantities[index]
-            val lowerBound = max(-maxAdjustPerDenom, 1 - base)
-            val upperBound = maxAdjustPerDenom
-            val remainingCapacity = suffixMaxContribution[index + 1]
-
-            val targetDelta = (remaining.toDouble() / denom).roundToInt().coerceIn(lowerBound, upperBound)
-            val candidateDeltas = mutableListOf<Int>()
-            candidateDeltas.add(targetDelta)
-            var offset = 1
-            while (targetDelta - offset >= lowerBound || targetDelta + offset <= upperBound) {
-                val down = targetDelta - offset
-                val up = targetDelta + offset
-                if (down >= lowerBound) candidateDeltas.add(down)
-                if (up <= upperBound) candidateDeltas.add(up)
-                offset++
-            }
-
-            for (delta in candidateDeltas) {
-                if (adjustmentsUsed + abs(delta) > maxTotalAdjust) continue
-                val newQty = base + delta
-                if (newQty < 1) continue
-                val newRemaining = remaining - denom * delta
-                if (abs(newRemaining) > remainingCapacity) continue
-                deltas[index] = delta
-                if (search(index + 1, newRemaining, adjustmentsUsed + abs(delta))) {
-                    return true
-                }
-            }
-
-            return false
-        }
-
-        val found = search(0, error, 0)
-        return if (found) result else null
-    }
+    /** Nearest standard chip value to [chip]. Ties go to the smaller chip. */
+    fun snapToStandardDenomination(chip: Int): Int =
+        STANDARD_DENOMINATIONS.minWith(compareBy<Int> { abs(it.toLong() - chip.toLong()) }.thenBy { it })
 
     /**
-     * Check if a quantity adjustment is valid for the given curve pattern
-     */
-    private fun isValidForCurve(newQty: Int, index: Int, baseQuantities: List<Int>, curve: ChipDistributionCurve): Boolean {
-        return when (curve) {
-            ChipDistributionCurve.LinearSteep -> {
-                // For LinearSteep: quantities should be non-increasing (decreasing or equal)
-                when (index) {
-                    0 -> newQty >= baseQuantities.getOrElse(1) { 0 } // First >= second
-                    baseQuantities.size - 1 -> baseQuantities.getOrElse(index - 1) { Int.MAX_VALUE } >= newQty // Last <= previous
-                    else -> {
-                        val prev = baseQuantities.getOrElse(index - 1) { Int.MAX_VALUE }
-                        val next = baseQuantities.getOrElse(index + 1) { 0 }
-                        prev >= newQty && newQty >= next
-                    }
-                }
-            }
-            ChipDistributionCurve.LinearModerate -> {
-                // Similar logic for LinearModerate
-                when (index) {
-                    0 -> newQty >= baseQuantities.getOrElse(1) { 0 }
-                    baseQuantities.size - 1 -> baseQuantities.getOrElse(index - 1) { Int.MAX_VALUE } >= newQty
-                    else -> {
-                        val prev = baseQuantities.getOrElse(index - 1) { Int.MAX_VALUE }
-                        val next = baseQuantities.getOrElse(index + 1) { 0 }
-                        prev >= newQty && newQty >= next
-                    }
-                }
-            }
-            else -> true // Other curves don't have strict ordering requirements
-        }
-    }
-
-    /**
-     * Check if the entire quantity array follows the curve pattern
-     */
-    private fun isValidCurvePattern(quantities: List<Int>, curve: ChipDistributionCurve): Boolean {
-        return when (curve) {
-            ChipDistributionCurve.LinearSteep -> {
-                // Check that quantities are non-increasing
-                for (i in 0 until quantities.size - 1) {
-                    if (quantities[i] < quantities[i + 1]) {
-                        return false
-                    }
-                }
-                true
-            }
-            ChipDistributionCurve.LinearModerate -> {
-                // Same logic for LinearModerate
-                for (i in 0 until quantities.size - 1) {
-                    if (quantities[i] < quantities[i + 1]) {
-                        return false
-                    }
-                }
-                true
-            }
-            else -> true // Other curves don't have strict ordering requirements
-        }
-    }
-    
-    /**
-     * Compute penalty for deviating from ideal curve
-     */
-    private fun computeFitPenalty(quantities: List<Int>, idealY: List<Double>): Double {
-        val maxQty = quantities.maxOrNull()?.toDouble() ?: 1.0
-        if (maxQty <= 0.0) return Double.MAX_VALUE
-        
-        val normalizedQty = quantities.map { it / maxQty }
-        
-        var sumSqDist = 0.0
-        for (i in idealY.indices) {
-            val diff = idealY[i] - normalizedQty[i]
-            sumSqDist += diff * diff
-        }
-        
-        return kotlin.math.sqrt(sumSqDist / idealY.size)
-    }
-    /**
-     * Calculate fit score: 1.0 = perfect fit, 0.0 = terrible fit
-     * Measures how well normalized quantities match the ideal curve
-     */
-    private fun calculateFitScore(
-        idealY: List<Double>,
-        normalizedQty: List<Double>
-    ): Double {
-        require(idealY.size == normalizedQty.size)
-        
-        if (idealY.isEmpty()) return 0.0
-        
-        // Calculate RMS vertical distance
-        var sumSqDist = 0.0
-        for (i in idealY.indices) {
-            val diff = idealY[i] - normalizedQty[i]
-            sumSqDist += diff * diff
-        }
-        
-        val rms = kotlin.math.sqrt(sumSqDist / idealY.size)
-        
-        // Maximum possible RMS distance is sqrt(2) ≈ 1.414
-        // Invert so 1.0 = perfect, 0.0 = terrible
-        val maxRMS = kotlin.math.sqrt(2.0)
-        return (1.0 - (rms / maxRMS)).coerceIn(0.0, 1.0)
-    }
-    
-    /**
-     * Calculate fit score for an existing distribution
-     * Useful for testing and validation
+     * Calculate fit score for an existing distribution: 1.0 = counts (relative to the largest
+     * count) exactly follow the curve, 0.0 = as far from it as possible.
      */
     fun calculateFitScoreForDistribution(
         denominations: List<Int>,
@@ -651,51 +128,356 @@ object ChipDistributionOptimizer {
         curve: ChipDistributionCurve
     ): Double {
         require(denominations.size == quantities.size)
-        
+
         val sortedPairs = denominations.zip(quantities).sortedBy { it.first }
-        val sortedDenoms = sortedPairs.map { it.first }
+        val sortedDenoms = sortedPairs.map { it.first }.toIntArray()
         val sortedQtys = sortedPairs.map { it.second }
-        
-        val minValue = sortedDenoms.first()
-        val maxValue = sortedDenoms.last()
-        
-        // Normalize x positions
-        val normalizedX = if (maxValue == minValue) {
-            List(sortedDenoms.size) { 0.5 }
-        } else {
-            sortedDenoms.map { denom -> (denom - minValue).toDouble() / (maxValue - minValue) }
-        }
-        
-        // Get ideal Y from curve
-        val idealY = normalizedX.map { x -> curve.getValue(x).coerceIn(0.0, 1.0) }
-        
-        // Normalize quantities
+
+        val idealY = idealCurveValues(sortedDenoms, curve)
         val maxQty = sortedQtys.maxOrNull()?.toDouble() ?: 1.0
         val normalizedQty = if (maxQty > 0.0) {
-            sortedQtys.map { it / maxQty }
+            DoubleArray(sortedQtys.size) { sortedQtys[it] / maxQty }
         } else {
-            List(sortedQtys.size) { 0.0 }
+            DoubleArray(sortedQtys.size)
         }
-        
         return calculateFitScore(idealY, normalizedQty)
     }
-    
+
     /**
-     * Generate all combinations of k elements from the list
+     * Exact counts for one ascending denomination set, or null when the set can't make
+     * [targetValue] exactly under the constraints.
      */
-    private fun <T> combinations(list: List<T>, k: Int): List<List<T>> {
-        if (k == 0) return listOf(emptyList())
-        if (list.isEmpty() || k > list.size) return emptyList()
-        
-        val result = mutableListOf<List<T>>()
-        for (i in 0..(list.size - k)) {
-            val first = list[i]
-            val remaining = list.subList(i + 1, list.size)
-            val subCombinations = combinations(remaining, k - 1)
-            for (sub in subCombinations) {
-                result.add(listOf(first) + sub)
+    private fun solveForDenominations(
+        targetValue: Int,
+        denominations: IntArray,
+        curve: ChipDistributionCurve,
+        budget: SearchBudget
+    ): ChipDistributionResult? {
+        val idealY = idealCurveValues(denominations, curve)
+        val ideal = idealQuantities(targetValue, denominations, idealY)
+        val quantities = ExactCountSearch(denominations, ideal, isMonotone(curve), budget)
+            .solve(targetValue.toLong())
+            ?: return null
+
+        val maxQty = quantities.max().toDouble()
+        return ChipDistributionResult(
+            denominations = denominations.toList(),
+            quantities = quantities.toList(),
+            fitScore = calculateFitScore(idealY, DoubleArray(quantities.size) { quantities[it] / maxQty }),
+            totalChips = quantities.sum(),
+            totalValue = targetValue,
+            curveUsed = curve
+        )
+    }
+
+    private fun idealCurveValues(denominations: IntArray, curve: ChipDistributionCurve): DoubleArray {
+        val min = denominations.first().toDouble()
+        val max = denominations.last().toDouble()
+        return DoubleArray(denominations.size) { i ->
+            val x = if (min == max) 0.5 else (denominations[i] - min) / (max - min)
+            curve.getValue(x).coerceIn(0.0, 1.0)
+        }
+    }
+
+    /**
+     * Ideal real-valued count per denomination: proportional to the curve, scaled so the counts
+     * are worth exactly [targetValue].
+     */
+    private fun idealQuantities(targetValue: Int, denominations: IntArray, idealY: DoubleArray): DoubleArray {
+        val ySum = idealY.sum()
+        val chipCounts = DoubleArray(idealY.size) { idealY[it] / ySum * TARGET_TOTAL_CHIPS_FOR_CALCULATION }
+        var value = 0.0
+        for (i in denominations.indices) value += denominations[i] * chipCounts[i]
+        val scale = targetValue / value
+        return DoubleArray(chipCounts.size) { chipCounts[it] * scale }
+    }
+
+    /** The linear curves require counts that never rise with chip value. */
+    private fun isMonotone(curve: ChipDistributionCurve): Boolean =
+        curve == ChipDistributionCurve.LinearSteep || curve == ChipDistributionCurve.LinearModerate
+
+    /** RMS distance between normalized counts and the curve, mapped so 1.0 = perfect. */
+    private fun calculateFitScore(idealY: DoubleArray, normalizedQty: DoubleArray): Double {
+        if (idealY.isEmpty()) return 0.0
+        var sumSqDist = 0.0
+        for (i in idealY.indices) {
+            val diff = idealY[i] - normalizedQty[i]
+            sumSqDist += diff * diff
+        }
+        val rms = sqrt(sumSqDist / idealY.size)
+        // Maximum possible RMS distance is sqrt(2).
+        return (1.0 - rms / sqrt(2.0)).coerceIn(0.0, 1.0)
+    }
+
+    private class SearchBudget(var remaining: Int)
+
+    /**
+     * Least-squares exact count search for one denomination set.
+     *
+     * Variables are q[0..n-1] for ascending denominations d. Constraints: Σ d[i]·q[i] = target,
+     * every q[i] ≥ 1, and q[0] ≥ q[1] ≥ … when [monotone]. Objective: Σ (q[i] − ideal[i])².
+     *
+     * The search fixes q[n-1], q[n-2], …, q[1] in that order. q[0] then follows from the target.
+     *
+     * Feasibility of the still-free prefix q[0..k-1] is exact and O(1). With lower bound L on each
+     * of them (L = 1, or L = q[k] when monotone), the prefix must make W = rem − L·P[k-1], where
+     * P[j] = d[0] + … + d[j], from non-negative "steps":
+     * - Non-monotone: one more chip of d[j] is a step of d[j].
+     * - Monotone: q[j] = L + m[j] + … + m[k-1], so each step is a prefix sum P[j].
+     * The step set always contains d[0]. So W is reachable iff W ≥ table[W mod d[0]], where the
+     * table holds the smallest reachable amount in each residue class. The table is built with
+     * the round-robin shortest-path algorithm in O(n·d[0]).
+     *
+     * Pruning uses two lower bounds on the cost of the free prefix:
+     * - The continuous relaxation, which is convex in q[k]. It decides when to stop walking
+     *   outward from the best real value of q[k].
+     * - A tighter bound that keeps q[0] integral within its residue class. Σ_{j≥1} d[j]·q[j] is a
+     *   multiple of gcd(d[1..k-1]), so d[0]·q[0] ≡ W modulo that gcd. This skips subtrees.
+     */
+    private class ExactCountSearch(
+        private val d: IntArray,
+        private val ideal: DoubleArray,
+        private val monotone: Boolean,
+        private val budget: SearchBudget
+    ) {
+        private val n = d.size
+        private val base = d[0].toLong()
+
+        /** P[k] = d[0] + … + d[k], E[k] = Σ_{j≤k} d[j]·ideal[j], S[k] = Σ_{j≤k} d[j]². */
+        private val prefixValue = LongArray(n)
+        private val prefixIdealValue = DoubleArray(n)
+        private val prefixSquares = DoubleArray(n)
+
+        /** reach[k] = residue table for the first k free variables (k = 1..n). */
+        private val reach = arrayOfNulls<LongArray>(n + 1)
+
+        /**
+         * With k free variables (k ≥ 2), q[0] ≡ residue (mod q0Period[k]) where
+         * residue = (W / q0Divisor[k]) · q0Inverse[k]. A period of 1 means no restriction.
+         */
+        private val q0Period = LongArray(n + 1) { 1L }
+        private val q0Divisor = LongArray(n + 1) { 1L }
+        private val q0Inverse = LongArray(n + 1)
+
+        /** Σ_{j=1}^{k-1} d[j]·ideal[j] and Σ_{j=1}^{k-1} d[j]², for the tighter bound. */
+        private val othersIdealValue = DoubleArray(n + 1)
+        private val othersSquares = DoubleArray(n + 1)
+
+        private val current = LongArray(n)
+        private var best: LongArray? = null
+        private var bestCost = Double.POSITIVE_INFINITY
+        private var budgetExhausted = false
+
+        init {
+            var p = 0L
+            var e = 0.0
+            var s = 0.0
+            for (k in 0 until n) {
+                p += d[k]
+                e += d[k] * ideal[k]
+                s += d[k].toDouble() * d[k]
+                prefixValue[k] = p
+                prefixIdealValue[k] = e
+                prefixSquares[k] = s
+            }
+
+            var table = LongArray(d[0]) { if (it == 0) 0L else UNREACHABLE }
+            reach[1] = table
+            for (k in 1 until n) {
+                table = addStep(table, if (monotone) prefixValue[k] else d[k].toLong())
+                reach[k + 1] = table
+            }
+
+            var othersGcd = 0
+            for (k in 2..n) {
+                val j = k - 1
+                othersGcd = gcd(othersGcd, d[j])
+                othersIdealValue[k] = othersIdealValue[k - 1] + d[j] * ideal[j]
+                othersSquares[k] = othersSquares[k - 1] + d[j].toDouble() * d[j]
+                val h = gcd(d[0], othersGcd)
+                val period = othersGcd / h
+                q0Divisor[k] = h.toLong()
+                q0Period[k] = period.toLong()
+                if (period > 1) q0Inverse[k] = modInverse((d[0] / h) % period, period).toLong()
             }
         }
-        return result
+
+        fun solve(target: Long): IntArray? {
+            // All n variables free, each at least 1.
+            if (!canMake(n, target - prefixValue[n - 1])) return null
+            search(n - 1, target, 0.0, 1L)
+            return best?.let { q -> IntArray(n) { q[it].toInt() } }
+        }
+
+        private fun canMake(freeVariables: Int, amount: Long): Boolean {
+            if (amount < 0) return false
+            return reach[freeVariables]!![(amount % base).toInt()] <= amount
+        }
+
+        // Branch and bound: every return and continue below is a pruning rule.
+        @Suppress("ReturnCount", "CyclomaticComplexMethod", "LoopWithTooManyJumpStatements")
+        private fun search(i: Int, remaining: Long, costSoFar: Double, lowerBound: Long) {
+            if (i == 0) {
+                // canMake() one level up guarantees divisibility and q[0] ≥ lowerBound.
+                val q0 = remaining / base
+                val cost = costSoFar + square(q0 - ideal[0])
+                if (cost < bestCost) {
+                    bestCost = cost
+                    current[0] = q0
+                    best = current.copyOf()
+                }
+                return
+            }
+
+            val di = d[i].toLong()
+            val belowValue = prefixValue[i - 1]
+            val high = if (monotone) remaining / prefixValue[i] else (remaining - belowValue) / di
+            val low = lowerBound
+            if (high < low) return
+
+            // Walk outward from the real optimum of q[i]. The relaxed bound is a convex quadratic
+            // in q[i] centred there, so each direction stops at the first value that can't win.
+            val center = ideal[i] + d[i] * (remaining - prefixIdealValue[i]) / prefixSquares[i]
+            val start = clampRound(center, low, high)
+            var down = start
+            var up = start + 1
+            while (down >= low || up <= high) {
+                val downBound = if (down >= low) relaxedBound(costSoFar, i, down, remaining) else Double.POSITIVE_INFINITY
+                val upBound = if (up <= high) relaxedBound(costSoFar, i, up, remaining) else Double.POSITIVE_INFINITY
+                if (minOf(downBound, upBound) >= bestCost) return
+                val qi = if (downBound <= upBound) down-- else up++
+
+                if (best != null && --budget.remaining < 0) budgetExhausted = true
+                if (budgetExhausted) return
+
+                val nextRemaining = remaining - di * qi
+                val nextLowerBound = if (monotone) qi else 1L
+                if (!canMake(i, nextRemaining - nextLowerBound * belowValue)) continue
+                val cost = costSoFar + square(qi - ideal[i])
+                if (cost + residueBound(i, nextRemaining, nextLowerBound) >= bestCost) continue
+                current[i] = qi
+                search(i - 1, nextRemaining, cost, nextLowerBound)
+                if (budgetExhausted) return
+            }
+        }
+
+        /** Cost so far + q[i]'s term + continuous relaxation of q[0..i-1] making the rest. */
+        private fun relaxedBound(costSoFar: Double, i: Int, qi: Long, remaining: Long): Double {
+            val rest = (remaining - d[i] * qi) - prefixIdealValue[i - 1]
+            return costSoFar + square(qi - ideal[i]) + rest * rest / prefixSquares[i - 1]
+        }
+
+        /**
+         * Lower bound on the cost of k free variables q[0..k-1] making exactly [w], with
+         * q[0] ≥ [low]. q[0] is kept integral within its residue class, and q[1..k-1] are relaxed
+         * to real values.
+         */
+        @Suppress("ReturnCount") // one closed-form case per return
+        private fun residueBound(k: Int, w: Long, low: Long): Double {
+            if (k == 1) return square(w.toDouble() / base - ideal[0])
+            val period = q0Period[k]
+            if (period == 1L) return square(w - prefixIdealValue[k - 1]) / prefixSquares[k - 1]
+            val divisor = q0Divisor[k]
+            if (w < 0 || w % divisor != 0L) return Double.POSITIVE_INFINITY
+            val residue = Math.floorMod((w / divisor) % period * q0Inverse[k], period)
+
+            // f(q) = (q − ideal[0])² + (w − d[0]·q − E')² / S', minimized at qc over the reals.
+            val sOthers = othersSquares[k]
+            val eOthers = othersIdealValue[k]
+            val qc = (ideal[0] * sOthers + base * (w - eOthers)) / (sOthers + base.toDouble() * base)
+            var lower = residue + period * floor((qc - residue) / period).toLong()
+            if (lower < low) {
+                lower = residue + period * ceil((low - residue).toDouble() / period).toLong()
+                return f(lower, w, eOthers, sOthers)
+            }
+            return minOf(f(lower, w, eOthers, sOthers), f(lower + period, w, eOthers, sOthers))
+        }
+
+        private fun f(q0: Long, w: Long, eOthers: Double, sOthers: Double): Double {
+            val rest = (w - base * q0) - eOthers
+            return square(q0 - ideal[0]) + rest * rest / sOthers
+        }
+
+        private companion object {
+            const val UNREACHABLE = Long.MAX_VALUE
+
+            fun square(x: Double) = x * x
+
+            fun clampRound(x: Double, low: Long, high: Long): Long = when {
+                x.isNaN() || x <= low -> low
+                x >= high -> high
+                else -> x.roundToLong().coerceIn(low, high)
+            }
+
+            /**
+             * Add a step to a residue table (round-robin algorithm): table[r] is the smallest
+             * reachable amount congruent to r modulo table.size.
+             */
+            fun addStep(table: LongArray, step: Long): LongArray {
+                val modulus = table.size
+                val result = table.copyOf()
+                val stepMod = (step % modulus).toInt()
+                if (stepMod == 0) return result
+                val cycles = gcd(modulus, stepMod)
+                val cycleLength = modulus / cycles
+                for (start in 0 until cycles) {
+                    // Start each cycle at its minimum and relax once around it.
+                    var minResidue = start
+                    var r = start
+                    repeat(cycleLength) {
+                        if (result[r] < result[minResidue]) minResidue = r
+                        r = (r + stepMod) % modulus
+                    }
+                    if (result[minResidue] == UNREACHABLE) continue
+                    r = minResidue
+                    repeat(cycleLength - 1) {
+                        val next = (r + stepMod) % modulus
+                        val candidate = result[r] + step
+                        if (candidate < result[next]) result[next] = candidate
+                        r = next
+                    }
+                }
+                return result
+            }
+
+            /** x⁻¹ mod m for gcd(x, m) = 1 and m > 1. */
+            fun modInverse(x: Int, m: Int): Int {
+                var (oldR, r) = Math.floorMod(x, m) to m
+                var (oldS, s) = 1 to 0
+                while (r != 0) {
+                    val q = oldR / r
+                    oldR = r.also { r = oldR - q * r }
+                    oldS = s.also { s = oldS - q * s }
+                }
+                return Math.floorMod(oldS, m)
+            }
+        }
+    }
+
+    /** Calls [action] with every k-element combination of [items], in lexicographic order. */
+    private inline fun forEachCombination(items: List<Int>, k: Int, action: (IntArray) -> Unit) {
+        if (k > items.size) return
+        val idx = IntArray(k) { it }
+        val combo = IntArray(k)
+        while (true) {
+            for (j in 0 until k) combo[j] = items[idx[j]]
+            action(combo)
+            var j = k - 1
+            while (j >= 0 && idx[j] == items.size - k + j) j--
+            if (j < 0) return
+            idx[j]++
+            for (m in j + 1 until k) idx[m] = idx[m - 1] + 1
+        }
+    }
+
+    private fun gcd(a: Int, b: Int): Int {
+        var x = abs(a)
+        var y = abs(b)
+        while (y != 0) {
+            val t = x % y
+            x = y
+            y = t
+        }
+        return x
     }
 }

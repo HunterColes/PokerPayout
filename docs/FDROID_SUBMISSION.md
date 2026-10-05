@@ -1,5 +1,8 @@
 # F-Droid Submission Guide for Poker Payout Calculator
 
+> **Historical.** The app has been on F-Droid since December 2025. For releases, see
+> [RELEASING.md](RELEASING.md).
+
 This guide will walk you through submitting Poker Payout Calculator to F-Droid.
 
 ## ✅ Completed Steps

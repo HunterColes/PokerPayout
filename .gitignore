@@ -54,6 +54,9 @@ captures/
 # Keystore files
 *.jks
 *.keystore
+keystore.properties
+# GitLab personal access token for scripts/release/fdroid-mr.sh
+gitlab.token
 
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild
@@ -89,3 +92,9 @@ build-cache
 
 # Since Kotlin 2.0.0, folder named ".kotlin" is created at compile time
 .kotlin
+
+# Claude Code agent worktrees
+.claude/worktrees/
+
+# Python bytecode (scripts/device/ui.py)
+__pycache__/

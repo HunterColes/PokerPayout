@@ -6,6 +6,7 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import java.util.Locale
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -18,6 +19,17 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
 }
+
+// Release keystore secrets: gitignored keystore.properties at the repo root (chmod 600).
+// Falls back to RELEASE_* Gradle properties / ORG_GRADLE_PROJECT_RELEASE_* env vars.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.isFile) file.inputStream().use { load(it) }
+}
+
+fun keystoreValue(key: String, legacyProperty: String): String? =
+    keystoreProperties.getProperty(key)?.trim()?.takeIf { it.isNotEmpty() }
+        ?: project.findProperty(legacyProperty) as String?
 
 android {
     compileSdk = 34
@@ -42,8 +54,8 @@ android {
     }
 
     lint {
+        // Baseline and abortOnError come from the root build script.
         checkReleaseBuilds = false
-        abortOnError = false
     }
 
     signingConfigs {
@@ -51,14 +63,16 @@ android {
         getByName("debug")
 
         // Production signing (only if keystore exists and properties are set)
-        val storeFile = project.findProperty("RELEASE_STORE_FILE") as String?
-        val storePassword = project.findProperty("RELEASE_STORE_PASSWORD") as String?
-        val keyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String?
-        val keyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String?
+        val storeFile = keystoreProperties.getProperty("storeFile")?.trim()?.takeIf { it.isNotEmpty() }
+            ?.let { rootProject.file(it) }
+            ?: (project.findProperty("RELEASE_STORE_FILE") as String?)?.let { project.file(it) }
+        val storePassword = keystoreValue("storePassword", "RELEASE_STORE_PASSWORD")
+        val keyAlias = keystoreValue("keyAlias", "RELEASE_KEY_ALIAS")
+        val keyPassword = keystoreValue("keyPassword", "RELEASE_KEY_PASSWORD")
 
         if (storeFile != null && storePassword != null && keyAlias != null && keyPassword != null) {
             create("release") {
-                this.storeFile = project.file(storeFile)
+                this.storeFile = storeFile
                 this.storePassword = storePassword
                 this.keyAlias = keyAlias
                 this.keyPassword = keyPassword
@@ -89,7 +103,9 @@ android {
     }
 
     kotlin {
-        jvmToolchain(17)
+        // Same JDK in every module and on F-Droid's buildserver (Debian 13 ships only JDK 21).
+        // The javac major version changes the APK bytes, so release builds must use 21 too.
+        jvmToolchain(21)
     }
 
     packaging {

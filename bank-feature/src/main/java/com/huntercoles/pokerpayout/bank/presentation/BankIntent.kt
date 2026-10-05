@@ -1,7 +1,9 @@
 package com.huntercoles.pokerpayout.bank.presentation
 
 import android.os.Parcelable
+import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import kotlinx.parcelize.Parcelize
+
 sealed class BankIntent {
     data class PlayerNameChanged(val playerId: Int, val name: String) : BankIntent()
     data class BuyInToggled(val playerId: Int) : BankIntent()
@@ -23,6 +25,7 @@ sealed class BankIntent {
     object ShowWeightsDialog : BankIntent()
     object HideWeightsDialog : BankIntent()
     data class UpdateWeights(val weights: List<Int>) : BankIntent()
+    data class UpdatePayoutSettings(val settings: PayoutSettings) : BankIntent()
     object ShowPoolSummaryDialog : BankIntent()
     object HidePoolSummaryDialog : BankIntent()
 }

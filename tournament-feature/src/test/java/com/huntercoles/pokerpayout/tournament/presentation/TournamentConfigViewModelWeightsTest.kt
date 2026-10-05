@@ -2,7 +2,10 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.huntercoles.pokerpayout.tournament.domain.usecase.CalculatePayoutsUseCase
+import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
+import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
@@ -12,15 +15,15 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Payout weights on the Tournament tab, through the real [CalculatePayoutsUseCase]. */
+/** Payout weights on the Tournament tab, through the real [CalculatePayoutsUseCase]. Amounts in cents. */
 @kotlinx.coroutines.ExperimentalCoroutinesApi
 @RunWith(RobolectricTestRunner::class)
 class TournamentConfigViewModelWeightsTest {
@@ -52,18 +55,14 @@ class TournamentConfigViewModelWeightsTest {
     }
 
     private val state get() = viewModel.uiState.value
-
-    private fun assertAmounts(expected: List<Double>, actual: List<Double>) {
-        assertEquals(expected.size, actual.size, "count of $actual")
-        expected.zip(actual).forEach { (e, a) -> assertEquals(e, a, 1e-9, "in $actual") }
-    }
+    private val amounts get() = state.payoutTable.places.map { it.amountCents }
 
     @Test
     fun `default weights pay one place for the default five players`() {
-        assertEquals(5, state.tournamentConfig.numPlayers)
-        assertEquals(listOf(35), state.tournamentConfig.payoutWeights)
+        assertEquals(5, state.playerCount)
+        assertEquals(listOf(35), state.config.payoutWeights)
         // 5 x 20 buy-in, all to 1st
-        assertEquals(listOf(100.0), state.payouts.map { it.payout })
+        assertEquals(listOf(10_000L), amounts)
     }
 
     @Test
@@ -73,9 +72,9 @@ class TournamentConfigViewModelWeightsTest {
         val expected = listOf(35, 20, 15, 10, 8, 6)
         assertEquals(18, tournamentPreferences.getPlayerCount())
         assertEquals(expected, tournamentPreferences.getPayoutWeights())
-        assertEquals(expected, state.tournamentConfig.payoutWeights)
-        assertEquals(expected, state.payouts.map { it.weight })
-        assertEquals(18 * 20.0, state.payouts.sumOf { it.payout }, 1e-9)
+        assertEquals(expected, state.config.payoutWeights)
+        assertEquals(expected, state.payoutTable.places.map { it.weight })
+        assertEquals(18 * 2_000L, state.payoutTable.totalCents)
     }
 
     @Test
@@ -85,23 +84,61 @@ class TournamentConfigViewModelWeightsTest {
 
         assertEquals(listOf(40, 30, 20, 10), tournamentPreferences.getPayoutWeights())
         // Prize pool 6 x 20 = 120
-        assertAmounts(listOf(48.0, 36.0, 24.0, 12.0), state.payouts.map { it.payout })
-        assertAmounts(listOf(40.0, 30.0, 20.0, 10.0), state.payouts.map { it.percentage })
+        assertEquals(listOf(4_800L, 3_600L, 2_400L, 1_200L), amounts)
+        assertEquals(listOf(40.0, 30.0, 20.0, 10.0), state.payoutTable.places.map { it.sharePercent })
+        assertNull(state.payoutPreset)
     }
 
-    @Ignore("PP-016: custom weights can pay more places than there are players. Enable when payouts are capped.")
     @Test
     fun `never pays more places than there are players`() {
-        // 5 players (default), 6 custom places
+        // 5 players (default), 6 custom places (PP-016)
         viewModel.acceptIntent(TournamentConfigIntent.UpdateWeights(listOf(35, 20, 15, 10, 8, 6)))
 
-        assertEquals(5, state.payouts.size)
-        assertEquals(100.0, state.payouts.sumOf { it.payout }, 1e-9)
+        assertEquals(5, state.payoutTable.places.size)
+        assertEquals(10_000L, state.payoutTable.totalCents)
     }
 
     @Test
-    fun `reset restores default weights and the timer`() {
+    fun `presets follow the player count until the user picks the places`() {
+        viewModel.acceptIntent(TournamentConfigIntent.UpdatePlayerCount(9))
+        viewModel.acceptIntent(TournamentConfigIntent.ApplyPayoutPreset(PayoutPreset.FLAT))
+        assertEquals(listOf(45, 32, 23), tournamentPreferences.getPayoutWeights())
+
+        viewModel.acceptIntent(TournamentConfigIntent.UpdatePlayerCount(12))
+        assertEquals(PayoutPreset.FLAT.weightsFor(4), tournamentPreferences.getPayoutWeights())
+
+        viewModel.acceptIntent(TournamentConfigIntent.SetPaidPlaces(2))
+        viewModel.acceptIntent(TournamentConfigIntent.UpdatePlayerCount(24))
+        assertEquals(PayoutPreset.FLAT.weightsFor(2), tournamentPreferences.getPayoutWeights())
+    }
+
+    @Test
+    fun `the payout editor saves weights, preset and rounding together`() {
+        viewModel.acceptIntent(TournamentConfigIntent.UpdatePlayerCount(10))
+        viewModel.acceptIntent(TournamentConfigIntent.ShowWeightsEditor)
+        assertTrue(state.showWeightsEditor)
+
+        viewModel.acceptIntent(
+            TournamentConfigIntent.UpdatePayoutSettings(
+                PayoutSettings(
+                    weights = listOf(60, 30, 10),
+                    preset = PayoutPreset.TOP_HEAVY,
+                    rounding = PayoutRounding.TEN_DOLLARS
+                )
+            )
+        )
+
+        assertFalse(state.showWeightsEditor)
+        assertEquals(PayoutPreset.TOP_HEAVY, tournamentPreferences.getPayoutPreset())
+        assertEquals(PayoutRounding.TEN_DOLLARS, tournamentPreferences.getPayoutRounding())
+        // $200 at $10: 2nd 60, 3rd 20, 1st 120
+        assertEquals(listOf(12_000L, 6_000L, 2_000L), amounts)
+    }
+
+    @Test
+    fun `reset restores default weights, rounding and the timer`() {
         viewModel.acceptIntent(TournamentConfigIntent.UpdateWeights(listOf(50, 30, 20)))
+        viewModel.acceptIntent(TournamentConfigIntent.UpdatePayoutRounding(PayoutRounding.FIVE_DOLLARS))
         timerPreferences.setGameDurationMinutes(240)
         assertFalse(timerPreferences.isInDefaultState())
 
@@ -110,7 +147,8 @@ class TournamentConfigViewModelWeightsTest {
         assertTrue(tournamentPreferences.isInDefaultState())
         assertTrue(timerPreferences.isInDefaultState())
         assertEquals(180, timerPreferences.getGameDurationMinutes())
-        assertEquals(listOf(35), state.tournamentConfig.payoutWeights)
-        assertEquals(listOf(100.0), state.payouts.map { it.payout })
+        assertEquals(listOf(35), state.config.payoutWeights)
+        assertEquals(PayoutRounding.ONE_DOLLAR, state.config.payoutRounding)
+        assertEquals(listOf(10_000L), amounts)
     }
 }

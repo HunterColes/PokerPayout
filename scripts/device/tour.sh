@@ -251,10 +251,26 @@ s_flop() {
   ui tap "desc=Add Card"; pick 2 "♣"
   ui assert-text "text~=Community Cards (3/5)" Flop Turn River
 }
+# Centre x of the node whose text is exactly $2, from `ui find` output in $1.
+x_of() { sed -n "s/^text='$2' .* @\([0-9]*\),[0-9]*\$/\1/p" <<<"$1" | head -1; }
 s_odds_results() {
   ui tap "Calculate Odds"
-  ui wait 're=^[0-9]+\.[0-9]{2}%$' --timeout 60
-  ui wait-gone "Calculating..." --timeout 60
+  # AsKs vs QhQd on JsTs2c is enumerated exactly: Player 1 wins 555 and Player 2 435 of the
+  # 990 turn-and-river runouts, with no ties. Before v1.2.0 the kicker-order bug (PP-011)
+  # showed about 49.25 / 50.75 here, so anything else is a regression.
+  ui wait "text=56.06%" --timeout 30 || return 1
+  local found p1 p2 w1 w2
+  found="$(ui find 're=^(Player 1|Player 2|56\.06%|43\.94%)$')"
+  p1="$(x_of "$found" "Player 1")"; p2="$(x_of "$found" "Player 2")"
+  w1="$(x_of "$found" "56.06%")";   w2="$(x_of "$found" "43.94%")"
+  echo "odds columns: Player 1 x=$p1 shows 56.06% at x=$w1; Player 2 x=$p2 shows 43.94% at x=$w2"
+  [[ -n "$p1" && -n "$p2" && -n "$w1" && -n "$w2" ]] || { echo "[ui] FAIL expected 56.06% / 43.94% under Player 1 / Player 2"; return 1; }
+  (( p1 < p2 && w1 < w2 )) || { echo "[ui] FAIL 56.06% / 43.94% are not under Player 1 / Player 2"; return 1; }
+}
+s_odds_card_clears() {
+  ui tap "desc=Add Card"; pick 9 "♥"         # the turn: any input change drops the old odds
+  ui assert-text "text~=Community Cards (4/5)" "Calculate Odds" || return 1
+  ui wait-gone 're=^[0-9]+\.[0-9]{2}%$' --timeout 5
 }
 s_odds_more_players() {
   ui slide class=SeekBar --frac 0.3            # 2..10 -> 4 players
@@ -280,7 +296,35 @@ s_chip_calc() {
 }
 s_chip_calc_generated() {
   ui tap Generate
-  ui assert-text "text~=Chip Breakdown" "Total Chips" "Total Value"
+  ui assert-text "text~=Chip Breakdown" "Total Chips" "Total Value" 're=^× [0-9]+$' || return 1
+  check_chip_totals "$PP_UI_LAST_XML"
+}
+# The stats row against the breakdown rows in a UI dump: Total Chips must be non-zero and
+# equal the sum of the "× N" counts (v1.1.12 showed 0), and Denominations must equal the
+# number of rows, so a row below the fold can't drop out of the sum unnoticed.
+check_chip_totals() {
+  python3 - "$1" <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+nodes = set()
+for n in ET.parse(sys.argv[1]).iter("node"):
+    b = [int(v) for v in re.findall(r"-?\d+", n.get("bounds", ""))]
+    label = n.get("text") or n.get("content-desc") or ""
+    if label and len(b) == 4:
+        nodes.add((label, (b[0] + b[2]) // 2, b[1], b[3]))
+def stat(name):  # the number shown directly above a stat's label
+    label = next((n for n in nodes if n[0] == name), None)
+    above = [n for n in nodes if label and re.fullmatch(r"\d+", n[0]) and 0 <= label[2] - n[3] < 200]
+    if not above:
+        sys.exit("[ui] FAIL no value shown for %r" % name)
+    return int(min(above, key=lambda n: abs(n[1] - label[1]))[0])
+total, denoms = stat("Total Chips"), stat("Denominations")
+counts = [int(n[0][2:]) for n in sorted(nodes, key=lambda n: n[2]) if re.fullmatch(r"× \d+", n[0])]
+print("chip stats: Total Chips %d, Denominations %d, row counts %s (sum %d)" % (total, denoms, counts, sum(counts)))
+if len(counts) != denoms:
+    sys.exit("[ui] FAIL %d breakdown rows on screen but Denominations is %d" % (len(counts), denoms))
+if total <= 0 or total != sum(counts):
+    sys.exit("[ui] FAIL Total Chips is %d but the breakdown adds up to %d" % (total, sum(counts)))
+PY
 }
 s_chip_calc_advanced() {
   ui tap "desc=Expand advanced settings"
@@ -324,7 +368,8 @@ step odds-empty           "Odds calculator, empty state"                        
 step odds-card-picker     "Card picker dialog"                                  s_card_picker
 step odds-hole-cards      "Hole cards: AsKs vs QhQd"                            s_hole_cards
 step odds-flop            "Flop: Js Ts 2c"                                      s_flop
-step odds-results         "Run the Monte Carlo calculation"                     s_odds_results
+step odds-results         "Exact odds: 56.06% / 43.94%"                          s_odds_results
+step odds-card-clears     "Add the turn; stale odds disappear"                  s_odds_card_clears
 step odds-4-players       "Raise player count to 4 (empty seats)"               s_odds_more_players
 step odds-reset-dialog    "Odds reset dialog"                                   s_odds_reset_dialog
 step odds-reset-done      "Odds reset confirmed"                                s_odds_reset_done

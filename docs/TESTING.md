@@ -5,7 +5,7 @@ sound. It is written so that a person *or* an AI agent can run it unattended.
 
 | Tier | Command | Needs | Typical time |
 |------|---------|-------|--------------|
-| JVM unit tests | `./gradlew testDebugUnitTest` | JDK 21 | ~15 s warm (143 tests) |
+| JVM unit tests | `./gradlew testDebugUnitTest` | JDK 21 | ~10 s warm (284 tests) |
 | Device smoke tour (screenshots + UI dumps + logcat) | `scripts/device/tour.sh` | emulator (auto-booted) | ~6 min incl. build |
 | Instrumented tests | `./gradlew connectedDebugAndroidTest` | running emulator | compiles; there are 0 instrumented tests (see below) |
 | JVM screenshot tests (Roborazzi) | not set up yet | n/a | n/a |
@@ -43,8 +43,8 @@ stdout is a short summary, one line per step. The tour exits non-zero if any ste
 [device] installed PokerPayout-v1.1.12-debug.apk (19M) in 1s
 [tour] PASS 01-launch (7.6s)
 ...
-[tour] PASS: 36/36 steps passed, 0 fatal, 0 ANR, 337s total
-[tour] report: build/device-reports/20261004-185201/index.md
+[tour] PASS: 37/37 steps passed, 0 fatal, 0 ANR, 471s total
+[tour] report: build/device-reports/20261004-205652/index.md
 ```
 
 ## 3. Output layout
@@ -152,9 +152,14 @@ bash function of `ui.py` calls that ends in assertions. The steps are:
    pool-summary dialog; scroll.
 3. **Tools.** Open the grid and the Settings tile (volume dialog).
 4. **Odds.** Empty state; card picker; AsKs vs QhQd; a JsTs2c flop (the picker scrolls to
-   find 2c); run the Monte Carlo calculation and wait for `NN.NN%`; switch to 4 players; reset.
-5. **Hand rankings, then the chip calculator.** In the chip calculator: Generate, open the
-   advanced settings, scroll.
+   find 2c); calculate and require the exact answer, **56.06%** under Player 1 and **43.94%**
+   under Player 2 (555 and 435 of 990 runouts; v1.1.12 showed about 49.25 / 50.75 because of
+   the kicker-order bug); add the 9h turn and require the old numbers to disappear; switch to
+   4 players; reset.
+5. **Hand rankings, then the chip calculator.** In the chip calculator: Generate and require
+   Total Chips to be non-zero and equal to the sum of the "× N" rows (26 for the defaults;
+   v1.1.12 showed 0), and Denominations to equal the number of rows; open the advanced
+   settings; scroll.
 6. Back to Tournament, then check that the app process is still alive.
 
 After every step, the tour fails it if logcat's crash buffer has a `FATAL EXCEPTION` for the
@@ -184,14 +189,16 @@ runs on the JUnit Platform with two engines from the `common-test` bundle: Jupit
 tests and Vintage for JUnit 4 tests. Robolectric tests (`@RunWith(RobolectricTestRunner::class)`)
 are JUnit 4, so Vintage runs them. Each test runs once, in its own module.
 
-Last measured (v1.2.0 test foundation): **143 tests, 135 pass, 8 skipped, 0 fail**, about 15 s
-with compilation up to date. `ChipDistributionOptimizerTest` accounts for about 12 s of that.
+Last measured (v1.2.0, batch A integrated): **284 tests, 275 pass, 9 skipped, 0 fail**, about
+10 s with compilation up to date. The slowest classes are `HandEvaluatorTest` (all 133,784,560
+seven-card hands, about 4 s) and `ChipDistributionOptimizerTest` (a 115,500-call input sweep,
+about 2 s).
 
 | Module | Tests | Skipped | What they cover |
 |---|---|---|---|
-| core | 73 | 3 | Blind engine: 6,600-config property sweep plus exact ladders. Chip optimizer, FormatUtils. |
+| core | 83 | 3 | Blind engine: 6,600-config property sweep plus exact ladders. Chip optimizer: reported crashes, typed failures, a 115,500-call input sweep and a brute-force oracle. FormatUtils. |
 | bank-feature | 36 | 2 | BankViewModel money flows on real prefs: buy-ins, rebuys, knockouts, money conservation over 14 configs, weights, reset. |
-| tools-feature | 8 | 0 | Odds engine (owned by the odds rework). |
+| tools-feature | 139 | 1 | Odds: 100 golden hand-ranking and equity tests, exhaustive 5- and 7-card evaluator checks, the engine (exact, Monte Carlo, cancellation) and its ViewModel. Chip calculator ViewModel. `OddsBenchmark` is skipped unless `ODDS_BENCH=1`. |
 | tournament-feature | 26 | 3 | Payout use case, TournamentConfigViewModel, TimerViewModel on virtual time: countdown, levels, sound cue, overtime, validation. |
 
 Before v1.2.0 the green run proved little: 245 executions but 101 unique tests (core's ran 3

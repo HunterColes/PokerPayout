@@ -1,7 +1,5 @@
 package com.huntercoles.pokerpayout.tools.presentation
 
-import com.huntercoles.pokerpayout.tools.presentation.composable.CardType
-
 sealed class OddsCalculatorIntent {
     data class PlayerCountChanged(val count: Int) : OddsCalculatorIntent()
     data class ShowCardPickerForPlayer(val playerId: Int) : OddsCalculatorIntent()
@@ -10,8 +8,9 @@ sealed class OddsCalculatorIntent {
     data class PlayerCardRemoved(val playerId: Int, val cardIndex: Int) : OddsCalculatorIntent()
     data class CommunityCardRemoved(val cardIndex: Int) : OddsCalculatorIntent()
     object HideCardPicker : OddsCalculatorIntent()
-    data class StartSimulation(val players: List<com.huntercoles.pokerpayout.tools.presentation.composable.Player>, val communityCards: List<com.huntercoles.pokerpayout.core.design.components.PlayingCard>) : OddsCalculatorIntent()
-    data class SimulationComplete(val players: List<com.huntercoles.pokerpayout.tools.presentation.composable.Player>) : OddsCalculatorIntent()
+
+    /** Compute odds for the current cards. Results stream into [OddsCalculatorUiState.result]. */
+    object Calculate : OddsCalculatorIntent()
     object ShowResetDialog : OddsCalculatorIntent()
     object HideResetDialog : OddsCalculatorIntent()
     object ConfirmReset : OddsCalculatorIntent()

@@ -4,49 +4,22 @@
   <CurrentIssues>
     <ID>ComplexCondition:CalculatorComponents.kt$isFocused &amp;&amp; !hasAutoPositionedThisFocus &amp;&amp; isCursorMovement &amp;&amp; newTextFieldValue.selection.collapsed &amp;&amp; newTextFieldValue.selection.start != idealPosition</ID>
     <ID>CyclomaticComplexMethod:CalculatorComponents.kt$@Composable private fun DecimalTextField( value: Double, onValueChange: (Double) -&gt; Unit, label: String, isLocked: Boolean, modifier: Modifier = Modifier )</ID>
-    <ID>CyclomaticComplexMethod:TimerScreen.kt$@Composable fun TimerScreen( uiState: TimerUiState, onIntent: (TimerIntent) -&gt; Unit, isConfigExpanded: Boolean = false )</ID>
     <ID>CyclomaticComplexMethod:TournamentConfigViewModel.kt$TournamentConfigViewModel$fun acceptIntent(intent: TournamentConfigIntent)</ID>
-    <ID>ImplicitDefaultLocale:TimerUiState.kt$TimerUiState$String.format("%d:%02d:%02d", hours, minutes, seconds)</ID>
     <ID>LongMethod:CalculatorComponents.kt$@Composable private fun DecimalTextField( value: Double, onValueChange: (Double) -&gt; Unit, label: String, isLocked: Boolean, modifier: Modifier = Modifier )</ID>
-    <ID>LongMethod:CalculatorComponents.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PoolConfigurationSection( buyIn: Double, foodPerPlayer: Double, bountyPerPlayer: Double, rebuyPerPlayer: Double, addOnPerPlayer: Double, onBuyInChange: (Double) -&gt; Unit, onFoodChange: (Double) -&gt; Unit, onBountyChange: (Double) -&gt; Unit, onRebuyChange: (Double) -&gt; Unit, onAddOnChange: (Double) -&gt; Unit, playerCount: Int, onPlayerCountChange: (Int) -&gt; Unit, gameDurationHours: Int, roundLengthMinutes: Int, smallestChip: Int, startingChips: Int, onGameDurationHoursChange: (Int) -&gt; Unit, onRoundLengthChange: (Int) -&gt; Unit, onSmallestChipChange: (Int) -&gt; Unit, onStartingChipsChange: (Int) -&gt; Unit, selectedPanel: String, onIntent: (TournamentConfigIntent) -&gt; Unit, isLocked: Boolean = false, modifier: Modifier = Modifier )</ID>
-    <ID>LongMethod:TimerScreen.kt$@Composable fun TimerScreen( uiState: TimerUiState, onIntent: (TimerIntent) -&gt; Unit, isConfigExpanded: Boolean = false )</ID>
-    <ID>LongMethod:TimerScreen.kt$@Composable private fun BlindInformationTile( uiState: TimerUiState, onIntent: (TimerIntent) -&gt; Unit, isConfigExpanded: Boolean )</ID>
-    <ID>LongMethod:TimerScreen.kt$@Composable private fun BlindLevelRow( level: BlindLevel, formatter: NumberFormat, isCurrent: Boolean, highlightColor: Color, isOvertime: Boolean = false )</ID>
-    <ID>LongMethod:TimerViewModel.kt$TimerViewModel$private fun startTimer()</ID>
-    <ID>LongMethod:TournamentScreen.kt$@Composable fun TournamentConfigurationCard( uiState: TournamentConfigUiState, onIntent: (TournamentConfigIntent) -&gt; Unit, onTimerIntent: (TimerIntent) -&gt; Unit, isExpanded: Boolean, onExpandedChange: (Boolean) -&gt; Unit )</ID>
-    <ID>LongParameterList:CalculatorComponents.kt$( buyIn: Double, foodPerPlayer: Double, bountyPerPlayer: Double, rebuyPerPlayer: Double, addOnPerPlayer: Double, onBuyInChange: (Double) -&gt; Unit, onFoodChange: (Double) -&gt; Unit, onBountyChange: (Double) -&gt; Unit, onRebuyChange: (Double) -&gt; Unit, onAddOnChange: (Double) -&gt; Unit, playerCount: Int, onPlayerCountChange: (Int) -&gt; Unit, gameDurationHours: Int, roundLengthMinutes: Int, smallestChip: Int, startingChips: Int, onGameDurationHoursChange: (Int) -&gt; Unit, onRoundLengthChange: (Int) -&gt; Unit, onSmallestChipChange: (Int) -&gt; Unit, onStartingChipsChange: (Int) -&gt; Unit, selectedPanel: String, onIntent: (TournamentConfigIntent) -&gt; Unit, isLocked: Boolean = false, modifier: Modifier = Modifier )</ID>
-    <ID>LoopWithTooManyJumpStatements:TimerViewModel.kt$TimerViewModel$while</ID>
+    <ID>LongMethod:CalculatorComponents.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun PoolConfigurationSection( buyIn: Double, foodPerPlayer: Double, bountyPerPlayer: Double, rebuyPerPlayer: Double, addOnPerPlayer: Double, onBuyInChange: (Double) -&gt; Unit, onFoodChange: (Double) -&gt; Unit, onBountyChange: (Double) -&gt; Unit, onRebuyChange: (Double) -&gt; Unit, onAddOnChange: (Double) -&gt; Unit, playerCount: Int, onPlayerCountChange: (Int) -&gt; Unit, blindsPanel: @Composable () -&gt; Unit, selectedPanel: String, onIntent: (TournamentConfigIntent) -&gt; Unit, isLocked: Boolean = false, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:TournamentScreen.kt$@Composable fun TournamentConfigurationCard( uiState: TournamentConfigUiState, onIntent: (TournamentConfigIntent) -&gt; Unit, blindsPanel: @Composable () -&gt; Unit, isExpanded: Boolean, onExpandedChange: (Boolean) -&gt; Unit )</ID>
+    <ID>LongParameterList:CalculatorComponents.kt$( buyIn: Double, foodPerPlayer: Double, bountyPerPlayer: Double, rebuyPerPlayer: Double, addOnPerPlayer: Double, onBuyInChange: (Double) -&gt; Unit, onFoodChange: (Double) -&gt; Unit, onBountyChange: (Double) -&gt; Unit, onRebuyChange: (Double) -&gt; Unit, onAddOnChange: (Double) -&gt; Unit, playerCount: Int, onPlayerCountChange: (Int) -&gt; Unit, blindsPanel: @Composable () -&gt; Unit, selectedPanel: String, onIntent: (TournamentConfigIntent) -&gt; Unit, isLocked: Boolean = false, modifier: Modifier = Modifier )</ID>
     <ID>MagicNumber:CalculatePayoutsUseCase.kt$CalculatePayoutsUseCase$100</ID>
     <ID>MagicNumber:CalculatePayoutsUseCase.kt$CalculatePayoutsUseCase$3</ID>
     <ID>MagicNumber:CalculatorComponents.kt$24</ID>
     <ID>MagicNumber:CalculatorComponents.kt$999_999_999.0</ID>
-    <ID>MagicNumber:TimerScreen.kt$150</ID>
-    <ID>MagicNumber:TimerScreen.kt$3</ID>
-    <ID>MagicNumber:TimerScreen.kt$3600</ID>
-    <ID>MagicNumber:TimerScreen.kt$4</ID>
-    <ID>MagicNumber:TimerScreen.kt$60</ID>
-    <ID>MagicNumber:TimerScreen.kt$9</ID>
-    <ID>MagicNumber:TimerUiState.kt$TimerUiState$3600</ID>
-    <ID>MagicNumber:TimerUiState.kt$TimerUiState$60</ID>
-    <ID>MagicNumber:TimerViewModel.kt$TimerViewModel$100</ID>
-    <ID>MagicNumber:TimerViewModel.kt$TimerViewModel$1000</ID>
-    <ID>MagicNumber:TimerViewModel.kt$TimerViewModel$1440</ID>
-    <ID>MagicNumber:TimerViewModel.kt$TimerViewModel$24</ID>
-    <ID>MagicNumber:TimerViewModel.kt$TimerViewModel$60</ID>
     <ID>MagicNumber:TournamentConfigViewModel.kt$TournamentConfigViewModel$60</ID>
-    <ID>MaxLineLength:TimerScreen.kt$tint = if (atFirstLevel) PokerColors.PokerGold.copy(alpha = 0.3f) else PokerColors.PokerGold</ID>
-    <ID>MaxLineLength:TimerScreen.kt$tint = if (atLastLevel) PokerColors.PokerGold.copy(alpha = 0.3f) else PokerColors.PokerGold</ID>
-    <ID>MaxLineLength:TimerScreen.kt$val atLastLevel = uiState.currentBlindLevelIndex &gt;= uiState.blindLevels.size - 1 &amp;&amp; !canGenerateMoreOvertime</ID>
-    <ID>MaxLineLength:TimerScreen.kt$val canGenerateMoreOvertime = uiState.overtimeLevelsRevealed &lt; com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator.MAX_OVERTIME_LEVELS</ID>
     <ID>NewLineAtEndOfFile:BlindConfiguration.kt$com.huntercoles.pokerpayout.tournament.presentation.BlindConfiguration.kt</ID>
     <ID>NewLineAtEndOfFile:CalculatePayoutsUseCase.kt$com.huntercoles.pokerpayout.tournament.domain.usecase.CalculatePayoutsUseCase.kt</ID>
     <ID>NewLineAtEndOfFile:CalculatePayoutsUseCaseTest.kt$com.huntercoles.pokerpayout.tournament.domain.usecase.CalculatePayoutsUseCaseTest.kt</ID>
     <ID>NewLineAtEndOfFile:CalculatorComponents.kt$com.huntercoles.pokerpayout.tournament.presentation.composable.CalculatorComponents.kt</ID>
     <ID>NewLineAtEndOfFile:PayoutPosition.kt$com.huntercoles.pokerpayout.tournament.domain.model.PayoutPosition.kt</ID>
     <ID>NewLineAtEndOfFile:TimerIntent.kt$com.huntercoles.pokerpayout.tournament.presentation.TimerIntent.kt</ID>
-    <ID>NewLineAtEndOfFile:TimerScreen.kt$com.huntercoles.pokerpayout.tournament.presentation.composable.TimerScreen.kt</ID>
-    <ID>NewLineAtEndOfFile:TimerUiState.kt$com.huntercoles.pokerpayout.tournament.presentation.TimerUiState.kt</ID>
-    <ID>NewLineAtEndOfFile:TimerViewModel.kt$com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel.kt</ID>
     <ID>NewLineAtEndOfFile:TournamentConfig.kt$com.huntercoles.pokerpayout.tournament.domain.model.TournamentConfig.kt</ID>
     <ID>NewLineAtEndOfFile:TournamentConfigIntent.kt$com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigIntent.kt</ID>
     <ID>NewLineAtEndOfFile:TournamentConfigUiState.kt$com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiState.kt</ID>
@@ -54,14 +27,9 @@
     <ID>NewLineAtEndOfFile:TournamentFeatureModule.kt$com.huntercoles.pokerpayout.tournament.di.TournamentFeatureModule.kt</ID>
     <ID>NewLineAtEndOfFile:TournamentNavigationFactory.kt$com.huntercoles.pokerpayout.tournament.presentation.TournamentNavigationFactory.kt</ID>
     <ID>ReturnCount:CalculatorComponents.kt$private fun isValidDecimalInput(text: String): Boolean</ID>
-    <ID>ReturnCount:TimerViewModel.kt$TimerViewModel$internal fun isValidBlindConfiguration(state: TimerUiState): Boolean</ID>
     <ID>TooManyFunctions:TimerViewModel.kt$TimerViewModel : ViewModel</ID>
     <ID>TooManyFunctions:TournamentConfigViewModel.kt$TournamentConfigViewModel : ViewModel</ID>
-    <ID>UnusedParameter:TimerScreen.kt$onIntent: (TimerIntent) -&gt; Unit</ID>
     <ID>UnusedParameter:TournamentConfigViewModel.kt$TournamentConfigViewModel$numPlayers: Int</ID>
-    <ID>UnusedPrivateMember:TimerScreen.kt$private fun formatCountdown(seconds: Int): String</ID>
-    <ID>UnusedPrivateMember:TimerScreen.kt$private fun isValidBlindConfigInput(text: String): Boolean</ID>
-    <ID>UnusedPrivateMember:TimerScreen.kt$private fun isValidDurationInput(text: String): Boolean</ID>
     <ID>UnusedPrivateProperty:TournamentConfigViewModel.kt$TournamentConfigViewModel$val eliminationSet = eliminationOrder.toSet()</ID>
     <ID>WildcardImport:CalculatorComponents.kt$import androidx.compose.foundation.layout.*</ID>
     <ID>WildcardImport:CalculatorComponents.kt$import androidx.compose.material3.*</ID>

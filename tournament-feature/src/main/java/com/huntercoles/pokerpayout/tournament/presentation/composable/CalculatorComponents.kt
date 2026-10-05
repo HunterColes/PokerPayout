@@ -239,14 +239,7 @@ fun PoolConfigurationSection(
     onAddOnChange: (Double) -> Unit,
     playerCount: Int,
     onPlayerCountChange: (Int) -> Unit,
-    gameDurationHours: Int,
-    roundLengthMinutes: Int,
-    smallestChip: Int,
-    startingChips: Int,
-    onGameDurationHoursChange: (Int) -> Unit,
-    onRoundLengthChange: (Int) -> Unit,
-    onSmallestChipChange: (Int) -> Unit,
-    onStartingChipsChange: (Int) -> Unit,
+    blindsPanel: @Composable () -> Unit,
     selectedPanel: String,
     onIntent: (TournamentConfigIntent) -> Unit,
     isLocked: Boolean = false,
@@ -352,75 +345,8 @@ fun PoolConfigurationSection(
                     }
                 }
                 "blinds" -> {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        val focusManager = LocalFocusManager.current
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            PokerNumberField(
-                                value = gameDurationHours,
-                                onValueChange = { hours ->
-                                    val cappedHours = minOf(hours, 24).coerceAtLeast(1)
-                                    if (!isLocked) {
-                                        onGameDurationHoursChange(cappedHours)
-                                    }
-                                },
-                                label = "Duration (Hours)",
-                                isLocked = isLocked,
-                                minValue = 1,
-                                maxValue = 24,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            PokerNumberField(
-                                value = roundLengthMinutes,
-                                onValueChange = { 
-                                    if (!isLocked) {
-                                        onRoundLengthChange(it)
-                                    }
-                                },
-                                label = "Round Length (Min)",
-                                isLocked = isLocked,
-                                minValue = 1,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            PokerNumberField(
-                                value = smallestChip,
-                                onValueChange = { 
-                                    if (!isLocked) {
-                                        onSmallestChipChange(it)
-                                    }
-                                },
-                                label = "Smallest Chip",
-                                isLocked = isLocked,
-                                minValue = 1,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            PokerNumberField(
-                                value = startingChips,
-                                onValueChange = { 
-                                    if (!isLocked) {
-                                        onStartingChipsChange(it)
-                                    }
-                                },
-                                label = "Starting Chips",
-                                isLocked = isLocked,
-                                minValue = 1,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
+                    Box(modifier = Modifier.padding(16.dp)) {
+                        blindsPanel()
                     }
                 }
             }

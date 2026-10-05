@@ -194,16 +194,17 @@ class BlindStructureCalculatorTest {
     }
 
     @Test
-    fun `antes start at level 5 at half the small blind rounded up to a chip`() {
+    fun `a big-blind ante equals the big blind from its first level on`() {
         val schedule = BlindStructureCalculator.generateSchedule(
-            BlindStructureInput(9, 180, 25, 6_400, 20, includeAnte = true)
+            BlindStructureInput(9, 180, 25, 6_400, 20, bigBlindAnteFromLevel = 3)
         )
 
-        assertTrue(schedule.take(4).all { it.ante == 0 }, "no ante before level 5: $schedule")
-        schedule.drop(4).forEach { level ->
-            val half = level.smallBlind / 2
-            assertTrue(level.ante % 25 == 0 && level.ante >= half && level.ante < half + 25, "ante of $level")
-        }
+        assertTrue(schedule.take(2).all { it.ante == 0 }, "no ante before level 3: $schedule")
+        assertTrue(schedule.drop(2).all { it.ante == it.bigBlind }, "BB ante from level 3: $schedule")
+
+        val overtime = BlindStructureCalculator.generateNextOvertimeLevel(schedule, 20, bigBlindAnteFromLevel = 3)!!
+        assertEquals(overtime.bigBlind, overtime.ante)
+        assertEquals(0, BlindStructureCalculator.generateNextOvertimeLevel(schedule, 20)!!.ante)
     }
 
     @Test

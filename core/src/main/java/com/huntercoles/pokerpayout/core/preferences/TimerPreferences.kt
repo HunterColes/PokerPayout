@@ -2,6 +2,8 @@ package com.huntercoles.pokerpayout.core.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
+import com.huntercoles.pokerpayout.core.time.ClockAnchor
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,216 +11,221 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Tournament clock state and the clock-only settings (breaks, big-blind ante).
+ *
+ * The clock is stored as a [ClockAnchor], written only when it starts, pauses, jumps, finishes or
+ * resets; a running clock's time is derived from the anchor, so nothing is written per tick.
+ */
 @Singleton
 class TimerPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val prefs: SharedPreferences = context.getSharedPreferences("timer_prefs", Context.MODE_PRIVATE)
-    
+
     private val _timerRunning = MutableStateFlow(getTimerRunning())
     val timerRunning: Flow<Boolean> = _timerRunning.asStateFlow()
-    
-    private val _currentTimeSeconds = MutableStateFlow(getCurrentTimeSeconds())
-    val currentTimeSeconds: Flow<Int> = _currentTimeSeconds.asStateFlow()
-    
-    private val _gameDurationMinutes = MutableStateFlow(getGameDurationMinutes())
-    val gameDurationMinutes: Flow<Int> = _gameDurationMinutes.asStateFlow()
-    
-    private val _timerDirection = MutableStateFlow(getTimerDirection())
-    val timerDirection: Flow<String> = _timerDirection.asStateFlow()
-    
-    private val _isFinished = MutableStateFlow(getIsFinished())
-    val isFinished: Flow<Boolean> = _isFinished.asStateFlow()
-    
-    private val _hasTimerStarted = MutableStateFlow(getHasTimerStarted())
-    val hasTimerStarted: Flow<Boolean> = _hasTimerStarted.asStateFlow()
-    
-    private val _lastUpdateTime = MutableStateFlow(getLastUpdateTime())
-    val lastUpdateTime: Flow<Long> = _lastUpdateTime.asStateFlow()
-    
+
+    // ------------------------------------------------------------------ clock
+
+    /** Mirrors the clock's running flag for observers (Bank locks while the clock runs). */
     fun setTimerRunning(running: Boolean) {
         prefs.edit().putBoolean(TIMER_RUNNING_KEY, running).apply()
         _timerRunning.value = running
-        if (running) {
-            setLastUpdateTime(System.currentTimeMillis())
+    }
+
+    fun getTimerRunning(): Boolean = prefs.getBoolean(TIMER_RUNNING_KEY, false)
+
+    fun saveClock(anchor: ClockAnchor) {
+        prefs.edit()
+            .putLong(CLOCK_ELAPSED_MS_KEY, anchor.elapsedMillis)
+            .putBoolean(TIMER_RUNNING_KEY, anchor.running)
+            .putLong(CLOCK_REALTIME_MS_KEY, anchor.realtimeMillis)
+            .putLong(CLOCK_WALL_MS_KEY, anchor.wallMillis)
+            .putInt(CLOCK_BOOT_COUNT_KEY, anchor.bootCount)
+            .removeLegacyClock()
+            .apply()
+        _timerRunning.value = anchor.running
+    }
+
+    /** The saved clock, or null if none was saved in the current format. */
+    fun getClock(): ClockAnchor? {
+        if (!prefs.contains(CLOCK_ELAPSED_MS_KEY)) return null
+        return ClockAnchor(
+            elapsedMillis = prefs.getLong(CLOCK_ELAPSED_MS_KEY, 0L),
+            running = getTimerRunning(),
+            realtimeMillis = prefs.getLong(CLOCK_REALTIME_MS_KEY, 0L),
+            wallMillis = prefs.getLong(CLOCK_WALL_MS_KEY, 0L),
+            bootCount = prefs.getInt(CLOCK_BOOT_COUNT_KEY, -1)
+        )
+    }
+
+    /**
+     * A clock saved by v1.1.x (remaining or overtime seconds plus a wall-clock timestamp), or null.
+     * [LegacyClock.elapsedSeconds] is play time at [LegacyClock.savedAtWallMillis].
+     */
+    fun getLegacyClock(): LegacyClock? {
+        if (prefs.contains(CLOCK_ELAPSED_MS_KEY) || !prefs.contains(LEGACY_CURRENT_TIME_SECONDS_KEY)) return null
+        val durationSeconds = getGameDurationMinutes() * SECONDS_PER_MINUTE
+        val seconds = prefs.getInt(LEGACY_CURRENT_TIME_SECONDS_KEY, durationSeconds)
+        val elapsed = when (prefs.getString(LEGACY_TIMER_DIRECTION_KEY, "COUNTDOWN")) {
+            "COUNTUP" -> durationSeconds + seconds
+            else -> durationSeconds - seconds
         }
+        return LegacyClock(
+            elapsedSeconds = elapsed.coerceAtLeast(0),
+            running = getTimerRunning() && !getIsFinished(),
+            savedAtWallMillis = prefs.getLong(LEGACY_LAST_UPDATE_TIME_KEY, 0L)
+        )
     }
-    
-    fun setCurrentTimeSeconds(seconds: Int) {
-        prefs.edit().putInt(CURRENT_TIME_SECONDS_KEY, seconds).apply()
-        _currentTimeSeconds.value = seconds
-        setLastUpdateTime(System.currentTimeMillis())
-    }
-    
+
+    data class LegacyClock(val elapsedSeconds: Int, val running: Boolean, val savedAtWallMillis: Long)
+
     fun setGameDurationMinutes(minutes: Int) {
         prefs.edit().putInt(GAME_DURATION_MINUTES_KEY, minutes).apply()
-        _gameDurationMinutes.value = minutes
     }
-    
-    fun setTimerDirection(direction: String) {
-        prefs.edit().putString(TIMER_DIRECTION_KEY, direction).apply()
-        _timerDirection.value = direction
-    }
-    
+
+    fun getGameDurationMinutes(): Int = prefs.getInt(GAME_DURATION_MINUTES_KEY, DEFAULT_DURATION_MINUTES)
+
     fun setIsFinished(finished: Boolean) {
         prefs.edit().putBoolean(IS_FINISHED_KEY, finished).apply()
-        _isFinished.value = finished
     }
-    
+
+    fun getIsFinished(): Boolean = prefs.getBoolean(IS_FINISHED_KEY, false)
+
     fun setHasTimerStarted(hasStarted: Boolean) {
         prefs.edit().putBoolean(HAS_TIMER_STARTED_KEY, hasStarted).apply()
-        _hasTimerStarted.value = hasStarted
-    }
-    
-    private fun setLastUpdateTime(time: Long) {
-        prefs.edit().putLong(LAST_UPDATE_TIME_KEY, time).apply()
-        _lastUpdateTime.value = time
-    }
-    
-    fun getTimerRunning(): Boolean {
-        return prefs.getBoolean(TIMER_RUNNING_KEY, false)
-    }
-    
-    fun getCurrentTimeSeconds(): Int {
-        return prefs.getInt(CURRENT_TIME_SECONDS_KEY, 180 * 60) // Default 3 hours
-    }
-    
-    fun getGameDurationMinutes(): Int {
-        return prefs.getInt(GAME_DURATION_MINUTES_KEY, 180) // Default 3 hours
-    }
-    
-    fun getTimerDirection(): String {
-        return prefs.getString(TIMER_DIRECTION_KEY, "COUNTDOWN") ?: "COUNTDOWN"
-    }
-    
-    fun getIsFinished(): Boolean {
-        return prefs.getBoolean(IS_FINISHED_KEY, false)
-    }
-    
-    fun getHasTimerStarted(): Boolean {
-        return prefs.getBoolean(HAS_TIMER_STARTED_KEY, false)
     }
 
-    fun getOvertimeLevelsRevealed(): Int {
-        return prefs.getInt(OVERTIME_LEVELS_REVEALED_KEY, 0)
-    }
+    fun getHasTimerStarted(): Boolean = prefs.getBoolean(HAS_TIMER_STARTED_KEY, false)
 
-    fun setOvertimeLevelsRevealed(count: Int) {
-        prefs.edit().putInt(OVERTIME_LEVELS_REVEALED_KEY, count).apply()
-    }
+    // ------------------------------------------------- blind setup frozen at start
 
-    fun getSmallestChipAtStart(): Int {
-        return prefs.getInt(SMALLEST_CHIP_AT_START_KEY, 25)
-    }
+    fun getSmallestChipAtStart(): Int = prefs.getInt(SMALLEST_CHIP_AT_START_KEY, TournamentDefaults.SMALLEST_CHIP)
 
     fun setSmallestChipAtStart(value: Int) {
         prefs.edit().putInt(SMALLEST_CHIP_AT_START_KEY, value).apply()
     }
 
-    fun getStartingChipsAtStart(): Int {
-        return prefs.getInt(STARTING_CHIPS_AT_START_KEY, 5000)
-    }
+    fun getStartingChipsAtStart(): Int = prefs.getInt(STARTING_CHIPS_AT_START_KEY, TournamentDefaults.STARTING_CHIPS)
 
     fun setStartingChipsAtStart(value: Int) {
         prefs.edit().putInt(STARTING_CHIPS_AT_START_KEY, value).apply()
     }
 
-    fun getRoundLengthAtStart(): Int {
-        return prefs.getInt(ROUND_LENGTH_AT_START_KEY, 20)
-    }
+    fun getRoundLengthAtStart(): Int = prefs.getInt(ROUND_LENGTH_AT_START_KEY, TournamentDefaults.ROUND_LENGTH_MINUTES)
 
     fun setRoundLengthAtStart(minutes: Int) {
         prefs.edit().putInt(ROUND_LENGTH_AT_START_KEY, minutes).apply()
     }
 
-    fun getLastUpdateTime(): Long {
-        return prefs.getLong(LAST_UPDATE_TIME_KEY, 0L)
+    // ------------------------------------------------- breaks and antes (PP-026)
+
+    /** Levels between breaks; 0 = no breaks. */
+    fun getBreakEveryLevels(): Int = prefs.getInt(BREAK_EVERY_LEVELS_KEY, DEFAULT_BREAK_EVERY_LEVELS)
+
+    fun setBreakEveryLevels(levels: Int) {
+        prefs.edit().putInt(BREAK_EVERY_LEVELS_KEY, levels).apply()
     }
-    
-    // Calculate the actual time if timer was running in background
-    fun calculateActualTime(): Int {
-        if (!getTimerRunning() || getIsFinished()) {
-            return getCurrentTimeSeconds()
-        }
-        
-        val currentTime = System.currentTimeMillis()
-        val lastUpdate = getLastUpdateTime()
-        
-        // Avoid negative elapsed time due to clock changes
-        val elapsedSeconds = ((currentTime - lastUpdate) / 1000).toInt().coerceAtLeast(0)
-        
-        val savedSeconds = getCurrentTimeSeconds()
-        return when (getTimerDirection()) {
-            "COUNTDOWN" -> (savedSeconds - elapsedSeconds).coerceAtLeast(0)
-            "COUNTUP" -> savedSeconds + elapsedSeconds
-            else -> (savedSeconds - elapsedSeconds).coerceAtLeast(0)
-        }
+
+    fun getBreakLengthMinutes(): Int = prefs.getInt(BREAK_LENGTH_MINUTES_KEY, DEFAULT_BREAK_LENGTH_MINUTES)
+
+    fun setBreakLengthMinutes(minutes: Int) {
+        prefs.edit().putInt(BREAK_LENGTH_MINUTES_KEY, minutes).apply()
     }
-    
+
+    /** Shown on the clock during every break, e.g. "Last rebuy". */
+    fun getBreakMessage(): String = prefs.getString(BREAK_MESSAGE_KEY, "") ?: ""
+
+    fun setBreakMessage(message: String) {
+        prefs.edit().putString(BREAK_MESSAGE_KEY, message).apply()
+    }
+
+    /** 1-based level from which the big blind antes one big blind; 0 = no ante. */
+    fun getBigBlindAnteFromLevel(): Int = prefs.getInt(BIG_BLIND_ANTE_FROM_LEVEL_KEY, 0)
+
+    fun setBigBlindAnteFromLevel(level: Int) {
+        prefs.edit().putInt(BIG_BLIND_ANTE_FROM_LEVEL_KEY, level).apply()
+    }
+
+    // ------------------------------------------------------------------ reset
+
+    /** Back to a fresh clock; keeps the duration, breaks and ante settings. */
     fun resetTimer() {
-        val resetSeconds = getGameDurationMinutes() * 60
-        setCurrentTimeSeconds(resetSeconds)
-        setTimerDirection("COUNTDOWN")  // Always reset to countdown
-        setTimerRunning(false)
-        setIsFinished(false)
-        setHasTimerStarted(false)  // Reset the started flag
-        // Clear blind configuration so it will use current tournament preferences
         prefs.edit()
+            .putLong(CLOCK_ELAPSED_MS_KEY, 0L)
+            .putBoolean(TIMER_RUNNING_KEY, false)
+            .putLong(CLOCK_REALTIME_MS_KEY, 0L)
+            .putLong(CLOCK_WALL_MS_KEY, 0L)
+            .putInt(CLOCK_BOOT_COUNT_KEY, -1)
+            .putBoolean(IS_FINISHED_KEY, false)
+            .putBoolean(HAS_TIMER_STARTED_KEY, false)
             .remove(SMALLEST_CHIP_AT_START_KEY)
             .remove(STARTING_CHIPS_AT_START_KEY)
             .remove(ROUND_LENGTH_AT_START_KEY)
+            .removeLegacyClock()
             .apply()
-    }
-    
-    /**
-     * Reset all timer data to default values
-     */
-    fun resetAllTimerData() {
-        // Reset specific keys instead of clearing all preferences
-        val currentTime = System.currentTimeMillis()
-        prefs.edit()
-            .putBoolean(TIMER_RUNNING_KEY, false)
-            .putInt(CURRENT_TIME_SECONDS_KEY, 180 * 60)
-            .putInt(GAME_DURATION_MINUTES_KEY, 180)
-            .putString(TIMER_DIRECTION_KEY, "COUNTDOWN")
-            .putBoolean(IS_FINISHED_KEY, false)
-            .putBoolean(HAS_TIMER_STARTED_KEY, false)
-            .putLong(LAST_UPDATE_TIME_KEY, currentTime)
-            .apply()
-        
-        // Reset all state flows to default values
         _timerRunning.value = false
-        _currentTimeSeconds.value = 180 * 60 // 3 hours in seconds
-        _gameDurationMinutes.value = 180 // 3 hours
-        _timerDirection.value = "COUNTDOWN"
-        _isFinished.value = false
-        _hasTimerStarted.value = false
-        _lastUpdateTime.value = currentTime
     }
-    
-    /**
-     * Check if timer settings are in default state
-     */
+
+    /** Reset all timer data, including duration, breaks and ante, to default values. */
+    fun resetAllTimerData() {
+        resetTimer()
+        prefs.edit()
+            .putInt(GAME_DURATION_MINUTES_KEY, DEFAULT_DURATION_MINUTES)
+            .putInt(BREAK_EVERY_LEVELS_KEY, DEFAULT_BREAK_EVERY_LEVELS)
+            .putInt(BREAK_LENGTH_MINUTES_KEY, DEFAULT_BREAK_LENGTH_MINUTES)
+            .putString(BREAK_MESSAGE_KEY, "")
+            .putInt(BIG_BLIND_ANTE_FROM_LEVEL_KEY, 0)
+            .apply()
+    }
+
+    /** Check if timer settings are in default state. */
     fun isInDefaultState(): Boolean {
         return !getTimerRunning() &&
-               getCurrentTimeSeconds() == 180 * 60 &&
-               getGameDurationMinutes() == 180 &&
-               getTimerDirection() == "COUNTDOWN" &&
-               !getIsFinished() &&
-               !getHasTimerStarted()
+            (getClock()?.elapsedMillis ?: 0L) == 0L &&
+            getLegacyClock()?.elapsedSeconds.let { it == null || it == 0 } &&
+            getGameDurationMinutes() == DEFAULT_DURATION_MINUTES &&
+            !getIsFinished() &&
+            !getHasTimerStarted() &&
+            getBreakEveryLevels() == DEFAULT_BREAK_EVERY_LEVELS &&
+            getBreakLengthMinutes() == DEFAULT_BREAK_LENGTH_MINUTES &&
+            getBreakMessage().isEmpty() &&
+            getBigBlindAnteFromLevel() == 0
     }
-    
+
+    private fun SharedPreferences.Editor.removeLegacyClock() = this
+        .remove(LEGACY_CURRENT_TIME_SECONDS_KEY)
+        .remove(LEGACY_TIMER_DIRECTION_KEY)
+        .remove(LEGACY_LAST_UPDATE_TIME_KEY)
+        .remove(LEGACY_OVERTIME_LEVELS_REVEALED_KEY)
+
     companion object {
+        const val DEFAULT_DURATION_MINUTES = TournamentDefaults.GAME_DURATION_HOURS * 60
+        const val DEFAULT_BREAK_EVERY_LEVELS = 0
+        const val DEFAULT_BREAK_LENGTH_MINUTES = 10
+        private const val SECONDS_PER_MINUTE = 60
+
         private const val TIMER_RUNNING_KEY = "timer_running"
-        private const val CURRENT_TIME_SECONDS_KEY = "current_time_seconds"
         private const val GAME_DURATION_MINUTES_KEY = "game_duration_minutes"
-        private const val TIMER_DIRECTION_KEY = "timer_direction"
         private const val IS_FINISHED_KEY = "is_finished"
         private const val HAS_TIMER_STARTED_KEY = "has_timer_started"
-        private const val LAST_UPDATE_TIME_KEY = "last_update_time"
-        private const val OVERTIME_LEVELS_REVEALED_KEY = "overtime_levels_revealed"
+        private const val CLOCK_ELAPSED_MS_KEY = "clock_elapsed_ms"
+        private const val CLOCK_REALTIME_MS_KEY = "clock_anchor_realtime_ms"
+        private const val CLOCK_WALL_MS_KEY = "clock_anchor_wall_ms"
+        private const val CLOCK_BOOT_COUNT_KEY = "clock_anchor_boot_count"
         private const val SMALLEST_CHIP_AT_START_KEY = "smallest_chip_at_start"
         private const val STARTING_CHIPS_AT_START_KEY = "starting_chips_at_start"
         private const val ROUND_LENGTH_AT_START_KEY = "round_length_at_start"
+        private const val BREAK_EVERY_LEVELS_KEY = "break_every_levels"
+        private const val BREAK_LENGTH_MINUTES_KEY = "break_length_minutes"
+        private const val BREAK_MESSAGE_KEY = "break_message"
+        private const val BIG_BLIND_ANTE_FROM_LEVEL_KEY = "big_blind_ante_from_level"
+
+        // v1.1.x clock, read once and migrated to the anchor
+        private const val LEGACY_CURRENT_TIME_SECONDS_KEY = "current_time_seconds"
+        private const val LEGACY_TIMER_DIRECTION_KEY = "timer_direction"
+        private const val LEGACY_LAST_UPDATE_TIME_KEY = "last_update_time"
+        private const val LEGACY_OVERTIME_LEVELS_REVEALED_KEY = "overtime_levels_revealed"
     }
 }

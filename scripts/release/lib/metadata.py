@@ -5,8 +5,11 @@ Subcommands
   get-version GRADLE                 print "versionName versionCode" from app/build.gradle.kts
   set-version GRADLE NAME CODE       rewrite versionName / versionCode in place
   field YML KEY                      print a top-level scalar from an fdroiddata-style yml
-  add-build YML NAME CODE COMMIT     append a Builds entry (copy of the last one, like
-                                     F-Droid's checkupdates bot) and set CurrentVersion(Code)
+  add-build YML NAME CODE COMMIT [REPO]
+                                     append a Builds entry (copy of the last one, like
+                                     F-Droid's checkupdates bot) and set CurrentVersion(Code);
+                                     with REPO, drop scandelete/scanignore paths that aren't
+                                     in the source tree (F-Droid's scanner rejects them)
   has-build YML CODE                 exit 0 if the yml has a build for CODE
   rotate-key YML SHA256 CODE REASON  pin only SHA256 and add `disable: REASON` to every
                                      build with a versionCode below CODE
@@ -125,7 +128,52 @@ def rotate_key(yml, key, below_code, reason):
     write(yml, "".join(lines))
 
 
-def add_build(yml, name, code, commit):
+def git_tracked(repo, ref, path):
+    """True if `path` (a file or directory) is in git at `ref`, or in the index if `ref`
+    isn't a commit yet (e.g. a tag that is about to be created)."""
+    import subprocess
+
+    def git(*args):
+        return subprocess.run(["git", "-C", repo, *args], capture_output=True, text=True)
+
+    if ref and git("rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").returncode == 0:
+        listing = git("ls-tree", "-r", "--name-only", ref, "--", path).stdout
+    else:
+        listing = git("ls-files", "--", path).stdout
+    return bool(listing.strip())
+
+
+def prune_scan_paths(block, repo, ref):
+    """Drop scandelete/scanignore paths that don't exist in the source tree.
+
+    fdroidserver's scanner rejects them ("Non-exist scandelete path"), failing the whole
+    build, and a copied build entry carries them forward forever."""
+    lines = block.splitlines(keepends=True)
+    out, i = [], 0
+    while i < len(lines):
+        m = re.match(r"^(\s*)(scandelete|scanignore):\s*$", lines[i])
+        if not m:
+            out.append(lines[i])
+            i += 1
+            continue
+        key_line, key_indent, i = lines[i], len(m.group(1)), i + 1
+        kept = []
+        while i < len(lines) and re.match(r"^\s+- ", lines[i]) \
+                and len(lines[i]) - len(lines[i].lstrip()) > key_indent:
+            path = lines[i].strip()[2:].strip().strip("'\"")
+            if git_tracked(repo, ref, path):
+                kept.append(lines[i])
+            else:
+                print(f"metadata.py: dropping {m.group(2)} path not in the source tree: {path}",
+                      file=sys.stderr)
+            i += 1
+        if kept:
+            out.append(key_line)
+            out.extend(kept)
+    return "".join(out)
+
+
+def add_build(yml, name, code, commit, repo=None):
     lines = read(yml).splitlines(keepends=True)
     start, end, entry_starts = builds_section(lines, yml)
     last = entry_starts[-1]
@@ -140,6 +188,8 @@ def add_build(yml, name, code, commit):
     new = re.sub(r"(\n\s*commit:\s*).*", lambda m: m.group(1) + commit, new, count=1)
     # A build-specific disable flag must not be inherited.
     new = re.sub(r"\n\s*disable:.*", "", new)
+    if repo:
+        new = prune_scan_paths(new, repo, commit)
     out = lines[:last_end] + ["\n", new if new.endswith("\n") else new + "\n"] + lines[last_end:]
     text = "".join(out)
     text, n1 = re.subn(r"(?m)^CurrentVersion:.*$", f"CurrentVersion: {name}", text)
@@ -222,7 +272,7 @@ def main(argv):
     elif cmd == "field":
         print(field(read(args[0]), args[1]))
     elif cmd == "add-build":
-        add_build(args[0], args[1], int(args[2]), args[3])
+        add_build(args[0], args[1], int(args[2]), args[3], args[4] if len(args) > 4 else None)
     elif cmd == "has-build":
         text = read(args[0])
         return 0 if re.search(rf"(?m)^\s*-?\s*versionCode:\s*{int(args[1])}\s*$", text) else 1

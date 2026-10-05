@@ -42,8 +42,6 @@ Builds:
     subdir: app
     gradle:
       - yes
-    scandelete:
-      - build-cache
 
 AllowedAPKSigningKeys: 223c397a82d6ed7b50659d30ed907ed23b200509b84fdcf8412f4ed859db35c0
 

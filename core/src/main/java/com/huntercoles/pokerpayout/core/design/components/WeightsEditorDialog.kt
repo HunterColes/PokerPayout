@@ -1,44 +1,64 @@
 package com.huntercoles.pokerpayout.core.design.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.constants.TournamentConstants
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDialog
+import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
+import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
+import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.domain.model.PayoutTable
+import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
+import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
+import com.huntercoles.pokerpayout.core.utils.FormatUtils
 
 private const val MAX_WEIGHT_VALUE = 999
-private val MAX_WEIGHT_POSITIONS = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.size
+
+/** What the editor previews amounts against. */
+data class PayoutPreview(val prizePoolCents: Long, val playerCount: Int)
+
+private data class WeightRowState(val position: Int, val weight: Int, val amountCents: Long, val isError: Boolean)
 
 /**
  * Validates that weights are in strictly decreasing order
  */
 internal fun isValidWeightChange(weights: List<Int>, index: Int, newWeight: Int): Boolean {
-    // Check against previous weight (should be less than)
-    if (index > 0 && newWeight >= weights[index - 1]) {
-        return false
-    }
-    // Check against next weight (should be greater than)
-    if (index < weights.size - 1 && newWeight <= weights[index + 1]) {
-        return false
-    }
-    return true
+    val belowPrevious = index == 0 || newWeight < weights[index - 1]
+    val aboveNext = index == weights.lastIndex || newWeight > weights[index + 1]
+    return belowPrevious && aboveNext
 }
 
 internal fun detectInvalidWeights(weights: List<Int>): List<Boolean> {
@@ -50,225 +70,280 @@ internal fun detectInvalidWeights(weights: List<Int>): List<Boolean> {
     }
 }
 
+/**
+ * [weights] resized to [places] places: a preset's own table, or for hand-edited weights the last
+ * places dropped or default weights appended.
+ */
+internal fun resizeWeights(weights: List<Int>, preset: PayoutPreset?, places: Int): List<Int> = when {
+    preset != null -> preset.weightsFor(places)
+    places > weights.size -> weights + (weights.size + 1..places).map {
+        TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.getOrElse(it - 1) { 1 }
+    }
+    else -> weights.take(places)
+}
+
+/**
+ * The payout structure editor: presets, rounding, how many places to pay (never more than there
+ * are players), and the weight of each place with the amount it pays right now.
+ */
 @Composable
 fun WeightsEditorDialog(
-    currentWeights: List<Int>,
-    onWeightsChanged: (List<Int>) -> Unit,
+    current: PayoutSettings,
+    preview: PayoutPreview,
+    onSave: (PayoutSettings) -> Unit,
     onDismiss: () -> Unit,
     isLocked: Boolean = false
 ) {
-    val weights = remember(currentWeights) { mutableStateListOf<Int>().apply { addAll(currentWeights) } }
-
-    // Track which positions violate the strictly decreasing requirement
-    val invalidPositions by remember(weights) {
-        derivedStateOf { detectInvalidWeights(weights) }
+    val maxPlaces = PayoutPlaces.maxFor(preview.playerCount)
+    val weights = remember(current) {
+        mutableStateListOf<Int>().apply { addAll(current.weights.take(maxPlaces)) }
+    }
+    var preset by remember(current) { mutableStateOf(current.preset) }
+    var rounding by remember(current) { mutableStateOf(current.rounding) }
+    val invalidPositions by remember(weights) { derivedStateOf { detectInvalidWeights(weights) } }
+    val hasErrors = invalidPositions.any { it }
+    val table by remember(weights, preview) {
+        derivedStateOf {
+            CalculatePayoutsUseCase()(preview.prizePoolCents, weights.toList(), preview.playerCount, rounding)
+        }
     }
 
-    val hasErrors = invalidPositions.any { it }
+    fun setPlaces(places: Int) {
+        val next = resizeWeights(weights.toList(), preset, places.coerceIn(1, maxPlaces))
+        weights.clear()
+        weights.addAll(next)
+    }
 
-    PokerDialog(
-        onDismissRequest = onDismiss,
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(0.85f)
+    PokerDialog(onDismissRequest = onDismiss) {
+        EditorHeader()
+        PresetChips(
+            selected = preset,
+            enabled = !isLocked,
+            onSelect = { chosen ->
+                preset = chosen
+                setPlaces(weights.size)
+            }
+        )
+        RoundingChips(selected = rounding, enabled = !isLocked, onSelect = { rounding = it })
+        PlacesStepper(
+            places = weights.size,
+            maxPlaces = maxPlaces,
+            playerCount = preview.playerCount,
+            enabled = !isLocked && !hasErrors,
+            onChange = { setPlaces(it) }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        WeightList(
+            weights = weights,
+            invalid = invalidPositions,
+            table = table,
+            isLocked = isLocked,
+            onWeightChange = { index, newWeight ->
+                if (newWeight > 0 && newWeight != weights[index]) {
+                    weights[index] = newWeight
+                    preset = null
+                }
+            }
+        )
+        EditorButtons(
+            canSave = !hasErrors && !isLocked,
+            onCancel = onDismiss,
+            onSave = {
+                onSave(PayoutSettings(weights = weights.toList(), preset = preset, rounding = rounding))
+                onDismiss()
+            }
+        )
+    }
+}
+
+@Composable
+private fun EditorHeader() {
+    Text(
+        text = "⚖️ Payout Structure",
+        fontSize = 20.sp,
+        fontWeight = FontWeight.Bold,
+        color = PokerColors.PokerGold,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(
+        text = "Higher weights = larger payouts.",
+        fontSize = 14.sp,
+        color = PokerColors.CardWhite,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+}
+
+@Composable
+private fun PlacesStepper(places: Int, maxPlaces: Int, playerCount: Int, enabled: Boolean, onChange: (Int) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "⚖️ Edit Payout Weights",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = PokerColors.PokerGold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Higher weights = larger payouts.",
-            fontSize = 14.sp,
+            text = "Places paid",
             color = PokerColors.CardWhite,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+            fontSize = 14.sp,
+            modifier = Modifier.weight(1f)
         )
+        StepButton(label = "−", description = "Pay one place fewer", enabled = enabled && places > 1) {
+            onChange(places - 1)
+        }
+        Text(
+            text = "$places",
+            color = PokerColors.PokerGold,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(min = 24.dp)
+        )
+        StepButton(label = "+", description = "Pay one more place", enabled = enabled && places < maxPlaces) {
+            onChange(places + 1)
+        }
+    }
+    Text(
+        text = "Tip: pay about a third of the field, ${PayoutPlaces.recommended(playerCount)} " +
+            "of $playerCount players. At most $maxPlaces.",
+        color = PokerColors.CardWhite.copy(alpha = 0.7f),
+        fontSize = 12.sp
+    )
+}
 
-        Spacer(modifier = Modifier.height(16.dp))
+@Composable
+private fun StepButton(label: String, description: String, enabled: Boolean, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        border = BorderStroke(1.dp, if (enabled) PokerColors.PokerGold else PokerColors.CardWhite.copy(alpha = 0.3f)),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = PokerColors.PokerGold),
+        modifier = Modifier
+            .width(56.dp)
+            .semantics { contentDescription = description }
+    ) {
+        Text(label, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    }
+}
 
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            itemsIndexed(weights) { index, weight ->
-                WeightRow(
+@Composable
+private fun WeightList(
+    weights: List<Int>,
+    invalid: List<Boolean>,
+    table: PayoutTable,
+    isLocked: Boolean,
+    onWeightChange: (Int, Int) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.heightIn(max = 320.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        itemsIndexed(weights) { index, weight ->
+            WeightRow(
+                row = WeightRowState(
                     position = index + 1,
                     weight = weight,
-                    isError = invalidPositions.getOrElse(index) { false },
-                    isLocked = isLocked,
-                    onWeightChange = { newWeight ->
-                        if (newWeight > 0) {
-                            weights[index] = newWeight
-                        }
-                    }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedButton(
-                onClick = {
-                    if (weights.size > 1) {
-                        weights.removeAt(weights.size - 1)
-                    }
-                },
-                enabled = weights.size > 1 && !hasErrors && !isLocked,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = if (isLocked) PokerColors.PokerGold.copy(alpha = 0.5f) else PokerColors.ErrorRed
+                    amountCents = table.amountFor(index + 1),
+                    isError = invalid.getOrElse(index) { false }
                 ),
-                border = BorderStroke(
-                    1.dp,
-                    if (isLocked) PokerColors.PokerGold.copy(alpha = 0.5f) else PokerColors.ErrorRed
-                )
-            ) {
-                Text("-", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            }
-
-            OutlinedButton(
-                onClick = {
-                    if (weights.size < MAX_WEIGHT_POSITIONS && !hasErrors) {
-                        val nextPosition = weights.size + 1
-                        val defaultWeight = if (nextPosition <= TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.size) {
-                            TournamentConstants.DEFAULT_PAYOUT_WEIGHTS[nextPosition - 1]
-                        } else {
-                            1 // Default for positions beyond the standard defaults
-                        }
-                        weights.add(defaultWeight)
-                    }
-                },
-                enabled = weights.size < MAX_WEIGHT_POSITIONS && !hasErrors && !isLocked,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = if (isLocked) PokerColors.PokerGold.copy(alpha = 0.5f) else PokerColors.AccentGreen
-                ),
-                border = BorderStroke(
-                    1.dp,
-                    if (isLocked) PokerColors.PokerGold.copy(alpha = 0.5f) else PokerColors.AccentGreen
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Position"
-                )
-            }
+                isLocked = isLocked,
+                onWeightChange = { onWeightChange(index, it) }
+            )
         }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text("Prize pool", color = PokerColors.CardWhite, fontWeight = FontWeight.Bold)
+        Text(FormatUtils.formatCents(table.prizePoolCents), color = PokerColors.PokerGold, fontWeight = FontWeight.Bold)
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+}
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+@Composable
+private fun EditorButtons(canSave: Boolean, onCancel: () -> Unit, onSave: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        OutlinedButton(
+            onClick = onCancel,
+            modifier = Modifier.weight(1f),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = PokerColors.CardWhite)
         ) {
-            OutlinedButton(
-                onClick = onDismiss,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = PokerColors.CardWhite
-                )
-            ) {
-                Text("Cancel")
-            }
-
-            Button(
-                onClick = {
-                    onWeightsChanged(weights.toList())
-                    onDismiss()
-                },
-                enabled = !hasErrors && !isLocked,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isLocked) PokerColors.PokerGold.copy(alpha = 0.5f) else PokerColors.AccentGreen,
-                    contentColor = if (isLocked) PokerColors.CardWhite.copy(alpha = 0.5f) else PokerColors.DarkGreen,
-                    disabledContainerColor = PokerColors.CardWhite.copy(alpha = 0.3f),
-                    disabledContentColor = PokerColors.CardWhite.copy(alpha = 0.5f)
-                )
-            ) {
-                Text("Save", fontWeight = FontWeight.Bold)
-            }
+            Text("Cancel")
+        }
+        Button(
+            onClick = onSave,
+            enabled = canSave,
+            modifier = Modifier.weight(1f),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = PokerColors.AccentGreen,
+                contentColor = PokerColors.DarkGreen,
+                disabledContainerColor = PokerColors.CardWhite.copy(alpha = 0.3f),
+                disabledContentColor = PokerColors.CardWhite.copy(alpha = 0.5f)
+            )
+        ) {
+            Text("Save", fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
-fun WeightRow(
-    position: Int,
-    weight: Int,
-    isError: Boolean,
-    isLocked: Boolean,
-    onWeightChange: (Int) -> Unit
-) {
+private fun WeightRow(row: WeightRowState, isLocked: Boolean, onWeightChange: (Int) -> Unit) {
+    val position = row.position
     val trophy = when (position) {
         1 -> "🥇"
         2 -> "🥈"
-        3 -> "🥉"
+        THIRD_PLACE -> "🥉"
         else -> "🏅"
-    }
-
-    val positionSuffix = when {
-        position % 100 in 10..20 -> "th"
-        position % 10 == 1 -> "st"
-        position % 10 == 2 -> "nd"
-        position % 10 == 3 -> "rd"
-        else -> "th"
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (position <= 3) PokerColors.AccentGreen.copy(alpha = 0.2f)
-                          else PokerColors.SurfaceSecondary
+            containerColor = if (position <= THIRD_PLACE) {
+                PokerColors.AccentGreen.copy(alpha = 0.2f)
+            } else {
+                PokerColors.SurfaceSecondary
+            }
         ),
+        border = if (row.isError) BorderStroke(1.dp, PokerColors.ErrorRed) else null,
         shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Position info
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            Text(text = trophy, fontSize = 18.sp)
+            Text(
+                text = ordinalOf(position),
+                color = PokerColors.CardWhite,
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
                 modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = trophy,
-                    fontSize = 18.sp,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-
-                Text(
-                    text = "$position$positionSuffix",
-                    color = PokerColors.CardWhite,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp
-                )
-            }
-
-            // Weight input
+            )
+            Text(
+                text = FormatUtils.formatCents(row.amountCents),
+                color = PokerColors.PokerGold,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
             PokerNumberField(
-                value = weight,
+                value = row.weight,
                 onValueChange = onWeightChange,
                 label = "",
                 minValue = 1,
                 maxValue = MAX_WEIGHT_VALUE,
                 isLocked = isLocked,
-                modifier = Modifier.width(80.dp)
+                modifier = Modifier.width(72.dp)
             )
         }
     }
 }
+
+private const val THIRD_PLACE = 3

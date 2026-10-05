@@ -2,6 +2,12 @@ package com.huntercoles.pokerpayout.bank.presentation
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.huntercoles.pokerpayout.core.constants.TournamentConstants
+import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
+import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
+import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
@@ -46,13 +52,14 @@ class BankViewModelWeightsTest {
         Dispatchers.resetMain()
     }
 
-    private fun newViewModel() = BankViewModel(tournamentPreferences, bankPreferences, timerPreferences)
-        .also { testDispatcher.scheduler.advanceUntilIdle() }
+    private fun newViewModel() = BankViewModel(
+        tournamentPreferences,
+        bankPreferences,
+        timerPreferences,
+        SettleTournamentUseCase(CalculatePayoutsUseCase())
+    ).also { testDispatcher.scheduler.advanceUntilIdle() }
 
-    private fun assertAmounts(expected: List<Double>, actual: List<Double>) {
-        assertEquals("count of $actual", expected.size, actual.size)
-        expected.zip(actual).forEach { (e, a) -> assertEquals("in $actual", e, a, 1e-9) }
-    }
+    private val BankViewModel.amounts get() = uiState.value.payoutTable.places.map { it.amountCents }
 
     private fun BankViewModel.send(vararg intents: BankIntent) {
         intents.forEach { acceptIntent(it) }
@@ -83,9 +90,9 @@ class BankViewModelWeightsTest {
         assertEquals(listOf(40, 30, 20, 10), state.payoutWeights)
         assertEquals(listOf(40, 30, 20, 10), tournamentPreferences.getPayoutWeights())
         // Prize pool 5 x 20 = 100
-        assertAmounts(listOf(40.0, 30.0, 20.0, 10.0), state.payoutPositions.map { it.payout })
-        assertEquals(listOf("40%", "30%", "20%", "10%"), state.payoutPositions.map { it.formattedPercentage })
-        assertEquals(listOf("st", "nd", "rd", "th"), state.payoutPositions.map { it.positionSuffix })
+        assertEquals(listOf(4_000L, 3_000L, 2_000L, 1_000L), viewModel.amounts)
+        assertEquals(listOf(40.0, 30.0, 20.0, 10.0), state.payoutTable.places.map { it.sharePercent })
+        assertEquals(listOf("1st", "2nd", "3rd", "4th"), state.payoutTable.places.map { it.ordinal })
     }
 
     @Test
@@ -97,8 +104,8 @@ class BankViewModelWeightsTest {
         viewModel.send(BankIntent.UpdateWeights(listOf(35, 20, 15, 10, 8, 6, 4, 2)))
 
         val state = viewModel.uiState.value
-        assertEquals(330.0, state.prizePool, 0.001)
-        assertEquals(state.prizePool, state.payoutPositions.sumOf { it.payout }, 1e-9)
+        assertEquals(33_000L, state.prizePoolCents)
+        assertEquals(state.prizePoolCents, state.payoutTable.totalCents)
     }
 
     @Test
@@ -131,7 +138,7 @@ class BankViewModelWeightsTest {
         val state = viewModel.uiState.value
         assertFalse(state.players.first { it.id == 1 }.buyIn)
         assertEquals("Player 2", state.players.first { it.id == 2 }.name)
-        assertEquals(0.0, state.totalPaidIn, 0.001)
+        assertEquals(0L, state.totalPaidInCents)
         // Weights belong to the Tournament tab, which has its own reset
         assertEquals(listOf(50, 30, 20), state.payoutWeights)
     }
@@ -180,6 +187,38 @@ class BankViewModelWeightsTest {
 
         viewModel.send(BankIntent.UpdateWeights(listOf(50, 50)))
 
-        assertAmounts(listOf(50.0, 50.0), viewModel.uiState.value.payoutPositions.map { it.payout })
+        assertEquals(listOf(5_000L, 5_000L), viewModel.amounts)
+    }
+
+    @Test
+    fun `custom weights never pay more places than there are players`() {
+        // 5 players, 9 weights (PP-016)
+        val viewModel = newViewModel()
+
+        viewModel.send(BankIntent.UpdateWeights(TournamentConstants.DEFAULT_PAYOUT_WEIGHTS))
+
+        assertEquals(5, viewModel.uiState.value.payoutTable.places.size)
+        assertEquals(10_000L, viewModel.uiState.value.payoutTable.totalCents)
+    }
+
+    @Test
+    fun `the payout editor saves preset and rounding from the bank`() {
+        tournamentPreferences.setPlayerCount(10)
+        tournamentPreferences.setBuyIn(23.0)
+        val viewModel = newViewModel()
+
+        viewModel.send(
+            BankIntent.ShowWeightsDialog,
+            BankIntent.UpdatePayoutSettings(
+                PayoutSettings(listOf(50, 24, 13, 8, 5), PayoutPreset.TOP_HEAVY, PayoutRounding.FIVE_DOLLARS)
+            )
+        )
+
+        val state = viewModel.uiState.value
+        assertFalse(state.showWeightsDialog)
+        assertEquals(PayoutPreset.TOP_HEAVY, state.payoutSettings.preset)
+        assertEquals(PayoutRounding.FIVE_DOLLARS, tournamentPreferences.getPayoutRounding())
+        // $230 at $5: 2nd 55.20 -> 55, 3rd 29.90 -> 30, 4th 18.40 -> 20, 5th 11.50 -> 10, 1st 115
+        assertEquals(listOf(11_500L, 5_500L, 3_000L, 2_000L, 1_000L), viewModel.amounts)
     }
 }

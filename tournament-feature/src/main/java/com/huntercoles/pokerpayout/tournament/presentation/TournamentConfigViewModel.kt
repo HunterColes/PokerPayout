@@ -2,14 +2,19 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.huntercoles.pokerpayout.tournament.domain.usecase.CalculatePayoutsUseCase
+import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
+import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
+import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
+import com.huntercoles.pokerpayout.core.domain.model.Standings
+import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
-import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
+import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -31,47 +36,52 @@ class TournamentConfigViewModel @Inject constructor(
         // Listen for tournament lock state changes
         viewModelScope.launch {
             tournamentPreferences.tournamentLocked.collect { isLocked ->
-                _uiState.value = _uiState.value.copy(
-                    isTournamentLocked = isLocked
-                )
+                _uiState.update { it.copy(isTournamentLocked = isLocked) }
             }
         }
 
         // Listen for config expanded state changes
         viewModelScope.launch {
             tournamentPreferences.isConfigExpanded.collect { isExpanded ->
-                _uiState.value = _uiState.value.copy(isConfigExpanded = isExpanded)
+                _uiState.update { it.copy(isConfigExpanded = isExpanded) }
             }
         }
 
+        // The pool and the payout table follow every settings change (including the Bank's
+        // weights editor) and every purchase or knockout recorded in the Bank.
         viewModelScope.launch {
-            bankPreferences.eliminationOrder.collect { order ->
-                refreshLeaderboard(order)
-            }
+            tournamentPreferences.config.collect { refreshPayouts() }
         }
-
         viewModelScope.launch {
-            bankPreferences.totalRebuys.collect { count ->
-                updatePurchaseCounts(rebuyCount = count)
-            }
-        }
-
-        viewModelScope.launch {
-            bankPreferences.totalAddons.collect { count ->
-                updatePurchaseCounts(addOnCount = count)
-            }
+            bankPreferences.revision.collect { refreshPayouts() }
         }
     }
 
     fun acceptIntent(intent: TournamentConfigIntent) {
         when (intent) {
             is TournamentConfigIntent.UpdatePlayerCount -> updatePlayerCount(intent.count)
-            is TournamentConfigIntent.UpdateBuyIn -> updateBuyIn(intent.buyIn)
-            is TournamentConfigIntent.UpdateFoodPerPlayer -> updateFoodPerPlayer(intent.food)
-            is TournamentConfigIntent.UpdateBountyPerPlayer -> updateBountyPerPlayer(intent.bounty)
-            is TournamentConfigIntent.UpdateRebuyAmount -> updateRebuyPerPlayer(intent.rebuy)
-            is TournamentConfigIntent.UpdateAddOnAmount -> updateAddOnPerPlayer(intent.addOn)
+            is TournamentConfigIntent.UpdateBuyIn -> updateSettings { setBuyInCents(intent.cents) }
+            is TournamentConfigIntent.UpdateFoodPerPlayer -> updateSettings { setFoodCents(intent.cents) }
+            is TournamentConfigIntent.UpdateBountyPerPlayer -> updateSettings { setBountyCents(intent.cents) }
+            is TournamentConfigIntent.UpdateRebuyAmount -> updatePurchaseAmount(PurchaseKind.REBUY, intent.cents)
+            is TournamentConfigIntent.UpdateAddOnAmount -> updatePurchaseAmount(PurchaseKind.ADD_ON, intent.cents)
+            is TournamentConfigIntent.CommitRebuyAmount ->
+                commitPurchaseAmount(PurchaseKind.REBUY, intent.cents, intent.centsBeforeEdit)
+            is TournamentConfigIntent.CommitAddOnAmount ->
+                commitPurchaseAmount(PurchaseKind.ADD_ON, intent.cents, intent.centsBeforeEdit)
+            TournamentConfigIntent.ConfirmClearPurchases -> confirmClearPurchases()
+            TournamentConfigIntent.DismissClearPurchases -> keepPurchases()
             is TournamentConfigIntent.UpdateWeights -> updateWeights(intent.weights)
+            is TournamentConfigIntent.UpdatePayoutSettings -> {
+                _uiState.update { it.copy(showWeightsEditor = false) }
+                updateSettings { setPayoutSettings(intent.settings) }
+            }
+            is TournamentConfigIntent.ApplyPayoutPreset -> applyPreset(intent.preset, currentPaidPlaces())
+            is TournamentConfigIntent.SetPaidPlaces ->
+                applyPreset(_uiState.value.payoutPreset ?: PayoutPreset.DEFAULT, intent.places)
+            is TournamentConfigIntent.UpdatePayoutRounding -> updateSettings { setPayoutRounding(intent.rounding) }
+            TournamentConfigIntent.ShowWeightsEditor -> _uiState.update { it.copy(showWeightsEditor = true) }
+            TournamentConfigIntent.HideWeightsEditor -> _uiState.update { it.copy(showWeightsEditor = false) }
             is TournamentConfigIntent.ToggleConfigExpanded -> toggleConfigExpanded(intent.isExpanded)
             is TournamentConfigIntent.ToggleBlindConfigExpanded -> toggleBlindConfigExpanded(intent.isExpanded)
             is TournamentConfigIntent.UpdateGameDurationHours -> updateGameDurationHours(intent.hours)
@@ -86,125 +96,154 @@ class TournamentConfigViewModel @Inject constructor(
     }
 
     private fun loadTournamentConfiguration() {
-        val savedPlayerCount = tournamentPreferences.getPlayerCount()
-        val savedBuyIn = tournamentPreferences.getBuyIn()
-        val savedFood = tournamentPreferences.getFoodPerPlayer()
-        val savedBounty = tournamentPreferences.getBountyPerPlayer()
-        val savedRebuy = tournamentPreferences.getRebuyAmount()
-        val savedAddOn = tournamentPreferences.getAddOnAmount()
-        val savedWeights = tournamentPreferences.getPayoutWeights()
-        val savedGameDurationHours = tournamentPreferences.getGameDurationHours()
-        val savedRoundLength = tournamentPreferences.getRoundLengthMinutes()
-        val savedSmallestChip = tournamentPreferences.getSmallestChip()
-        val savedStartingChips = tournamentPreferences.getStartingChips()
-        val savedSelectedPanel = tournamentPreferences.getSelectedPanel()
-        val savedIsConfigExpanded = tournamentPreferences.getIsConfigExpanded()
+        _uiState.update {
+            it.copy(
+                gameDurationHours = tournamentPreferences.getGameDurationHours(),
+                roundLengthMinutes = tournamentPreferences.getRoundLengthMinutes(),
+                smallestChip = tournamentPreferences.getSmallestChip(),
+                startingChips = tournamentPreferences.getStartingChips(),
+                selectedPanel = tournamentPreferences.getSelectedPanel(),
+                isConfigExpanded = tournamentPreferences.getIsConfigExpanded()
+            )
+        }
+        bankPreferences.removePlayersAbove(tournamentPreferences.getPlayerCount())
+        refreshPayouts()
+    }
 
-        val initialConfig = _uiState.value.tournamentConfig.copy(
-            numPlayers = savedPlayerCount,
-            buyIn = savedBuyIn,
-            foodPerPlayer = savedFood,
-            bountyPerPlayer = savedBounty,
-            payoutWeights = savedWeights
+    /** Recomputes the pool, the payout table and who holds each decided place. */
+    private fun refreshPayouts() {
+        val config = tournamentPreferences.getCurrentTournamentConfig()
+        val rebuys = bankPreferences.getTotalRebuyCount()
+        val addOns = bankPreferences.getTotalAddonCount()
+        val pool = PoolBreakdown.of(config.money, config.numPlayers, rebuys, addOns)
+        val table = calculatePayoutsUseCase(
+            prizePoolCents = pool.prizePoolCents,
+            weights = config.payoutWeights,
+            playerCount = config.numPlayers,
+            rounding = config.payoutRounding
         )
-        // include rebuy and add-on in the initial config
-        val withRebuy = initialConfig.copy(rebuyPerPlayer = savedRebuy, addOnPerPlayer = savedAddOn)
-        val initialRebuyCount = bankPreferences.getTotalRebuyCount()
-        val initialAddOnCount = bankPreferences.getTotalAddonCount()
-        _uiState.value = _uiState.value.copy(
-            tournamentConfig = withRebuy,
-            rebuyPurchases = initialRebuyCount,
-            addOnPurchases = initialAddOnCount,
-            gameDurationHours = savedGameDurationHours,
-            roundLengthMinutes = savedRoundLength,
-            smallestChip = savedSmallestChip,
-            startingChips = savedStartingChips,
-            selectedPanel = savedSelectedPanel,
-            isConfigExpanded = savedIsConfigExpanded
-        )
-        calculatePayouts()
+        val standings = Standings((1..config.numPlayers).toList(), bankPreferences.getEliminationOrder())
+        val placeNames = table.places.mapNotNull { row ->
+            standings.playerAt(row.place)?.let { playerId -> row.place to bankPreferences.getPlayerName(playerId) }
+        }.toMap()
+
+        _uiState.update {
+            it.copy(
+                config = config,
+                pool = pool,
+                payoutTable = table,
+                payoutPreset = tournamentPreferences.getPayoutPreset(),
+                recommendedPlaces = PayoutPlaces.recommended(config.numPlayers),
+                placeNames = placeNames,
+                rebuyPurchases = rebuys,
+                addOnPurchases = addOns
+            )
+        }
     }
 
     private fun updatePlayerCount(count: Int) {
         tournamentPreferences.setPlayerCount(count)
-        val updatedWeights = tournamentPreferences.getPayoutWeights()
-
-        val newConfig = _uiState.value.tournamentConfig.copy(
-            numPlayers = count,
-            payoutWeights = updatedWeights
-        )
-        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
-        calculatePayouts()
+        // Removed players are gone for good, in the Bank too (they used to come back after a restart).
+        bankPreferences.removePlayersAbove(count)
+        refreshPayouts()
     }
 
-    private fun updateBuyIn(buyIn: Double) {
-        val newConfig = _uiState.value.tournamentConfig.copy(buyIn = buyIn)
-        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
-        // Save to shared preferences
-        tournamentPreferences.setBuyIn(buyIn)
-        calculatePayouts()
+    private inline fun updateSettings(write: TournamentPreferences.() -> Unit) {
+        tournamentPreferences.write()
+        refreshPayouts()
     }
 
-    private fun updateFoodPerPlayer(food: Double) {
-        val newConfig = _uiState.value.tournamentConfig.copy(foodPerPlayer = food)
-        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
-        // Save to shared preferences
-        tournamentPreferences.setFoodPerPlayer(food)
-        calculatePayouts()
+    private fun purchaseCount(kind: PurchaseKind): Int = when (kind) {
+        PurchaseKind.REBUY -> _uiState.value.rebuyPurchases
+        PurchaseKind.ADD_ON -> _uiState.value.addOnPurchases
     }
 
-    private fun updateBountyPerPlayer(bounty: Double) {
-        val newConfig = _uiState.value.tournamentConfig.copy(bountyPerPlayer = bounty)
-        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
-        // Save to shared preferences
-        tournamentPreferences.setBountyPerPlayer(bounty)
-        calculatePayouts()
+    private fun savedAmount(kind: PurchaseKind): Long = when (kind) {
+        PurchaseKind.REBUY -> tournamentPreferences.getMoneySettings().rebuyCents
+        PurchaseKind.ADD_ON -> tournamentPreferences.getMoneySettings().addOnCents
     }
 
-    private fun updateRebuyPerPlayer(rebuy: Double) {
-        val newConfig = _uiState.value.tournamentConfig.copy(rebuyPerPlayer = rebuy)
-        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
-        // Save to shared preferences
-        tournamentPreferences.setRebuyAmount(rebuy)
-        if (rebuy <= 0.0) {
-            bankPreferences.clearAllRebuys()
+    private fun saveAmount(kind: PurchaseKind, cents: Long) = updateSettings {
+        when (kind) {
+            PurchaseKind.REBUY -> setRebuyCents(cents)
+            PurchaseKind.ADD_ON -> setAddOnCents(cents)
         }
-        calculatePayouts()
     }
 
-    private fun updateAddOnPerPlayer(addOn: Double) {
-        val newConfig = _uiState.value.tournamentConfig.copy(addOnPerPlayer = addOn)
-        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
-        // Save to shared preferences
-        tournamentPreferences.setAddOnAmount(addOn)
-        if (addOn <= 0.0) {
-            bankPreferences.clearAllAddons()
+    /**
+     * An amount typed into the Rebuy or Add-on field. A zero while purchases are recorded is not
+     * saved: it is usually the field being cleared to type a new amount. Leaving the field at zero
+     * asks first ([commitPurchaseAmount]).
+     */
+    private fun updatePurchaseAmount(kind: PurchaseKind, cents: Long) {
+        if (cents > 0L || purchaseCount(kind) == 0) {
+            saveAmount(kind, cents)
         }
-        calculatePayouts()
+    }
+
+    /**
+     * The Rebuy or Add-on field was left at [cents]. Leaving it at zero while purchases are recorded
+     * asks first; "Keep" puts back [centsBeforeEdit], since backspacing "15" saved "1" on the way.
+     */
+    private fun commitPurchaseAmount(kind: PurchaseKind, cents: Long, centsBeforeEdit: Long) {
+        val count = purchaseCount(kind)
+        if (cents == 0L && count > 0) {
+            val kept = centsBeforeEdit.takeIf { it > 0L } ?: savedAmount(kind)
+            _uiState.update { it.copy(purchaseClearPrompt = PurchaseClearPrompt(kind, count, keptAmountCents = kept)) }
+        } else {
+            updatePurchaseAmount(kind, cents)
+        }
+    }
+
+    /** "Keep": the purchases stay and so does the amount from before the edit. */
+    private fun keepPurchases() {
+        val prompt = _uiState.value.purchaseClearPrompt ?: return
+        _uiState.update { it.copy(purchaseClearPrompt = null) }
+        if (prompt.keptAmountCents > 0L && prompt.keptAmountCents != savedAmount(prompt.kind)) {
+            saveAmount(prompt.kind, prompt.keptAmountCents)
+        }
+    }
+
+    /** The user confirmed: the amount goes to zero and the recorded purchases are cleared. */
+    private fun confirmClearPurchases() {
+        val prompt = _uiState.value.purchaseClearPrompt ?: return
+        when (prompt.kind) {
+            PurchaseKind.REBUY -> bankPreferences.clearAllRebuys()
+            PurchaseKind.ADD_ON -> bankPreferences.clearAllAddons()
+        }
+        _uiState.update { it.copy(purchaseClearPrompt = null) }
+        saveAmount(prompt.kind, 0L)
+    }
+
+    private fun currentPaidPlaces(): Int =
+        _uiState.value.paidPlaces.takeIf { it > 0 } ?: PayoutPlaces.recommended(_uiState.value.playerCount)
+
+    private fun applyPreset(preset: PayoutPreset, places: Int) {
+        val maxPlaces = PayoutPlaces.maxFor(_uiState.value.playerCount)
+        tournamentPreferences.setPayoutPreset(preset, places.coerceIn(1, maxPlaces))
+        refreshPayouts()
     }
 
     private fun updateWeights(weights: List<Int>) {
-        val newConfig = _uiState.value.tournamentConfig.copy(payoutWeights = weights)
-        _uiState.value = _uiState.value.copy(tournamentConfig = newConfig)
-        // Save to shared preferences
         tournamentPreferences.setPayoutWeights(weights)
-        calculatePayouts()
+        _uiState.update { it.copy(showWeightsEditor = false) }
+        refreshPayouts()
     }
 
     private fun toggleConfigExpanded(isExpanded: Boolean) {
         tournamentPreferences.setIsConfigExpanded(isExpanded)
-        _uiState.value = _uiState.value.copy(isConfigExpanded = isExpanded)
+        _uiState.update { it.copy(isConfigExpanded = isExpanded) }
     }
 
     private fun showResetDialog() {
         // Only show dialog if not already in default state
         if (!isInDefaultState()) {
-            _uiState.value = _uiState.value.copy(showResetDialog = true)
+            _uiState.update { it.copy(showResetDialog = true) }
         }
     }
 
     private fun hideResetDialog() {
-        _uiState.value = _uiState.value.copy(showResetDialog = false)
+        _uiState.update { it.copy(showResetDialog = false) }
     }
 
     private fun isInDefaultState(): Boolean {
@@ -222,147 +261,71 @@ class TournamentConfigViewModel @Inject constructor(
 
     private fun confirmReset() {
         resetAllData()
-        _uiState.value = _uiState.value.copy(showResetDialog = false)
+        _uiState.update { it.copy(showResetDialog = false) }
     }
 
     private fun resetAllData() {
         // Preserve current selected panel
         val currentSelectedPanel = _uiState.value.selectedPanel
-        
+
+        // The reset sets the rebuy and add-on amounts to zero; the dialog said the purchases
+        // recorded at the old amounts go too, so the Bank never holds purchases worth nothing.
+        if (_uiState.value.rebuyPurchases > 0) bankPreferences.clearAllRebuys()
+        if (_uiState.value.addOnPurchases > 0) bankPreferences.clearAllAddons()
+
         tournamentPreferences.resetAllTournamentData()
         timerPreferences.resetAllTimerData()
-        
+
         // Restore the selected panel to what it was before reset
         tournamentPreferences.setSelectedPanel(currentSelectedPanel)
-        
+
         // Reload tournament configuration from preferences
         loadTournamentConfiguration()
 
         // Reset UI-only blind-related fields to their defaults. Use timer preference for duration.
         val defaultUi = TournamentConfigUiState()
-        val defaultHours = (timerPreferences.getGameDurationMinutes() / 60).coerceAtLeast(1)
-        _uiState.value = _uiState.value.copy(
-            gameDurationHours = defaultHours,
-            roundLengthMinutes = defaultUi.roundLengthMinutes,
-            smallestChip = defaultUi.smallestChip,
-            startingChips = defaultUi.startingChips,
-            selectedPanel = currentSelectedPanel // Preserve the selected panel
-        )
-    }
-
-    private fun calculatePayouts() {
-        viewModelScope.launch {
-            val currentState = _uiState.value
-            _uiState.value = currentState.copy(isLoading = true)
-
-            val stateForCalculation = _uiState.value
-            val rebuyPool = stateForCalculation.tournamentConfig.rebuyPerPlayer * stateForCalculation.rebuyPurchases
-            val addOnPool = stateForCalculation.tournamentConfig.addOnPerPlayer * stateForCalculation.addOnPurchases
-            val prizePoolOverride = stateForCalculation.tournamentConfig.prizePool + rebuyPool + addOnPool
-            val adjustedConfig = if (stateForCalculation.tournamentConfig.numPlayers > 0) {
-                stateForCalculation.tournamentConfig.copy(
-                    buyIn = prizePoolOverride / stateForCalculation.tournamentConfig.numPlayers
-                )
-            } else {
-                stateForCalculation.tournamentConfig
-            }
-
-            val payouts = calculatePayoutsUseCase(adjustedConfig)
-
-            _uiState.value = stateForCalculation.copy(
-                payouts = payouts,
-                isLoading = false
+        val defaultHours = (timerPreferences.getGameDurationMinutes() / MINUTES_PER_HOUR).coerceAtLeast(1)
+        _uiState.update {
+            it.copy(
+                gameDurationHours = defaultHours,
+                roundLengthMinutes = defaultUi.roundLengthMinutes,
+                smallestChip = defaultUi.smallestChip,
+                startingChips = defaultUi.startingChips,
+                selectedPanel = currentSelectedPanel // Preserve the selected panel
             )
-
-            refreshLeaderboard()
         }
-    }
-
-    private fun updatePurchaseCounts(rebuyCount: Int? = null, addOnCount: Int? = null) {
-        val currentState = _uiState.value
-        val updatedState = currentState.copy(
-            rebuyPurchases = rebuyCount ?: currentState.rebuyPurchases,
-            addOnPurchases = addOnCount ?: currentState.addOnPurchases
-        )
-        if (updatedState != currentState) {
-            _uiState.value = updatedState
-            calculatePayouts()
-        }
-    }
-
-    private fun refreshLeaderboard(eliminationOrderOverride: List<Int>? = null) {
-        val payouts = _uiState.value.payouts
-        if (payouts.isEmpty()) {
-            if (_uiState.value.leaderboardNames.isNotEmpty()) {
-                _uiState.value = _uiState.value.copy(leaderboardNames = emptyMap())
-            }
-            return
-        }
-
-        val numPlayers = _uiState.value.tournamentConfig.numPlayers
-        if (numPlayers <= 0) {
-            _uiState.value = _uiState.value.copy(leaderboardNames = emptyMap())
-            return
-        }
-
-        val eliminationOrder = (eliminationOrderOverride ?: bankPreferences.getEliminationOrder())
-            .filter { it in 1..numPlayers }
-            .distinct()
-
-        val leaderboard = mutableMapOf<Int, String>()
-        val eliminationSet = eliminationOrder.toSet()
-
-        payouts.forEach { payout ->
-            val playerId = determinePlayerForPosition(payout.position, numPlayers, eliminationOrder)
-            if (playerId != null) {
-                val name = bankPreferences.getPlayerName(playerId).takeIf { it.isNotBlank() }
-                if (name != null) {
-                    leaderboard[payout.position] = name
-                }
-            }
-        }
-
-        _uiState.value = _uiState.value.copy(leaderboardNames = leaderboard)
     }
 
     private fun toggleBlindConfigExpanded(isExpanded: Boolean) {
-        _uiState.value = _uiState.value.copy(isBlindConfigExpanded = isExpanded)
+        _uiState.update { it.copy(isBlindConfigExpanded = isExpanded) }
     }
 
     private fun updateGameDurationHours(hours: Int) {
-        _uiState.value = _uiState.value.copy(gameDurationHours = hours)
+        _uiState.update { it.copy(gameDurationHours = hours) }
         tournamentPreferences.setGameDurationHours(hours)
     }
 
     private fun updateRoundLength(minutes: Int) {
-        _uiState.value = _uiState.value.copy(roundLengthMinutes = minutes)
+        _uiState.update { it.copy(roundLengthMinutes = minutes) }
         tournamentPreferences.setRoundLengthMinutes(minutes)
     }
 
     private fun updateSmallestChip(chip: Int) {
-        _uiState.value = _uiState.value.copy(smallestChip = chip)
+        _uiState.update { it.copy(smallestChip = chip) }
         tournamentPreferences.setSmallestChip(chip)
     }
 
     private fun updateStartingChips(chips: Int) {
-        _uiState.value = _uiState.value.copy(startingChips = chips)
+        _uiState.update { it.copy(startingChips = chips) }
         tournamentPreferences.setStartingChips(chips)
     }
 
     private fun updateSelectedPanel(panel: String) {
-        _uiState.value = _uiState.value.copy(selectedPanel = panel)
+        _uiState.update { it.copy(selectedPanel = panel) }
         tournamentPreferences.setSelectedPanel(panel)
     }
 
-    private fun determinePlayerForPosition(position: Int, numPlayers: Int, eliminationOrder: List<Int>): Int? {
-        // If we don't have enough eliminations recorded for this position, return null
-        if (eliminationOrder.size < position) {
-            return null
-        }
-
-        // Position 1 (1st place) is the last player eliminated (winner)
-        // Position 2 (2nd place) is the second-to-last, etc.
-        val index = eliminationOrder.size - position
-        return eliminationOrder.getOrNull(index)
+    private companion object {
+        const val MINUTES_PER_HOUR = 60
     }
 }

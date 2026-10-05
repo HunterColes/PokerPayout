@@ -3,185 +3,31 @@ package com.huntercoles.pokerpayout.tournament.presentation.composable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.TextSelectionColors
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.huntercoles.pokerpayout.tournament.domain.model.PayoutPosition
-import com.huntercoles.pokerpayout.tournament.domain.model.TournamentConfig
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.components.PokerNumberField
-import com.huntercoles.pokerpayout.core.design.components.PokerTextFieldDefaults
-import com.huntercoles.pokerpayout.core.utils.FormatUtils
+import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigIntent
-
-/**
- * Validates decimal input to only allow digits and one decimal point
- */
-private fun isValidDecimalInput(text: String): Boolean {
-    if (text.isEmpty()) return true
-    
-    // Check if it contains only digits and at most one decimal point
-    val decimalCount = text.count { it == '.' }
-    if (decimalCount > 1) return false
-    
-    // Check if all characters are digits or decimal point
-    return text.all { it.isDigit() || it == '.' }
-}
-
-/**
- * Formats a double value to avoid scientific notation
- */
-private fun formatDecimal(value: Double): String {
-    return if (value == value.toLong().toDouble()) {
-        // It's a whole number
-        value.toLong().toString()
-    } else {
-        // Format with appropriate decimal places, avoiding scientific notation
-        FormatUtils.formatDecimal(value)
-    }
-}
-
-/**
- * Custom OutlinedTextField for decimal values that positions cursor before decimal point
- */
-@Composable
-private fun DecimalTextField(
-    value: Double,
-    onValueChange: (Double) -> Unit,
-    label: String,
-    isLocked: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val focusManager = LocalFocusManager.current
-    
-    var textFieldValue by remember(value) {
-        val text = if (value == 0.0) "" else formatDecimal(value)
-        val decimalIndex = text.indexOf('.')
-        val cursorPosition = if (decimalIndex > 0) decimalIndex else text.length
-        mutableStateOf(TextFieldValue(text = text, selection = TextRange(cursorPosition)))
-    }
-    
-    var isFocused by remember { mutableStateOf(false) }
-    var hasAutoPositionedThisFocus by remember { mutableStateOf(false) }
-
-    // Update text when value prop changes (from persistence/page switching)
-    LaunchedEffect(value) {
-        val newText = if (value == 0.0) "" else formatDecimal(value)
-        if (newText != textFieldValue.text) {
-            val decimalIndex = newText.indexOf('.')
-            val cursorPosition = if (decimalIndex > 0) decimalIndex else newText.length
-            textFieldValue = TextFieldValue(text = newText, selection = TextRange(cursorPosition))
-        }
-    }
-
-    OutlinedTextField(
-        value = textFieldValue,
-        onValueChange = { newTextFieldValue ->
-            val newText = newTextFieldValue.text
-            
-            // Validate input: only allow digits, one decimal point, and reasonable length
-            if (isValidDecimalInput(newText)) {
-                val decimalIndex = newText.indexOf('.')
-                val idealPosition = if (decimalIndex > 0) decimalIndex else newText.length
-                
-                // Only auto-position if this is a cursor movement (not text change) and we haven't done it yet this focus
-                val isTextChange = newText != textFieldValue.text
-                val isCursorMovement = !isTextChange && newTextFieldValue.selection != textFieldValue.selection
-                
-                val updatedValue = if (isFocused && 
-                                       !hasAutoPositionedThisFocus && 
-                                       isCursorMovement &&
-                                       newTextFieldValue.selection.collapsed &&
-                                       newTextFieldValue.selection.start != idealPosition) {
-                    hasAutoPositionedThisFocus = true
-                    newTextFieldValue.copy(selection = TextRange(idealPosition))
-                } else {
-                    newTextFieldValue
-                }
-                
-                textFieldValue = updatedValue
-                
-                // Only call onValueChange for actual text changes
-                if (isTextChange) {
-                    val doubleValue = newText.toDoubleOrNull() ?: 0.0
-                    // Cap at 999,999,999
-                    val cappedValue = minOf(doubleValue, 999_999_999.0)
-                    if (cappedValue != doubleValue) {
-                        // If we had to cap it, update the text field
-                        val cappedText = formatDecimal(cappedValue)
-                        textFieldValue = textFieldValue.copy(text = cappedText)
-                    }
-                    onValueChange(cappedValue)
-                }
-            }
-        },
-        label = {
-            Text(
-                label,
-                color = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
-                fontSize = 13.sp,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-            )
-        },
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Decimal,
-            imeAction = ImeAction.Done
-        ),
-        keyboardActions = KeyboardActions(
-            onDone = { focusManager.clearFocus() }
-        ),
-        singleLine = true,
-        enabled = !isLocked,
-        colors = PokerTextFieldDefaults.colors(isLocked = isLocked),
-        modifier = modifier
-            .onPreviewKeyEvent { event ->
-                val isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter
-                if (!isEnter) return@onPreviewKeyEvent false
-
-                when (event.type) {
-                    KeyEventType.KeyUp -> {
-                        focusManager.clearFocus(force = true)
-                        true
-                    }
-                    KeyEventType.KeyDown -> true
-                    else -> false
-                }
-            }
-            .onFocusChanged { focusState ->
-            val wasFocused = isFocused
-            isFocused = focusState.isFocused
-            
-            // Reset auto-position flag when gaining focus
-            if (!wasFocused && isFocused) {
-                hasAutoPositionedThisFocus = false
-            }
-        }
-    )
-}
+import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiState
 
 @Composable
 fun FolderTab(
@@ -192,7 +38,7 @@ fun FolderTab(
 ) {
     Box(
         modifier = modifier
-            .widthIn(min = 120.dp, max = 160.dp)
+            .widthIn(max = 160.dp)
             .height(48.dp)
             .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }
@@ -224,257 +70,232 @@ fun FolderTab(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+private const val PANEL_PLAYER = "player"
+private const val PANEL_BLINDS = "blinds"
+private const val PANEL_PAYOUTS = "payouts"
+
+/** The player slider, then the Player / Blinds / Payouts folder tabs and the selected panel. */
 @Composable
 fun PoolConfigurationSection(
-    buyIn: Double,
-    foodPerPlayer: Double,
-    bountyPerPlayer: Double,
-    rebuyPerPlayer: Double,
-    addOnPerPlayer: Double,
-    onBuyInChange: (Double) -> Unit,
-    onFoodChange: (Double) -> Unit,
-    onBountyChange: (Double) -> Unit,
-    onRebuyChange: (Double) -> Unit,
-    onAddOnChange: (Double) -> Unit,
-    playerCount: Int,
-    onPlayerCountChange: (Int) -> Unit,
-    gameDurationHours: Int,
-    roundLengthMinutes: Int,
-    smallestChip: Int,
-    startingChips: Int,
-    onGameDurationHoursChange: (Int) -> Unit,
-    onRoundLengthChange: (Int) -> Unit,
-    onSmallestChipChange: (Int) -> Unit,
-    onStartingChipsChange: (Int) -> Unit,
-    selectedPanel: String,
+    uiState: TournamentConfigUiState,
     onIntent: (TournamentConfigIntent) -> Unit,
-    isLocked: Boolean = false,
+    onTimerIntent: (TimerIntent) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isLocked = uiState.isTournamentLocked
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Player Count Slider (moved to top)
         PlayerCountSlider(
-            playerCount = playerCount,
-            onPlayerCountChange = onPlayerCountChange,
+            playerCount = uiState.playerCount,
+            onPlayerCountChange = { onIntent(TournamentConfigIntent.UpdatePlayerCount(it)) },
             isLocked = isLocked
         )
 
         // Tabs and content grouped together with no spacing between them
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // Folder Tabs positioned above the content box
+        Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                FolderTab(
-                    text = "Player",
-                    isSelected = selectedPanel == "player",
-                    onClick = { onIntent(TournamentConfigIntent.UpdateSelectedPanel("player")) },
-                    modifier = Modifier
-                )
-                FolderTab(
-                    text = "Blinds",
-                    isSelected = selectedPanel == "blinds",
-                    onClick = { onIntent(TournamentConfigIntent.UpdateSelectedPanel("blinds")) },
-                    modifier = Modifier
-                )
+                listOf(PANEL_PLAYER to "Player", PANEL_BLINDS to "Blinds", PANEL_PAYOUTS to "Payouts")
+                    .forEach { (panel, title) ->
+                        FolderTab(
+                            text = title,
+                            isSelected = uiState.selectedPanel == panel,
+                            onClick = { onIntent(TournamentConfigIntent.UpdateSelectedPanel(panel)) },
+                            // Three tabs share the width; at a fixed 120+ dp each the third was squeezed
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
             }
 
-            // Content area box below the tabs (no spacing between tabs and content)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 color = PokerColors.SurfaceSecondary.copy(alpha = 0.4f)
             ) {
-            when (selectedPanel) {
-                "player" -> {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            DecimalTextField(
-                                value = buyIn,
-                                onValueChange = { if (!isLocked) onBuyInChange(it) },
-                                label = "Buy-in ($)",
-                                isLocked = isLocked,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            DecimalTextField(
-                                value = foodPerPlayer,
-                                onValueChange = { if (!isLocked) onFoodChange(it) },
-                                label = "Food ($)",
-                                isLocked = isLocked,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            DecimalTextField(
-                                value = bountyPerPlayer,
-                                onValueChange = { if (!isLocked) onBountyChange(it) },
-                                label = "Bounty ($)",
-                                isLocked = isLocked,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            DecimalTextField(
-                                value = rebuyPerPlayer,
-                                onValueChange = { if (!isLocked) onRebuyChange(it) },
-                                label = "Rebuy ($)",
-                                isLocked = isLocked,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            DecimalTextField(
-                                value = addOnPerPlayer,
-                                onValueChange = { if (!isLocked) onAddOnChange(it) },
-                                label = "Add-on ($)",
-                                isLocked = isLocked,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
-                "blinds" -> {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        val focusManager = LocalFocusManager.current
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            PokerNumberField(
-                                value = gameDurationHours,
-                                onValueChange = { hours ->
-                                    val cappedHours = minOf(hours, 24).coerceAtLeast(1)
-                                    if (!isLocked) {
-                                        onGameDurationHoursChange(cappedHours)
-                                    }
-                                },
-                                label = "Duration (Hours)",
-                                isLocked = isLocked,
-                                minValue = 1,
-                                maxValue = 24,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            PokerNumberField(
-                                value = roundLengthMinutes,
-                                onValueChange = { 
-                                    if (!isLocked) {
-                                        onRoundLengthChange(it)
-                                    }
-                                },
-                                label = "Round Length (Min)",
-                                isLocked = isLocked,
-                                minValue = 1,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            PokerNumberField(
-                                value = smallestChip,
-                                onValueChange = { 
-                                    if (!isLocked) {
-                                        onSmallestChipChange(it)
-                                    }
-                                },
-                                label = "Smallest Chip",
-                                isLocked = isLocked,
-                                minValue = 1,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            PokerNumberField(
-                                value = startingChips,
-                                onValueChange = { 
-                                    if (!isLocked) {
-                                        onStartingChipsChange(it)
-                                    }
-                                },
-                                label = "Starting Chips",
-                                isLocked = isLocked,
-                                minValue = 1,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
+                when (uiState.selectedPanel) {
+                    PANEL_BLINDS -> BlindsPanel(uiState, onIntent, onTimerIntent)
+                    PANEL_PAYOUTS -> PayoutsPanel(uiState, onIntent)
+                    else -> PlayerPanel(uiState, onIntent)
                 }
             }
         }
-        }
     }
 }
 
 @Composable
-fun PayoutsList(payouts: List<PayoutPosition>) {
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+private fun PlayerPanel(uiState: TournamentConfigUiState, onIntent: (TournamentConfigIntent) -> Unit) {
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(payouts) { payout ->
-            PayoutItem(payout = payout)
-        }
+        EntryFeeRow(uiState, onIntent)
+        PurchaseRow(uiState, onIntent)
     }
 }
 
 @Composable
-fun PayoutItem(payout: PayoutPosition) {
-    Card(
+private fun EntryFeeRow(uiState: TournamentConfigUiState, onIntent: (TournamentConfigIntent) -> Unit) {
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = PokerColors.FeltGreen),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = payout.formattedPosition,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = PokerColors.CardWhite
-                )
-                Text(
-                    text = payout.formattedPercentage,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = PokerColors.CardWhite
-                )
-            }
-
-            Text(
-                text = payout.formattedPayout,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = PokerColors.PokerGold
-            )
-        }
+        MoneyTextField(
+            valueCents = uiState.money.buyInCents,
+            onAmount = amountHandler({ onIntent(TournamentConfigIntent.UpdateBuyIn(it)) }),
+            label = "Buy-in ($)",
+            isLocked = uiState.isTournamentLocked,
+            modifier = Modifier.weight(1f)
+        )
+        MoneyTextField(
+            valueCents = uiState.money.foodCents,
+            onAmount = amountHandler({ onIntent(TournamentConfigIntent.UpdateFoodPerPlayer(it)) }),
+            label = "Food ($)",
+            isLocked = uiState.isTournamentLocked,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
+
+/** Bounty, rebuy and add-on. Only a committed zero rebuy or add-on can clear purchases (PP-014). */
+@Composable
+private fun PurchaseRow(uiState: TournamentConfigUiState, onIntent: (TournamentConfigIntent) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        MoneyTextField(
+            valueCents = uiState.money.bountyCents,
+            onAmount = amountHandler({ onIntent(TournamentConfigIntent.UpdateBountyPerPlayer(it)) }),
+            label = "Bounty ($)",
+            isLocked = uiState.isTournamentLocked,
+            modifier = Modifier.weight(1f)
+        )
+        MoneyTextField(
+            valueCents = uiState.money.rebuyCents,
+            onAmount = amountHandler(
+                onTyped = { onIntent(TournamentConfigIntent.UpdateRebuyAmount(it)) },
+                onCommitted = { onIntent(TournamentConfigIntent.CommitRebuyAmount(it.cents, it.centsBeforeEdit)) }
+            ),
+            label = "Rebuy ($)",
+            isLocked = uiState.isTournamentLocked,
+            modifier = Modifier.weight(1f)
+        )
+        MoneyTextField(
+            valueCents = uiState.money.addOnCents,
+            onAmount = amountHandler(
+                onTyped = { onIntent(TournamentConfigIntent.UpdateAddOnAmount(it)) },
+                onCommitted = { onIntent(TournamentConfigIntent.CommitAddOnAmount(it.cents, it.centsBeforeEdit)) }
+            ),
+            label = "Add-on ($)",
+            isLocked = uiState.isTournamentLocked,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun BlindsPanel(
+    uiState: TournamentConfigUiState,
+    onIntent: (TournamentConfigIntent) -> Unit,
+    onTimerIntent: (TimerIntent) -> Unit
+) {
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        BlindsTimeRow(uiState, onIntent, onTimerIntent)
+        BlindsChipsRow(uiState, onIntent, onTimerIntent)
+    }
+}
+
+@Composable
+private fun BlindsTimeRow(
+    uiState: TournamentConfigUiState,
+    onIntent: (TournamentConfigIntent) -> Unit,
+    onTimerIntent: (TimerIntent) -> Unit
+) {
+    val isLocked = uiState.isTournamentLocked
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        PokerNumberField(
+            value = uiState.gameDurationHours,
+            onValueChange = { hours ->
+                val cappedHours = hours.coerceIn(1, MAX_DURATION_HOURS)
+                if (!isLocked) {
+                    onIntent(TournamentConfigIntent.UpdateGameDurationHours(cappedHours))
+                    onTimerIntent(TimerIntent.GameDurationHoursChanged(cappedHours))
+                }
+            },
+            label = "Duration (Hours)",
+            isLocked = isLocked,
+            minValue = 1,
+            maxValue = MAX_DURATION_HOURS,
+            modifier = Modifier.weight(1f)
+        )
+
+        PokerNumberField(
+            value = uiState.roundLengthMinutes,
+            onValueChange = { minutes ->
+                if (!isLocked) {
+                    onIntent(TournamentConfigIntent.UpdateRoundLength(minutes))
+                    onTimerIntent(TimerIntent.UpdateRoundLength(minutes))
+                }
+            },
+            label = "Round Length (Min)",
+            isLocked = isLocked,
+            minValue = 1,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun BlindsChipsRow(
+    uiState: TournamentConfigUiState,
+    onIntent: (TournamentConfigIntent) -> Unit,
+    onTimerIntent: (TimerIntent) -> Unit
+) {
+    val isLocked = uiState.isTournamentLocked
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        PokerNumberField(
+            value = uiState.smallestChip,
+            onValueChange = { chip ->
+                if (!isLocked) {
+                    onIntent(TournamentConfigIntent.UpdateSmallestChip(chip))
+                    onTimerIntent(TimerIntent.UpdateSmallestChip(chip))
+                }
+            },
+            label = "Smallest Chip",
+            isLocked = isLocked,
+            minValue = 1,
+            modifier = Modifier.weight(1f)
+        )
+
+        PokerNumberField(
+            value = uiState.startingChips,
+            onValueChange = { chips ->
+                if (!isLocked) {
+                    onIntent(TournamentConfigIntent.UpdateStartingChips(chips))
+                    onTimerIntent(TimerIntent.UpdateStartingChips(chips))
+                }
+            },
+            label = "Starting Chips",
+            isLocked = isLocked,
+            minValue = 1,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+private const val MAX_DURATION_HOURS = 24

@@ -7,6 +7,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 @Singleton
@@ -20,17 +21,23 @@ class BankPreferences @Inject constructor(
     val totalRebuys: Flow<Int> = _totalRebuys.asStateFlow()
     private val _totalAddons = MutableStateFlow(calculateTotalAddons())
     val totalAddons: Flow<Int> = _totalAddons.asStateFlow()
+    private val _revision = MutableStateFlow(0L)
+
+    /** Bumped by every write, so screens that only read the Bank (the Tournament tab) can refresh. */
+    val revision: StateFlow<Long> = _revision.asStateFlow()
     
     fun savePlayerName(playerId: Int, name: String) {
-        prefs.edit().putString("player_name_$playerId", name).apply()
+        prefs.edit().putString("$PLAYER_NAME_PREFIX$playerId", name).apply()
+        changed()
     }
     
     fun getPlayerName(playerId: Int): String {
-        return prefs.getString("player_name_$playerId", "Player $playerId") ?: "Player $playerId"
+        return prefs.getString("$PLAYER_NAME_PREFIX$playerId", "Player $playerId") ?: "Player $playerId"
     }
     
     fun savePlayerBuyInStatus(playerId: Int, buyIn: Boolean) {
         prefs.edit().putBoolean("player_buyin_$playerId", buyIn).apply()
+        changed()
     }
     
     fun getPlayerBuyInStatus(playerId: Int): Boolean {
@@ -39,6 +46,7 @@ class BankPreferences @Inject constructor(
     
     fun savePlayerOutStatus(playerId: Int, out: Boolean) {
         prefs.edit().putBoolean("player_out_$playerId", out).apply()
+        changed()
     }
     
     fun getPlayerOutStatus(playerId: Int): Boolean {
@@ -47,6 +55,7 @@ class BankPreferences @Inject constructor(
     
     fun savePlayerPayedOutStatus(playerId: Int, payedOut: Boolean) {
         prefs.edit().putBoolean("player_payedout_$playerId", payedOut).apply()
+        changed()
     }
     
     fun getPlayerPayedOutStatus(playerId: Int): Boolean {
@@ -61,6 +70,7 @@ class BankPreferences @Inject constructor(
             editor.putInt("$PLAYER_ELIMINATED_BY_PREFIX$playerId", eliminatedBy)
         }
         editor.apply()
+        changed()
     }
 
     fun getPlayerEliminatedBy(playerId: Int): Int? {
@@ -71,7 +81,7 @@ class BankPreferences @Inject constructor(
     
     fun savePlayerRebuys(playerId: Int, rebuys: Int) {
         prefs.edit().putInt("$PLAYER_REBUYS_PREFIX$playerId", rebuys).apply()
-        _totalRebuys.value = calculateTotalRebuys()
+        changed()
     }
     
     fun getPlayerRebuys(playerId: Int): Int {
@@ -80,7 +90,7 @@ class BankPreferences @Inject constructor(
     
     fun savePlayerAddons(playerId: Int, addons: Int) {
         prefs.edit().putInt("$PLAYER_ADDONS_PREFIX$playerId", addons).apply()
-        _totalAddons.value = calculateTotalAddons()
+        changed()
     }
     
     fun getPlayerAddons(playerId: Int): Int {
@@ -97,7 +107,7 @@ class BankPreferences @Inject constructor(
             .filter { it.startsWith(PLAYER_REBUYS_PREFIX) }
             .forEach { editor.remove(it) }
         editor.apply()
-        _totalRebuys.value = 0
+        changed()
     }
 
     fun clearAllAddons() {
@@ -106,7 +116,7 @@ class BankPreferences @Inject constructor(
             .filter { it.startsWith(PLAYER_ADDONS_PREFIX) }
             .forEach { editor.remove(it) }
         editor.apply()
-        _totalAddons.value = 0
+        changed()
     }
 
     fun clearAllEliminatedBy() {
@@ -115,6 +125,7 @@ class BankPreferences @Inject constructor(
             .filter { it.startsWith(PLAYER_ELIMINATED_BY_PREFIX) }
             .forEach { editor.remove(it) }
         editor.apply()
+        changed()
     }
 
     fun getEliminationOrder(): List<Int> = _eliminationOrder.value
@@ -127,6 +138,34 @@ class BankPreferences @Inject constructor(
             .putString(ELIMINATION_ORDER_KEY, sanitized.joinToString(","))
             .apply()
         _eliminationOrder.value = sanitized
+        changed()
+    }
+
+    /**
+     * Forget everything about players numbered above [playerCount]: names, statuses, purchases and
+     * knockouts, including knockouts credited to them. The Bank shows removed players as gone, so
+     * their data must not come back when the count grows again or after a restart.
+     */
+    fun removePlayersAbove(playerCount: Int) {
+        val stored = prefs.all
+        val editor = prefs.edit()
+        var removedAny = false
+        stored.forEach { (key, value) ->
+            val playerId = key.takeIf { it.startsWith(PLAYER_PREFIX) }?.substringAfterLast('_')?.toIntOrNull()
+            val creditsRemovedPlayer = key.startsWith(PLAYER_ELIMINATED_BY_PREFIX) && (value as? Int ?: 0) > playerCount
+            if ((playerId != null && playerId > playerCount) || creditsRemovedPlayer) {
+                editor.remove(key)
+                removedAny = true
+            }
+        }
+        editor.apply()
+        val order = getEliminationOrder()
+        val keptOrder = order.filter { it <= playerCount }
+        if (keptOrder != order) {
+            saveEliminationOrder(keptOrder)
+        } else if (removedAny) {
+            changed()
+        }
     }
     
     /**
@@ -168,9 +207,13 @@ class BankPreferences @Inject constructor(
         editor.remove(ELIMINATION_ORDER_KEY)
         editor.apply()
         _eliminationOrder.value = emptyList()
-        _totalRebuys.value = 0
-        _totalAddons.value = 0
         clearAllEliminatedBy()
+    }
+
+    private fun changed() {
+        _totalRebuys.value = calculateTotalRebuys()
+        _totalAddons.value = calculateTotalAddons()
+        _revision.value = _revision.value + 1
     }
 
     private fun readEliminationOrderFromPrefs(): List<Int> {
@@ -195,6 +238,8 @@ class BankPreferences @Inject constructor(
 
     companion object {
         private const val ELIMINATION_ORDER_KEY = "elimination_order"
+        private const val PLAYER_PREFIX = "player_"
+        private const val PLAYER_NAME_PREFIX = "player_name_"
         private const val PLAYER_REBUYS_PREFIX = "player_rebuys_"
         private const val PLAYER_ADDONS_PREFIX = "player_addons_"
         private const val PLAYER_ELIMINATED_BY_PREFIX = "player_eliminated_by_"

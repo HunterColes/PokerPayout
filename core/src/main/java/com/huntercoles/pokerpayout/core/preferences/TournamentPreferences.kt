@@ -2,132 +2,123 @@ package com.huntercoles.pokerpayout.core.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.huntercoles.pokerpayout.core.constants.TournamentConstants
 import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
+import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
+import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
+import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
+import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.utils.Money
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.max
 
+/**
+ * Tournament settings. Money is stored as whole cents (`Long`). Versions up to v1.1.12 stored
+ * `Float` dollars under other keys; [migrateLegacyMoney] converts those once, on first use.
+ */
 @Singleton
 class TournamentPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val prefs: SharedPreferences = context.getSharedPreferences("tournament_prefs", Context.MODE_PRIVATE)
-    
+
+    init {
+        // Before any flow below reads a money value.
+        migrateLegacyMoney()
+    }
+
     private val _playerCount = MutableStateFlow(getPlayerCount())
     val playerCount: Flow<Int> = _playerCount.asStateFlow()
-    
+
     private val _tournamentLocked = MutableStateFlow(getTournamentLocked())
     val tournamentLocked: Flow<Boolean> = _tournamentLocked.asStateFlow()
-    
-    private val _buyIn = MutableStateFlow(getBuyIn())
-    val buyIn: Flow<Double> = _buyIn.asStateFlow()
-    
-    private val _foodPerPlayer = MutableStateFlow(getFoodPerPlayer())
-    val foodPerPlayer: Flow<Double> = _foodPerPlayer.asStateFlow()
-    
-    private val _bountyPerPlayer = MutableStateFlow(getBountyPerPlayer())
-    val bountyPerPlayer: Flow<Double> = _bountyPerPlayer.asStateFlow()
 
-    private val _rebuyPerPlayer = MutableStateFlow(getRebuyAmount())
-    val rebuyPerPlayer: Flow<Double> = _rebuyPerPlayer.asStateFlow()
-    
-    private val _addOnPerPlayer = MutableStateFlow(getAddOnAmount())
-    val addOnPerPlayer: Flow<Double> = _addOnPerPlayer.asStateFlow()
-    
     private val _payoutWeights = MutableStateFlow(getPayoutWeights())
     val payoutWeights: Flow<List<Int>> = _payoutWeights.asStateFlow()
-    
+
     private val _isConfigExpanded = MutableStateFlow(getIsConfigExpanded())
     val isConfigExpanded: Flow<Boolean> = _isConfigExpanded.asStateFlow()
-    
+
+    private val _config = MutableStateFlow(getCurrentTournamentConfig())
+
+    /** Everything the pool and payout math reads; emits after any change to it. */
+    val config: StateFlow<TournamentConfigData> = _config.asStateFlow()
+
     fun setPlayerCount(count: Int) {
         val oldCount = getPlayerCount()
         prefs.edit().putInt(PLAYER_COUNT_KEY, count).apply()
         _playerCount.value = count
-        
-        // If weights haven't been set before, set defaults
+
+        // A preset at the recommended number of places follows the player count until the user
+        // picks another number of places or edits the weights.
+        val preset = getPayoutPreset()
+        val currentWeights = getPayoutWeights()
         if (!prefs.contains(PAYOUT_WEIGHTS_KEY)) {
             _payoutWeights.value = defaultPayoutWeightsFor(count)
-        } else {
-            // If current weights match the default for the old count, update to new defaults
-            val currentWeights = getPayoutWeights()
-            val oldDefaults = defaultPayoutWeightsFor(oldCount)
-            if (currentWeights == oldDefaults) {
-                val newDefaults = defaultPayoutWeightsFor(count)
-                setPayoutWeights(newDefaults)
-            }
+        } else if (preset != null && currentWeights == preset.weightsFor(PayoutPlaces.recommended(oldCount))) {
+            setPayoutPreset(preset, PayoutPlaces.recommended(count))
         }
+        publish()
     }
-    
+
     fun getPlayerCount(): Int {
         return prefs.getInt(PLAYER_COUNT_KEY, DEFAULT_PLAYER_COUNT)
     }
-    
+
     fun setTournamentLocked(locked: Boolean) {
         prefs.edit().putBoolean(TOURNAMENT_LOCKED_KEY, locked).apply()
         _tournamentLocked.value = locked
     }
-    
+
     fun getTournamentLocked(): Boolean {
         return prefs.getBoolean(TOURNAMENT_LOCKED_KEY, false)
     }
-    
-    fun setBuyIn(buyIn: Double) {
-        prefs.edit().putFloat(BUY_IN_KEY, buyIn.toFloat()).apply()
-        _buyIn.value = buyIn
-    }
-    
-    fun getBuyIn(): Double {
-        return prefs.getFloat(BUY_IN_KEY, TournamentDefaults.BUY_IN.toFloat()).toDouble()
-    }
-    
-    fun setFoodPerPlayer(food: Double) {
-        prefs.edit().putFloat(FOOD_PER_PLAYER_KEY, food.toFloat()).apply()
-        _foodPerPlayer.value = food
-    }
-    
-    fun getFoodPerPlayer(): Double {
-        return prefs.getFloat(FOOD_PER_PLAYER_KEY, TournamentDefaults.FOOD_PER_PLAYER.toFloat()).toDouble()
-    }
-    
-    fun setBountyPerPlayer(bounty: Double) {
-        prefs.edit().putFloat(BOUNTY_PER_PLAYER_KEY, bounty.toFloat()).apply()
-        _bountyPerPlayer.value = bounty
-    }
-    
-    fun getBountyPerPlayer(): Double {
-        return prefs.getFloat(BOUNTY_PER_PLAYER_KEY, TournamentDefaults.BOUNTY_PER_PLAYER.toFloat()).toDouble()
+
+    // Money, in cents ---------------------------------------------------------------------------
+
+    fun getMoneySettings(): MoneySettings {
+        val defaults = MoneySettings.DEFAULT
+        return MoneySettings(
+            buyInCents = prefs.getLong(BUY_IN_CENTS_KEY, defaults.buyInCents),
+            foodCents = prefs.getLong(FOOD_CENTS_KEY, defaults.foodCents),
+            bountyCents = prefs.getLong(BOUNTY_CENTS_KEY, defaults.bountyCents),
+            rebuyCents = prefs.getLong(REBUY_CENTS_KEY, defaults.rebuyCents),
+            addOnCents = prefs.getLong(ADDON_CENTS_KEY, defaults.addOnCents)
+        )
     }
 
-    fun setRebuyAmount(rebuy: Double) {
-        prefs.edit().putFloat(REBUY_PER_PLAYER_KEY, rebuy.toFloat()).apply()
-        _rebuyPerPlayer.value = rebuy
+    fun setBuyInCents(cents: Long) = putCents(BUY_IN_CENTS_KEY, cents)
+    fun setFoodCents(cents: Long) = putCents(FOOD_CENTS_KEY, cents)
+    fun setBountyCents(cents: Long) = putCents(BOUNTY_CENTS_KEY, cents)
+    fun setRebuyCents(cents: Long) = putCents(REBUY_CENTS_KEY, cents)
+    fun setAddOnCents(cents: Long) = putCents(ADDON_CENTS_KEY, cents)
+
+    // Dollar conveniences, converted to the exact nearest cent.
+    fun setBuyIn(buyIn: Double) = setBuyInCents(Money.centsOf(buyIn))
+    fun setFoodPerPlayer(food: Double) = setFoodCents(Money.centsOf(food))
+    fun setBountyPerPlayer(bounty: Double) = setBountyCents(Money.centsOf(bounty))
+    fun setRebuyAmount(rebuy: Double) = setRebuyCents(Money.centsOf(rebuy))
+    fun setAddOnAmount(addOn: Double) = setAddOnCents(Money.centsOf(addOn))
+
+    private fun putCents(key: String, cents: Long) {
+        prefs.edit().putLong(key, cents.coerceAtLeast(0L)).apply()
+        publish()
     }
 
-    fun getRebuyAmount(): Double {
-        return prefs.getFloat(REBUY_PER_PLAYER_KEY, TournamentDefaults.REBUY_PER_PLAYER.toFloat()).toDouble()
-    }
+    // Payout structure ----------------------------------------------------------------------------
 
-    fun setAddOnAmount(addOn: Double) {
-        prefs.edit().putFloat(ADDON_PER_PLAYER_KEY, addOn.toFloat()).apply()
-        _addOnPerPlayer.value = addOn
-    }
-
-    fun getAddOnAmount(): Double {
-        return prefs.getFloat(ADDON_PER_PLAYER_KEY, TournamentDefaults.ADDON_PER_PLAYER.toFloat()).toDouble()
-    }
-    
     fun setPayoutWeights(weights: List<Int>) {
         val weightsString = weights.joinToString(",")
         prefs.edit().putString(PAYOUT_WEIGHTS_KEY, weightsString).apply()
         _payoutWeights.value = weights
+        publish()
     }
-    
+
     fun getPayoutWeights(): List<Int> {
         val weightsString = prefs.getString(PAYOUT_WEIGHTS_KEY, null)
         val parsedWeights = weightsString
@@ -138,122 +129,148 @@ class TournamentPreferences @Inject constructor(
 
         return parsedWeights ?: defaultPayoutWeightsFor()
     }
-    
+
+    /** Pays [places] places with [preset]'s weights. */
+    fun setPayoutPreset(preset: PayoutPreset, places: Int) {
+        prefs.edit().putString(PAYOUT_PRESET_KEY, preset.name).apply()
+        setPayoutWeights(preset.weightsFor(places))
+    }
+
+    /** The preset the current weights come from, or null once they have been edited by hand. */
+    fun getPayoutPreset(): PayoutPreset? {
+        val weights = getPayoutWeights()
+        val stored = prefs.getString(PAYOUT_PRESET_KEY, null)
+            ?.let { name -> PayoutPreset.entries.firstOrNull { it.name == name } }
+        return stored?.takeIf { it.weightsFor(weights.size) == weights } ?: PayoutPreset.matching(weights)
+    }
+
+    fun getPayoutSettings(): PayoutSettings =
+        PayoutSettings(weights = getPayoutWeights(), preset = getPayoutPreset(), rounding = getPayoutRounding())
+
+    /** Saves a structure from the payout editor. Weights edited by hand drop the preset. */
+    fun setPayoutSettings(settings: PayoutSettings) {
+        val preset = settings.preset?.takeIf { it.weightsFor(settings.weights.size) == settings.weights }
+        if (preset != null) {
+            setPayoutPreset(preset, settings.weights.size)
+        } else {
+            prefs.edit().remove(PAYOUT_PRESET_KEY).apply()
+            setPayoutWeights(settings.weights)
+        }
+        setPayoutRounding(settings.rounding)
+    }
+
+    fun setPayoutRounding(rounding: PayoutRounding) {
+        prefs.edit().putLong(PAYOUT_ROUNDING_CENTS_KEY, rounding.unitCents).apply()
+        publish()
+    }
+
+    fun getPayoutRounding(): PayoutRounding =
+        PayoutRounding.fromUnitCents(prefs.getLong(PAYOUT_ROUNDING_CENTS_KEY, PayoutRounding.DEFAULT.unitCents))
+
     fun setIsConfigExpanded(expanded: Boolean) {
         prefs.edit().putBoolean(IS_CONFIG_EXPANDED_KEY, expanded).apply()
         _isConfigExpanded.value = expanded
     }
-    
+
     fun getIsConfigExpanded(): Boolean {
         return prefs.getBoolean(IS_CONFIG_EXPANDED_KEY, true) // Default to expanded
     }
-    
+
     // Blind Configuration Persistence
     fun setGameDurationHours(hours: Int) {
         prefs.edit().putInt(GAME_DURATION_HOURS_KEY, hours).apply()
     }
-    
+
     fun getGameDurationHours(): Int {
         return prefs.getInt(GAME_DURATION_HOURS_KEY, TournamentDefaults.GAME_DURATION_HOURS)
     }
-    
+
     fun setRoundLengthMinutes(minutes: Int) {
         prefs.edit().putInt(ROUND_LENGTH_MINUTES_KEY, minutes).apply()
     }
-    
+
     fun getRoundLengthMinutes(): Int {
         return prefs.getInt(ROUND_LENGTH_MINUTES_KEY, TournamentDefaults.ROUND_LENGTH_MINUTES)
     }
-    
+
     fun setSmallestChip(chip: Int) {
         prefs.edit().putInt(SMALLEST_CHIP_KEY, chip).apply()
     }
-    
+
     fun getSmallestChip(): Int {
         return prefs.getInt(SMALLEST_CHIP_KEY, TournamentDefaults.SMALLEST_CHIP)
     }
-    
+
     fun setStartingChips(chips: Int) {
         prefs.edit().putInt(STARTING_CHIPS_KEY, chips).apply()
     }
-    
+
     fun getStartingChips(): Int {
         return prefs.getInt(STARTING_CHIPS_KEY, TournamentDefaults.STARTING_CHIPS)
     }
-    
+
     fun setSelectedPanel(panel: String) {
         prefs.edit().putString(SELECTED_PANEL_KEY, panel).apply()
     }
-    
+
     fun getSelectedPanel(): String {
         return prefs.getString(SELECTED_PANEL_KEY, "player") ?: "player"
     }
-    
+
     /**
-     * Get complete tournament configuration as a simple data holder
-     * This can be used by other modules that need access to tournament settings
+     * The tournament settings the pool and payout math needs, as one value. Other modules read
+     * this (or observe [config]) instead of the individual keys.
      */
     data class TournamentConfigData(
         val numPlayers: Int,
-        val buyIn: Double,
-        val foodPerPlayer: Double,
-        val bountyPerPlayer: Double,
-        val rebuyPerPlayer: Double,
-        val addOnPerPlayer: Double,
-        val payoutWeights: List<Int>
-    ) {
-    val totalPerPlayer: Double get() = buyIn + foodPerPlayer + bountyPerPlayer + addOnPerPlayer
-        val prizePool: Double get() = numPlayers * buyIn
-        val foodPool: Double get() = numPlayers * foodPerPlayer
-        val bountyPool: Double get() = numPlayers * bountyPerPlayer
-    val addOnPool: Double get() = numPlayers * addOnPerPlayer
-    val totalPool: Double get() = prizePool + foodPool + bountyPool + addOnPool
-    }
-    
+        val money: MoneySettings,
+        val payoutWeights: List<Int>,
+        val payoutRounding: PayoutRounding
+    )
+
     fun getCurrentTournamentConfig(): TournamentConfigData {
         return TournamentConfigData(
             numPlayers = getPlayerCount(),
-            buyIn = getBuyIn(),
-            foodPerPlayer = getFoodPerPlayer(),
-            bountyPerPlayer = getBountyPerPlayer(),
-            rebuyPerPlayer = getRebuyAmount(),
-            addOnPerPlayer = getAddOnAmount(),
-            payoutWeights = getPayoutWeights()
+            money = getMoneySettings(),
+            payoutWeights = getPayoutWeights(),
+            payoutRounding = getPayoutRounding()
         )
     }
-    
+
     /**
      * Check if tournament settings are in default state
      */
     fun isInDefaultState(): Boolean {
         val playerCount = getPlayerCount()
-         return playerCount == DEFAULT_PLAYER_COUNT &&
-         getBuyIn() == TournamentDefaults.BUY_IN &&
-         getFoodPerPlayer() == TournamentDefaults.FOOD_PER_PLAYER &&
-         getBountyPerPlayer() == TournamentDefaults.BOUNTY_PER_PLAYER &&
-         getRebuyAmount() == TournamentDefaults.REBUY_PER_PLAYER &&
-         getAddOnAmount() == TournamentDefaults.ADDON_PER_PLAYER &&
-         getPayoutWeights() == defaultPayoutWeightsFor(playerCount) &&
-         !getTournamentLocked() &&
-         getGameDurationHours() == TournamentDefaults.GAME_DURATION_HOURS &&
-         getRoundLengthMinutes() == TournamentDefaults.ROUND_LENGTH_MINUTES &&
-         getSmallestChip() == TournamentDefaults.SMALLEST_CHIP &&
-         getStartingChips() == TournamentDefaults.STARTING_CHIPS
-         // Note: selectedPanel is preserved during reset, so not included in default state check
-    }    /**
+        return playerCount == DEFAULT_PLAYER_COUNT &&
+            getMoneySettings() == MoneySettings.DEFAULT &&
+            getPayoutWeights() == defaultPayoutWeightsFor(playerCount) &&
+            getPayoutRounding() == PayoutRounding.DEFAULT &&
+            !getTournamentLocked() &&
+            getGameDurationHours() == TournamentDefaults.GAME_DURATION_HOURS &&
+            getRoundLengthMinutes() == TournamentDefaults.ROUND_LENGTH_MINUTES &&
+            getSmallestChip() == TournamentDefaults.SMALLEST_CHIP &&
+            getStartingChips() == TournamentDefaults.STARTING_CHIPS
+        // Note: selectedPanel is preserved during reset, so not included in default state check
+    }
+
+    /**
      * Reset all tournament data to default values
      */
     fun resetAllTournamentData() {
+        val defaults = MoneySettings.DEFAULT
         // Reset specific keys instead of clearing all preferences
         prefs.edit()
             .putBoolean(TOURNAMENT_LOCKED_KEY, false)
             .putInt(PLAYER_COUNT_KEY, DEFAULT_PLAYER_COUNT)
-            .putFloat(BUY_IN_KEY, TournamentDefaults.BUY_IN.toFloat())
-            .putFloat(FOOD_PER_PLAYER_KEY, TournamentDefaults.FOOD_PER_PLAYER.toFloat())
-            .putFloat(BOUNTY_PER_PLAYER_KEY, TournamentDefaults.BOUNTY_PER_PLAYER.toFloat())
-            .putFloat(REBUY_PER_PLAYER_KEY, TournamentDefaults.REBUY_PER_PLAYER.toFloat())
-            .putFloat(ADDON_PER_PLAYER_KEY, TournamentDefaults.ADDON_PER_PLAYER.toFloat())
+            .putLong(BUY_IN_CENTS_KEY, defaults.buyInCents)
+            .putLong(FOOD_CENTS_KEY, defaults.foodCents)
+            .putLong(BOUNTY_CENTS_KEY, defaults.bountyCents)
+            .putLong(REBUY_CENTS_KEY, defaults.rebuyCents)
+            .putLong(ADDON_CENTS_KEY, defaults.addOnCents)
             .remove(PAYOUT_WEIGHTS_KEY)
+            .remove(PAYOUT_PRESET_KEY)
+            .remove(PAYOUT_ROUNDING_CENTS_KEY)
             .putInt(GAME_DURATION_HOURS_KEY, TournamentDefaults.GAME_DURATION_HOURS)
             .putInt(ROUND_LENGTH_MINUTES_KEY, TournamentDefaults.ROUND_LENGTH_MINUTES)
             .putInt(SMALLEST_CHIP_KEY, TournamentDefaults.SMALLEST_CHIP)
@@ -261,33 +278,53 @@ class TournamentPreferences @Inject constructor(
             .putString(SELECTED_PANEL_KEY, "player")
             .putBoolean(IS_CONFIG_EXPANDED_KEY, true)
             .apply()
-        
+
         // Reset all state flows to default values (keep current player count)
         _tournamentLocked.value = false
         _playerCount.value = DEFAULT_PLAYER_COUNT
-        _buyIn.value = TournamentDefaults.BUY_IN
-        _foodPerPlayer.value = TournamentDefaults.FOOD_PER_PLAYER
-        _bountyPerPlayer.value = TournamentDefaults.BOUNTY_PER_PLAYER
-        _rebuyPerPlayer.value = TournamentDefaults.REBUY_PER_PLAYER
-        _addOnPerPlayer.value = TournamentDefaults.ADDON_PER_PLAYER
         _payoutWeights.value = defaultPayoutWeightsFor(DEFAULT_PLAYER_COUNT)
         _isConfigExpanded.value = true
+        publish()
     }
 
-    private fun defaultPayoutWeightsFor(playerCount: Int = getPlayerCount()): List<Int> {
-        val defaultCount = max(1, playerCount / 3)
-        return TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.take(defaultCount)
+    private fun publish() {
+        _config.value = getCurrentTournamentConfig()
     }
-    
+
+    private fun defaultPayoutWeightsFor(playerCount: Int = getPlayerCount()): List<Int> =
+        PayoutPreset.DEFAULT.weightsFor(PayoutPlaces.recommended(playerCount))
+
+    /**
+     * v1.1.12 and earlier stored money as Float dollars, which keeps about 7 significant digits
+     * (123456.78 came back as 123456.78125). Convert each to cents once, under a new key, and drop
+     * the Float. A cents value that already exists wins.
+     */
+    private fun migrateLegacyMoney() {
+        val legacy = LEGACY_MONEY_KEYS.filterKeys { prefs.contains(it) }
+        if (legacy.isEmpty()) return
+        val stored = prefs.all
+        val editor = prefs.edit()
+        legacy.forEach { (floatKey, centsKey) ->
+            val value = stored[floatKey]
+            if (value is Float && !prefs.contains(centsKey)) {
+                editor.putLong(centsKey, Money.centsOfLegacyFloat(value).coerceAtLeast(0L))
+            }
+            editor.remove(floatKey)
+        }
+        editor.apply()
+    }
+
     companion object {
         private const val PLAYER_COUNT_KEY = "player_count"
         private const val TOURNAMENT_LOCKED_KEY = "tournament_locked"
-        private const val BUY_IN_KEY = "buy_in"
-        private const val FOOD_PER_PLAYER_KEY = "food_per_player"
-        private const val BOUNTY_PER_PLAYER_KEY = "bounty_per_player"
-        private const val REBUY_PER_PLAYER_KEY = "rebuy_per_player"
-        private const val ADDON_PER_PLAYER_KEY = "addon_per_player"
+        private const val BUY_IN_CENTS_KEY = "buy_in_cents"
+        private const val FOOD_CENTS_KEY = "food_per_player_cents"
+        private const val BOUNTY_CENTS_KEY = "bounty_per_player_cents"
+        private const val REBUY_CENTS_KEY = "rebuy_per_player_cents"
+        private const val ADDON_CENTS_KEY = "addon_per_player_cents"
         private const val PAYOUT_WEIGHTS_KEY = "payout_weights"
+        private const val PAYOUT_PRESET_KEY = "payout_preset"
+        private const val PAYOUT_ROUNDING_CENTS_KEY = "payout_rounding_cents"
         private const val IS_CONFIG_EXPANDED_KEY = "is_config_expanded"
         private const val GAME_DURATION_HOURS_KEY = "game_duration_hours"
         private const val ROUND_LENGTH_MINUTES_KEY = "round_length_minutes"
@@ -295,5 +332,14 @@ class TournamentPreferences @Inject constructor(
         private const val STARTING_CHIPS_KEY = "starting_chips"
         private const val SELECTED_PANEL_KEY = "selected_panel"
         private const val DEFAULT_PLAYER_COUNT = TournamentDefaults.PLAYER_COUNT
+
+        /** v1.1.x Float keys and the cents keys that replace them. */
+        private val LEGACY_MONEY_KEYS = mapOf(
+            "buy_in" to BUY_IN_CENTS_KEY,
+            "food_per_player" to FOOD_CENTS_KEY,
+            "bounty_per_player" to BOUNTY_CENTS_KEY,
+            "rebuy_per_player" to REBUY_CENTS_KEY,
+            "addon_per_player" to ADDON_CENTS_KEY
+        )
     }
 }

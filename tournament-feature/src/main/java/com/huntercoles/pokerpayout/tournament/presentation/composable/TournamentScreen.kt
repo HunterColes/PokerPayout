@@ -72,6 +72,10 @@ import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDialog
 import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
 import com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction
+import com.huntercoles.pokerpayout.core.design.components.PayoutPreview
+import com.huntercoles.pokerpayout.core.design.components.WeightsEditorDialog
+import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 import com.huntercoles.pokerpayout.tournament.presentation.composable.TimerScreen
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
@@ -129,7 +133,7 @@ fun PlayContent(
         // Reset Confirmation Dialog
         PokerConfirmationDialog(
             title = "Reset tournament?",
-            description = "This will reset all tournament settings and timer data to defaults.",
+            description = resetDescription(calculatorUiState),
             onDismiss = { onCalculatorIntent(TournamentConfigIntent.HideResetDialog) },
             onConfirm = {
                 onCalculatorIntent(TournamentConfigIntent.ConfirmReset)
@@ -137,6 +141,8 @@ fun PlayContent(
             },
             isVisible = calculatorUiState.showResetDialog
         )
+
+        PayoutDialogs(uiState = calculatorUiState, onIntent = onCalculatorIntent)
 
         // Configuration Section (Collapsible)
         TournamentConfigurationCard(
@@ -270,52 +276,60 @@ fun TournamentConfigurationCard(
                 Column {
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        // Pool Configuration (now includes Player panel, Player slider, and Blinds panel)
-                        PoolConfigurationSection(
-                            buyIn = uiState.tournamentConfig.buyIn,
-                            foodPerPlayer = uiState.tournamentConfig.foodPerPlayer,
-                            bountyPerPlayer = uiState.tournamentConfig.bountyPerPlayer,
-                            rebuyPerPlayer = uiState.tournamentConfig.rebuyPerPlayer,
-                            addOnPerPlayer = uiState.tournamentConfig.addOnPerPlayer,
-                            onBuyInChange = { onIntent(TournamentConfigIntent.UpdateBuyIn(it)) },
-                            onFoodChange = { onIntent(TournamentConfigIntent.UpdateFoodPerPlayer(it)) },
-                            onBountyChange = { onIntent(TournamentConfigIntent.UpdateBountyPerPlayer(it)) },
-                            onRebuyChange = { onIntent(TournamentConfigIntent.UpdateRebuyAmount(it)) },
-                            onAddOnChange = { onIntent(TournamentConfigIntent.UpdateAddOnAmount(it)) },
-                            playerCount = uiState.tournamentConfig.numPlayers,
-                            onPlayerCountChange = { count ->
-                                onIntent(TournamentConfigIntent.UpdatePlayerCount(count))
-                            },
-                            gameDurationHours = uiState.gameDurationHours,
-                            roundLengthMinutes = uiState.roundLengthMinutes,
-                            smallestChip = uiState.smallestChip,
-                            startingChips = uiState.startingChips,
-                            onGameDurationHoursChange = { hours ->
-                                onIntent(TournamentConfigIntent.UpdateGameDurationHours(hours))
-                                onTimerIntent(TimerIntent.GameDurationHoursChanged(hours))
-                            },
-                            onRoundLengthChange = { minutes ->
-                                onIntent(TournamentConfigIntent.UpdateRoundLength(minutes))
-                                onTimerIntent(TimerIntent.UpdateRoundLength(minutes))
-                            },
-                            onSmallestChipChange = { chip ->
-                                onIntent(TournamentConfigIntent.UpdateSmallestChip(chip))
-                                onTimerIntent(TimerIntent.UpdateSmallestChip(chip))
-                            },
-                            onStartingChipsChange = { chips ->
-                                onIntent(TournamentConfigIntent.UpdateStartingChips(chips))
-                                onTimerIntent(TimerIntent.UpdateStartingChips(chips))
-                            },
-                            selectedPanel = uiState.selectedPanel,
-                            onIntent = onIntent,
-                            isLocked = uiState.isTournamentLocked
-                        )
-                    }
+                    // Player slider, then the Player / Blinds / Payouts panels
+                    PoolConfigurationSection(
+                        uiState = uiState,
+                        onIntent = onIntent,
+                        onTimerIntent = onTimerIntent
+                    )
                 }
             }
         }
+    }
+}
+
+/** The reset dialog says what a reset takes with it, including purchases recorded in the Bank. */
+private fun resetDescription(uiState: TournamentConfigUiState): String {
+    val purchases = listOfNotNull(
+        uiState.rebuyPurchases.takeIf { it > 0 }?.let { "$it ${if (it == 1) "rebuy" else "rebuys"}" },
+        uiState.addOnPurchases.takeIf { it > 0 }?.let { "$it ${if (it == 1) "add-on" else "add-ons"}" }
+    )
+    val base = "This will reset all tournament settings and timer data to defaults."
+    return if (purchases.isEmpty()) {
+        base
+    } else {
+        "$base The ${purchases.joinToString(" and ")} recorded in the Bank will be cleared too."
+    }
+}
+
+/** The payout editor and the "clear recorded purchases?" question (PP-014). */
+@Composable
+private fun PayoutDialogs(uiState: TournamentConfigUiState, onIntent: (TournamentConfigIntent) -> Unit) {
+    if (uiState.showWeightsEditor) {
+        WeightsEditorDialog(
+            current = PayoutSettings(
+                weights = uiState.config.payoutWeights,
+                preset = uiState.payoutPreset,
+                rounding = uiState.config.payoutRounding
+            ),
+            preview = PayoutPreview(prizePoolCents = uiState.pool.prizePoolCents, playerCount = uiState.playerCount),
+            onSave = { onIntent(TournamentConfigIntent.UpdatePayoutSettings(it)) },
+            onDismiss = { onIntent(TournamentConfigIntent.HideWeightsEditor) },
+            isLocked = uiState.isTournamentLocked
+        )
+    }
+
+    uiState.purchaseClearPrompt?.let { prompt ->
+        val noun = if (prompt.count == 1) prompt.kind.singular else prompt.kind.plural
+        PokerConfirmationDialog(
+            title = "Turn ${prompt.kind.plural} off?",
+            description = "A ${prompt.kind.singular} amount of \$0 clears the ${prompt.count} $noun recorded " +
+                "in the Bank. Keep them to leave the amount at " +
+                "${FormatUtils.formatCents(prompt.keptAmountCents)}.",
+            onDismiss = { onIntent(TournamentConfigIntent.DismissClearPurchases) },
+            onConfirm = { onIntent(TournamentConfigIntent.ConfirmClearPurchases) },
+            cancelText = "Keep",
+            confirmText = "Clear $noun"
+        )
     }
 }

@@ -59,6 +59,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,7 +91,9 @@ import com.huntercoles.pokerpayout.core.design.PokerDialog
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
 import com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction
+import com.huntercoles.pokerpayout.core.design.components.PayoutPreview
 import com.huntercoles.pokerpayout.core.design.components.WeightsEditorDialog
+import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.bank.presentation.BankIntent
 import com.huntercoles.pokerpayout.bank.presentation.MAX_PURCHASE_COUNT
@@ -157,10 +161,9 @@ internal fun BankScreen(
         // Weights Editor Dialog
         if (uiState.showWeightsDialog) {
             WeightsEditorDialog(
-                currentWeights = uiState.payoutWeights,
-                onWeightsChanged = { newWeights ->
-                    onIntent(BankIntent.UpdateWeights(newWeights))
-                },
+                current = uiState.payoutSettings,
+                preview = PayoutPreview(prizePoolCents = uiState.prizePoolCents, playerCount = uiState.players.size),
+                onSave = { onIntent(BankIntent.UpdatePayoutSettings(it)) },
                 onDismiss = { onIntent(BankIntent.HideWeightsDialog) },
                 isLocked = uiState.isTimerRunning
             )
@@ -237,8 +240,8 @@ internal fun BankScreen(
                         isKnockingOut = knockingOutPlayerId == player.id,
                         isChampionHighlight = championPlayerId == player.id,
                         outEnabled = championPlayerId == null || championPlayerId != player.id,
-                        rebuyEnabled = uiState.rebuyAmount > 0.0,
-                        addonEnabled = uiState.addonAmount > 0.0,
+                        rebuyEnabled = uiState.isRebuyEnabled,
+                        addonEnabled = uiState.isAddOnEnabled,
                         knockoutCount = knockoutCount,
                         showKnockoutIndicator = knockoutCount > 0,
                         onNameChange = { onIntent(BankIntent.PlayerNameChanged(player.id, it)) },
@@ -314,18 +317,18 @@ private fun PoolSummaryCard(uiState: BankUiState, onIntent: (BankIntent) -> Unit
             Spacer(modifier = Modifier.height(12.dp))
 
             SummaryProgressBar(
-                label = "Total Payed In:",
-                currentAmount = uiState.totalPaidIn,
-                targetAmount = uiState.totalPool,
+                label = "Total Paid In:",
+                currentCents = uiState.totalPaidInCents,
+                targetCents = uiState.totalPoolCents,
                 baseColor = PokerColors.AccentGreen
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             SummaryProgressBar(
-                label = "Total Payed Out:",
-                currentAmount = uiState.totalPayedOut,
-                targetAmount = uiState.prizePool + uiState.bountyPool,
+                label = "Total Paid Out:",
+                currentCents = uiState.totalPaidOutCents,
+                targetCents = uiState.payableCents,
                 baseColor = PokerColors.SuccessGreen
             )
         }
@@ -335,16 +338,15 @@ private fun PoolSummaryCard(uiState: BankUiState, onIntent: (BankIntent) -> Unit
 @Composable
 private fun SummaryProgressBar(
     label: String,
-    currentAmount: Double,
-    targetAmount: Double,
+    currentCents: Long,
+    targetCents: Long,
     baseColor: Color,
-    modifier: Modifier = Modifier,
-    fullColor: Color = PokerColors.PokerGold
+    modifier: Modifier = Modifier
 ) {
-    val safeTarget = targetAmount.coerceAtLeast(0.0)
-    val progress = if (safeTarget > 0.0) (currentAmount / safeTarget).coerceIn(0.0, 1.0) else 0.0
-    val isComplete = safeTarget > 0.0 && (currentAmount + 0.01) >= safeTarget
-    val fillColor = if (isComplete) fullColor else baseColor
+    val progress = if (targetCents > 0L) (currentCents.toDouble() / targetCents).coerceIn(0.0, 1.0) else 0.0
+    // Exact in cents: complete means every cent is accounted for, not "within a cent".
+    val isComplete = targetCents > 0L && currentCents >= targetCents
+    val fillColor = if (isComplete) PokerColors.PokerGold else baseColor
 
     Column(modifier = modifier.fillMaxWidth()) {
         Spacer(modifier = Modifier.height(4.dp))
@@ -384,7 +386,7 @@ private fun SummaryProgressBar(
                     color = textColor
                 )
                 Text(
-                    text = FormatUtils.formatCurrency(currentAmount),
+                    text = FormatUtils.formatCents(currentCents),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                     color = textColor
                 )
@@ -409,12 +411,6 @@ private fun PlayerRow(
     onAnimationComplete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val focusManager = LocalFocusManager.current
-    val commitAndClear: (String) -> Unit = { text ->
-        onNameChange(text)
-        focusManager.clearFocus()
-    }
-    
     // Animation state for the red flash effect
     var showRedFlash by remember(player.id) { mutableStateOf(false) }
     
@@ -440,36 +436,6 @@ private fun PlayerRow(
         label = "background_color_animation"
     )
     
-    // Keep a local editable text state to handle IME Done commits and to avoid
-    // losing typed input when recomposition happens. Also sync with external
-    // updates (like reset) by observing player.name.
-    var nameTextFieldValue by remember(player.id, player.name) {
-        mutableStateOf(TextFieldValue(text = player.name))
-    }
-    
-    // Track interaction source for focus detection
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    
-    // Check if the current name is default (e.g., "Player 1", "Player 2")
-    val isDefaultName = player.name.matches(Regex("^Player \\d+$"))
-    
-    // Auto-select all text when focused on default name
-    LaunchedEffect(isFocused, isDefaultName) {
-        if (isFocused && isDefaultName && nameTextFieldValue.selection.collapsed) {
-            nameTextFieldValue = nameTextFieldValue.copy(
-                selection = TextRange(0, nameTextFieldValue.text.length)
-            )
-        }
-    }
-    
-    // If the player.name changes externally (reset), update local text state once
-    LaunchedEffect(player.name) {
-        if (nameTextFieldValue.text != player.name) {
-            nameTextFieldValue = TextFieldValue(text = player.name)
-        }
-    }
-    
     Card(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -481,94 +447,15 @@ private fun PlayerRow(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
+            PlayerNameField(
+                player = player,
+                placementNumber = placementNumber,
+                isChampionHighlight = isChampionHighlight,
+                onNameChange = onNameChange,
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 12.dp)
-            ) {
-                placementNumber?.let { placement ->
-                    val orbitronFont = FontFamily(Font(R.font.orbitron_variablefont_wght))
-                    if (isChampionHighlight) {
-                        Text(
-                            text = "👑",
-                            style = MaterialTheme.typography.displayLarge.copy(fontSize = 55.sp),
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .graphicsLayer { rotationZ = -4f },
-                            color = Color.Unspecified,
-                            maxLines = 1
-                        )
-                    }
-                    Text(
-                        text = placement.toString(),
-                        style = MaterialTheme.typography.displayLarge.copy(
-                            fontFamily = orbitronFont,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 48.sp,
-                            shadow = Shadow(
-                                color = Color.Black.copy(alpha = 0.35f),
-                                offset = Offset(2f, 4f),
-                                blurRadius = 12f
-                            )
-                        ),
-                        color = if (isChampionHighlight) Color.Black.copy(alpha = 0.78f) else PokerColors.PokerGold.copy(alpha = 0.22f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Clip,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.Center)
-                            .graphicsLayer { rotationZ = if (isChampionHighlight) -3f else -8f }
-                    )
-                }
-
-                OutlinedTextField(
-                    value = nameTextFieldValue,
-                    onValueChange = { new -> nameTextFieldValue = new },
-                    interactionSource = interactionSource,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onPreviewKeyEvent { keyEvent ->
-                            val native = keyEvent.nativeKeyEvent ?: return@onPreviewKeyEvent false
-                            if (native.keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
-                                when (native.action) {
-                                    android.view.KeyEvent.ACTION_DOWN -> true
-                                    android.view.KeyEvent.ACTION_UP -> { commitAndClear(nameTextFieldValue.text); true }
-                                    else -> false
-                                }
-                            } else false
-                        },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    colors = if (isChampionHighlight) {
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.Black,
-                            unfocusedBorderColor = Color.Black,
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            cursorColor = Color.Black,
-                            selectionColors = TextSelectionColors(
-                                handleColor = Color.Black,
-                                backgroundColor = Color.Black.copy(alpha = 0.35f)
-                            )
-                        )
-                    } else {
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PokerColors.AccentGreen,
-                            unfocusedBorderColor = PokerColors.CardWhite,
-                            focusedTextColor = PokerColors.CardWhite,
-                            unfocusedTextColor = PokerColors.CardWhite,
-                            cursorColor = PokerColors.PokerGold,
-                            selectionColors = TextSelectionColors(
-                                handleColor = PokerColors.PokerGold,
-                                backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
-                            )
-                        )
-                    },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { commitAndClear(nameTextFieldValue.text) })
-                )
-            }
+            )
 
             // Right-justified group: out chip + two vertical columns (rebuy/addon) and (buy-in/payout)
             Row(
@@ -669,6 +556,135 @@ private fun PlayerRow(
                 }
             }
         }
+    }
+}
+
+/**
+ * The player's name. The name is saved when the field loses focus, on Done/Enter, and when the row
+ * goes away (tab switch, scrolling), not only on the IME action as before. A knocked-out player's
+ * finishing place sits on the field's top edge as a badge, clear of the name (it used to be a large
+ * number drawn over it).
+ */
+@Composable
+private fun PlayerNameField(
+    player: PlayerData,
+    placementNumber: Int?,
+    isChampionHighlight: Boolean,
+    onNameChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val focusManager = LocalFocusManager.current
+    var nameTextFieldValue by remember(player.id, player.name) {
+        mutableStateOf(TextFieldValue(text = player.name))
+    }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val latestText by rememberUpdatedState(nameTextFieldValue.text)
+    val latestName by rememberUpdatedState(player.name)
+    val latestOnNameChange by rememberUpdatedState(onNameChange)
+    val commit = { if (latestText != latestName) latestOnNameChange(latestText) }
+
+    // Select a default name ("Player 3") on focus, so typing replaces it
+    LaunchedEffect(isFocused) {
+        val isDefaultName = player.name.matches(Regex("^Player \\d+$"))
+        if (isFocused && isDefaultName && nameTextFieldValue.selection.collapsed) {
+            nameTextFieldValue = nameTextFieldValue.copy(selection = TextRange(0, nameTextFieldValue.text.length))
+        }
+    }
+    // Focus moved elsewhere: save what was typed
+    var wasFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(isFocused) {
+        if (wasFocused && !isFocused) commit()
+        wasFocused = isFocused
+    }
+    // The row is leaving the screen (tab switch): save what was typed
+    DisposableEffect(player.id) {
+        onDispose { commit() }
+    }
+
+    Box(modifier = modifier) {
+        OutlinedTextField(
+            value = nameTextFieldValue,
+            onValueChange = { new -> nameTextFieldValue = new },
+            interactionSource = interactionSource,
+            modifier = Modifier
+                .fillMaxWidth()
+                .onEnterKeyUp {
+                    commit()
+                    focusManager.clearFocus()
+                },
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium,
+            colors = nameFieldColors(isChampionHighlight),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = {
+                commit()
+                focusManager.clearFocus()
+            })
+        )
+        placementNumber?.let { place ->
+            PlacementBadge(
+                place = place,
+                isChampion = isChampionHighlight,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset(x = 10.dp, y = (-9).dp)
+            )
+        }
+    }
+}
+
+/** Runs [action] when a hardware Enter key is released, and keeps Enter out of the text. */
+private fun Modifier.onEnterKeyUp(action: () -> Unit): Modifier = onPreviewKeyEvent { keyEvent ->
+    val isEnter = keyEvent.nativeKeyEvent?.keyCode == android.view.KeyEvent.KEYCODE_ENTER
+    if (isEnter && keyEvent.nativeKeyEvent?.action == android.view.KeyEvent.ACTION_UP) action()
+    isEnter
+}
+
+@Composable
+private fun nameFieldColors(isChampionHighlight: Boolean) = if (isChampionHighlight) {
+    OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = Color.Black,
+        unfocusedBorderColor = Color.Black,
+        focusedTextColor = Color.Black,
+        unfocusedTextColor = Color.Black,
+        cursorColor = Color.Black,
+        selectionColors = TextSelectionColors(
+            handleColor = Color.Black,
+            backgroundColor = Color.Black.copy(alpha = 0.35f)
+        )
+    )
+} else {
+    OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = PokerColors.AccentGreen,
+        unfocusedBorderColor = PokerColors.CardWhite,
+        focusedTextColor = PokerColors.CardWhite,
+        unfocusedTextColor = PokerColors.CardWhite,
+        cursorColor = PokerColors.PokerGold,
+        selectionColors = TextSelectionColors(
+            handleColor = PokerColors.PokerGold,
+            backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
+        )
+    )
+}
+
+/** "5th", or "👑 1st" for the champion, in the Orbitron face the big number used. */
+@Composable
+private fun PlacementBadge(place: Int, isChampion: Boolean, modifier: Modifier = Modifier) {
+    val orbitronFont = FontFamily(Font(R.font.orbitron_variablefont_wght))
+    Surface(
+        modifier = modifier.semantics { contentDescription = "Finished ${ordinalOf(place)}" },
+        shape = RoundedCornerShape(10.dp),
+        color = if (isChampion) PokerColors.PokerGold else PokerColors.FeltGreen,
+        border = BorderStroke(1.dp, if (isChampion) Color.Black else PokerColors.PokerGold)
+    ) {
+        Text(
+            text = if (isChampion) "👑 ${ordinalOf(place)}" else ordinalOf(place),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = orbitronFont, fontWeight = FontWeight.Black),
+            color = if (isChampion) Color.Black else PokerColors.PokerGold,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp)
+        )
     }
 }
 
@@ -1027,7 +1043,7 @@ private fun PlayerActionDialog(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = FormatUtils.formatCurrency(pendingAction.buyInCost),
+                        text = FormatUtils.formatCents(pendingAction.buyInCostCents),
                         style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
                         color = PokerColors.PokerGold
                     )
@@ -1059,7 +1075,7 @@ private fun PlayerActionDialog(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Buy-in cost (negative, red)
-                    if (pendingAction.buyInCost > 0.0) {
+                    if (pendingAction.buyInCostCents > 0L) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -1070,7 +1086,7 @@ private fun PlayerActionDialog(
                                 color = PokerColors.ErrorRed
                             )
                             Text(
-                                text = FormatUtils.formatNegativeCurrency(pendingAction.buyInCost),
+                                text = FormatUtils.formatCents(-pendingAction.buyInCostCents),
                                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                                 color = PokerColors.ErrorRed
                             )
@@ -1079,7 +1095,7 @@ private fun PlayerActionDialog(
                     }
 
                     // Payout (leaderboard payout)
-                    if (pendingAction.buyInPayout > 0.0) {
+                    if (pendingAction.buyInPayoutCents > 0L) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -1090,7 +1106,7 @@ private fun PlayerActionDialog(
                                 color = PokerColors.CardWhite
                             )
                             Text(
-                                text = FormatUtils.formatCurrency(pendingAction.buyInPayout),
+                                text = FormatUtils.formatCents(pendingAction.buyInPayoutCents),
                                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                                 color = PokerColors.PokerGold
                             )
@@ -1111,7 +1127,7 @@ private fun PlayerActionDialog(
                                 color = PokerColors.CardWhite
                             )
                             Text(
-                                text = FormatUtils.formatCurrency(pendingAction.knockoutBonus),
+                                text = FormatUtils.formatCents(pendingAction.knockoutBonusCents),
                                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                                 color = PokerColors.PokerGold
                             )
@@ -1120,7 +1136,7 @@ private fun PlayerActionDialog(
                     }
 
                     // King's bounty
-                    if (pendingAction.kingsBounty > 0.0) {
+                    if (pendingAction.kingsBountyCents > 0L) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -1131,11 +1147,18 @@ private fun PlayerActionDialog(
                                 color = PokerColors.CardWhite
                             )
                             Text(
-                                text = FormatUtils.formatCurrency(pendingAction.kingsBounty),
+                                text = FormatUtils.formatCents(pendingAction.kingsBountyCents),
                                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                                 color = PokerColors.PokerGold
                             )
                         }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    if (pendingAction.unclaimedBountyCents > 0L) {
+                        BreakdownLine(
+                            label = "Unclaimed bounties",
+                            cents = pendingAction.unclaimedBountyCents
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                     HorizontalDivider(color = PokerColors.PokerGold.copy(alpha = 0.3f))
@@ -1151,11 +1174,9 @@ private fun PlayerActionDialog(
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = PokerColors.CardWhite
                         )
-                        val netPayColor = if (pendingAction.payoutAmount >= 0) PokerColors.PokerGold else PokerColors.ErrorRed
-                        val netPayText = if (pendingAction.payoutAmount >= 0) 
-                            FormatUtils.formatCurrency(pendingAction.payoutAmount)
-                        else 
-                            FormatUtils.formatNegativeCurrency(-pendingAction.payoutAmount)
+                        val netPayColor =
+                            if (pendingAction.payoutAmountCents >= 0) PokerColors.PokerGold else PokerColors.ErrorRed
+                        val netPayText = FormatUtils.formatCents(pendingAction.payoutAmountCents)
                         Text(
                             text = netPayText,
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
@@ -1216,76 +1237,23 @@ private fun PoolSummaryDialog(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Prize Pool
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Prize Pool:", color = PokerColors.CardWhite)
-                    Text(FormatUtils.formatCurrency(uiState.prizePool), 
-                         fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
-                }
-
-                // Food Pool (hide when zero)
-                if (uiState.foodPool > 0) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Food Pool:", color = PokerColors.CardWhite)
-                        Text(FormatUtils.formatCurrency(uiState.foodPool), 
-                             fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
-                    }
-                }
-
-                // Bounty Pool (hide when zero)
-                if (uiState.bountyPool > 0) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Bounty Pool:", color = PokerColors.CardWhite)
-                        Text(FormatUtils.formatCurrency(uiState.bountyPool), 
-                             fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
-                    }
-                }
-
-                // Rebuy Pool (hide when zero)
-                if (uiState.rebuyPool > 0) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Rebuy Pool:", color = PokerColors.CardWhite)
-                        Text(FormatUtils.formatCurrency(uiState.rebuyPool),
-                             fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
-                    }
-                }
-
-                // Add-on Pool (hide when zero)
-                if (uiState.addonPool > 0) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Add-on Pool:", color = PokerColors.CardWhite)
-                        Text(FormatUtils.formatCurrency(uiState.addonPool),
-                             fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
-                    }
-                }
-
-                // Divider then Total below it
+                val pool = uiState.pool
+                PoolLine("Prize Pool:", pool.prizePoolCents)
+                // Optional pools only when they hold money
+                listOf(
+                    "Food Pool:" to pool.foodCents,
+                    "Bounty Pool:" to pool.bountyCents,
+                    "Rebuy Pool:" to pool.rebuyCents,
+                    "Add-on Pool:" to pool.addOnCents
+                ).filter { it.second > 0L }.forEach { (label, cents) -> PoolLine(label, cents) }
                 HorizontalDivider(color = PokerColors.PokerGold.copy(alpha = 0.3f))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Total Pool:", color = PokerColors.CardWhite, fontWeight = FontWeight.Bold)
-                    Text(FormatUtils.formatCurrency(uiState.totalPool),
-                         fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
-                }
+                PoolLine("Total Pool:", pool.totalCents, bold = true)
             }
+        }
+
+        if (uiState.payoutTable.places.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            PayoutTableCard(uiState)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -1361,30 +1329,63 @@ private fun dialogTitle(actionType: PlayerActionType): Pair<String, String> = wh
 }
 
 @Composable
-private fun SummaryInfoRow(
-    label: String,
-    amount: Double,
-    modifier: Modifier = Modifier
-) {
+private fun PoolLine(label: String, cents: Long, bold: Boolean = false) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
+        Text(label, color = PokerColors.CardWhite, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal)
+        Text(FormatUtils.formatCents(cents), fontWeight = FontWeight.Bold, color = PokerColors.PokerGold)
+    }
+}
+
+@Composable
+private fun BreakdownLine(label: String, cents: Long) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodyLarge, color = PokerColors.CardWhite)
         Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = PokerColors.CardWhite,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            text = FormatUtils.formatCents(cents),
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+            color = PokerColors.PokerGold
         )
-        Text(
-            text = FormatUtils.formatCurrency(amount),
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            color = PokerColors.CardWhite,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+    }
+}
+
+/** The same payout table as the Tournament tab, with who holds each decided place. */
+@Composable
+private fun PayoutTableCard(uiState: BankUiState) {
+    val holderByPlace = uiState.placeByPlayer.entries.associate { (playerId, place) -> place to playerId }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = PokerColors.FeltGreen,
+        border = BorderStroke(1.dp, PokerColors.PokerGold.copy(alpha = 0.6f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Payouts", color = PokerColors.PokerGold, fontWeight = FontWeight.Bold)
+            uiState.payoutTable.places.forEach { row ->
+                val holder = holderByPlace[row.place]?.let { id -> uiState.players.firstOrNull { it.id == id }?.name }
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = row.ordinal,
+                        color = PokerColors.PokerGold,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(44.dp)
+                    )
+                    Text(
+                        text = holder.orEmpty(),
+                        color = PokerColors.CardWhite,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(FormatUtils.formatCents(row.amountCents), color = PokerColors.CardWhite, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }
 

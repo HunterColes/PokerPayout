@@ -1,0 +1,5 @@
+One-time reinstall needed: this version is signed with a new key, so it can't update the installed app. Uninstall Poker Payout, then install this version (saved data is deleted). Later updates install normally.
+
+• Odds calculator fixed: it compared kickers backwards and could name the wrong favorite. Results are now exact.
+• Chip calculator no longer crashes or freezes.
+• Odds clear as soon as you change a card.

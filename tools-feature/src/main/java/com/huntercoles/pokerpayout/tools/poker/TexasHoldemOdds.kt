@@ -32,13 +32,16 @@ fun fullDeck(): List<Card> = buildList(52) {
     for (r in RANK_ORDER) for (s in SUITS) add(Card(r, s))
 }
 
-/** Encode a 5-card hand to an Int for comparison: category (0..8) shifted + kicker pattern base-15. */
+/**
+ * Encode a 5-card hand to an Int for comparison: category (0..8) in bits 24+, then up to five
+ * ranks as 4-bit nibbles, most significant rank first (bits 16..19 down to 0..3).
+ */
 private fun encode(category: Int, ranks: List<Int>): Int {
     var value = category shl 24
-    var shift = 0
+    var shift = 16
     for (r in ranks) {
         value = value or (r shl shift)
-        shift += 4 // fits up to rank 14
+        shift -= 4 // fits up to rank 14
     }
     return value
 }

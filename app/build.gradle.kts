@@ -82,12 +82,15 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
-            // proguardFiles(
-            //     getDefaultProguardFile("proguard-android.txt"),
-            //     "proguard-rules.pro"
-            // )
+            // R8 (shrink, optimize, obfuscate) and resource shrinking. R8's output is
+            // deterministic for a pinned AGP + JDK, so F-Droid's rebuild still matches
+            // byte for byte (release.sh --repro-check proves it for every release).
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             // Use production signing if available, otherwise use debug signing for development
             signingConfig = if (signingConfigs.names.contains("release")) {
                 signingConfigs.getByName("release")

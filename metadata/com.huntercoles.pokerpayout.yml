@@ -1,6 +1,5 @@
 Categories:
-  - Games
-  - Money
+  - Game Helper
 License: MIT
 AuthorName: Hunter Coles, Joshua Glenn
 AuthorEmail: hunter.colesw@gmail.com
@@ -13,7 +12,8 @@ AutoName: Poker Payout
 
 RepoType: git
 Repo: https://github.com/HunterColes/PokerPayout.git
-Binaries: https://github.com/HunterColes/PokerPayout/releases/download/v%v/PokerPayout-v%v-release.apk
+Binaries: 
+  https://github.com/HunterColes/PokerPayout/releases/download/v%v/PokerPayout-v%v-release.apk
 
 Builds:
   - versionName: 1.1.11
@@ -27,7 +27,7 @@ Builds:
 
   - versionName: 1.1.12
     versionCode: 24
-    commit: v1.1.12
+    commit: 00265fccc5d33ffca9322d0c65af99ceb41174a5
     subdir: app
     gradle:
       - yes

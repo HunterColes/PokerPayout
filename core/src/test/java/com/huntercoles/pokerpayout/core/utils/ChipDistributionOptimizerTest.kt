@@ -34,7 +34,10 @@ class ChipDistributionOptimizerTest {
 
     private fun success(target: Int, smallest: Int, count: Int, curve: ChipDistributionCurve): ChipDistributionOutcome.Success {
         val outcome = optimize(target, smallest, count, curve)
-        assertTrue(outcome is ChipDistributionOutcome.Success, "expected a breakdown for $target/$smallest/$count/${curve.displayName}, got $outcome")
+        assertTrue(
+            outcome is ChipDistributionOutcome.Success,
+            "expected a breakdown for $target/$smallest/$count/${curve.displayName}, got $outcome"
+        )
         outcome as ChipDistributionOutcome.Success
         assertExactBreakdown(outcome, target, smallest, count, curve)
         return outcome
@@ -291,6 +294,7 @@ class ChipDistributionOptimizerTest {
 
     @Test
     @Timeout(value = 120, unit = TimeUnit.SECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    @Suppress("NestedBlockDepth") // one loop per input dimension of the sweep
     fun `every UI-reachable input gives an exact breakdown or a genuine typed error, within budget`() {
         // Chip calculator UI: smallest chip 1..100, starting chips 1..999,999,999, 3..8
         // denominations, 5 curves. Tournament → Blinds feeds any smallest chip ≥ 1.
@@ -362,6 +366,7 @@ class ChipDistributionOptimizerTest {
         println("ORACLE checked=$checked")
     }
 
+    @Suppress("CyclomaticComplexMethod") // builds the oracle, then one check per optimality property
     private fun checkAgainstOracle(t: Int, s: Int, k: Int, curve: ChipDistributionCurve) {
         val label = "$t/$s/$k/${curve.displayName}"
         val outcome = optimize(t, s, k, curve)
@@ -532,10 +537,10 @@ class ChipDistributionOptimizerTest {
         go(n - 1, t, 1)
     }
 
-    private fun <T> combinations(items: List<T>, k: Int): List<List<T>> {
-        if (k == 0) return listOf(emptyList())
-        if (k > items.size) return emptyList()
-        return items.indices.flatMap { i -> combinations(items.drop(i + 1), k - 1).map { listOf(items[i]) + it } }
+    private fun <T> combinations(items: List<T>, k: Int): List<List<T>> = when {
+        k == 0 -> listOf(emptyList())
+        k > items.size -> emptyList()
+        else -> items.indices.flatMap { i -> combinations(items.drop(i + 1), k - 1).map { listOf(items[i]) + it } }
     }
 
     private fun gcd(a: Int, b: Int): Int = if (b == 0) a else gcd(b, a % b)

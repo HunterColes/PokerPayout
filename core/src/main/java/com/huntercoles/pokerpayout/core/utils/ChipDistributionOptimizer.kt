@@ -55,6 +55,7 @@ object ChipDistributionOptimizer {
      *   can't support that many.
      * @param curve The shape the counts should follow.
      */
+    @Suppress("ReturnCount") // one early return per typed failure, in the order they are checked
     fun optimize(
         targetValue: Int,
         smallestChip: Int,
@@ -313,6 +314,8 @@ object ChipDistributionOptimizer {
             return reach[freeVariables]!![(amount % base).toInt()] <= amount
         }
 
+        // Branch and bound: every return and continue below is a pruning rule.
+        @Suppress("ReturnCount", "CyclomaticComplexMethod", "LoopWithTooManyJumpStatements")
         private fun search(i: Int, remaining: Long, costSoFar: Double, lowerBound: Long) {
             if (i == 0) {
                 // canMake() one level up guarantees divisibility and q[0] ≥ lowerBound.
@@ -369,6 +372,7 @@ object ChipDistributionOptimizer {
          * q[0] ≥ [low]. q[0] is kept integral within its residue class, and q[1..k-1] are relaxed
          * to real values.
          */
+        @Suppress("ReturnCount") // one closed-form case per return
         private fun residueBound(k: Int, w: Long, low: Long): Double {
             if (k == 1) return square(w.toDouble() / base - ideal[0])
             val period = q0Period[k]

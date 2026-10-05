@@ -7,6 +7,7 @@ import com.huntercoles.pokerpayout.core.preferences.ChipCalculatorPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.utils.ChipDistributionCurve
 import com.huntercoles.pokerpayout.core.utils.ChipDistributionOptimizer
+import com.huntercoles.pokerpayout.core.utils.ChipDistributionOutcome
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -140,14 +141,15 @@ class ChipCalculatorViewModel @Inject constructor(
         val denomCount = _uiState.value.denominationCount
         val curve = _uiState.value.selectedCurve
         
-        // Use curve-based optimization
-        val result = ChipDistributionOptimizer.optimize(
+        // Use curve-based optimization. Inputs with no exact breakdown leave the screen as it is.
+        val outcome = ChipDistributionOptimizer.optimize(
             targetValue = total,
             smallestChip = smallestChip,
             denominationCount = denomCount,
             curve = curve
         )
-        
+        val result = (outcome as? ChipDistributionOutcome.Success)?.distribution ?: return
+
         // Convert to ChipBreakdown with colors
         val breakdown = result.denominations.zip(result.quantities).map { (value, count) ->
             val chipInfo = ChipDenominations.getChipByValue(value)

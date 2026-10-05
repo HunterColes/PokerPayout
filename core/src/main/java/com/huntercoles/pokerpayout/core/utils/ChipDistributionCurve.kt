@@ -133,23 +133,96 @@ sealed class ChipDistributionCurve {
 }
 
 /**
- * Result of chip distribution optimization
+ * An exact chip distribution: Σ denominations[i] × quantities[i] == totalValue.
  */
 data class ChipDistributionResult(
-    val denominations: List<Int>,           // Selected chip values
-    val quantities: List<Int>,              // Quantity of each denomination
+    val denominations: List<Int>,           // Selected chip values, ascending
+    val quantities: List<Int>,              // Quantity of each denomination (each ≥ 1)
     val fitScore: Double,                   // 0-1, where 1 = perfect fit to curve
     val totalChips: Int,                    // Total number of physical chips
-    val totalValue: Int,                    // Total value (should match target)
+    val totalValue: Int,                    // Total value (equals the starting stack)
     val curveUsed: ChipDistributionCurve    // Which curve was used
 )
 
 /**
- * Point on the curve representing a chip denomination
+ * What [ChipDistributionOptimizer.optimize] returns: an exact distribution or the reason there
+ * isn't one. Every [Failure] carries a one-line, user-facing [Failure.message].
  */
-data class ChipPoint(
-    val value: Int,           // Denomination value
-    val normalizedX: Double,  // Position on curve (0-1)
-    val quantity: Int,        // Number of chips
-    val normalizedY: Double   // Normalized quantity (0-1)
-)
+sealed interface ChipDistributionOutcome {
+
+    data class Success(
+        val distribution: ChipDistributionResult,
+        /** The smallest chip as asked for, before snapping to a standard chip value. */
+        val requestedSmallestChip: Int
+    ) : ChipDistributionOutcome {
+        val usedSmallestChip: Int get() = distribution.denominations.first()
+        val smallestChipAdjusted: Boolean get() = usedSmallestChip != requestedSmallestChip
+
+        /** One-line note for the user when an input was adjusted, else null. */
+        val note: String?
+            get() = if (smallestChipAdjusted) {
+                "$requestedSmallestChip isn't a standard chip, so the smallest chip used is $usedSmallestChip."
+            } else {
+                null
+            }
+    }
+
+    sealed interface Failure : ChipDistributionOutcome {
+        val message: String
+    }
+
+    enum class Field { STARTING_CHIPS, SMALLEST_CHIP, DENOMINATION_COUNT }
+
+    /** A number outside its allowed range (all must be at least 1). */
+    data class InvalidInput(val input: Field, val value: Int) : Failure {
+        override val message: String
+            get() = when (input) {
+                Field.STARTING_CHIPS -> "Starting chips must be at least 1."
+                Field.SMALLEST_CHIP -> "Smallest chip must be at least 1."
+                Field.DENOMINATION_COUNT -> "Use at least 1 chip denomination."
+            }
+    }
+
+    /** The stack is smaller than one smallest chip. */
+    data class StackSmallerThanSmallestChip(
+        val startingChips: Int,
+        val requestedSmallestChip: Int,
+        val usedSmallestChip: Int
+    ) : Failure {
+        override val message: String
+            get() = "Starting chips ($startingChips) must be at least the smallest chip ($usedSmallestChip)."
+    }
+
+    /**
+     * No mix of the allowed chips adds up to the stack, because every allowed chip is a multiple
+     * of [unit] and the stack isn't.
+     */
+    data class StackNotReachable(
+        val startingChips: Int,
+        val requestedSmallestChip: Int,
+        val usedSmallestChip: Int,
+        val unit: Int
+    ) : Failure {
+        val nearestBelow: Int get() = startingChips - startingChips % unit
+        val nearestAbove: Int get() = nearestBelow + unit
+
+        override val message: String
+            get() = "$startingChips can't be made from chips of $usedSmallestChip and up. " +
+                "Try $nearestBelow or $nearestAbove."
+    }
+
+    /**
+     * The stack is a reachable amount, but no breakdown with at least one of each chip fits the
+     * curve's constraints (the linear curves need counts that never rise with chip value).
+     */
+    data class NoExactBreakdown(
+        val startingChips: Int,
+        val requestedSmallestChip: Int,
+        val usedSmallestChip: Int,
+        val curve: ChipDistributionCurve
+    ) : Failure {
+        override val message: String
+            get() = "No exact breakdown of $startingChips with chips of $usedSmallestChip and up fits " +
+                "${curve.displayName}. Try another curve or a multiple of $usedSmallestChip."
+    }
+}

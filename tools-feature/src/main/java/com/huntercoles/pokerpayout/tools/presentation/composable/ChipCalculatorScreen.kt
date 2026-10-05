@@ -118,6 +118,7 @@ fun ChipCalculatorScreen(
                 ) {
                     Button(
                         onClick = { viewModel.calculateChipBreakdown() },
+                        enabled = !uiState.isCalculating,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = PokerColors.AccentGreen,
                             contentColor = PokerColors.CardWhite
@@ -125,7 +126,7 @@ fun ChipCalculatorScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = "Generate",
+                            text = if (uiState.isCalculating) "Generating…" else "Generate",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
@@ -140,6 +141,15 @@ fun ChipCalculatorScreen(
                             tint = PokerColors.PokerGold
                         )
                     }
+                }
+
+                // Why there is no breakdown, or a note about an adjusted input
+                uiState.message?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PokerColors.PokerGold
+                    )
                 }
 
                 // Collapsible Advanced Settings Content

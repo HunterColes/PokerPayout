@@ -85,10 +85,29 @@ class ChipCalculatorPreferences @Inject constructor(
         }
     }
 
-    fun setChipBreakdown(breakdown: List<Pair<Int, Int>>) {
+    /**
+     * Save a generated breakdown and its fit score together, in one edit, before notifying
+     * [chipBreakdown] collectors. A collector therefore never sees a breakdown paired with the
+     * previous run's fit score.
+     */
+    fun saveResult(breakdown: List<Pair<Int, Int>>, fitScore: Double) {
         val breakdownString = breakdown.joinToString(";") { "${it.first},${it.second}" }
-        prefs.edit().putString(CHIP_BREAKDOWN_KEY, breakdownString).apply()
+        prefs.edit()
+            .putString(CHIP_BREAKDOWN_KEY, breakdownString)
+            .putFloat(FIT_SCORE_KEY, fitScore.toFloat())
+            .remove(LEGACY_TOTAL_PHYSICAL_CHIPS_KEY)
+            .apply()
         _chipBreakdown.value = breakdown
+    }
+
+    /** Forget the last generated breakdown (e.g. when the latest Generate had no answer). */
+    fun clearResult() {
+        prefs.edit()
+            .remove(CHIP_BREAKDOWN_KEY)
+            .remove(FIT_SCORE_KEY)
+            .remove(LEGACY_TOTAL_PHYSICAL_CHIPS_KEY)
+            .apply()
+        _chipBreakdown.value = emptyList()
     }
 
     fun getFitScore(): Double? {
@@ -96,21 +115,8 @@ class ChipCalculatorPreferences @Inject constructor(
         return if (score >= 0) score.toDouble() else null
     }
 
-    fun setFitScore(score: Double?) {
-        if (score != null) {
-            prefs.edit().putFloat(FIT_SCORE_KEY, score.toFloat()).apply()
-        } else {
-            prefs.edit().remove(FIT_SCORE_KEY).apply()
-        }
-    }
-
-    fun getTotalPhysicalChips(): Int {
-        return prefs.getInt(TOTAL_PHYSICAL_CHIPS_KEY, 0)
-    }
-
-    fun setTotalPhysicalChips(total: Int) {
-        prefs.edit().putInt(TOTAL_PHYSICAL_CHIPS_KEY, total).apply()
-    }
+    /** Physical chips in the saved breakdown, derived from it so the two can't disagree. */
+    fun getTotalPhysicalChips(): Int = getChipBreakdown().sumOf { it.second }
 
     companion object {
         private const val CUSTOM_TOTAL_CHIPS_KEY = "custom_total_chips"
@@ -118,6 +124,7 @@ class ChipCalculatorPreferences @Inject constructor(
         private const val DENOMINATION_COUNT_KEY = "denomination_count"
         private const val CHIP_BREAKDOWN_KEY = "chip_breakdown"
         private const val FIT_SCORE_KEY = "fit_score"
-        private const val TOTAL_PHYSICAL_CHIPS_KEY = "total_physical_chips"
+        // Written by v1.1.x; now derived from the breakdown and only removed.
+        private const val LEGACY_TOTAL_PHYSICAL_CHIPS_KEY = "total_physical_chips"
     }
 }

@@ -95,3 +95,6 @@ build-cache
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# Python bytecode (scripts/device/ui.py)
+__pycache__/

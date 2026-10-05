@@ -19,7 +19,7 @@ android {
     }
 
     defaultConfig {
-        testInstrumentationRunner = "com.huntercoles.pokerpayout.core.utils.HiltTestRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -50,9 +50,6 @@ android {
     }
 
     sourceSets {
-        getByName("androidTest") {
-            java.srcDir(project(":core").file("src/androidTest/java"))
-        }
         getByName("test") {
             java.srcDir(project(":core").file("src/test/java"))
         }

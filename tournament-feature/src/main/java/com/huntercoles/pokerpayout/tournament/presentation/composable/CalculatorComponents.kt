@@ -24,8 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
-import com.huntercoles.pokerpayout.core.design.components.PokerNumberField
-import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiState
 
@@ -79,7 +77,7 @@ private const val PANEL_PAYOUTS = "payouts"
 fun PoolConfigurationSection(
     uiState: TournamentConfigUiState,
     onIntent: (TournamentConfigIntent) -> Unit,
-    onTimerIntent: (TimerIntent) -> Unit,
+    blindsPanel: @Composable () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isLocked = uiState.isTournamentLocked
@@ -117,7 +115,8 @@ fun PoolConfigurationSection(
                 color = PokerColors.SurfaceSecondary.copy(alpha = 0.4f)
             ) {
                 when (uiState.selectedPanel) {
-                    PANEL_BLINDS -> BlindsPanel(uiState, onIntent, onTimerIntent)
+                    // The clock owns the blind setup (PP-020, PP-026, PP-051); see BlindsConfigPanel
+                    PANEL_BLINDS -> Box(modifier = Modifier.padding(16.dp)) { blindsPanel() }
                     PANEL_PAYOUTS -> PayoutsPanel(uiState, onIntent)
                     else -> PlayerPanel(uiState, onIntent)
                 }
@@ -198,104 +197,3 @@ private fun PurchaseRow(uiState: TournamentConfigUiState, onIntent: (TournamentC
         )
     }
 }
-
-@Composable
-private fun BlindsPanel(
-    uiState: TournamentConfigUiState,
-    onIntent: (TournamentConfigIntent) -> Unit,
-    onTimerIntent: (TimerIntent) -> Unit
-) {
-    Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        BlindsTimeRow(uiState, onIntent, onTimerIntent)
-        BlindsChipsRow(uiState, onIntent, onTimerIntent)
-    }
-}
-
-@Composable
-private fun BlindsTimeRow(
-    uiState: TournamentConfigUiState,
-    onIntent: (TournamentConfigIntent) -> Unit,
-    onTimerIntent: (TimerIntent) -> Unit
-) {
-    val isLocked = uiState.isTournamentLocked
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        PokerNumberField(
-            value = uiState.gameDurationHours,
-            onValueChange = { hours ->
-                val cappedHours = hours.coerceIn(1, MAX_DURATION_HOURS)
-                if (!isLocked) {
-                    onIntent(TournamentConfigIntent.UpdateGameDurationHours(cappedHours))
-                    onTimerIntent(TimerIntent.GameDurationHoursChanged(cappedHours))
-                }
-            },
-            label = "Duration (Hours)",
-            isLocked = isLocked,
-            minValue = 1,
-            maxValue = MAX_DURATION_HOURS,
-            modifier = Modifier.weight(1f)
-        )
-
-        PokerNumberField(
-            value = uiState.roundLengthMinutes,
-            onValueChange = { minutes ->
-                if (!isLocked) {
-                    onIntent(TournamentConfigIntent.UpdateRoundLength(minutes))
-                    onTimerIntent(TimerIntent.UpdateRoundLength(minutes))
-                }
-            },
-            label = "Round Length (Min)",
-            isLocked = isLocked,
-            minValue = 1,
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-private fun BlindsChipsRow(
-    uiState: TournamentConfigUiState,
-    onIntent: (TournamentConfigIntent) -> Unit,
-    onTimerIntent: (TimerIntent) -> Unit
-) {
-    val isLocked = uiState.isTournamentLocked
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        PokerNumberField(
-            value = uiState.smallestChip,
-            onValueChange = { chip ->
-                if (!isLocked) {
-                    onIntent(TournamentConfigIntent.UpdateSmallestChip(chip))
-                    onTimerIntent(TimerIntent.UpdateSmallestChip(chip))
-                }
-            },
-            label = "Smallest Chip",
-            isLocked = isLocked,
-            minValue = 1,
-            modifier = Modifier.weight(1f)
-        )
-
-        PokerNumberField(
-            value = uiState.startingChips,
-            onValueChange = { chips ->
-                if (!isLocked) {
-                    onIntent(TournamentConfigIntent.UpdateStartingChips(chips))
-                    onTimerIntent(TimerIntent.UpdateStartingChips(chips))
-                }
-            },
-            label = "Starting Chips",
-            isLocked = isLocked,
-            minValue = 1,
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-private const val MAX_DURATION_HOURS = 24

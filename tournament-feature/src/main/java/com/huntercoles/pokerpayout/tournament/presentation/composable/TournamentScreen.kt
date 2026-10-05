@@ -109,6 +109,11 @@ fun PlayContent(
     onTimerIntent: (TimerIntent) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
+    // Blind setup lives in the clock; mirror it to the config ViewModel's copy (used by Reset).
+    val timerIntent: (TimerIntent) -> Unit = { intent ->
+        intent.toConfigIntent()?.let(onCalculatorIntent)
+        onTimerIntent(intent)
+    }
 
     // Clear focus immediately when this composable is disposed (tab switch)
     DisposableEffect(Unit) {
@@ -120,6 +125,7 @@ fun PlayContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -148,7 +154,13 @@ fun PlayContent(
         TournamentConfigurationCard(
             uiState = calculatorUiState,
             onIntent = onCalculatorIntent,
-            onTimerIntent = onTimerIntent,
+            blindsPanel = {
+                BlindsConfigPanel(
+                    uiState = timerUiState,
+                    onIntent = timerIntent,
+                    isLocked = calculatorUiState.isTournamentLocked
+                )
+            },
             isExpanded = calculatorUiState.isConfigExpanded,
             onExpandedChange = { onCalculatorIntent(TournamentConfigIntent.ToggleConfigExpanded(it)) }
         )
@@ -156,7 +168,7 @@ fun PlayContent(
         // Timer Section (from Timer screen)
         TimerScreen(
             uiState = timerUiState,
-            onIntent = onTimerIntent,
+            onIntent = timerIntent,
             isConfigExpanded = calculatorUiState.isConfigExpanded
         )
     }
@@ -212,7 +224,7 @@ fun PlayerCountSlider(
 fun TournamentConfigurationCard(
     uiState: TournamentConfigUiState,
     onIntent: (TournamentConfigIntent) -> Unit,
-    onTimerIntent: (TimerIntent) -> Unit,
+    blindsPanel: @Composable () -> Unit,
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit
 ) {
@@ -280,7 +292,7 @@ fun TournamentConfigurationCard(
                     PoolConfigurationSection(
                         uiState = uiState,
                         onIntent = onIntent,
-                        onTimerIntent = onTimerIntent
+                        blindsPanel = blindsPanel
                     )
                 }
             }

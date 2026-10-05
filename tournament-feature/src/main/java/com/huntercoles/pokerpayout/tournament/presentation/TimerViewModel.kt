@@ -2,716 +2,507 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.huntercoles.pokerpayout.core.R
 import com.huntercoles.pokerpayout.core.audio.SoundManager
 import com.huntercoles.pokerpayout.core.constants.AudioConstants.LEVEL_CHANGE_SOUND_LEAD_SECONDS
+import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
+import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
-import com.huntercoles.pokerpayout.core.utils.BlindLevel
+import com.huntercoles.pokerpayout.core.time.ClockAnchor
+import com.huntercoles.pokerpayout.core.time.TimeSource
+import com.huntercoles.pokerpayout.core.utils.BlindSetupAdvisor
+import com.huntercoles.pokerpayout.core.utils.BlindSetupFix
 import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
 import com.huntercoles.pokerpayout.core.utils.BlindStructureInput
+import com.huntercoles.pokerpayout.core.utils.SmallestChipChoices
+import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
+import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSettings
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockTimeline
+import com.huntercoles.pokerpayout.tournament.domain.clock.LevelSegment
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
+/**
+ * The tournament clock (PP-015).
+ *
+ * Time is never counted: the clock is a [ClockAnchor] (play time at an instant, plus the monotonic
+ * clock's reading then), and every tick derives play time from [TimeSource.elapsedRealtimeMillis].
+ * The tick loop only decides when to look; a late, skipped or sleep-delayed tick can't make the clock
+ * drift. The anchor is saved when the clock starts, pauses, jumps, finishes or resets, so a killed
+ * process resumes exactly where the clock would be, overtime included.
+ */
 @HiltViewModel
 class TimerViewModel @Inject constructor(
     private val timerPreferences: TimerPreferences,
     private val tournamentPreferences: TournamentPreferences,
-    private val soundManager: SoundManager
+    private val bankPreferences: BankPreferences,
+    private val soundManager: SoundManager,
+    private val timeSource: TimeSource
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimerUiState())
     val uiState: StateFlow<TimerUiState> = _uiState.asStateFlow()
 
-    private var timerJob: Job? = null
-    private var hasPlayedSoundForLevel: Int = -1 // Track which level we've played sound for
-    private var latestPlayerCount: Int = runBlocking {
-        runCatching { tournamentPreferences.playerCount.first() }
-            .getOrElse { TimerUiState().playerCount }
-    }
+    private var anchor = ClockAnchor()
+    private var tickJob: Job? = null
+
+    /** Play time at the previous look, to detect sound cues crossed since. */
+    private var lastSeenMillis = 0L
+
+    private var tableConfig = tournamentPreferences.getCurrentTournamentConfig()
+    private var bank = BankCounts()
 
     init {
-        // Preload sound effect so it's ready when needed
-        soundManager.preloadSound(com.huntercoles.pokerpayout.core.R.raw.blind_level_up)
-        
-        // Restore timer state from preferences (includes frozen blind config if timer started)
-        restoreTimerState()
-        observePlayerCount()
-        // Always regenerate blind schedule - it will use the preserved blind config
-        // if timer has started, ensuring we get the exact same levels
-        regenerateBlindSchedule()
-    }
-
-    private fun restoreTimerState() {
-        val actualTime = timerPreferences.calculateActualTime()
-        val storedDirection = timerPreferences.getTimerDirection()
-        val direction = when (storedDirection) {
-            "COUNTUP" -> TimerDirection.COUNTUP
-            else -> TimerDirection.COUNTDOWN
-        }
-        val finishedPref = timerPreferences.getIsFinished()
-        val isRunning = timerPreferences.getTimerRunning()
-        val hasStarted = timerPreferences.getHasTimerStarted()
-        val overtimeRevealed = timerPreferences.getOvertimeLevelsRevealed()
-        
-        // Restore blind configuration from when timer started (if timer has started)
-        val blindConfig = if (hasStarted) {
-            BlindConfiguration(
-                smallestChip = timerPreferences.getSmallestChipAtStart(),
-                startingChips = timerPreferences.getStartingChipsAtStart(),
-                roundLengthMinutes = timerPreferences.getRoundLengthAtStart()
-            )
-        } else {
-            // Use current tournament preferences if timer hasn't started
-            BlindConfiguration(
-                smallestChip = tournamentPreferences.getSmallestChip(),
-                startingChips = tournamentPreferences.getStartingChips(),
-                roundLengthMinutes = tournamentPreferences.getRoundLengthMinutes()
-            )
-        }
-        
-        _uiState.update { 
-            it.copy(
-                gameDurationMinutes = timerPreferences.getGameDurationMinutes(),
-                currentTimeSeconds = actualTime,
-                timerDirection = direction,
-                isRunning = isRunning,
-                isFinished = finishedPref,
-                hasTimerStarted = hasStarted,
-                overtimeLevelsRevealed = overtimeRevealed,
-                blindConfiguration = blindConfig
-            )
-        }
-        
-        // Update preferences with the calculated time only if timer was running
-        if (isRunning && !finishedPref) {
-            timerPreferences.setCurrentTimeSeconds(actualTime)
-            // Continue the timer after a brief delay to ensure UI is ready
-            viewModelScope.launch {
-                delay(100) // Brief delay to ensure restoration is complete
-                startTimer()
-            }
-        }
-        
-        regenerateBlindSchedule()
+        soundManager.preloadSound(R.raw.blind_level_up)
+        normalizeStoredSmallestChip()
+        restore()
+        observeTable()
     }
 
     fun acceptIntent(intent: TimerIntent) {
         when (intent) {
-            is TimerIntent.GameDurationChanged -> updateGameDuration(intent.minutes)
-            is TimerIntent.GameDurationHoursChanged -> updateGameDurationHours(intent.hours)
-            is TimerIntent.ToggleTimer -> toggleTimer()
-            is TimerIntent.ResetTimer -> resetTimer()
-            is TimerIntent.TimerTick -> updateTimer(intent.seconds)
-            is TimerIntent.NextBlindLevel -> goToNextBlindLevel()
-            is TimerIntent.PreviousBlindLevel -> goToPreviousBlindLevel()
-            
-            // Blind configuration intents
-            is TimerIntent.UpdateSmallestChip -> updateSmallestChip(intent.value)
-            is TimerIntent.UpdateStartingChips -> updateStartingChips(intent.value)
-            is TimerIntent.UpdateRoundLength -> updateRoundLength(intent.minutes)
-            is TimerIntent.ToggleBlindConfigCollapsed -> toggleBlindConfigCollapsed(intent.collapsed)
-
-            // Dialog intents
-            is TimerIntent.ShowInvalidConfigDialog -> _uiState.update { it.copy(showInvalidConfigDialog = true) }
-            is TimerIntent.HideInvalidConfigDialog -> _uiState.update { it.copy(showInvalidConfigDialog = false) }
+            TimerIntent.ToggleTimer -> toggleTimer()
+            TimerIntent.ResetTimer -> resetTimer()
+            TimerIntent.NextBlindLevel -> jumpToSegment(_uiState.value.currentSegmentIndex + 1)
+            TimerIntent.PreviousBlindLevel -> jumpToSegment(_uiState.value.currentSegmentIndex - 1)
+            TimerIntent.ShowInvalidConfigDialog -> _uiState.update { it.copy(showInvalidConfigDialog = true) }
+            TimerIntent.HideInvalidConfigDialog -> _uiState.update { it.copy(showInvalidConfigDialog = false) }
+            is TimerIntent.SetTableView -> _uiState.update { it.copy(isTableView = intent.enabled) }
+            is TimerIntent.ApplyFix -> applyFix(intent.fix)
+            else -> acceptSetupIntent(intent)
         }
     }
 
-    private fun updateGameDuration(minutes: Int) {
-        val validMinutes = minutes.coerceIn(1, 1440) // 1 minute to 24 hours
-        timerPreferences.setGameDurationMinutes(validMinutes)
-        
-        _uiState.update { state ->
-            val newTotalSeconds = validMinutes * 60
-            val newCurrentSeconds = when (state.timerDirection) {
-                TimerDirection.COUNTDOWN -> newTotalSeconds
-                TimerDirection.COUNTUP -> 0
+    private fun acceptSetupIntent(intent: TimerIntent) {
+        when (intent) {
+            is TimerIntent.GameDurationHoursChanged -> changeSetup {
+                it.copy(gameDurationMinutes = intent.hours.coerceIn(1, MAX_HOURS) * MINUTES_PER_HOUR)
             }
-            state.copy(
-                gameDurationMinutes = validMinutes,
-                currentTimeSeconds = newCurrentSeconds,
-                isFinished = false,
-                hasTimerStarted = state.hasTimerStarted  // Preserve hasTimerStarted
+            is TimerIntent.UpdateSmallestChip -> changeSetup { it.copy(smallestChip = intent.value.coerceAtLeast(1)) }
+            is TimerIntent.UpdateStartingChips -> changeSetup { it.copy(startingChips = intent.value.coerceAtLeast(1)) }
+            is TimerIntent.UpdateRoundLength -> changeSetup {
+                it.copy(roundLengthMinutes = intent.minutes.coerceAtLeast(1))
+            }
+            is TimerIntent.UpdateBreakEvery -> changeBreaks {
+                it.copy(everyLevels = intent.levels.coerceIn(0, MAX_BREAK_EVERY))
+            }
+            is TimerIntent.UpdateBreakLength -> changeBreaks {
+                it.copy(lengthMinutes = intent.minutes.coerceIn(1, MAX_BREAK_MINUTES))
+            }
+            is TimerIntent.UpdateBreakMessage -> changeBreaks { it.copy(message = intent.message.take(MAX_NOTE)) }
+            is TimerIntent.UpdateBigBlindAnte -> changeKeepingPosition {
+                it.copy(bigBlindAnteFromLevel = intent.fromLevel.coerceAtLeast(0))
+            }
+            else -> Unit
+        }
+    }
+
+    private fun changeBreaks(transform: (BreakSettings) -> BreakSettings) =
+        changeKeepingPosition { it.copy(breaks = transform(it.breaks)) }
+
+    // ------------------------------------------------------------------ restore
+
+    private fun restore() {
+        val hasStarted = timerPreferences.getHasTimerStarted()
+        _uiState.update {
+            it.copy(
+                config = loadConfig(frozen = hasStarted),
+                hasTimerStarted = hasStarted,
+                isFinished = timerPreferences.getIsFinished()
             )
         }
-        
-        timerPreferences.setCurrentTimeSeconds(_uiState.value.currentTimeSeconds)
-        timerPreferences.setIsFinished(false)
-        stopTimer()
-        regenerateBlindSchedule()
+        rebuildSchedule()
+        anchor = timerPreferences.getClock() ?: migrateLegacyClock()
+        val elapsed = anchor.elapsedAt(timeSource)
+        lastSeenMillis = elapsed
+
+        val state = _uiState.value
+        if (anchor.running && !state.isFinished && !state.timeline.isEmpty) {
+            _uiState.update { it.copy(isRunning = true) }
+            tournamentPreferences.setTournamentLocked(true)
+            show(elapsed, playCues = false)
+            if (_uiState.value.isRunning) startTicking()
+        } else {
+            if (anchor.running) {
+                anchor = ClockAnchor.stopped(elapsed)
+                timerPreferences.saveClock(anchor)
+            }
+            show(elapsed, playCues = false)
+        }
     }
 
-    private fun updateGameDurationHours(hours: Int) {
-        val validHours = hours.coerceIn(1, 24) // 1 hour to 24 hours
-        val minutes = validHours * 60
-        updateGameDuration(minutes)
+    /** A v1.1.x clock (remaining seconds + wall time) becomes an anchor once, keeping any overtime. */
+    private fun migrateLegacyClock(): ClockAnchor {
+        val legacy = timerPreferences.getLegacyClock() ?: return ClockAnchor()
+        val sinceSaved = if (legacy.running) {
+            (timeSource.wallClockMillis() - legacy.savedAtWallMillis).coerceAtLeast(0)
+        } else {
+            0L
+        }
+        val elapsed = legacy.elapsedSeconds * MILLIS_PER_SECOND + sinceSaved
+        val migrated = anchorAt(elapsed, running = legacy.running)
+        timerPreferences.saveClock(migrated)
+        return migrated
     }
+
+    private fun loadConfig(frozen: Boolean) = BlindConfiguration(
+        gameDurationMinutes = timerPreferences.getGameDurationMinutes(),
+        roundLengthMinutes = if (frozen) {
+            timerPreferences.getRoundLengthAtStart()
+        } else {
+            tournamentPreferences.getRoundLengthMinutes()
+        },
+        smallestChip = if (frozen) {
+            timerPreferences.getSmallestChipAtStart()
+        } else {
+            tournamentPreferences.getSmallestChip()
+        },
+        startingChips = if (frozen) {
+            timerPreferences.getStartingChipsAtStart()
+        } else {
+            tournamentPreferences.getStartingChips()
+        },
+        breaks = BreakSettings(
+            everyLevels = timerPreferences.getBreakEveryLevels(),
+            lengthMinutes = timerPreferences.getBreakLengthMinutes(),
+            message = timerPreferences.getBreakMessage()
+        ),
+        bigBlindAnteFromLevel = timerPreferences.getBigBlindAnteFromLevel()
+    )
+
+    /** PP-051: the smallest chip is now picked from real chips; map an old free-entry value onto one. */
+    private fun normalizeStoredSmallestChip() {
+        val stored = tournamentPreferences.getSmallestChip()
+        val normalized = SmallestChipChoices.normalize(stored)
+        if (normalized != stored) tournamentPreferences.setSmallestChip(normalized)
+    }
+
+    // ------------------------------------------------------------------ the clock
 
     private fun toggleTimer() {
-        val currentState = _uiState.value
-        if (currentState.isRunning) {
-            stopTimer()
-        } else {
-            // Validate blind configuration before starting
-            if (!isValidBlindConfiguration(currentState)) {
-                _uiState.update { it.copy(showInvalidConfigDialog = true) }
-                return
-            }
-
-            startTimer()
+        val state = _uiState.value
+        when {
+            state.isFinished -> Unit
+            state.isRunning -> pause()
+            !isValidBlindConfiguration(state) -> _uiState.update { it.copy(showInvalidConfigDialog = true) }
+            else -> start()
         }
     }
 
-    private fun startTimer() {
-        if (timerJob?.isActive == true) return
-
-        val currentState = _uiState.value
-        
-        // Calculate final time once when timer starts
-        val finalTimeSeconds = calculateFinalTimeSeconds(currentState)
-        
-        // Reset sound tracking when timer starts/resumes
-        hasPlayedSoundForLevel = -1
-
-        _uiState.update { 
-            it.copy(
-                isRunning = true, 
-                isFinished = false,
-                finalTimeSeconds = finalTimeSeconds,
-                isBlindConfigCollapsed = true,  // Auto-collapse when timer starts
-                hasTimerStarted = true  // Mark that timer has been started (stays true until reset)
-            ) 
-        }
-        timerPreferences.setTimerRunning(true)
-        timerPreferences.setIsFinished(false)
-        timerPreferences.setHasTimerStarted(true)  // Set the preference
-        
-        // Save blind configuration at start time (frozen for entire tournament)
-        timerPreferences.setSmallestChipAtStart(currentState.blindConfiguration.smallestChip)
-        timerPreferences.setStartingChipsAtStart(currentState.blindConfiguration.startingChips)
-        timerPreferences.setRoundLengthAtStart(currentState.blindConfiguration.roundLengthMinutes)
-        
-        // Lock tournament settings when timer starts
+    private fun start() {
+        markStarted()
+        val elapsed = anchor.elapsedAt(timeSource)
+        anchor = ClockAnchor.runningFrom(elapsed, timeSource)
+        timerPreferences.saveClock(anchor)
         tournamentPreferences.setTournamentLocked(true)
         tournamentPreferences.setIsConfigExpanded(false)
+        lastSeenMillis = elapsed
+        _uiState.update { it.copy(isRunning = true, isFinished = false) }
+        startTicking()
+    }
 
-        timerJob = viewModelScope.launch {
-            while (true) {
-                delay(1000) // 1 second
+    private fun pause() {
+        val elapsed = anchor.elapsedAt(timeSource)
+        tickJob?.cancel()
+        tickJob = null
+        anchor = ClockAnchor.stopped(elapsed)
+        timerPreferences.saveClock(anchor)
+        tournamentPreferences.setTournamentLocked(false)
+        _uiState.update { it.copy(isRunning = false) }
+        show(elapsed, playCues = false)
+    }
 
-                val state = _uiState.value
-                val newTimeSeconds = when (state.timerDirection) {
-                    TimerDirection.COUNTDOWN -> state.currentTimeSeconds - 1
-                    TimerDirection.COUNTUP -> state.currentTimeSeconds + 1
-                }
+    /** The first start (or jump) freezes the setup so the schedule survives until reset. */
+    private fun markStarted() {
+        if (_uiState.value.hasTimerStarted) return
+        val config = _uiState.value.config
+        timerPreferences.setSmallestChipAtStart(config.smallestChip)
+        timerPreferences.setStartingChipsAtStart(config.startingChips)
+        timerPreferences.setRoundLengthAtStart(config.roundLengthMinutes)
+        timerPreferences.setHasTimerStarted(true)
+        timerPreferences.setIsFinished(false)
+        _uiState.update { it.copy(hasTimerStarted = true) }
+    }
 
-                // Check for upcoming blind level change (4 seconds before)
-                // Play sound for organic level changes only
-                checkAndPlayLevelUpSound(state, newTimeSeconds)
-
-                // Check if we need to switch from COUNTDOWN to COUNTUP
-                val shouldSwitchToCountUp = state.timerDirection == TimerDirection.COUNTDOWN && 
-                    newTimeSeconds <= 0
-
-                if (shouldSwitchToCountUp) {
-                    // Switch to COUNTUP mode at 0
-                    _uiState.update { 
-                        it.copy(
-                            currentTimeSeconds = 0,
-                            timerDirection = TimerDirection.COUNTUP
-                        )
-                    }
-                    timerPreferences.setCurrentTimeSeconds(0)
-                    timerPreferences.setTimerDirection("COUNTUP")
-                    continue // Skip the rest of the loop and continue with COUNTUP
-                }
-
-                val reachedCountUpLimit = state.timerDirection == TimerDirection.COUNTUP &&
-                    newTimeSeconds >= state.finalTimeSeconds
-
-                if (reachedCountUpLimit) {
-                    val finalSeconds = state.finalTimeSeconds
-                    _uiState.update {
-                        it.copy(
-                            currentTimeSeconds = finalSeconds,
-                            isRunning = false,
-                            isFinished = true
-                        )
-                    }
-
-                    timerPreferences.setCurrentTimeSeconds(finalSeconds)
-                    timerPreferences.setTimerRunning(false)
-                    timerPreferences.setIsFinished(true)
-                    break
-                }
-
-                _uiState.update {
-                    it.copy(
-                        currentTimeSeconds = newTimeSeconds,
-                        isFinished = if (state.timerDirection == TimerDirection.COUNTDOWN) false else it.isFinished
-                    )
-                }
-                timerPreferences.setCurrentTimeSeconds(newTimeSeconds)
-                updateCurrentBlindLevel()
+    private fun startTicking() {
+        tickJob?.cancel()
+        tickJob = viewModelScope.launch {
+            while (isActive) {
+                val elapsed = anchor.elapsedAt(timeSource)
+                show(elapsed, playCues = true)
+                if (!_uiState.value.isRunning) break
+                // Wake at the next whole second of play; the time shown is derived, not counted.
+                delay(MILLIS_PER_SECOND - elapsed % MILLIS_PER_SECOND)
             }
         }
     }
 
-    private fun stopTimer() {
-        timerJob?.cancel()
-        timerJob = null
-        _uiState.update { it.copy(isRunning = false) }
-        timerPreferences.setTimerRunning(false)
-        
-        // Unlock tournament settings when timer is paused
-        tournamentPreferences.setTournamentLocked(false)
+    /** Shows play time [elapsedMillis], plays any cue crossed since the last look, and finishes at the end. */
+    private fun show(elapsedMillis: Long, playCues: Boolean) {
+        val state = _uiState.value
+        val timeline = state.timeline
+        if (playCues) playCrossedCues(lastSeenMillis, elapsedMillis, timeline)
+        lastSeenMillis = elapsedMillis
+
+        val endMillis = timeline.endSeconds * MILLIS_PER_SECOND
+        if (state.isRunning && !timeline.isEmpty && elapsedMillis >= endMillis) {
+            finish(timeline.endSeconds)
+            return
+        }
+        val seconds = (elapsedMillis / MILLIS_PER_SECOND).toInt()
+        if (seconds != state.elapsedSeconds) _uiState.update { it.copy(elapsedSeconds = seconds) }
+    }
+
+    /**
+     * One chime [LEVEL_CHANGE_SOUND_LEAD_SECONDS] before every level change, break start, break end and
+     * the end of the last level. Crossing-based, so pausing or resuming can't skip or repeat one (B17),
+     * and cues more than a moment stale (the device slept through them) stay silent.
+     */
+    private fun playCrossedCues(fromMillis: Long, toMillis: Long, timeline: ClockTimeline) {
+        if (toMillis <= fromMillis) return
+        val lead = LEVEL_CHANGE_SOUND_LEAD_SECONDS * MILLIS_PER_SECOND
+        val crossed = timeline.segments.any { segment ->
+            val boundary = segment.endSeconds * MILLIS_PER_SECOND
+            val cue = boundary - lead
+            cue > fromMillis && cue <= toMillis && toMillis <= boundary + CUE_GRACE_MILLIS
+        }
+        if (crossed) soundManager.playSound(R.raw.blind_level_up)
+    }
+
+    private fun finish(endSeconds: Int) {
+        tickJob?.cancel()
+        tickJob = null
+        anchor = ClockAnchor.stopped(endSeconds * MILLIS_PER_SECOND)
+        timerPreferences.saveClock(anchor)
+        timerPreferences.setIsFinished(true)
+        lastSeenMillis = anchor.elapsedMillis
+        _uiState.update { it.copy(isRunning = false, isFinished = true, elapsedSeconds = endSeconds) }
+    }
+
+    private fun jumpToSegment(index: Int) {
+        val state = _uiState.value
+        val target = state.timeline.segments.getOrNull(index) ?: return
+        markStarted()
+        val elapsed = target.startSeconds * MILLIS_PER_SECOND
+        anchor = anchorAt(elapsed, running = anchor.running)
+        timerPreferences.saveClock(anchor)
+        timerPreferences.setIsFinished(false)
+        lastSeenMillis = elapsed
+        _uiState.update { it.copy(isFinished = false, elapsedSeconds = target.startSeconds) }
     }
 
     private fun resetTimer() {
-        stopTimer()
-        
-        // Unlock tournament settings when timer is reset
-        tournamentPreferences.setTournamentLocked(false)
-        
-        // Reset sound tracking
-        hasPlayedSoundForLevel = -1
-        
-        // Reload duration from preferences in case it was reset
-        val resetDurationMinutes = timerPreferences.getGameDurationMinutes()
-        
-        _uiState.update { state ->
-            val resetSeconds = resetDurationMinutes * 60
-            // Reset blind configuration to defaults from tournament preferences
-            val resetBlindConfig = BlindConfiguration(
-                smallestChip = tournamentPreferences.getSmallestChip(),
-                startingChips = tournamentPreferences.getStartingChips(),
-                roundLengthMinutes = tournamentPreferences.getRoundLengthMinutes()
-            )
-            state.copy(
-                gameDurationMinutes = resetDurationMinutes,
-                currentTimeSeconds = resetSeconds,
-                timerDirection = TimerDirection.COUNTDOWN, // Always reset to COUNTDOWN
-                isRunning = false,
-                isFinished = false,
-                isBlindConfigCollapsed = false,  // Unlock and expand blind config on reset
-                hasTimerStarted = false,  // Reset the timer started flag
-                overtimeLevelsRevealed = 0,  // Clear all overtime levels
-                finalTimeSeconds = resetDurationMinutes * 60, // Reset final time to tournament duration
-                showInvalidConfigDialog = false,  // Clear any invalid config dialog
-                blindConfiguration = resetBlindConfig // Reset blind configuration to defaults
-            )
-        }
-        
+        tickJob?.cancel()
+        tickJob = null
+        anchor = ClockAnchor()
+        lastSeenMillis = 0
         timerPreferences.resetTimer()
-        timerPreferences.setOvertimeLevelsRevealed(0)  // Reset overtime count in preferences
-        // Regenerate blind schedule to ensure validation works correctly after reset
-        regenerateBlindSchedule()
-        updateCurrentBlindLevel()
-    }
-
-    private fun updateTimer(seconds: Int) {
-        _uiState.update { it.copy(currentTimeSeconds = seconds) }
-        timerPreferences.setCurrentTimeSeconds(seconds)
-        updateCurrentBlindLevel()
-    }
-
-    /**Plays sound effect before blind level changes during organic timer progression.
-     * The lead time centers the audio on the actual transition for better immersion.
-     * Also plays when approaching the end of the final overtime level to signal tournament end.
-     */
-    private fun checkAndPlayLevelUpSound(state: TimerUiState, newTimeSeconds: Int) {
-        if (state.blindLevels.isEmpty()) return
-        
-        val nextLevel = state.currentBlindLevelIndex + 1
-        
-        // If there's a next level, calculate when to play sound for that transition
-        if (nextLevel < state.blindLevels.size) {
-            val nextLevelStartSeconds = state.blindLevels[nextLevel].roundStartMinute * 60
-            val elapsedSeconds = when (state.timerDirection) {
-                TimerDirection.COUNTDOWN -> state.totalDurationSeconds - newTimeSeconds
-                TimerDirection.COUNTUP -> state.totalDurationSeconds + newTimeSeconds
-            }
-            
-            val secondsUntilLevelChange = nextLevelStartSeconds - elapsedSeconds
-            
-            if (secondsUntilLevelChange == LEVEL_CHANGE_SOUND_LEAD_SECONDS && 
-                hasPlayedSoundForLevel != nextLevel) {
-                soundManager.playSound(com.huntercoles.pokerpayout.core.R.raw.blind_level_up)
-                hasPlayedSoundForLevel = nextLevel
-            }
-        } else {
-            // We're on the final level - check if we should play sound before tournament ends
-            val elapsedSeconds = when (state.timerDirection) {
-                TimerDirection.COUNTDOWN -> state.totalDurationSeconds - newTimeSeconds
-                TimerDirection.COUNTUP -> state.totalDurationSeconds + newTimeSeconds
-            }
-            
-            val secondsUntilFinish = state.finalTimeSeconds - elapsedSeconds
-            
-            // Play sound 4 seconds before tournament ends, using -1 as a sentinel to prevent replay
-            if (secondsUntilFinish == LEVEL_CHANGE_SOUND_LEAD_SECONDS && 
-                hasPlayedSoundForLevel != -1) {
-                soundManager.playSound(com.huntercoles.pokerpayout.core.R.raw.blind_level_up)
-                hasPlayedSoundForLevel = -1 // Use -1 to mark that we've played the "end" sound
-            }
-        }
-    }
-
-    // Blind configuration methods
-    private fun updateSmallestChip(value: Int) {
-        val sanitizedValue = value.coerceAtLeast(1)
-        _uiState.update { state ->
-            state.copy(
-                blindConfiguration = state.blindConfiguration.copy(smallestChip = sanitizedValue)
-            )
-        }
-        resetTimerToFreshState()
-        regenerateBlindSchedule()
-    }
-
-    private fun updateStartingChips(value: Int) {
-        val sanitizedValue = value.coerceAtLeast(1)
-        _uiState.update { state ->
-            state.copy(
-                blindConfiguration = state.blindConfiguration.copy(startingChips = sanitizedValue)
-            )
-        }
-        resetTimerToFreshState()
-        regenerateBlindSchedule()
-    }
-
-    private fun updateRoundLength(minutes: Int) {
-        val sanitizedMinutes = minutes.coerceAtLeast(1)
-        _uiState.update { state ->
-            state.copy(
-                blindConfiguration = state.blindConfiguration.copy(roundLengthMinutes = sanitizedMinutes)
-            )
-        }
-        resetTimerToFreshState()
-        regenerateBlindSchedule()
-    }
-
-    private fun toggleBlindConfigCollapsed(collapsed: Boolean) {
-        _uiState.update { state ->
-            state.copy(isBlindConfigCollapsed = collapsed)
-        }
-    }
-
-    private fun resetTimerToFreshState() {
-        stopTimer()
         tournamentPreferences.setTournamentLocked(false)
-        
-        _uiState.update { state ->
-            val resetSeconds = state.gameDurationMinutes * 60
-            state.copy(
-                currentTimeSeconds = resetSeconds,
-                timerDirection = TimerDirection.COUNTDOWN,
-                isRunning = false,
-                isFinished = false,
-                hasTimerStarted = false,  // Reset to fresh state
-                isBlindConfigCollapsed = false,
-                overtimeLevelsRevealed = 0  // Clear overtime levels
-            )
-        }
-        
-        timerPreferences.setCurrentTimeSeconds(_uiState.value.currentTimeSeconds)
-        timerPreferences.setTimerDirection("COUNTDOWN")
-        timerPreferences.setTimerRunning(false)
-        timerPreferences.setIsFinished(false)
-        timerPreferences.setHasTimerStarted(false)
+        _uiState.update { TimerUiState(config = loadConfig(frozen = false), table = it.table) }
+        rebuildSchedule()
+        refreshTable()
     }
+
+    private fun anchorAt(elapsedMillis: Long, running: Boolean) =
+        if (running) ClockAnchor.runningFrom(elapsedMillis, timeSource) else ClockAnchor.stopped(elapsedMillis)
 
     override fun onCleared() {
+        // The anchor is already saved; a running clock resumes from it in the next process.
+        tickJob?.cancel()
         super.onCleared()
-        val currentState = _uiState.value
-        
-        // If timer is running, preserve state for restoration
-        if (currentState.isRunning && !currentState.isFinished) {
-            // Only cancel the job, don't call stopTimer() which clears the running state
-            timerJob?.cancel()
-            timerJob = null
-            
-            // Persist current state
-            timerPreferences.setTimerRunning(true)
-            timerPreferences.setCurrentTimeSeconds(currentState.currentTimeSeconds)
-            timerPreferences.setTimerDirection(when (currentState.timerDirection) {
-                TimerDirection.COUNTDOWN -> "COUNTDOWN"
-                TimerDirection.COUNTUP -> "COUNTUP"
-            })
-            timerPreferences.setIsFinished(currentState.isFinished)
-            timerPreferences.setHasTimerStarted(currentState.hasTimerStarted)
-        } else {
-            // Timer is stopped or finished, clean stop
-            stopTimer()
+    }
+
+    // ------------------------------------------------------------------ setup
+
+    /** A change to the levels themselves: back to a fresh clock, as before. */
+    private fun changeSetup(transform: (BlindConfiguration) -> BlindConfiguration) {
+        val old = _uiState.value.config
+        val new = transform(old)
+        if (new == old) return
+        persist(new)
+        if (_uiState.value.hasTimerStarted || anchor.elapsedMillis > 0) {
+            tickJob?.cancel()
+            tickJob = null
+            anchor = ClockAnchor()
+            lastSeenMillis = 0
+            timerPreferences.resetTimer()
+            tournamentPreferences.setTournamentLocked(false)
+        }
+        _uiState.update {
+            it.copy(config = new, elapsedSeconds = 0, isRunning = false, isFinished = false, hasTimerStarted = false)
+        }
+        rebuildSchedule()
+        refreshTable()
+    }
+
+    /**
+     * Breaks, break text and antes don't change the levels, so the clock keeps its place: the same
+     * level (or break), the same time into it.
+     */
+    private fun changeKeepingPosition(transform: (BlindConfiguration) -> BlindConfiguration) {
+        val before = _uiState.value
+        val new = transform(before.config)
+        if (new == before.config) return
+        persist(new)
+        val elapsedBefore = anchor.elapsedAt(timeSource)
+        val segment = before.currentSegment
+        val into = segment?.let { elapsedBefore - it.startSeconds * MILLIS_PER_SECOND } ?: 0L
+        _uiState.update { it.copy(config = new) }
+        rebuildSchedule()
+
+        val timeline = _uiState.value.timeline
+        val elapsedAfter = when (segment) {
+            null -> elapsedBefore
+            is LevelSegment -> timeline.levels.getOrNull(segment.index)
+                ?.let { it.startSeconds * MILLIS_PER_SECOND + into }
+            is BreakSegment -> timeline.segments.filterIsInstance<BreakSegment>()
+                .firstOrNull { it.afterLevel == segment.afterLevel }
+                ?.let { breakAfter ->
+                    val lastMillis = breakAfter.durationSeconds * MILLIS_PER_SECOND - 1
+                    breakAfter.startSeconds * MILLIS_PER_SECOND + into.coerceAtMost(lastMillis)
+                }
+                ?: timeline.levels.getOrNull(segment.afterLevel)?.let { it.startSeconds * MILLIS_PER_SECOND }
+        } ?: elapsedBefore
+        if (elapsedAfter != elapsedBefore) {
+            anchor = anchorAt(elapsedAfter, running = anchor.running)
+            timerPreferences.saveClock(anchor)
+            lastSeenMillis = elapsedAfter
+        }
+        show(elapsedAfter, playCues = false)
+    }
+
+    private fun applyFix(fix: BlindSetupFix) {
+        _uiState.update { it.copy(showInvalidConfigDialog = false) }
+        when (fix) {
+            is BlindSetupFix.UseRoundLength -> acceptIntent(TimerIntent.UpdateRoundLength(fix.minutes))
+            is BlindSetupFix.UseStartingChips -> acceptIntent(TimerIntent.UpdateStartingChips(fix.chips))
         }
     }
 
-    private fun observePlayerCount() {
-        viewModelScope.launch {
-            tournamentPreferences.playerCount.collect { count ->
-                latestPlayerCount = count
-                regenerateBlindSchedule()
-            }
-        }
+    private fun persist(config: BlindConfiguration) {
+        timerPreferences.setGameDurationMinutes(config.gameDurationMinutes)
+        timerPreferences.setBreakEveryLevels(config.breaks.everyLevels)
+        timerPreferences.setBreakLengthMinutes(config.breaks.lengthMinutes)
+        timerPreferences.setBreakMessage(config.breaks.message)
+        timerPreferences.setBigBlindAnteFromLevel(config.bigBlindAnteFromLevel)
+        tournamentPreferences.setGameDurationHours(config.gameDurationHours)
+        tournamentPreferences.setRoundLengthMinutes(config.roundLengthMinutes)
+        tournamentPreferences.setSmallestChip(config.smallestChip)
+        tournamentPreferences.setStartingChips(config.startingChips)
     }
 
-    private fun regenerateBlindSchedule() {
-        val state = _uiState.value
-        val roundLength = state.blindConfiguration.roundLengthMinutes
-        if (roundLength <= 0 || state.gameDurationMinutes <= 0) {
-            _uiState.update {
-                it.copy(
-                    playerCount = latestPlayerCount,
-                    baseBlindLevels = emptyList(),
-                    blindLevels = emptyList(),
-                    currentBlindLevelIndex = 0,
-                    overtimeLevelsRevealed = 0
-                )
-            }
-            return
-        }
-
-        val input = BlindStructureInput(
-            players = latestPlayerCount,
-            targetDurationMinutes = state.gameDurationMinutes,
-            smallestChip = state.blindConfiguration.smallestChip,
-            startingStack = state.blindConfiguration.startingChips,
-            roundLengthMinutes = roundLength
+    private fun rebuildSchedule() {
+        val config = _uiState.value.config
+        val problem = BlindSetupAdvisor.check(
+            durationMinutes = config.gameDurationMinutes,
+            roundLengthMinutes = config.roundLengthMinutes,
+            smallestChip = config.smallestChip,
+            startingChips = config.startingChips
         )
-
-        val schedule = runCatching { BlindStructureCalculator.generateSchedule(input) }
-            .getOrElse { emptyList() }
-
-        // Preserve overtime levels if timer has started and we're in overtime
-        val shouldPreserveOvertime = state.hasTimerStarted && state.overtimeLevelsRevealed > 0
-        val fullSchedule = if (shouldPreserveOvertime) {
-            // Regenerate overtime levels based on current count
-            var currentSchedule = schedule
-            repeat(state.overtimeLevelsRevealed) {
-                val nextOvertime = BlindStructureCalculator.generateNextOvertimeLevel(
-                    currentSchedule = currentSchedule,
-                    roundLengthMinutes = roundLength,
-                    includeAnte = false
-                )
-                if (nextOvertime != null) {
-                    currentSchedule = currentSchedule + nextOvertime
-                }
-            }
-            currentSchedule
-        } else {
-            schedule
-        }
-
-        val levelIndex = if (fullSchedule.isEmpty()) {
-            0
-        } else {
-            calculateBlindLevelIndex(fullSchedule, state).coerceIn(0, fullSchedule.lastIndex)
-        }
-
-        _uiState.update {
-            it.copy(
-                playerCount = latestPlayerCount,
-                baseBlindLevels = schedule,
-                blindLevels = fullSchedule,
-                currentBlindLevelIndex = levelIndex,
-                overtimeLevelsRevealed = if (shouldPreserveOvertime) state.overtimeLevelsRevealed else 0,
-                finalTimeSeconds = calculateFinalTimeSeconds(it.copy(blindLevels = fullSchedule))
-            )
-        }
-    }
-
-    private fun updateCurrentBlindLevel() {
-        val state = _uiState.value
-        if (state.blindLevels.isEmpty()) return
-
-        val newIndex = calculateBlindLevelIndex(state.blindLevels, state)
-        if (newIndex != state.currentBlindLevelIndex) {
-            _uiState.update { it.copy(currentBlindLevelIndex = newIndex) }
-        }
-    }
-
-    private fun calculateBlindLevelIndex(levels: List<BlindLevel>, state: TimerUiState): Int {
-        if (levels.isEmpty()) return 0
-        val elapsedSeconds = when (state.timerDirection) {
-            TimerDirection.COUNTDOWN -> state.totalDurationSeconds - state.currentTimeSeconds
-            TimerDirection.COUNTUP -> state.totalDurationSeconds + state.currentTimeSeconds // Add overtime to tournament duration
-        }
-        val elapsedMinutes = elapsedSeconds / 60
-        val index = levels.indexOfLast { elapsedMinutes >= it.roundStartMinute }
-        return if (index == -1) 0 else index.coerceIn(0, levels.lastIndex)
-    }
-
-    private fun calculateFinalTimeSeconds(state: TimerUiState): Int {
-        return state.blindLevels.lastOrNull()?.let { finalLevel ->
-            val roundLength = state.blindConfiguration.roundLengthMinutes
-            (finalLevel.roundStartMinute + roundLength) * 60
-        } ?: (state.totalDurationSeconds + (60 * 60)) // Fallback to 60 minutes over
-    }
-
-    internal fun isValidBlindConfiguration(state: TimerUiState): Boolean {
-        // Validate based on base levels only (regular levels without overtime)
-        val levels = state.baseBlindLevels
-        if (levels.isEmpty()) return false
-        
-        // Check that we actually reached the target - this is the real validation
-        // If generator can't reach target (impossible config), it won't hit this value
-        if (levels.last().smallBlind != state.blindConfiguration.startingChips) {
-            return false // Didn't reach the target starting stack
-        }
-        
-        // Check that levels are properly ordered by start time
-        for (i in 1 until levels.size) {
-            if (levels[i].roundStartMinute <= levels[i-1].roundStartMinute) {
-                return false
-            }
-        }
-        
-        // Check that blinds increase monotonically
-        for (i in 1 until levels.size) {
-            if (levels[i].smallBlind <= levels[i-1].smallBlind) {
-                return false
-            }
-        }
-        
-        // Check that the final regular level ends exactly at or just after tournament duration
-        // (overtime levels will be added dynamically beyond this point)
-        val finalLevel = levels.last()
-        val roundLength = state.blindConfiguration.roundLengthMinutes
-        val finalEndTime = (finalLevel.roundStartMinute + roundLength) * 60
-        
-        // Final level should end at or slightly after tournament duration
-        // Allow small tolerance for rounding
-        val isValidEndTime = finalEndTime >= state.totalDurationSeconds - 60 && 
-                            finalEndTime <= state.totalDurationSeconds + roundLength * 60
-        
-        if (!isValidEndTime) {
-            return false
-        }
-        
-        return true
-    }
-
-    private fun goToNextBlindLevel() {
-        val state = _uiState.value
-        if (state.blindLevels.isEmpty()) return
-        
-        // Check if we're at the last visible level
-        val isAtLastLevel = state.currentBlindLevelIndex >= state.blindLevels.lastIndex
-        
-        if (isAtLastLevel) {
-            // Try to add another overtime level
-            val canAddOvertime = state.overtimeLevelsRevealed < BlindStructureCalculator.MAX_OVERTIME_LEVELS
-            
-            if (canAddOvertime) {
-                val nextOvertimeLevel = BlindStructureCalculator.generateNextOvertimeLevel(
-                    currentSchedule = state.blindLevels,  // Use current schedule (includes any overtime already added)
-                    roundLengthMinutes = state.blindConfiguration.roundLengthMinutes,
-                    includeAnte = false // Match the regular levels' ante setting
-                )
-                
-                if (nextOvertimeLevel != null) {
-                    // Add the new overtime level to the visible list
-                    val updatedLevels = state.blindLevels + nextOvertimeLevel
-                    val newOvertimeCount = state.overtimeLevelsRevealed + 1
-                    _uiState.update {
-                        it.copy(
-                            blindLevels = updatedLevels,
-                            overtimeLevelsRevealed = newOvertimeCount,
-                            finalTimeSeconds = calculateFinalTimeSeconds(it.copy(blindLevels = updatedLevels))
-                        )
-                    }
-                    // Persist overtime count to preferences
-                    timerPreferences.setOvertimeLevelsRevealed(newOvertimeCount)
-                }
-            }
-            
-            // Now check again if we can advance
-            if (state.currentBlindLevelIndex < _uiState.value.blindLevels.lastIndex) {
-                val targetIndex = state.currentBlindLevelIndex + 1
-                jumpToBlindLevel(targetIndex)
-            }
-            // If still at max and can't add more overtime, we've reached the end
-            return
-        }
-        
-        // Normal case: advance to next level
-        val targetIndex = state.currentBlindLevelIndex + 1
-        jumpToBlindLevel(targetIndex)
-    }
-
-    private fun goToPreviousBlindLevel() {
-        val state = _uiState.value
-        if (state.blindLevels.isEmpty()) return
-        if (state.currentBlindLevelIndex <= 0) {
-            resetTimer()
-            return
-        }
-        val targetIndex = state.currentBlindLevelIndex - 1
-        
-        // Remove overtime levels when navigating back
-        if (state.overtimeLevelsRevealed > 0) {
-            val regularLevelCount = state.baseBlindLevels.size
-            val neededOvertimeLevels = (targetIndex - regularLevelCount + 1).coerceAtLeast(0)
-            
-            if (neededOvertimeLevels < state.overtimeLevelsRevealed) {
-                val updatedLevels = state.blindLevels.take(regularLevelCount + neededOvertimeLevels)
-                _uiState.update {
-                    it.copy(
-                        blindLevels = updatedLevels,
-                        overtimeLevelsRevealed = neededOvertimeLevels,
-                        finalTimeSeconds = calculateFinalTimeSeconds(it.copy(blindLevels = updatedLevels))
+        val levels = if (problem == null) {
+            runCatching {
+                BlindStructureCalculator.generateSchedule(
+                    BlindStructureInput(
+                        players = tableConfig.numPlayers.coerceAtLeast(1),
+                        targetDurationMinutes = config.gameDurationMinutes,
+                        smallestChip = config.smallestChip,
+                        startingStack = config.startingChips,
+                        roundLengthMinutes = config.roundLengthMinutes,
+                        bigBlindAnteFromLevel = config.bigBlindAnteFromLevel
                     )
-                }
-                timerPreferences.setOvertimeLevelsRevealed(neededOvertimeLevels)
-            }
+                )
+            }.getOrDefault(emptyList())
+        } else {
+            emptyList()
         }
-        
-        jumpToBlindLevel(targetIndex)
+        val timeline = ClockTimeline.build(
+            regularLevels = levels,
+            roundLengthMinutes = config.roundLengthMinutes,
+            breaks = config.breaks,
+            smallestChip = config.smallestChip,
+            bigBlindAnteFromLevel = config.bigBlindAnteFromLevel
+        )
+        _uiState.update { it.copy(baseBlindLevels = levels, timeline = timeline, setupProblem = problem) }
     }
 
-    private fun jumpToBlindLevel(targetIndex: Int) {
-        val state = _uiState.value
-        val levels = state.blindLevels
-        if (targetIndex !in levels.indices) return
-
-        val targetLevel = levels[targetIndex]
-        val elapsedSecondsForLevel = (targetLevel.roundStartMinute * 60).coerceAtLeast(0)
-        
-        // Determine appropriate timer direction and time based on elapsed time vs tournament duration
-        val isInOvertime = elapsedSecondsForLevel >= state.totalDurationSeconds
-        val newTimerDirection = if (isInOvertime) TimerDirection.COUNTUP else TimerDirection.COUNTDOWN
-        
-        val newCurrentSeconds = when (newTimerDirection) {
-            TimerDirection.COUNTDOWN -> state.totalDurationSeconds - elapsedSecondsForLevel
-            TimerDirection.COUNTUP -> elapsedSecondsForLevel - state.totalDurationSeconds // Show overtime from zero
+    /** Defensive check of the schedule itself; [BlindSetupAdvisor] explains failures to the user. */
+    internal fun isValidBlindConfiguration(state: TimerUiState): Boolean {
+        val levels = state.baseBlindLevels
+        val ordered = levels.zipWithNext().all { (a, b) ->
+            b.roundStartMinute > a.roundStartMinute && b.smallBlind > a.smallBlind
         }
+        return state.setupProblem == null &&
+            levels.isNotEmpty() &&
+            levels.last().smallBlind == state.config.startingChips &&
+            ordered &&
+            // Levels exactly fill the duration (overtime levels are added beyond it)
+            levels.size * state.config.roundLengthMinutes == state.config.gameDurationMinutes
+    }
 
-        val hasStarted = targetIndex > 0 || newCurrentSeconds != state.totalDurationSeconds
+    // ------------------------------------------------------------------ table numbers
 
-        _uiState.update {
-            it.copy(
-                currentTimeSeconds = newCurrentSeconds,
-                currentBlindLevelIndex = targetIndex,
-                timerDirection = newTimerDirection,
-                isFinished = false,
-                hasTimerStarted = it.hasTimerStarted || hasStarted
-            )
+    private data class BankCounts(val eliminated: List<Int> = emptyList(), val rebuys: Int = 0, val addOns: Int = 0)
+
+    private fun observeTable() {
+        tableConfig = tournamentPreferences.getCurrentTournamentConfig()
+        bank = BankCounts(
+            bankPreferences.getEliminationOrder(),
+            bankPreferences.getTotalRebuyCount(),
+            bankPreferences.getTotalAddonCount()
+        )
+        refreshTable()
+        viewModelScope.launch {
+            tournamentPreferences.config
+                .combine(
+                    combine(
+                        bankPreferences.eliminationOrder,
+                        bankPreferences.totalRebuys,
+                        bankPreferences.totalAddons
+                    ) { eliminated, rebuys, addOns -> BankCounts(eliminated, rebuys, addOns) }
+                ) { config, bankCounts -> config to bankCounts }
+                .collect { (config, bankCounts) ->
+                    tableConfig = config
+                    bank = bankCounts
+                    refreshTable()
+                }
         }
+    }
 
-        timerPreferences.setCurrentTimeSeconds(_uiState.value.currentTimeSeconds)
-        if (hasStarted) {
-            timerPreferences.setHasTimerStarted(true)
-        }
-        timerPreferences.setIsFinished(false)
-        updateCurrentBlindLevel()
+    private fun refreshTable() {
+        val players = tableConfig.numPlayers
+        val out = bank.eliminated.filter { it in 1..players }.distinct().size
+        val left = (players - out).coerceAtLeast(0)
+        val stacks = players.toLong() + bank.rebuys + bank.addOns
+        val chips = stacks * _uiState.value.config.startingChips
+        val table = TableStats(
+            playerCount = players,
+            playersLeft = left,
+            averageStack = if (left > 0) (chips / left).toInt() else 0,
+            // The same prize pool the Payouts table splits (buy-ins, rebuys and add-ons; no food or bounty)
+            prizePoolCents = PoolBreakdown.of(tableConfig.money, players, bank.rebuys, bank.addOns).prizePoolCents
+        )
+        _uiState.update { it.copy(table = table) }
+    }
+
+    private companion object {
+        const val MILLIS_PER_SECOND = 1_000L
+        const val MINUTES_PER_HOUR = 60
+        const val MAX_HOURS = 24
+        const val MAX_BREAK_EVERY = 20
+        const val MAX_BREAK_MINUTES = 120
+        const val MAX_NOTE = BreakSettings.MAX_MESSAGE_LENGTH
+
+        /** A cue that's this late (the device slept through it) is skipped rather than played late. */
+        const val CUE_GRACE_MILLIS = 2_000L
     }
 }

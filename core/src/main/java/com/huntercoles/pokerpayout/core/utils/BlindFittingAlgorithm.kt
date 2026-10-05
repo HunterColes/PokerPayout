@@ -1,6 +1,7 @@
 package com.huntercoles.pokerpayout.core.utils
 
 import com.huntercoles.pokerpayout.core.constants.BlindStructureConstants
+import java.util.Locale
 import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -14,23 +15,46 @@ data class BlindFittingResult(
     val calculatedGrowthRate: Double
 )
 
+/** Why no in-band ladder exists for a configuration. */
+enum class LadderProblem {
+    /** Blinds would have to more than double at some level: too few rounds or too big a stack. */
+    TOO_STEEP,
+
+    /** Blinds would have to rise by less than 1.3x (or repeat) somewhere: too many rounds or too small a stack. */
+    TOO_FLAT,
+
+    /** The starting stack isn't a whole number of smallest chips. */
+    STACK_NOT_MULTIPLE_OF_CHIP
+}
+
 /**
- * Fits blind values to an exponential growth curve using a calculated growth rate.
- * Uses the first level (smallestChip) and final level (startingChips) as fixed endpoints,
- * then selects valid poker amounts that minimize squared error from the ideal exponential curve.
- * 
- * The required exponential growth rate is calculated as:
- * r = (startingChips / smallestChip)^(1 / (numRounds - 1))
- * 
- * This calculated rate must be between MIN_BLIND_GROWTH_RATE (1.3) and MAX_BLIND_GROWTH_RATE (2.0)
- * or the configuration is considered invalid.
+ * Thrown when no ladder satisfies the documented rules. The message says which way to adjust
+ * ("Try more rounds or smaller starting chips" / "Try fewer rounds or larger starting chips").
+ */
+class BlindLadderException(val problem: LadderProblem, message: String) : IllegalArgumentException(message)
+
+/**
+ * Builds a small-blind ladder from the smallest chip to the starting stack.
+ *
+ * Every ladder it returns satisfies the documented rules exactly (PP-020):
+ * - the first level is the smallest chip and the last is the starting stack;
+ * - every level is a multiple of the smallest chip;
+ * - every step grows by at least [BlindStructureConstants.MIN_BLIND_GROWTH_RATE] (1.3x) and at most
+ *   [BlindStructureConstants.MAX_BLIND_GROWTH_RATE] (2.0x), so levels also strictly increase.
+ *
+ * Which configurations have such a ladder is exact integer arithmetic (see [BlindLadderSearch]); the
+ * rest are rejected with a [BlindLadderException]. Among the valid ladders it picks the one closest (in
+ * log space) to the ideal geometric curve smallestChip x r^i, r = (startingChips / smallestChip)^(1 / (n - 1)),
+ * preferring values players expect on a blind sheet (300 and 1,500 over 275 and 1,725).
  */
 object BlindFittingAlgorithm {
 
     /**
-     * Fits blinds to exponential growth curve and returns fitted values with quality score.
-     * 
-     * @throws IllegalArgumentException if the calculated growth rate is outside valid bounds (1.3-2.0)
+     * Fits blinds to the band and returns fitted values with quality score.
+     *
+     * @throws BlindLadderException if no in-band ladder exists, saying which way to adjust
+     * @throws IllegalArgumentException for impossible inputs (fewer than 2 rounds, non-positive chip,
+     *   stack below the smallest chip)
      */
     fun fitBlinds(
         numRounds: Int,
@@ -40,58 +64,88 @@ object BlindFittingAlgorithm {
         require(numRounds >= 2) { "Must have at least 2 rounds" }
         require(smallestChip > 0) { "Smallest chip must be positive" }
         require(startingChips >= smallestChip) { "Starting chips must be >= smallest chip" }
-        
-        // Calculate the required exponential growth rate for this configuration
-        val calculatedGrowthRate = calculateGrowthRate(
-            numRounds = numRounds,
-            smallestChip = smallestChip,
-            startingChips = startingChips
-        )
-        
-        // Validate the calculated growth rate is within acceptable bounds
-        // Allow a small tolerance (5%) for rates slightly outside bounds
-        val minRate = BlindStructureConstants.MIN_BLIND_GROWTH_RATE
-        val maxRate = BlindStructureConstants.MAX_BLIND_GROWTH_RATE
-        val tolerance = 0.05
-        
-        require(calculatedGrowthRate >= minRate * (1 - tolerance)) {
-            "Calculated growth rate %.3f is too low (min: %.2f). Try fewer rounds or larger starting chips."
-                .format(calculatedGrowthRate, minRate)
-        }
-        require(calculatedGrowthRate <= maxRate * (1 + tolerance)) {
-            "Calculated growth rate %.3f is too high (max: %.2f). Try more rounds or smaller starting chips."
-                .format(calculatedGrowthRate, maxRate)
-        }
 
-        // Generate candidate blinds using exponential growth with calculated rate
-        val candidateBlinds = generateCandidateBlinds(
-            numRounds = numRounds,
-            smallestChip = smallestChip,
-            startingChips = startingChips,
-            calculatedGrowthRate = calculatedGrowthRate
-        )
-        
-        // Calculate fit score using the calculated growth rate
-        val fitScore = calculateFitScore(
-            blinds = candidateBlinds,
-            calculatedGrowthRate = calculatedGrowthRate
-        )
-        
+        val growthRate = calculateGrowthRate(numRounds, smallestChip, startingChips)
+        problemWith(numRounds, smallestChip, startingChips, growthRate)?.let { throw it }
+
+        val target = (startingChips / smallestChip).toLong()
+        val windows = BlindLadderSearch.windows(numRounds, target)
+        val ladder = BlindLadderSearch.bestLadder(numRounds, smallestChip, target, windows, growthRate)
+            ?: BlindLadderSearch.greedyLadder(numRounds, smallestChip, target, windows, growthRate)
+        val blinds = ladder.map { (it * smallestChip).toInt() }
+
         return BlindFittingResult(
-            blinds = candidateBlinds,
-            fitScore = fitScore,
-            calculatedGrowthRate = calculatedGrowthRate
+            blinds = blinds,
+            fitScore = calculateFitScore(blinds, growthRate),
+            calculatedGrowthRate = growthRate
         )
     }
-    
+
+    /** True when [fitBlinds] would return a ladder for this configuration. */
+    fun isFeasible(numRounds: Int, smallestChip: Int, startingChips: Int): Boolean =
+        numRounds >= 2 && smallestChip > 0 && startingChips >= smallestChip &&
+            startingChips % smallestChip == 0 &&
+            (startingChips / smallestChip).toLong() in BlindLadderSearch.feasibleTargets(numRounds)
+
+    /**
+     * Starting stacks that give an in-band ladder of [numRounds] levels from [smallestChip], or null if
+     * none fit in an Int. Every multiple of [smallestChip] in the range is feasible.
+     */
+    fun feasibleStackRange(numRounds: Int, smallestChip: Int): LongRange? {
+        val targets = if (numRounds >= 2 && smallestChip > 0) BlindLadderSearch.feasibleTargets(numRounds) else null
+        val low = targets?.let { it.first * smallestChip }
+        return if (targets == null || low == null || low > Int.MAX_VALUE) {
+            null
+        } else {
+            low..minOf(targets.last, Int.MAX_VALUE.toLong() / smallestChip) * smallestChip
+        }
+    }
+
+    private fun problemWith(
+        numRounds: Int,
+        smallestChip: Int,
+        startingChips: Int,
+        growthRate: Double
+    ): BlindLadderException? {
+        val targets = BlindLadderSearch.feasibleTargets(numRounds)
+        val target = (startingChips / smallestChip).toLong()
+        val minRate = BlindStructureConstants.MIN_BLIND_GROWTH_RATE
+        val maxRate = BlindStructureConstants.MAX_BLIND_GROWTH_RATE
+        return when {
+            startingChips % smallestChip != 0 -> {
+                val below = startingChips / smallestChip * smallestChip
+                BlindLadderException(
+                    LadderProblem.STACK_NOT_MULTIPLE_OF_CHIP,
+                    "Starting chips %d aren't a multiple of the smallest chip %d. Try %d or %d."
+                        .format(Locale.ROOT, startingChips, smallestChip, below, below + smallestChip)
+                )
+            }
+            target > targets.last -> BlindLadderException(
+                LadderProblem.TOO_STEEP,
+                "Calculated growth rate %.3f is too high (max: %.2f). Try more rounds or smaller starting chips."
+                    .format(Locale.ROOT, growthRate, maxRate)
+            )
+            growthRate < minRate -> BlindLadderException(
+                LadderProblem.TOO_FLAT,
+                "Calculated growth rate %.3f is too low (min: %.2f). Try fewer rounds or larger starting chips."
+                    .format(Locale.ROOT, growthRate, minRate)
+            )
+            target < targets.first -> BlindLadderException(
+                LadderProblem.TOO_FLAT,
+                (
+                    "Calculated growth rate %.3f is too low (min: %.2f) to climb in whole %d-chip steps " +
+                        "without a level rising by less than %.1fx. Try fewer rounds or larger starting chips."
+                    ).format(Locale.ROOT, growthRate, minRate, smallestChip, minRate)
+            )
+            else -> null
+        }
+    }
+
     /**
      * Calculates the required exponential growth rate to go from smallest chip
      * to starting chips over the given number of rounds.
-     * 
+     *
      * Formula: r = (startingChips / smallestChip)^(1 / (numRounds - 1))
-     * 
-     * This represents the constant multiplier needed for exponential growth
-     * from smallestChip to startingChips over numRounds levels.
      */
     private fun calculateGrowthRate(
         numRounds: Int,
@@ -104,129 +158,24 @@ object BlindFittingAlgorithm {
     }
 
     /**
-     * Generates blind progression using exponential growth with the target rate.
-     */
-    private fun generateCandidateBlinds(
-        numRounds: Int,
-        smallestChip: Int,
-        startingChips: Int,
-        calculatedGrowthRate: Double
-    ): List<Int> {
-        val result = mutableListOf<Int>()
-        
-        // First level is always the smallest chip
-        result.add(smallestChip)
-        
-        // For intermediate levels, use exponential growth with calculated rate
-        for (i in 1 until numRounds - 1) {
-            // Calculate ideal value using exponential growth: smallestChip * r^i
-            val idealValue = smallestChip * calculatedGrowthRate.pow(i.toDouble())
-            
-            // Round to nearest valid poker amount, ensuring it's > previous
-            val previousBlind = result.last()
-            val roundedValue = roundToValidBlindAmount(idealValue.toInt(), smallestChip, previousBlind, startingChips)
-            result.add(roundedValue)
-        }
-        
-        // Last level is always the starting chips
-        result.add(startingChips)
-        
-        return result
-    }
-
-    /**
-     * Rounds a value to the nearest valid blind amount.
-     * Rules:
-     * - Values MUST be multiples of smallest chip (CRITICAL - non-negotiable)
-     * - Values > SMOOTH_NUMBER_THRESHOLD (25) SHOULD end in 0 (preferred but not forced)
-     * - Must be strictly greater than previous blind
-     * 
-     * Strategy: We try to honor smooth numbers when it doesn't significantly hurt fit quality.
-     * If the ideal rounded value is close to a smooth number, we'll snap to it. Otherwise,
-     * we'll use the closest valid multiple of smallestChip even if it doesn't end in 0.
-     */
-    private fun roundToValidBlindAmount(value: Int, smallestChip: Int, previousBlind: Int, maxValue: Int): Int {
-        // Round to nearest multiple of smallestChip first
-        var candidate = ((value.toDouble() / smallestChip + 0.5).toInt()) * smallestChip
-        
-        // Ensure strictly greater than previous
-        if (candidate <= previousBlind) {
-            candidate = previousBlind + smallestChip
-        }
-        
-        // If above threshold, try to find a nearby smooth number (ends in 0)
-        if (candidate > BlindStructureConstants.SMOOTH_NUMBER_THRESHOLD) {
-            val roundedTo10 = ((candidate.toDouble() / 10 + 0.5).toInt()) * 10
-            
-            // Use the smooth number if it:
-            // 1. Is divisible by smallestChip
-            // 2. Is greater than previous
-            // 3. Doesn't overshoot maxValue
-            // We're more lenient here - accept smooth numbers even if they're a bit further away
-            if (roundedTo10 % smallestChip == 0 && 
-                roundedTo10 > previousBlind && 
-                roundedTo10 < maxValue) {
-                candidate = roundedTo10
-            }
-        }
-        
-        // Cap at maxValue
-        if (candidate >= maxValue) {
-            candidate = maxValue
-        }
-        
-        return candidate
-    }
-    
-    /**
-     * Calculate least common multiple of two numbers.
-     */
-    private fun lcm(a: Int, b: Int): Int {
-        return (a * b) / gcd(a, b)
-    }
-    
-    /**
-     * Calculate greatest common divisor using Euclidean algorithm.
-     */
-    private fun gcd(a: Int, b: Int): Int {
-        var x = a
-        var y = b
-        while (y != 0) {
-            val temp = y
-            y = x % y
-            x = temp
-        }
-        return x
-    }
-
-    /**
      * Calculates fit quality score using root mean square error in log space.
      * Score = 1 - RMSE, where RMSE is computed on log-transformed values.
      * Higher scores (closer to 1.0) indicate better fit to exponential curve.
-     * 
-     * Uses the calculated growth rate as the ideal exponential curve.
      */
     private fun calculateFitScore(
         blinds: List<Int>,
         calculatedGrowthRate: Double
     ): Double {
         if (blinds.size < 2) return 1.0
-        
+
         val firstBlind = blinds.first().toDouble()
-        
-        // Calculate RMSE in log space against ideal exponential curve
         var sumSquaredError = 0.0
         for (i in blinds.indices) {
-            val expectedValue = firstBlind * calculatedGrowthRate.pow(i.toDouble())
-            val expectedLog = ln(expectedValue)
-            val actualLog = ln(blinds[i].toDouble())
-            val error = actualLog - expectedLog
+            val expectedLog = ln(firstBlind * calculatedGrowthRate.pow(i.toDouble()))
+            val error = ln(blinds[i].toDouble()) - expectedLog
             sumSquaredError += error * error
         }
-        
         val rmse = sqrt(sumSquaredError / blinds.size)
-        
-        // Fit score: 1 - RMSE (clamped to [0, 1])
         return (1.0 - rmse).coerceIn(0.0, 1.0)
     }
 }

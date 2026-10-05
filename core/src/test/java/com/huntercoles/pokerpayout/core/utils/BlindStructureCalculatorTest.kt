@@ -2,7 +2,6 @@ package com.huntercoles.pokerpayout.core.utils
 
 import com.huntercoles.pokerpayout.core.constants.BlindStructureConstants.MAX_BLIND_GROWTH_RATE
 import com.huntercoles.pokerpayout.core.constants.BlindStructureConstants.MIN_BLIND_GROWTH_RATE
-import org.junit.jupiter.api.Disabled
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -128,14 +127,9 @@ class BlindStructureCalculatorTest {
     }
 
     // The old version of this test accepted a schedule when 70% of its steps were in band, which
-    // hid that most accepted schedules have a step outside it: early levels crawl up one chip at a
-    // time (25, 50, 75, 100, 125 ... is 1.25x, 1.2x, 1.17x) and the 5% tolerance on the average
-    // rate admits steps above 2x.
-    @Disabled(
-        "PP-020: 1,229 of 2,224 accepted configurations have a step outside the documented " +
-            "1.3x-2.0x band (998 below 1.3x, 231 above 2.0x). Accept only in-band ladders, or " +
-            "reject the configuration with a reason."
-    )
+    // hid that most accepted schedules had a step outside it: early levels crawled up one chip at a
+    // time (25, 50, 75, 100, 125 ... is 1.25x, 1.2x, 1.17x) and a 5% tolerance on the average
+    // rate admitted steps above 2x. Before PP-020, 1,229 of 2,224 accepted configurations failed.
     @Test
     fun `every step of an accepted schedule stays within the documented growth bounds`() {
         assertEveryAccepted("every step within ${MIN_BLIND_GROWTH_RATE}x-${MAX_BLIND_GROWTH_RATE}x") { (_, levels) ->
@@ -200,16 +194,17 @@ class BlindStructureCalculatorTest {
     }
 
     @Test
-    fun `antes start at level 5 at half the small blind rounded up to a chip`() {
+    fun `a big-blind ante equals the big blind from its first level on`() {
         val schedule = BlindStructureCalculator.generateSchedule(
-            BlindStructureInput(9, 180, 25, 6_400, 20, includeAnte = true)
+            BlindStructureInput(9, 180, 25, 6_400, 20, bigBlindAnteFromLevel = 3)
         )
 
-        assertTrue(schedule.take(4).all { it.ante == 0 }, "no ante before level 5: $schedule")
-        schedule.drop(4).forEach { level ->
-            val half = level.smallBlind / 2
-            assertTrue(level.ante % 25 == 0 && level.ante >= half && level.ante < half + 25, "ante of $level")
-        }
+        assertTrue(schedule.take(2).all { it.ante == 0 }, "no ante before level 3: $schedule")
+        assertTrue(schedule.drop(2).all { it.ante == it.bigBlind }, "BB ante from level 3: $schedule")
+
+        val overtime = BlindStructureCalculator.generateNextOvertimeLevel(schedule, 20, bigBlindAnteFromLevel = 3)!!
+        assertEquals(overtime.bigBlind, overtime.ante)
+        assertEquals(0, BlindStructureCalculator.generateNextOvertimeLevel(schedule, 20)!!.ante)
     }
 
     @Test

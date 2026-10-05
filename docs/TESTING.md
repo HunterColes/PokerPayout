@@ -144,9 +144,14 @@ If you later add `Modifier.testTag(...)`, you also need
 `tour.sh` starts from cleared app data and visits every screen and tool. Each step is a
 bash function of `ui.py` calls that ends in assertions. The steps are:
 
-1. **Tournament.** Launch; enter buy-in 25 and bounty 5; move the players slider; open the
-   Blinds tab; collapse the config; start the timer; skip a level; pause; open the reset
-   dialog and confirm it.
+1. **Tournament.** Launch; enter buy-in 25 and bounty 5; move the players slider. On the
+   Blinds tab: pick 25 from the smallest-chip picker; type 25-minute rounds and require the
+   reason ("doesn't divide") and the "Use 20-min rounds (9 levels)" fix, then apply it; turn on
+   a break every 4 levels with the note "Last rebuy" and find it in the schedule. Collapse the
+   config and require the labelled level countdown (LEVEL 1, LEVEL TIME LEFT, 20:00, Next: 50 /
+   100) before the start; start; skip to level 2, then to the first break (BREAK, Last rebuy,
+   Next: Level 5); pause; open the table view and require a landscape screen, then leave it and
+   require portrait again; open the reset dialog and confirm it.
 2. **Bank.** Rename Player 1 to Alice and commit with Enter; confirm a buy-in (the dialog
    must say "Alice has paid"); knock out Player 2; open the payout-weights editor; open the
    pool-summary dialog; scroll.
@@ -189,17 +194,17 @@ runs on the JUnit Platform with two engines from the `common-test` bundle: Jupit
 tests and Vintage for JUnit 4 tests. Robolectric tests (`@RunWith(RobolectricTestRunner::class)`)
 are JUnit 4, so Vintage runs them. Each test runs once, in its own module.
 
-Last measured (v1.2.0, batch A integrated): **284 tests, 275 pass, 9 skipped, 0 fail**, about
+Last measured (v1.2.0, batch A plus the clock): **332 tests, 326 pass, 6 skipped, 0 fail**, about
 10 s with compilation up to date. The slowest classes are `HandEvaluatorTest` (all 133,784,560
 seven-card hands, about 4 s) and `ChipDistributionOptimizerTest` (a 115,500-call input sweep,
 about 2 s).
 
 | Module | Tests | Skipped | What they cover |
 |---|---|---|---|
-| core | 83 | 3 | Blind engine: 6,600-config property sweep plus exact ladders. Chip optimizer: reported crashes, typed failures, a 115,500-call input sweep and a brute-force oracle. FormatUtils. |
+| core | 104 | 0 | Blind engine: 6,600-config property sweep (every accepted ladder in the 1.3x-2.0x band) plus exact ladders, setup advice whose every offered fix works, color-ups. Chip optimizer: reported crashes, typed failures, a 115,500-call input sweep and a brute-force oracle. FormatUtils. |
 | bank-feature | 36 | 2 | BankViewModel money flows on real prefs: buy-ins, rebuys, knockouts, money conservation over 14 configs, weights, reset. |
 | tools-feature | 139 | 1 | Odds: 100 golden hand-ranking and equity tests, exhaustive 5- and 7-card evaluator checks, the engine (exact, Monte Carlo, cancellation) and its ViewModel. Chip calculator ViewModel. `OddsBenchmark` is skipped unless `ODDS_BENCH=1`. |
-| tournament-feature | 26 | 3 | Payout use case, TournamentConfigViewModel, TimerViewModel on virtual time: countdown, levels, sound cue, overtime, validation. |
+| tournament-feature | 53 | 3 | Payout use case, TournamentConfigViewModel. The clock: TimerViewModel on virtual time with a fake monotonic clock (late ticks, sleep gaps, process death mid-level and mid-overtime, reboot, v1.1 migration, chimes including the end chime after a resume, breaks, ante, write cadence) and the break/overtime timeline. |
 
 Before v1.2.0 the green run proved little: 245 executions but 101 unique tests (core's ran 3
 times), and 54 tests in JUnit 4/5-mismatched modules never ran. Turning them on surfaced 43
@@ -216,8 +221,6 @@ Gradle prints each one as `SKIPPED` on every run. To enable one, remove its
 | `BankViewModelTest.purchasesSurviveTheAmountBeingClearedAndRetyped`, `TournamentConfigViewModelTest.purchasesSurviveTheAmountBeingClearedAndRetyped` | PP-014 |
 | `CalculatePayoutsUseCaseTest` / `TournamentConfigViewModelWeightsTest`: `never pays more places than there are players` | PP-016 |
 | `BankViewModelTest.bankTotalsFollowTournamentConfigChanges` | PP-018 |
-| `BlindStructureCalculatorTest`: `every step of an accepted schedule stays within the documented growth bounds` | PP-020 |
-| `BlindFittingAlgorithmTest`: `levels strictly increase, or the configuration is rejected`; `every level is a multiple of the smallest chip, or the configuration is rejected` | PP-020 |
 
 ### Rules the build enforces
 
@@ -246,7 +249,13 @@ Gradle prints each one as `SKIPPED` on every run. To enable one, remove its
   Robolectric test (Robolectric gives each test fresh SharedPreferences) instead.
 * ViewModel tests: set `Dispatchers.Main` to a `StandardTestDispatcher`, and create the
   ViewModel through a `ViewModelStore` so `store.clear()` cancels its coroutines. For a running
-  clock, step it with `advanceTimeBy` + `runCurrent`. `TimerViewModelTest` shows the pattern.
+  clock, step it with `advanceTimeBy` + `runCurrent`, never `advanceUntilIdle` (a running clock
+  ticks forever).
+* **The tournament clock reads time only through `TimeSource`.** `TimerViewModelTest` injects a
+  fake whose monotonic and wall clocks follow the scheduler's virtual time, so the tick loop and
+  the clock agree; `sleep(ms)` moves the clocks without running a tick (deep sleep), `reboot()`
+  restarts the monotonic clock, and clearing the `ViewModelStore` and building a new ViewModel
+  from fresh preference objects is a process death. Never sleep or read real time in a test.
 
 ## 7. Instrumented tests
 

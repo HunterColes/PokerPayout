@@ -1,6 +1,5 @@
 package com.huntercoles.pokerpayout.tools.poker
 
-import kotlin.random.Random
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -8,88 +7,42 @@ import kotlinx.coroutines.runBlocking
  *
  * The golden tests only talk to [OddsSubject] in card-string terms ("As Kd 9c"). This
  * adapter is the only file that changes when the engine is replaced, so the same
- * assertions run unchanged against the old evaluator (where they must fail) and the new
- * one (where they must pass).
+ * assertions ran unchanged against the old evaluator (where 38 of them failed, see commit
+ * "Add golden odds tests that expose the kicker-order bug (red)") and the new one.
  *
- * This version drives the ORIGINAL engine: `evaluateBest` (21 five-card subsets) and
- * `simulateEquity` (Monte Carlo only).
+ * This version drives the new engine: [HandEvaluator] and [OddsEngine].
  */
 internal object OddsSubject {
 
+    private val engine = OddsEngine()
+
     /** Strength of the best five-card hand among [hand] (5..7 cards). Higher wins; equal splits. */
-    fun strength(hand: String): Int = evaluateBest(parse(hand))
+    fun strength(hand: String): Int = HandEvaluator.evaluate(Cards.parseAll(hand))
 
     fun category(hand: String): GoldenCategory = categoryOfStrength(strength(hand))
 
-    fun categoryOfStrength(strength: Int): GoldenCategory = GoldenCategory.entries[strength ushr 24]
+    fun categoryOfStrength(strength: Int): GoldenCategory =
+        GoldenCategory.entries[HandEvaluator.category(strength).ordinal]
 
-    private val deck: List<Card> = fullDeck()
+    /** Strength of the hand made of card i for each i in [indices] (deck order is the engine's). */
+    fun strengthOfDeckIndices(indices: IntArray): Int = HandEvaluator.evaluate(Cards.mask(indices))
 
-    /** Strength of the hand made of `deck[i]` for each i in [indices] (any fixed 52-card order). */
-    fun strengthOfDeckIndices(indices: IntArray): Int = evaluateBest(indices.map { deck[it] })
+    /** Exhaustive equity through the engine's exact mode. */
+    fun exact(holes: List<String>, board: String = ""): Showdown = run(holes, board, OddsSettings())
 
-    /**
-     * Exhaustive equity: every remaining runout is dealt exactly once. The old engine has no
-     * enumeration mode, so the adapter enumerates runouts itself and asks the old
-     * evaluator for each showdown.
-     */
-    fun exact(holes: List<String>, board: String = ""): Showdown {
-        val holeCards = holes.map(::parse)
-        val boardCards = parse(board)
-        val used = holeCards.flatten() + boardCards
-        require(used.size == used.toSet().size) { "duplicate cards" }
-        val rest = fullDeck().filterNot { it in used }
-        val need = 5 - boardCards.size
-        val n = holes.size
-        val wins = LongArray(n)
-        val ties = LongArray(n)
-        val shares = LongArray(n)
-        var deals = 0L
-        forEachCombination(rest, need) { extra ->
-            val fullBoard = boardCards + extra
-            val s = holeCards.map { evaluateBest(it + fullBoard) }
-            val best = s.max()
-            val winners = s.indices.filter { s[it] == best }
-            deals++
-            if (winners.size == 1) {
-                wins[winners[0]]++
-                shares[winners[0]] += Showdown.SHARE_UNIT
-            } else {
-                for (w in winners) {
-                    ties[w]++
-                    shares[w] += Showdown.SHARE_UNIT / winners.size
-                }
-            }
-        }
-        return Showdown(deals, wins.toList(), ties.toList(), shares.toList(), exact = true)
-    }
+    /** Heads-up preflop odds the way the app gets them: the engine's default settings. */
+    fun preflop(a: String, b: String): Showdown = run(listOf(a, b), "", OddsSettings())
 
-    /** Heads-up preflop odds, the way the app computes them (old engine: 10k-sample Monte Carlo). */
-    fun preflop(a: String, b: String): Showdown = runBlocking {
-        val iterations = 20_000
-        val r = simulateEquity(listOf(parse(a), parse(b)), emptyList(), iterations, Random(42))
-        val sims = r[0].simulations.toLong()
-        // Heads-up, so every tie is a two-way split.
-        val shares = r.map { it.wins * Showdown.SHARE_UNIT + it.ties * (Showdown.SHARE_UNIT / 2) }
-        Showdown(sims, r.map { it.wins.toLong() }, r.map { it.ties.toLong() }, shares, exact = false)
-    }
-
-    private fun parse(s: String): List<Card> =
-        s.split(' ').filter { it.isNotBlank() }.map { Card(it[0], it[1]) }
-
-    private fun <T> forEachCombination(items: List<T>, k: Int, action: (List<T>) -> Unit) {
-        val idx = IntArray(k)
-        fun go(start: Int, depth: Int) {
-            if (depth == k) {
-                action(List(k) { items[idx[it]] })
-                return
-            }
-            for (i in start..items.size - (k - depth)) {
-                idx[depth] = i
-                go(i + 1, depth + 1)
-            }
-        }
-        go(0, 0)
+    private fun run(holes: List<String>, board: String, settings: OddsSettings): Showdown {
+        val request = OddsRequest(holes.map { Seat.of(it) }, Cards.parseAll(board))
+        val r = runBlocking { engine.finalResult(request, settings) }
+        return Showdown(
+            deals = r.deals,
+            wins = r.players.map { it.wins },
+            ties = r.players.map { it.ties },
+            equityShares = r.players.map { it.potShares },
+            exact = r.exact,
+        )
     }
 }
 

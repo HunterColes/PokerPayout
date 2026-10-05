@@ -1,7 +1,6 @@
 package com.huntercoles.pokerpayout.core.utils
 
 import com.huntercoles.pokerpayout.core.constants.BlindStructureConstants
-import org.junit.jupiter.api.Disabled
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -103,8 +102,8 @@ class BlindFittingAlgorithmTest {
 
     @Test
     fun `calculated growth rate is the average step from smallest chip to starting stack`() {
-        // (1000 / 25)^(1/14) = 40^(1/14)
-        assertEquals(1.3015, BlindFittingAlgorithm.fitBlinds(15, 25, 1000).calculatedGrowthRate, 0.0001)
+        // (2500 / 25)^(1/10) = 100^(1/10)
+        assertEquals(1.5849, BlindFittingAlgorithm.fitBlinds(11, 25, 2500).calculatedGrowthRate, 0.0001)
         // (6400 / 100)^(1/6) = 2
         assertEquals(2.0, BlindFittingAlgorithm.fitBlinds(7, 100, 6400).calculatedGrowthRate, 1e-9)
     }
@@ -148,29 +147,91 @@ class BlindFittingAlgorithmTest {
         assertFailsWith<IllegalArgumentException> { BlindFittingAlgorithm.fitBlinds(9, 100, 50) }
     }
 
-    @Disabled(
-        "PP-020: 5 rounds from 25 to 100 returns [25, 50, 75, 100, 100]. There are only four " +
-            "multiples of 25 in that range, so the config should be rejected with a reason."
-    )
     @Test
     fun `levels strictly increase, or the configuration is rejected`() {
-        val result = runCatching { BlindFittingAlgorithm.fitBlinds(numRounds = 5, smallestChip = 25, startingChips = 100) }
+        val result = runCatching {
+            BlindFittingAlgorithm.fitBlinds(numRounds = 5, smallestChip = 25, startingChips = 100)
+        }
 
         result.onSuccess { fit ->
             assertTrue(fit.blinds.zipWithNext().all { (a, b) -> b > a }, "repeated level in ${fit.blinds}")
         }
     }
 
-    @Disabled(
-        "PP-020: a starting stack that isn't a multiple of the smallest chip (25 -> 1010) ends the " +
-            "ladder on 1010, which can't be paid in 25s. Reject it, or round the stack to the chip."
-    )
     @Test
     fun `every level is a multiple of the smallest chip, or the configuration is rejected`() {
-        val result = runCatching { BlindFittingAlgorithm.fitBlinds(numRounds = 9, smallestChip = 25, startingChips = 1010) }
+        val result = runCatching {
+            BlindFittingAlgorithm.fitBlinds(numRounds = 9, smallestChip = 25, startingChips = 1010)
+        }
 
         result.onSuccess { fit ->
             assertTrue(fit.blinds.all { it % 25 == 0 }, "non-multiple of 25 in ${fit.blinds}")
+        }
+    }
+
+    @Test
+    fun `an average rate in band is still rejected when whole chips can't climb that slowly`() {
+        // 25 -> 1000 in 15 levels averages 1.30x, but from 25 the only in-band steps are 50, then
+        // 75 or 100, ... (each at least ceil(1.3 x previous) chips): the slowest ladder passes 1000
+        // by level 12. Before PP-020 this was accepted as 25, 50, 75, 100, 125 ... (1.25x steps).
+        listOf(Triple(15, 25, 1000), Triple(5, 25, 100)).forEach { (rounds, chip, stack) ->
+            val error = assertFailsWith<BlindLadderException> { BlindFittingAlgorithm.fitBlinds(rounds, chip, stack) }
+            assertEquals(LadderProblem.TOO_FLAT, error.problem)
+            val message = error.message.orEmpty()
+            assertTrue("too low" in message && "Try fewer rounds or larger starting chips" in message, message)
+        }
+    }
+
+    @Test
+    fun `a stack that isn't a whole number of smallest chips is rejected with the nearest multiples`() {
+        val error = assertFailsWith<BlindLadderException> { BlindFittingAlgorithm.fitBlinds(9, 25, 1010) }
+        assertEquals(LadderProblem.STACK_NOT_MULTIPLE_OF_CHIP, error.problem)
+        assertTrue("Try 1000 or 1025" in error.message.orEmpty(), error.message)
+    }
+
+    @Test
+    fun `feasible stacks are exactly the slowest-to-fastest climb for the level count`() {
+        // 9 levels from 50: slowest climb 1, 2, 3, 4, 6, 8, 11, 15, 20 chips; fastest 2^8 = 256.
+        assertEquals(1_000L..12_800L, BlindFittingAlgorithm.feasibleStackRange(9, 50))
+        assertTrue(BlindFittingAlgorithm.isFeasible(9, 50, 1_000))
+        assertTrue(BlindFittingAlgorithm.isFeasible(9, 50, 12_800))
+        assertTrue(!BlindFittingAlgorithm.isFeasible(9, 50, 950))
+        assertTrue(!BlindFittingAlgorithm.isFeasible(9, 50, 12_850))
+        assertTrue(!BlindFittingAlgorithm.isFeasible(9, 50, 1_025), "not a multiple of 50")
+        // Both ends are reachable: the slowest ladder is forced
+        assertEquals(
+            listOf(50, 100, 150, 200, 300, 400, 550, 750, 1_000),
+            BlindFittingAlgorithm.fitBlinds(9, 50, 1_000).blinds
+        )
+        assertEquals((0..8).map { 50 shl it }, BlindFittingAlgorithm.fitBlinds(9, 50, 12_800).blinds)
+    }
+
+    @Test
+    fun `the default ladder reads like a printed blind sheet`() {
+        assertEquals(
+            listOf(50, 100, 150, 300, 500, 800, 1_500, 3_000, 5_000),
+            BlindFittingAlgorithm.fitBlinds(numRounds = 9, smallestChip = 50, startingChips = 5_000).blinds
+        )
+    }
+
+    @Test
+    fun `the fallback ladder is in band whenever the configuration is feasible`() {
+        // The candidate search normally finds the ladder; the greedy fallback must never fail either.
+        val configurations = listOf(
+            Triple(9, 50, 5_000),
+            Triple(15, 25, 5_000),
+            Triple(9, 50, 1_000),
+            Triple(12, 1, 1_000),
+            Triple(30, 1, 50_000)
+        )
+        configurations.forEach { (rounds, chip, stack) ->
+            val ladder = BlindLadderSearch.greedyLadder(rounds, chip, (stack / chip).toLong()).map { it * chip }
+            assertEquals(chip.toLong(), ladder.first())
+            assertEquals(stack.toLong(), ladder.last())
+            assertTrue(
+                ladder.zipWithNext().all { (a, b) -> 13 * a <= 10 * b && b <= 2 * a },
+                "out of band: $ladder"
+            )
         }
     }
 

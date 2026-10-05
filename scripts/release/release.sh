@@ -7,7 +7,8 @@
 #   scripts/release/release.sh --publish --notes-file build/notes/1.2.0.md --bump minor
 #
 # Options
-#   --dry-run              default. Works in a throwaway clone; never commits, tags or pushes
+#   --dry-run              default. Builds the last commit in a throwaway clone with the
+#                          debug key; never commits, tags or pushes
 #   --publish              ship it. Must run from the main checkout (keystore lives there)
 #   --bump patch|minor|major   next versionName (default patch); versionCode is always +1
 #   --version X.Y.Z        explicit versionName instead of --bump
@@ -37,7 +38,7 @@ MODE=dry-run BUMP=patch VERSION="" NOTES_FILE="" TITLE="" FDROID_NOTES=""
 SKIP_TESTS=0 SKIP_TOUR=0 REPRO="" REQUIRE_RELEASE_KEY=0 IGNORE_FDROID_JDK=0
 PREFLIGHT_ONLY=0 KEEP_WORK=0
 
-usage() { sed -n '2,32p' "$0" | sed -E 's/^# ?//'; }
+usage() { sed -n '2,29p' "$0" | sed -E 's/^# ?//'; }
 while (($#)); do
   case "$1" in
     --dry-run) MODE=dry-run ;;
@@ -235,7 +236,6 @@ semver_gt "$NEW_NAME" "$CUR_NAME" || VERSION_OK=1
 ((NEW_CODE > ${FDROID_CODE:-0})) || VERSION_OK=1
 pf always "$VERSION_OK" version "$CUR_NAME ($CUR_CODE) -> $NEW_NAME ($NEW_CODE); F-Droid has ${FDROID_CODE:-?}"
 
-PROPS="$CHECKOUT/keystore.properties"
 if [[ $MODE == publish ]]; then
   newlog verify-signing
   if "$HERE/verify-signing.sh" >"$log" 2>&1; then pf publish 0 signing "keystore.properties opens the key; certificate matches the pin"

@@ -59,6 +59,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,6 +93,7 @@ import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialo
 import com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction
 import com.huntercoles.pokerpayout.core.design.components.PayoutPreview
 import com.huntercoles.pokerpayout.core.design.components.WeightsEditorDialog
+import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.bank.presentation.BankIntent
 import com.huntercoles.pokerpayout.bank.presentation.MAX_PURCHASE_COUNT
@@ -408,12 +411,6 @@ private fun PlayerRow(
     onAnimationComplete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val focusManager = LocalFocusManager.current
-    val commitAndClear: (String) -> Unit = { text ->
-        onNameChange(text)
-        focusManager.clearFocus()
-    }
-    
     // Animation state for the red flash effect
     var showRedFlash by remember(player.id) { mutableStateOf(false) }
     
@@ -439,36 +436,6 @@ private fun PlayerRow(
         label = "background_color_animation"
     )
     
-    // Keep a local editable text state to handle IME Done commits and to avoid
-    // losing typed input when recomposition happens. Also sync with external
-    // updates (like reset) by observing player.name.
-    var nameTextFieldValue by remember(player.id, player.name) {
-        mutableStateOf(TextFieldValue(text = player.name))
-    }
-    
-    // Track interaction source for focus detection
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    
-    // Check if the current name is default (e.g., "Player 1", "Player 2")
-    val isDefaultName = player.name.matches(Regex("^Player \\d+$"))
-    
-    // Auto-select all text when focused on default name
-    LaunchedEffect(isFocused, isDefaultName) {
-        if (isFocused && isDefaultName && nameTextFieldValue.selection.collapsed) {
-            nameTextFieldValue = nameTextFieldValue.copy(
-                selection = TextRange(0, nameTextFieldValue.text.length)
-            )
-        }
-    }
-    
-    // If the player.name changes externally (reset), update local text state once
-    LaunchedEffect(player.name) {
-        if (nameTextFieldValue.text != player.name) {
-            nameTextFieldValue = TextFieldValue(text = player.name)
-        }
-    }
-    
     Card(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -480,94 +447,15 @@ private fun PlayerRow(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
+            PlayerNameField(
+                player = player,
+                placementNumber = placementNumber,
+                isChampionHighlight = isChampionHighlight,
+                onNameChange = onNameChange,
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 12.dp)
-            ) {
-                placementNumber?.let { placement ->
-                    val orbitronFont = FontFamily(Font(R.font.orbitron_variablefont_wght))
-                    if (isChampionHighlight) {
-                        Text(
-                            text = "👑",
-                            style = MaterialTheme.typography.displayLarge.copy(fontSize = 55.sp),
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .graphicsLayer { rotationZ = -4f },
-                            color = Color.Unspecified,
-                            maxLines = 1
-                        )
-                    }
-                    Text(
-                        text = placement.toString(),
-                        style = MaterialTheme.typography.displayLarge.copy(
-                            fontFamily = orbitronFont,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 48.sp,
-                            shadow = Shadow(
-                                color = Color.Black.copy(alpha = 0.35f),
-                                offset = Offset(2f, 4f),
-                                blurRadius = 12f
-                            )
-                        ),
-                        color = if (isChampionHighlight) Color.Black.copy(alpha = 0.78f) else PokerColors.PokerGold.copy(alpha = 0.22f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Clip,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.Center)
-                            .graphicsLayer { rotationZ = if (isChampionHighlight) -3f else -8f }
-                    )
-                }
-
-                OutlinedTextField(
-                    value = nameTextFieldValue,
-                    onValueChange = { new -> nameTextFieldValue = new },
-                    interactionSource = interactionSource,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onPreviewKeyEvent { keyEvent ->
-                            val native = keyEvent.nativeKeyEvent ?: return@onPreviewKeyEvent false
-                            if (native.keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
-                                when (native.action) {
-                                    android.view.KeyEvent.ACTION_DOWN -> true
-                                    android.view.KeyEvent.ACTION_UP -> { commitAndClear(nameTextFieldValue.text); true }
-                                    else -> false
-                                }
-                            } else false
-                        },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    colors = if (isChampionHighlight) {
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.Black,
-                            unfocusedBorderColor = Color.Black,
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            cursorColor = Color.Black,
-                            selectionColors = TextSelectionColors(
-                                handleColor = Color.Black,
-                                backgroundColor = Color.Black.copy(alpha = 0.35f)
-                            )
-                        )
-                    } else {
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PokerColors.AccentGreen,
-                            unfocusedBorderColor = PokerColors.CardWhite,
-                            focusedTextColor = PokerColors.CardWhite,
-                            unfocusedTextColor = PokerColors.CardWhite,
-                            cursorColor = PokerColors.PokerGold,
-                            selectionColors = TextSelectionColors(
-                                handleColor = PokerColors.PokerGold,
-                                backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
-                            )
-                        )
-                    },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { commitAndClear(nameTextFieldValue.text) })
-                )
-            }
+            )
 
             // Right-justified group: out chip + two vertical columns (rebuy/addon) and (buy-in/payout)
             Row(
@@ -668,6 +556,135 @@ private fun PlayerRow(
                 }
             }
         }
+    }
+}
+
+/**
+ * The player's name. The name is saved when the field loses focus, on Done/Enter, and when the row
+ * goes away (tab switch, scrolling), not only on the IME action as before. A knocked-out player's
+ * finishing place sits on the field's top edge as a badge, clear of the name (it used to be a large
+ * number drawn over it).
+ */
+@Composable
+private fun PlayerNameField(
+    player: PlayerData,
+    placementNumber: Int?,
+    isChampionHighlight: Boolean,
+    onNameChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val focusManager = LocalFocusManager.current
+    var nameTextFieldValue by remember(player.id, player.name) {
+        mutableStateOf(TextFieldValue(text = player.name))
+    }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val latestText by rememberUpdatedState(nameTextFieldValue.text)
+    val latestName by rememberUpdatedState(player.name)
+    val latestOnNameChange by rememberUpdatedState(onNameChange)
+    val commit = { if (latestText != latestName) latestOnNameChange(latestText) }
+
+    // Select a default name ("Player 3") on focus, so typing replaces it
+    LaunchedEffect(isFocused) {
+        val isDefaultName = player.name.matches(Regex("^Player \\d+$"))
+        if (isFocused && isDefaultName && nameTextFieldValue.selection.collapsed) {
+            nameTextFieldValue = nameTextFieldValue.copy(selection = TextRange(0, nameTextFieldValue.text.length))
+        }
+    }
+    // Focus moved elsewhere: save what was typed
+    var wasFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(isFocused) {
+        if (wasFocused && !isFocused) commit()
+        wasFocused = isFocused
+    }
+    // The row is leaving the screen (tab switch): save what was typed
+    DisposableEffect(player.id) {
+        onDispose { commit() }
+    }
+
+    Box(modifier = modifier) {
+        OutlinedTextField(
+            value = nameTextFieldValue,
+            onValueChange = { new -> nameTextFieldValue = new },
+            interactionSource = interactionSource,
+            modifier = Modifier
+                .fillMaxWidth()
+                .onEnterKeyUp {
+                    commit()
+                    focusManager.clearFocus()
+                },
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium,
+            colors = nameFieldColors(isChampionHighlight),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = {
+                commit()
+                focusManager.clearFocus()
+            })
+        )
+        placementNumber?.let { place ->
+            PlacementBadge(
+                place = place,
+                isChampion = isChampionHighlight,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset(x = 10.dp, y = (-9).dp)
+            )
+        }
+    }
+}
+
+/** Runs [action] when a hardware Enter key is released, and keeps Enter out of the text. */
+private fun Modifier.onEnterKeyUp(action: () -> Unit): Modifier = onPreviewKeyEvent { keyEvent ->
+    val isEnter = keyEvent.nativeKeyEvent?.keyCode == android.view.KeyEvent.KEYCODE_ENTER
+    if (isEnter && keyEvent.nativeKeyEvent?.action == android.view.KeyEvent.ACTION_UP) action()
+    isEnter
+}
+
+@Composable
+private fun nameFieldColors(isChampionHighlight: Boolean) = if (isChampionHighlight) {
+    OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = Color.Black,
+        unfocusedBorderColor = Color.Black,
+        focusedTextColor = Color.Black,
+        unfocusedTextColor = Color.Black,
+        cursorColor = Color.Black,
+        selectionColors = TextSelectionColors(
+            handleColor = Color.Black,
+            backgroundColor = Color.Black.copy(alpha = 0.35f)
+        )
+    )
+} else {
+    OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = PokerColors.AccentGreen,
+        unfocusedBorderColor = PokerColors.CardWhite,
+        focusedTextColor = PokerColors.CardWhite,
+        unfocusedTextColor = PokerColors.CardWhite,
+        cursorColor = PokerColors.PokerGold,
+        selectionColors = TextSelectionColors(
+            handleColor = PokerColors.PokerGold,
+            backgroundColor = PokerColors.PokerGold.copy(alpha = 0.4f)
+        )
+    )
+}
+
+/** "5th", or "👑 1st" for the champion, in the Orbitron face the big number used. */
+@Composable
+private fun PlacementBadge(place: Int, isChampion: Boolean, modifier: Modifier = Modifier) {
+    val orbitronFont = FontFamily(Font(R.font.orbitron_variablefont_wght))
+    Surface(
+        modifier = modifier.semantics { contentDescription = "Finished ${ordinalOf(place)}" },
+        shape = RoundedCornerShape(10.dp),
+        color = if (isChampion) PokerColors.PokerGold else PokerColors.FeltGreen,
+        border = BorderStroke(1.dp, if (isChampion) Color.Black else PokerColors.PokerGold)
+    ) {
+        Text(
+            text = if (isChampion) "👑 ${ordinalOf(place)}" else ordinalOf(place),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = orbitronFont, fontWeight = FontWeight.Black),
+            color = if (isChampion) Color.Black else PokerColors.PokerGold,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp)
+        )
     }
 }
 

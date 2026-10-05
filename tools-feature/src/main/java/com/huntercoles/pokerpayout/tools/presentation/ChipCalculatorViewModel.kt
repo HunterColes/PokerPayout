@@ -1,7 +1,9 @@
 package com.huntercoles.pokerpayout.tools.presentation
 
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.huntercoles.pokerpayout.core.coroutines.DefaultDispatcher
 import com.huntercoles.pokerpayout.core.design.ChipDenominations
 import com.huntercoles.pokerpayout.core.preferences.ChipCalculatorPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
@@ -9,17 +11,20 @@ import com.huntercoles.pokerpayout.core.utils.ChipDistributionCurve
 import com.huntercoles.pokerpayout.core.utils.ChipDistributionOptimizer
 import com.huntercoles.pokerpayout.core.utils.ChipDistributionOutcome
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class ChipBreakdown(
     val value: Int,
     val count: Int,
-    val color: androidx.compose.ui.graphics.Color,
+    val color: Color,
     val name: String
 )
 
@@ -32,17 +37,24 @@ data class ChipCalculatorUiState(
     val denominationCount: Int = 5,
     val fitScore: Double? = null,
     val totalPhysicalChips: Int = 0,
-    val smallestChip: Int = 10
+    val smallestChip: Int = 10,
+    /** True while Generate is computing a breakdown. */
+    val isCalculating: Boolean = false,
+    /** One plain line for the user: why there is no breakdown, or a note about an adjusted input. */
+    val message: String? = null
 )
 
 @HiltViewModel
 class ChipCalculatorViewModel @Inject constructor(
     private val chipPreferences: ChipCalculatorPreferences,
-    private val tournamentPreferences: TournamentPreferences
+    private val tournamentPreferences: TournamentPreferences,
+    @DefaultDispatcher private val computeDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChipCalculatorUiState())
     val uiState: StateFlow<ChipCalculatorUiState> = _uiState.asStateFlow()
+
+    private var calculation: Job? = null
 
     init {
         loadSavedState()
@@ -76,34 +88,6 @@ class ChipCalculatorViewModel @Inject constructor(
                 _uiState.update { it.copy(denominationCount = count) }
             }
         }
-
-        viewModelScope.launch {
-            chipPreferences.chipBreakdown.collect { breakdown ->
-                if (breakdown.isNotEmpty()) {
-                    val fitScore = chipPreferences.getFitScore()
-                    val totalPhysicalChips = chipPreferences.getTotalPhysicalChips()
-                    
-                    // Convert breakdown to ChipBreakdown objects
-                    val chipBreakdowns = breakdown.map { (value, count) ->
-                        val chipInfo = ChipDenominations.getChipByValue(value)
-                        ChipBreakdown(
-                            value = value,
-                            count = count,
-                            color = chipInfo?.color ?: androidx.compose.ui.graphics.Color.Gray,
-                            name = chipInfo?.name ?: "Chip"
-                        )
-                    }
-                    
-                    _uiState.update { 
-                        it.copy(
-                            chipBreakdown = chipBreakdowns,
-                            fitScore = fitScore,
-                            totalPhysicalChips = totalPhysicalChips
-                        )
-                    }
-                }
-            }
-        }
     }
 
     fun setTournamentStartingChips(chips: Int) {
@@ -135,45 +119,53 @@ class ChipCalculatorViewModel @Inject constructor(
         // Note: smallest chip is synced from tournament preferences, so we might not save it separately
     }
 
+    /**
+     * Compute the breakdown off the main thread. The screen shows a loading state meanwhile, then
+     * either the breakdown or one message line explaining why there isn't one.
+     */
     fun calculateChipBreakdown() {
-        val total = _uiState.value.totalChips
-        val smallestChip = _uiState.value.smallestChip
-        val denomCount = _uiState.value.denominationCount
-        val curve = _uiState.value.selectedCurve
-        
-        // Use curve-based optimization. Inputs with no exact breakdown leave the screen as it is.
-        val outcome = ChipDistributionOptimizer.optimize(
-            targetValue = total,
-            smallestChip = smallestChip,
-            denominationCount = denomCount,
-            curve = curve
-        )
-        val result = (outcome as? ChipDistributionOutcome.Success)?.distribution ?: return
-
-        // Convert to ChipBreakdown with colors
-        val breakdown = result.denominations.zip(result.quantities).map { (value, count) ->
-            val chipInfo = ChipDenominations.getChipByValue(value)
-            ChipBreakdown(
-                value = value,
-                count = count,
-                color = chipInfo?.color ?: androidx.compose.ui.graphics.Color.Gray,
-                name = chipInfo?.name ?: "Chip"
-            )
+        val inputs = _uiState.value
+        calculation?.cancel()
+        _uiState.update { it.copy(isCalculating = true, message = null) }
+        calculation = viewModelScope.launch {
+            val outcome = withContext(computeDispatcher) {
+                ChipDistributionOptimizer.optimize(
+                    targetValue = inputs.totalChips,
+                    smallestChip = inputs.smallestChip,
+                    denominationCount = inputs.denominationCount,
+                    curve = inputs.selectedCurve
+                )
+            }
+            when (outcome) {
+                is ChipDistributionOutcome.Success -> {
+                    val result = outcome.distribution
+                    val pairs = result.denominations.zip(result.quantities)
+                    // Every displayed number comes from this one result.
+                    _uiState.update {
+                        it.copy(
+                            chipBreakdown = pairs.map { (value, count) -> chipBreakdown(value, count) },
+                            fitScore = result.fitScore,
+                            totalPhysicalChips = result.totalChips,
+                            isCalculating = false,
+                            message = outcome.note
+                        )
+                    }
+                    chipPreferences.saveResult(pairs, result.fitScore)
+                }
+                is ChipDistributionOutcome.Failure -> {
+                    _uiState.update {
+                        it.copy(
+                            chipBreakdown = emptyList(),
+                            fitScore = null,
+                            totalPhysicalChips = 0,
+                            isCalculating = false,
+                            message = outcome.message
+                        )
+                    }
+                    chipPreferences.clearResult()
+                }
+            }
         }
-        
-        _uiState.update {
-            it.copy(
-                chipBreakdown = breakdown,
-                fitScore = result.fitScore,
-                totalPhysicalChips = result.quantities.sum()
-            )
-        }
-        
-        // Save results to preferences
-        val breakdownPairs = result.denominations.zip(result.quantities)
-        chipPreferences.setChipBreakdown(breakdownPairs)
-        chipPreferences.setFitScore(result.fitScore)
-        chipPreferences.setTotalPhysicalChips(result.quantities.sum())
     }
 
     fun showResetDialog() {
@@ -187,10 +179,11 @@ class ChipCalculatorViewModel @Inject constructor(
     }
 
     fun confirmReset() {
+        calculation?.cancel()
         chipPreferences.resetAllData()
         val tournamentStartingChips = tournamentPreferences.getStartingChips()
         val tournamentSmallestChip = tournamentPreferences.getSmallestChip()
-        _uiState.update { 
+        _uiState.update {
             it.copy(
                 totalChips = tournamentStartingChips,
                 customTotalChips = 0,
@@ -200,7 +193,9 @@ class ChipCalculatorViewModel @Inject constructor(
                 selectedCurve = ChipDistributionCurve.LinearSteep,
                 denominationCount = 5,
                 fitScore = null,
-                totalPhysicalChips = 0
+                totalPhysicalChips = 0,
+                isCalculating = false,
+                message = null
             )
         }
         // Removed auto-calculation - user must manually generate
@@ -211,14 +206,28 @@ class ChipCalculatorViewModel @Inject constructor(
         val selectedCurveName = chipPreferences.getSelectedCurve()
         val selectedCurve = ChipDistributionCurve.getCurveByName(selectedCurveName) ?: ChipDistributionCurve.LinearSteep
         val denominationCount = chipPreferences.getDenominationCount()
-        
-        _uiState.update { 
+        val savedBreakdown = chipPreferences.getChipBreakdown()
+
+        _uiState.update {
             it.copy(
                 customTotalChips = customTotal,
                 totalChips = if (customTotal > 0) customTotal else it.totalChips,
                 selectedCurve = selectedCurve,
-                denominationCount = denominationCount
+                denominationCount = denominationCount,
+                chipBreakdown = savedBreakdown.map { (value, count) -> chipBreakdown(value, count) },
+                fitScore = if (savedBreakdown.isEmpty()) null else chipPreferences.getFitScore(),
+                totalPhysicalChips = savedBreakdown.sumOf { (_, count) -> count }
             )
         }
+    }
+
+    private fun chipBreakdown(value: Int, count: Int): ChipBreakdown {
+        val chipInfo = ChipDenominations.getChipByValue(value)
+        return ChipBreakdown(
+            value = value,
+            count = count,
+            color = chipInfo?.color ?: Color.Gray,
+            name = chipInfo?.name ?: "Chip"
+        )
     }
 }

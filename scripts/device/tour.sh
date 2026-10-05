@@ -80,7 +80,16 @@ step() {
   t1=$(date +%s%N)
   local log_mark; log_mark=$(wc -l < "$LOG"); LAST_UI=""
   echo "=== $id: $desc" >>"$LOG"
-  if "$fn" >>"$LOG" 2>&1 && crash_check >>"$LOG" 2>&1; then
+  # Run the step with errexit so ANY failing command fails it, not just the last one. (Called
+  # as an `if` condition, bash ignores `set -e` inside the function, so an assertion in the
+  # middle of a step could fail unnoticed.) The subshell keeps LAST_UI, so hand it back.
+  local rc
+  set +e
+  ( set -e; "$fn"; printf '%s' "$LAST_UI" > "$OUT/.last-ui" ) >>"$LOG" 2>&1
+  rc=$?
+  set -e
+  LAST_UI="$(cat "$OUT/.last-ui" 2>/dev/null || true)"; rm -f "$OUT/.last-ui"
+  if (( rc == 0 )) && crash_check >>"$LOG" 2>&1; then
     status=PASS; PASSED=$((PASSED + 1)); detail=""
   else
     status=FAIL; FAILED=$((FAILED + 1))

@@ -125,6 +125,9 @@ class SoundManager @Inject constructor(
                     if (player.isPlaying) {
                         player.seekTo(0) // Restart if already playing
                     }
+                    // The volume slider may have moved since the player was prepared (B12)
+                    val volume = audioPreferences.getVolume()
+                    player.setVolume(volume, volume)
                     player.start()
                 }
                 return

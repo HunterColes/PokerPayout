@@ -13,10 +13,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -33,6 +35,7 @@ import com.huntercoles.pokerpayout.core.navigation.NavigationHost
 import com.huntercoles.pokerpayout.core.navigation.NavigationManager
 import com.huntercoles.pokerpayout.core.navigation.bottomNavigationItems
 import com.huntercoles.pokerpayout.core.preferences.ThemePreferences
+import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.isDarkTheme
 import com.huntercoles.pokerpayout.core.utils.collectWithLifecycle
 import javax.inject.Inject
@@ -49,10 +52,14 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var themePreferences: ThemePreferences
 
+    @Inject
+    lateinit var timerPreferences: TimerPreferences
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val isDarkTheme by themePreferences.darkModeEnabled.collectAsState(initial = themePreferences.getDarkModePreference())
+            KeepScreenOnWhileClockRuns(timerPreferences)
             
             PokerPayoutTheme(
                 darkTheme = isDarkTheme
@@ -88,6 +95,17 @@ class MainActivity : ComponentActivity() {
                     }
             }
         }
+    }
+}
+
+/** PP-015: the blind clock must not sleep while it runs, on any tab. */
+@Composable
+private fun KeepScreenOnWhileClockRuns(timerPreferences: TimerPreferences) {
+    val running by timerPreferences.timerRunning.collectAsState(initial = timerPreferences.getTimerRunning())
+    val view = LocalView.current
+    DisposableEffect(running) {
+        view.keepScreenOn = running
+        onDispose { view.keepScreenOn = false }
     }
 }
 

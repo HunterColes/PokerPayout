@@ -87,7 +87,8 @@ A quick checklist to track your F-Droid submission progress.
 - APK filename: `PokerPayout-v{versionName}-release.apk`
 
 🔄 **Future Updates**
-- Create changelogs in `en-US/changelogs/{versionCode}.txt`
+- `scripts/release/release.sh` writes `en-US/changelogs/{versionCode}.txt` and rebuilds the
+  yml mirror from fdroiddata; see [docs/RELEASING.md](../docs/RELEASING.md)
 - F-Droid auto-detects new tags if `AutoUpdateMode: Version` is set
 - Updates typically appear in F-Droid within a few days
 

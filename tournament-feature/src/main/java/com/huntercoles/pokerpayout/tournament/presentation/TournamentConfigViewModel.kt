@@ -65,10 +65,12 @@ class TournamentConfigViewModel @Inject constructor(
             is TournamentConfigIntent.UpdateBountyPerPlayer -> updateSettings { setBountyCents(intent.cents) }
             is TournamentConfigIntent.UpdateRebuyAmount -> updatePurchaseAmount(PurchaseKind.REBUY, intent.cents)
             is TournamentConfigIntent.UpdateAddOnAmount -> updatePurchaseAmount(PurchaseKind.ADD_ON, intent.cents)
-            is TournamentConfigIntent.CommitRebuyAmount -> commitPurchaseAmount(PurchaseKind.REBUY, intent.cents)
-            is TournamentConfigIntent.CommitAddOnAmount -> commitPurchaseAmount(PurchaseKind.ADD_ON, intent.cents)
+            is TournamentConfigIntent.CommitRebuyAmount ->
+                commitPurchaseAmount(PurchaseKind.REBUY, intent.cents, intent.centsBeforeEdit)
+            is TournamentConfigIntent.CommitAddOnAmount ->
+                commitPurchaseAmount(PurchaseKind.ADD_ON, intent.cents, intent.centsBeforeEdit)
             TournamentConfigIntent.ConfirmClearPurchases -> confirmClearPurchases()
-            TournamentConfigIntent.DismissClearPurchases -> _uiState.update { it.copy(purchaseClearPrompt = null) }
+            TournamentConfigIntent.DismissClearPurchases -> keepPurchases()
             is TournamentConfigIntent.UpdateWeights -> updateWeights(intent.weights)
             is TournamentConfigIntent.UpdatePayoutSettings -> {
                 _uiState.update { it.copy(showWeightsEditor = false) }
@@ -179,14 +181,26 @@ class TournamentConfigViewModel @Inject constructor(
         }
     }
 
-    private fun commitPurchaseAmount(kind: PurchaseKind, cents: Long) {
+    /**
+     * The Rebuy or Add-on field was left at [cents]. Leaving it at zero while purchases are recorded
+     * asks first; "Keep" puts back [centsBeforeEdit], since backspacing "15" saved "1" on the way.
+     */
+    private fun commitPurchaseAmount(kind: PurchaseKind, cents: Long, centsBeforeEdit: Long) {
         val count = purchaseCount(kind)
         if (cents == 0L && count > 0) {
-            _uiState.update {
-                it.copy(purchaseClearPrompt = PurchaseClearPrompt(kind, count, keptAmountCents = savedAmount(kind)))
-            }
+            val kept = centsBeforeEdit.takeIf { it > 0L } ?: savedAmount(kind)
+            _uiState.update { it.copy(purchaseClearPrompt = PurchaseClearPrompt(kind, count, keptAmountCents = kept)) }
         } else {
             updatePurchaseAmount(kind, cents)
+        }
+    }
+
+    /** "Keep": the purchases stay and so does the amount from before the edit. */
+    private fun keepPurchases() {
+        val prompt = _uiState.value.purchaseClearPrompt ?: return
+        _uiState.update { it.copy(purchaseClearPrompt = null) }
+        if (prompt.keptAmountCents > 0L && prompt.keptAmountCents != savedAmount(prompt.kind)) {
+            saveAmount(prompt.kind, prompt.keptAmountCents)
         }
     }
 

@@ -38,7 +38,7 @@ fun FolderTab(
 ) {
     Box(
         modifier = modifier
-            .widthIn(min = 96.dp, max = 160.dp)
+            .widthIn(max = 160.dp)
             .height(48.dp)
             .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }
@@ -104,7 +104,9 @@ fun PoolConfigurationSection(
                         FolderTab(
                             text = title,
                             isSelected = uiState.selectedPanel == panel,
-                            onClick = { onIntent(TournamentConfigIntent.UpdateSelectedPanel(panel)) }
+                            onClick = { onIntent(TournamentConfigIntent.UpdateSelectedPanel(panel)) },
+                            // Three tabs share the width; at a fixed 120+ dp each the third was squeezed
+                            modifier = Modifier.weight(1f)
                         )
                     }
             }
@@ -178,7 +180,7 @@ private fun PurchaseRow(uiState: TournamentConfigUiState, onIntent: (TournamentC
             valueCents = uiState.money.rebuyCents,
             onAmount = amountHandler(
                 onTyped = { onIntent(TournamentConfigIntent.UpdateRebuyAmount(it)) },
-                onCommitted = { onIntent(TournamentConfigIntent.CommitRebuyAmount(it)) }
+                onCommitted = { onIntent(TournamentConfigIntent.CommitRebuyAmount(it.cents, it.centsBeforeEdit)) }
             ),
             label = "Rebuy ($)",
             isLocked = uiState.isTournamentLocked,
@@ -188,7 +190,7 @@ private fun PurchaseRow(uiState: TournamentConfigUiState, onIntent: (TournamentC
             valueCents = uiState.money.addOnCents,
             onAmount = amountHandler(
                 onTyped = { onIntent(TournamentConfigIntent.UpdateAddOnAmount(it)) },
-                onCommitted = { onIntent(TournamentConfigIntent.CommitAddOnAmount(it)) }
+                onCommitted = { onIntent(TournamentConfigIntent.CommitAddOnAmount(it.cents, it.centsBeforeEdit)) }
             ),
             label = "Add-on ($)",
             isLocked = uiState.isTournamentLocked,

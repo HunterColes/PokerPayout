@@ -139,7 +139,7 @@ class TournamentConfigViewModelTest {
         bankPreferences.savePlayerRebuys(playerId = 3, rebuys = 1)
         settle()
 
-        viewModel.send(TournamentConfigIntent.CommitRebuyAmount(0))
+        viewModel.send(TournamentConfigIntent.CommitRebuyAmount(0, centsBeforeEdit = 2_500))
 
         val prompt = viewModel.state.purchaseClearPrompt
         assertEquals(PurchaseClearPrompt(PurchaseKind.REBUY, count = 3, keptAmountCents = 2_500), prompt)
@@ -155,11 +155,34 @@ class TournamentConfigViewModelTest {
         bankPreferences.savePlayerAddons(playerId = 2, addons = 1)
         settle()
 
-        viewModel.send(TournamentConfigIntent.CommitAddOnAmount(0), TournamentConfigIntent.DismissClearPurchases)
+        viewModel.send(
+            TournamentConfigIntent.CommitAddOnAmount(0, centsBeforeEdit = 1_000),
+            TournamentConfigIntent.DismissClearPurchases
+        )
 
         assertNull(viewModel.state.purchaseClearPrompt)
         assertEquals(1_000L, tournamentPreferences.getMoneySettings().addOnCents)
         assertEquals(1, bankPreferences.getPlayerAddons(2))
+    }
+
+    @Test
+    fun keepingPutsBackTheAmountFromBeforeTheEdit() {
+        tournamentPreferences.setRebuyAmount(15.0)
+        val viewModel = createViewModel()
+        bankPreferences.savePlayerRebuys(playerId = 1, rebuys = 1)
+        settle()
+
+        // Backspacing "15" passes through "1", which is a valid amount and is saved on the way
+        viewModel.send(
+            TournamentConfigIntent.UpdateRebuyAmount(100),
+            TournamentConfigIntent.CommitRebuyAmount(0, centsBeforeEdit = 1_500)
+        )
+        assertEquals(1_500L, viewModel.state.purchaseClearPrompt?.keptAmountCents)
+
+        viewModel.send(TournamentConfigIntent.DismissClearPurchases)
+
+        assertEquals(1_500L, tournamentPreferences.getMoneySettings().rebuyCents)
+        assertEquals(1, bankPreferences.getPlayerRebuys(1))
     }
 
     @Test
@@ -169,7 +192,10 @@ class TournamentConfigViewModelTest {
         bankPreferences.savePlayerRebuys(playerId = 1, rebuys = 2)
         settle()
 
-        viewModel.send(TournamentConfigIntent.CommitRebuyAmount(0), TournamentConfigIntent.ConfirmClearPurchases)
+        viewModel.send(
+            TournamentConfigIntent.CommitRebuyAmount(0, centsBeforeEdit = 2_500),
+            TournamentConfigIntent.ConfirmClearPurchases
+        )
 
         assertNull(viewModel.state.purchaseClearPrompt)
         assertEquals(0L, tournamentPreferences.getMoneySettings().rebuyCents)
@@ -182,7 +208,10 @@ class TournamentConfigViewModelTest {
         tournamentPreferences.setRebuyAmount(25.0)
         val viewModel = createViewModel()
 
-        viewModel.send(TournamentConfigIntent.UpdateRebuyAmount(0), TournamentConfigIntent.CommitRebuyAmount(0))
+        viewModel.send(
+            TournamentConfigIntent.UpdateRebuyAmount(0),
+            TournamentConfigIntent.CommitRebuyAmount(0, centsBeforeEdit = 2_500)
+        )
 
         assertEquals(0L, tournamentPreferences.getMoneySettings().rebuyCents)
         assertNull(viewModel.state.purchaseClearPrompt)

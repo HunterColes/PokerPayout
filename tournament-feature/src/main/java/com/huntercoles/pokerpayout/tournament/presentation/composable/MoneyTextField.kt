@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -37,20 +38,29 @@ private fun moneyFieldText(cents: Long, locale: Locale): String =
     if (cents == 0L) "" else MoneyInput.format(cents, locale)
 
 /**
+ * An amount from a money field: typed ([committed] false) or final ([committed] true, the field was
+ * left). [centsBeforeEdit] is the saved amount when the user started editing, so a question about
+ * the final amount can offer to put that back (backspacing "15" passes through "1").
+ */
+internal data class MoneyEntry(val cents: Long, val committed: Boolean, val centsBeforeEdit: Long)
+
+/**
  * A money input that keeps the text the user is typing.
  *
- * - The field owns its text while focused. Only parsed amounts go out ([onValueChange]); nothing
- *   coming back in rewrites the text, so the cursor stays put (typing 1, 2, ., 5, 0 gives "12.50",
- *   not "120.5" as in v1.1.12).
+ * - The field owns its text while focused. Only parsed amounts go out ([onAmount]); nothing coming
+ *   back in rewrites the text, so the cursor stays put (typing 1, 2, ., 5, 0 gives "12.50", not
+ *   "120.5" as in v1.1.12).
  * - An empty field sends nothing while typing: clearing a field to retype it is not a command.
- * - Leaving the field (focus loss, Done, tab switch) commits: empty means 0. [onCommit] gets the
- *   final amount, then the text shows the saved amount in the device locale ("12,50" in Germany).
+ * - Leaving the field (focus loss, Done, tab switch) commits: empty means 0. Then the text shows
+ *   the saved amount in the device locale ("12,50" in Germany).
  * - Both '.' and ',' work as the decimal separator, whatever the locale.
  */
+// The branches are the field's text/focus/commit rules listed above, kept together on purpose.
+@Suppress("CyclomaticComplexMethod")
 @Composable
 internal fun MoneyTextField(
     valueCents: Long,
-    onAmount: (cents: Long, committed: Boolean) -> Unit,
+    onAmount: (MoneyEntry) -> Unit,
     label: String,
     isLocked: Boolean,
     modifier: Modifier = Modifier
@@ -59,11 +69,14 @@ internal fun MoneyTextField(
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
     var text by remember { mutableStateOf(TextFieldValue(moneyFieldText(valueCents, locale))) }
     var isFocused by remember { mutableStateOf(false) }
+    var centsBeforeEdit by remember { mutableLongStateOf(valueCents) }
     val currentOnAmount by rememberUpdatedState(onAmount)
 
+    fun send(cents: Long, committed: Boolean) = currentOnAmount(MoneyEntry(cents, committed, centsBeforeEdit))
+
     fun commit() {
-        if (text.text.isBlank()) currentOnAmount(0L, false)
-        currentOnAmount(MoneyInput.parseCents(text.text) ?: 0L, true)
+        if (text.text.isBlank()) send(0L, committed = false)
+        send(MoneyInput.parseCents(text.text) ?: 0L, committed = true)
     }
 
     // Outside changes (reset, an amount the ViewModel kept) show up once the user isn't typing.
@@ -85,7 +98,7 @@ internal fun MoneyTextField(
             if (MoneyInput.isAcceptable(typed.text)) {
                 val textChanged = typed.text != text.text
                 text = typed
-                if (textChanged) MoneyInput.parseCents(typed.text)?.let { currentOnAmount(it, false) }
+                if (textChanged) MoneyInput.parseCents(typed.text)?.let { send(it, committed = false) }
             }
         },
         label = {
@@ -106,6 +119,7 @@ internal fun MoneyTextField(
             .clearFocusOnEnter { focusManager.clearFocus(force = true) }
             .onFocusChanged { focusState ->
                 if (isFocused && !focusState.isFocused) commit()
+                if (!isFocused && focusState.isFocused) centsBeforeEdit = valueCents
                 isFocused = focusState.isFocused
             }
     )
@@ -118,6 +132,6 @@ private fun Modifier.clearFocusOnEnter(clearFocus: () -> Unit): Modifier = onPre
     isEnter
 }
 
-/** Sends typed amounts with [onTyped] and committed ones with [onCommitted]. */
-internal fun amountHandler(onTyped: (Long) -> Unit, onCommitted: (Long) -> Unit = {}) =
-    { cents: Long, committed: Boolean -> if (committed) onCommitted(cents) else onTyped(cents) }
+/** Sends typed amounts to [onTyped] and committed ones to [onCommitted]. */
+internal fun amountHandler(onTyped: (Long) -> Unit, onCommitted: (MoneyEntry) -> Unit = {}) =
+    { entry: MoneyEntry -> if (entry.committed) onCommitted(entry) else onTyped(entry.cents) }

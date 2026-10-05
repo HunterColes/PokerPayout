@@ -1,10 +1,11 @@
 package com.huntercoles.pokerpayout.core.utils
 
 import com.huntercoles.pokerpayout.core.constants.BlindStructureConstants
+import org.junit.jupiter.api.Disabled
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-import kotlin.math.pow
 
 /**
  * Core tests for BlindFittingAlgorithm focusing on fit score quality and validation.
@@ -79,103 +80,97 @@ class BlindFittingAlgorithmTest {
     }
 
     @Test
-    fun `default tournament configuration achieves excellent fit`() {
-        // 3h duration, 20min rounds = 9 rounds, 50→5000
-        // Target rate ≈ 1.778 (between 1.3-2.0 bounds)
+    fun `default tournament configuration fits within the documented bounds`() {
+        // 3h duration, 20min rounds = 9 rounds, 50 -> 5000: average step 100^(1/8) = 1.778
         val result = BlindFittingAlgorithm.fitBlinds(
             numRounds = 9,
             smallestChip = 50,
             startingChips = 5000
         )
 
-        assertTrue(result.calculatedGrowthRate in 1.3..2.0)
+        assertEquals(1.7783, result.calculatedGrowthRate, 0.0001)
+        assertEquals(9, result.blinds.size)
         assertEquals(50, result.blinds.first())
         assertEquals(5000, result.blinds.last())
-        assertEquals(9, result.blinds.size)
+        assertTrue(result.blinds.all { it % 50 == 0 }, "multiples of 50: ${result.blinds}")
+        val steps = result.blinds.zipWithNext { a, b -> b.toDouble() / a }
+        assertTrue(
+            steps.all { it in BlindStructureConstants.MIN_BLIND_GROWTH_RATE..BlindStructureConstants.MAX_BLIND_GROWTH_RATE },
+            "steps $steps"
+        )
         assertTrue(result.fitScore > 0.9, "Default config should have fit score > 0.9, got ${result.fitScore}")
-        assertTrue(result.blinds.all { it % 50 == 0 })
     }
 
     @Test
-    fun `minimum growth rate boundary at 1_3`() {
-        // Target rate ~1.3 with many rounds
-        // Tests lower bound of acceptable growth rate
+    fun `calculated growth rate is the average step from smallest chip to starting stack`() {
+        // (1000 / 25)^(1/14) = 40^(1/14)
+        assertEquals(1.3015, BlindFittingAlgorithm.fitBlinds(15, 25, 1000).calculatedGrowthRate, 0.0001)
+        // (6400 / 100)^(1/6) = 2
+        assertEquals(2.0, BlindFittingAlgorithm.fitBlinds(7, 100, 6400).calculatedGrowthRate, 1e-9)
+    }
+
+    @Test
+    fun `maximum growth rate of 2_0 gives an exact doubling ladder`() {
+        // 25 x 2^7 = 3200 over 8 rounds
         val result = BlindFittingAlgorithm.fitBlinds(
-            numRounds = 15,
+            numRounds = 8,
             smallestChip = 25,
-            startingChips = 1000
+            startingChips = 3200
         )
 
-        assertTrue(result.calculatedGrowthRate >= 1.3)
-        assertTrue(result.fitScore > 0.65, "Boundary case should still have reasonable fit, got ${result.fitScore}")
-    }
-
-    @Test
-    fun `maximum growth rate boundary at 2_0`() {
-        // Target rate exactly 2.0 with 8 rounds
-        // Tests upper bound of acceptable growth rate
-        val startChip = 25
-        val targetRate = 2.0
-        val numRounds = 8
-        val endChip = (startChip * targetRate.pow(numRounds - 1)).toInt()
-
-        val result = BlindFittingAlgorithm.fitBlinds(
-            numRounds = numRounds,
-            smallestChip = startChip,
-            startingChips = endChip
-        )
-
-        assertEquals(2.0, result.calculatedGrowthRate, 0.01)
-        assertTrue(result.fitScore > 0.9, "Doubling growth should have excellent fit, got ${result.fitScore}")
+        assertEquals(2.0, result.calculatedGrowthRate, 1e-9)
+        assertEquals(listOf(25, 50, 100, 200, 400, 800, 1600, 3200), result.blinds)
+        assertEquals(1.0, result.fitScore, 1e-9)
     }
 
     @Test
     fun `too few rounds exceeds maximum growth rate`() {
-        // 3 rounds from 25→5000: target rate ≈ 14.14 >> 2.0
-        var exceptionThrown = false
-        try {
-            BlindFittingAlgorithm.fitBlinds(
-                numRounds = 3,
-                smallestChip = 25,
-                startingChips = 5000
-            )
-        } catch (e: IllegalArgumentException) {
-            exceptionThrown = true
-            assertTrue(e.message?.contains("growth rate") == true)
+        // 3 rounds from 25 -> 5000: average step 200^(1/2) = 14.1
+        val error = assertFailsWith<IllegalArgumentException> {
+            BlindFittingAlgorithm.fitBlinds(numRounds = 3, smallestChip = 25, startingChips = 5000)
         }
-        assertTrue(exceptionThrown, "Should reject excessive growth rate")
+        assertTrue("growth rate 14.142 is too high" in error.message.orEmpty(), error.message)
     }
 
     @Test
     fun `too many rounds falls below minimum growth rate`() {
-        // 50 rounds from 25→5000: target rate ≈ 1.113 < 1.3
-        var exceptionThrown = false
-        try {
-            BlindFittingAlgorithm.fitBlinds(
-                numRounds = 50,
-                smallestChip = 25,
-                startingChips = 5000
-            )
-        } catch (e: IllegalArgumentException) {
-            exceptionThrown = true
-            assertTrue(e.message?.contains("growth rate") == true)
+        // 50 rounds from 25 -> 5000: average step 200^(1/49) = 1.114
+        val error = assertFailsWith<IllegalArgumentException> {
+            BlindFittingAlgorithm.fitBlinds(numRounds = 50, smallestChip = 25, startingChips = 5000)
         }
-        assertTrue(exceptionThrown, "Should reject insufficient growth rate")
+        assertTrue("growth rate 1.114 is too low" in error.message.orEmpty(), error.message)
     }
 
     @Test
-    fun `blinds grow monotonically`() {
-        val result = BlindFittingAlgorithm.fitBlinds(
-            numRounds = 12,
-            smallestChip = 25,
-            startingChips = 5000
-        )
+    fun `invalid inputs are rejected`() {
+        assertFailsWith<IllegalArgumentException> { BlindFittingAlgorithm.fitBlinds(1, 25, 5000) }
+        assertFailsWith<IllegalArgumentException> { BlindFittingAlgorithm.fitBlinds(9, 0, 5000) }
+        assertFailsWith<IllegalArgumentException> { BlindFittingAlgorithm.fitBlinds(9, 100, 50) }
+    }
 
-        for (i in 1 until result.blinds.size) {
-            assertTrue(
-                result.blinds[i] > result.blinds[i - 1],
-                "Blind ${result.blinds[i]} at index $i should be > ${result.blinds[i - 1]}"
-            )
+    @Disabled(
+        "PP-020: 5 rounds from 25 to 100 returns [25, 50, 75, 100, 100]. There are only four " +
+            "multiples of 25 in that range, so the config should be rejected with a reason."
+    )
+    @Test
+    fun `levels strictly increase, or the configuration is rejected`() {
+        val result = runCatching { BlindFittingAlgorithm.fitBlinds(numRounds = 5, smallestChip = 25, startingChips = 100) }
+
+        result.onSuccess { fit ->
+            assertTrue(fit.blinds.zipWithNext().all { (a, b) -> b > a }, "repeated level in ${fit.blinds}")
+        }
+    }
+
+    @Disabled(
+        "PP-020: a starting stack that isn't a multiple of the smallest chip (25 -> 1010) ends the " +
+            "ladder on 1010, which can't be paid in 25s. Reject it, or round the stack to the chip."
+    )
+    @Test
+    fun `every level is a multiple of the smallest chip, or the configuration is rejected`() {
+        val result = runCatching { BlindFittingAlgorithm.fitBlinds(numRounds = 9, smallestChip = 25, startingChips = 1010) }
+
+        result.onSuccess { fit ->
+            assertTrue(fit.blinds.all { it % 25 == 0 }, "non-multiple of 25 in ${fit.blinds}")
         }
     }
 

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.7.2" type="baseline" client="gradle" dependencies="false" name="AGP (8.7.2)" variant="all" version="8.7.2">
+
+    <issue
+        id="ModifierParameter"
+        message="Optional Modifier parameter should have a default value of `Modifier`"
+        errorLine1="    modifier: Modifier = Modifier.size(width = PokerDimens.CardWidth, height = PokerDimens.CardHeight)"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/huntercoles/pokerpayout/tools/presentation/composable/OddsCalculatorScreen.kt"
+            line="617"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Optional Modifier parameter should have a default value of `Modifier`"
+        errorLine1="    modifier: Modifier = Modifier.size(width = PokerDimens.CardWidth, height = PokerDimens.CardHeight)"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/huntercoles/pokerpayout/tools/presentation/composable/OddsCalculatorScreen.kt"
+            line="629"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Optional Modifier parameter should have a default value of `Modifier`"
+        errorLine1="    modifier: Modifier = Modifier.size(width = PokerDimens.CardWidth, height = PokerDimens.CardHeight)"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/huntercoles/pokerpayout/tools/presentation/composable/OddsCalculatorScreen.kt"
+            line="654"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    implementation(&quot;androidx.compose.material:material-icons-extended&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="58"
+            column="20"/>
+    </issue>
+
+</issues>

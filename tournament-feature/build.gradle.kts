@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.detekt)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.junit)
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.compose.compiler)
     alias(libs.plugins.kotlin.parcelize)

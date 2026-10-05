@@ -1,0 +1,53 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>ComplexCondition:BankViewModel.kt$BankViewModel$(apply &amp;&amp; isLastActive) || (!apply &amp;&amp; !player.out)</ID>
+    <ID>CyclomaticComplexMethod:BankScreen.kt$@Composable internal fun BankScreen( uiState: BankUiState, onIntent: (BankIntent) -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:BankScreen.kt$@Composable private fun PlayerRow( player: PlayerData, placementNumber: Int?, isKnockingOut: Boolean, isChampionHighlight: Boolean, outEnabled: Boolean, rebuyEnabled: Boolean, addonEnabled: Boolean, knockoutCount: Int, showKnockoutIndicator: Boolean, onNameChange: (String) -&gt; Unit, onActionRequested: (PlayerActionType) -&gt; Unit, onAnimationComplete: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>CyclomaticComplexMethod:BankScreen.kt$@Composable private fun PlayerStatusChip( emoji: String, isActive: Boolean, activeColor: Color, contentDescription: String, onClick: () -&gt; Unit, modifier: Modifier = Modifier, enabled: Boolean = true, borderOverride: Color? = null, badgeCount: Int = 0 )</ID>
+    <ID>CyclomaticComplexMethod:BankScreen.kt$@OptIn(ExperimentalAnimationApi::class) @Composable private fun PlayerActionDialog( player: PlayerData, pendingAction: PendingPlayerAction, allPlayers: List&lt;PlayerData&gt;, uiState: BankUiState, onConfirm: (Int?, Int?) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
+    <ID>CyclomaticComplexMethod:BankViewModel.kt$BankViewModel$fun acceptIntent(intent: BankIntent)</ID>
+    <ID>CyclomaticComplexMethod:BankViewModel.kt$BankViewModel$private fun confirmPendingAction(targetCountOverride: Int? = null, selectedPlayerId: Int? = null)</ID>
+    <ID>CyclomaticComplexMethod:BankViewModel.kt$BankViewModel$private fun showPlayerActionDialog(playerId: Int, actionType: PlayerActionType)</ID>
+    <ID>CyclomaticComplexMethod:BankViewModel.kt$BankViewModel$private fun updateCalculations()</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:BankViewModel.kt$BankViewModel$val (payoutAmount, buyInPayout, knockoutBonus, kingsBounty, buyInCost) = if (apply) { // Calculate the payout breakdown for this player val currentState = _uiState.value val tournamentConfig = tournamentPreferences.getCurrentTournamentConfig() val prizePool = currentState.buyInPool + currentState.rebuyPool + currentState.addonPool val payouts = calculatePayoutPositions( config = tournamentConfig, prizePool = prizePool, playerCount = currentState.players.size ) val sanitizedElimination = currentState.eliminationOrder .filter { it in 1..currentState.players.size } .distinct() val eliminationSet = sanitizedElimination.toSet() val knockoutCounts = currentState.players .filter { it.eliminatedBy != null } .groupingBy { it.eliminatedBy!! } .eachCount() // Find the player's leaderboard payout val payoutPosition = payouts.firstOrNull { payout -&gt; determinePlayerForPosition( position = payout.position, numPlayers = currentState.players.size, eliminationOrder = sanitizedElimination, eliminationSet = eliminationSet ) == playerId } val leaderboardPayout = payoutPosition?.payout ?: 0.0 // Calculate knockout bonus val playerKnockouts = knockoutCounts[playerId] ?: 0 val knockoutBonusAmount = playerKnockouts * tournamentConfig.bountyPerPlayer // King's bounty - winner gets their own bounty back val kingsBountyAmount = if (payoutPosition?.position == 1) tournamentConfig.bountyPerPlayer else 0.0 // Calculate player's buy-in cost (buy-in + food + bounty + addons + rebuys) val playerBuyInCost = tournamentConfig.buyIn + tournamentConfig.foodPerPlayer + tournamentConfig.bountyPerPlayer + (player.addons * tournamentConfig.addOnPerPlayer) + (player.rebuys * tournamentConfig.rebuyPerPlayer) // Total payout (net pay = winnings - buy-in cost) val netPay = leaderboardPayout + knockoutBonusAmount + kingsBountyAmount - playerBuyInCost listOf(netPay, leaderboardPayout, knockoutBonusAmount, kingsBountyAmount, playerBuyInCost) } else listOf(0.0, 0.0, 0.0, 0.0, 0.0)</ID>
+    <ID>LongMethod:BankScreen.kt$@Composable internal fun BankScreen( uiState: BankUiState, onIntent: (BankIntent) -&gt; Unit, )</ID>
+    <ID>LongMethod:BankScreen.kt$@Composable private fun PlayerRow( player: PlayerData, placementNumber: Int?, isKnockingOut: Boolean, isChampionHighlight: Boolean, outEnabled: Boolean, rebuyEnabled: Boolean, addonEnabled: Boolean, knockoutCount: Int, showKnockoutIndicator: Boolean, onNameChange: (String) -&gt; Unit, onActionRequested: (PlayerActionType) -&gt; Unit, onAnimationComplete: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:BankScreen.kt$@Composable private fun PoolSummaryCard(uiState: BankUiState, onIntent: (BankIntent) -&gt; Unit)</ID>
+    <ID>LongMethod:BankScreen.kt$@Composable private fun PoolSummaryDialog( uiState: BankUiState, onDismiss: () -&gt; Unit )</ID>
+    <ID>LongMethod:BankScreen.kt$@OptIn(ExperimentalAnimationApi::class) @Composable private fun PlayerActionDialog( player: PlayerData, pendingAction: PendingPlayerAction, allPlayers: List&lt;PlayerData&gt;, uiState: BankUiState, onConfirm: (Int?, Int?) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
+    <ID>LongMethod:BankViewModel.kt$BankViewModel$private fun showPlayerActionDialog(playerId: Int, actionType: PlayerActionType)</ID>
+    <ID>LongMethod:BankViewModel.kt$BankViewModel$private fun updateCalculations()</ID>
+    <ID>LongParameterList:BankScreen.kt$( emoji: String, isActive: Boolean, activeColor: Color, contentDescription: String, onClick: () -&gt; Unit, modifier: Modifier = Modifier, enabled: Boolean = true, borderOverride: Color? = null, badgeCount: Int = 0 )</ID>
+    <ID>LongParameterList:BankScreen.kt$( label: String, currentAmount: Double, targetAmount: Double, baseColor: Color, modifier: Modifier = Modifier, fullColor: Color = PokerColors.PokerGold )</ID>
+    <ID>LongParameterList:BankScreen.kt$( player: PlayerData, pendingAction: PendingPlayerAction, allPlayers: List&lt;PlayerData&gt;, uiState: BankUiState, onConfirm: (Int?, Int?) -&gt; Unit, onCancel: () -&gt; Unit )</ID>
+    <ID>LongParameterList:BankScreen.kt$( player: PlayerData, placementNumber: Int?, isKnockingOut: Boolean, isChampionHighlight: Boolean, outEnabled: Boolean, rebuyEnabled: Boolean, addonEnabled: Boolean, knockoutCount: Int, showKnockoutIndicator: Boolean, onNameChange: (String) -&gt; Unit, onActionRequested: (PlayerActionType) -&gt; Unit, onAnimationComplete: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>LongParameterList:BankViewModel.kt$( playerId: Int, payouts: List&lt;PayoutPositionInternal&gt;, knockoutCounts: Map&lt;Int, Int&gt;, bountyPerPlayer: Double, playerCount: Int, eliminationOrder: List&lt;Int&gt;, eliminationSet: Set&lt;Int&gt; )</ID>
+    <ID>LongParameterList:BankViewModelTest.kt$BankViewModelTest$( players: Int, buyIn: Double, food: Double = 0.0, bounty: Double = 0.0, rebuy: Double = 0.0, addOn: Double = 0.0, weights: List&lt;Int&gt;? = null )</ID>
+    <ID>MagicNumber:BankScreen.kt$0.01</ID>
+    <ID>MagicNumber:BankScreen.kt$3f</ID>
+    <ID>MagicNumber:BankScreen.kt$4f</ID>
+    <ID>MagicNumber:BankScreen.kt$600</ID>
+    <ID>MagicNumber:BankScreen.kt$8f</ID>
+    <ID>MagicNumber:BankViewModel.kt$BankViewModel$10</ID>
+    <ID>MagicNumber:BankViewModel.kt$BankViewModel$100</ID>
+    <ID>MagicNumber:BankViewModel.kt$BankViewModel$20</ID>
+    <ID>MagicNumber:BankViewModel.kt$BankViewModel$3</ID>
+    <ID>MatchingDeclarationName:BankDisplayUtils.kt$PlayerDisplayModel</ID>
+    <ID>MaxLineLength:BankScreen.kt$color = if (isChampionHighlight) Color.Black.copy(alpha = 0.78f) else PokerColors.PokerGold.copy(alpha = 0.22f)</ID>
+    <ID>MaxLineLength:BankViewModel.kt$BankViewModel$val</ID>
+    <ID>MaxLineLength:BankViewModelTest.kt$BankViewModelTest$MoneyCase("prime players", 7, 13.0, food = 7.0, bounty = 3.0, rebuy = 5.0, rebuysEach = 1, weights = listOf(4, 3, 2, 1))</ID>
+    <ID>NewLineAtEndOfFile:BankNavigationFactory.kt$com.huntercoles.pokerpayout.bank.presentation.BankNavigationFactory.kt</ID>
+    <ID>NewLineAtEndOfFile:BankScreen.kt$com.huntercoles.pokerpayout.bank.presentation.composable.BankScreen.kt</ID>
+    <ID>NewLineAtEndOfFile:BankUiState.kt$com.huntercoles.pokerpayout.bank.presentation.BankUiState.kt</ID>
+    <ID>NewLineAtEndOfFile:BankViewModel.kt$com.huntercoles.pokerpayout.bank.presentation.BankViewModel.kt</ID>
+    <ID>ReturnCount:BankViewModel.kt$BankViewModel$private fun showPlayerActionDialog(playerId: Int, actionType: PlayerActionType)</ID>
+    <ID>TooManyFunctions:BankScreen.kt$com.huntercoles.pokerpayout.bank.presentation.composable.BankScreen.kt</ID>
+    <ID>TooManyFunctions:BankViewModel.kt$BankViewModel : ViewModel</ID>
+    <ID>UnusedParameter:BankScreen.kt$uiState: BankUiState</ID>
+    <ID>UnusedParameter:BankViewModel.kt$playerCount: Int</ID>
+    <ID>UnusedPrivateMember:BankScreen.kt$@Composable private fun SummaryInfoRow( label: String, amount: Double, modifier: Modifier = Modifier )</ID>
+    <ID>UnusedPrivateMember:BankViewModel.kt$private fun calculatePlayerTotalPayout( playerId: Int, payouts: List&lt;PayoutPositionInternal&gt;, knockoutCounts: Map&lt;Int, Int&gt;, bountyPerPlayer: Double, playerCount: Int, eliminationOrder: List&lt;Int&gt;, eliminationSet: Set&lt;Int&gt; ): Double</ID>
+  </CurrentIssues>
+</SmellBaseline>

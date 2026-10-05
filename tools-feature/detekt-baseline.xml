@@ -1,0 +1,85 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:TexasHoldemOdds.kt$private fun evaluate5(cards: List&lt;Card&gt;): Int</ID>
+    <ID>CyclomaticComplexMethod:TexasHoldemOdds.kt$suspend fun simulateEquity( holes: List&lt;List&lt;Card&gt;&gt;, // each 0..2 cards board: List&lt;Card&gt;, // 0..5 board cards iterations: Int = 10000, random: Random = Random ): List&lt;EquityResult&gt;</ID>
+    <ID>ForEachOnRange:OddsCalculatorViewModel.kt$OddsCalculatorViewModel$count + 1..currentPlayers.size</ID>
+    <ID>LongMethod:ChipCalculatorScreen.kt$@Composable fun ChipCalculatorScreen( viewModel: ChipCalculatorViewModel = hiltViewModel() )</ID>
+    <ID>LongMethod:HandRanksScreen.kt$@Composable fun HandRanksScreen()</ID>
+    <ID>LongMethod:OddsCalculatorScreen.kt$@Composable fun CardPickerDialog( allCards: List&lt;PlayingCard&gt;, usedCards: List&lt;PlayingCard&gt;, onCardSelected: (PlayingCard) -&gt; Unit, onDismiss: () -&gt; Unit )</ID>
+    <ID>LongMethod:OddsCalculatorScreen.kt$@Composable fun CommunityCardBox( title: String, cards: List&lt;PlayingCard&gt;, maxCards: Int, onCardClick: () -&gt; Unit, onRemoveCard: (Int) -&gt; Unit, startIndex: Int, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:OddsCalculatorScreen.kt$@Composable fun OddsCalculatorScreen( viewModel: OddsCalculatorViewModel = hiltViewModel() )</ID>
+    <ID>LongMethod:OddsCalculatorScreen.kt$@Composable fun PlayerCardItem( player: Player, onCardClick: () -&gt; Unit, onRemoveCard: (Int) -&gt; Unit )</ID>
+    <ID>LongMethod:OddsCalculatorScreen.kt$@Composable fun PlayerManagementCard( playerCount: Int, onPlayerCountChange: (Int) -&gt; Unit, isSimulating: Boolean, canCalculate: Boolean, validCommunityCards: Boolean, onCalculate: () -&gt; Unit )</ID>
+    <ID>LongMethod:OddsCalculatorScreen.kt$@Composable fun PlayersCardsSection( players: List&lt;Player&gt;, onPlayerCardClick: (Int) -&gt; Unit, onRemovePlayerCard: (Int, Int) -&gt; Unit )</ID>
+    <ID>LongMethod:RulesPopup.kt$@Composable fun RulesPopup(onDismiss: () -&gt; Unit)</ID>
+    <ID>LongMethod:TexasHoldemOdds.kt$suspend fun simulateEquity( holes: List&lt;List&lt;Card&gt;&gt;, // each 0..2 cards board: List&lt;Card&gt;, // 0..5 board cards iterations: Int = 10000, random: Random = Random ): List&lt;EquityResult&gt;</ID>
+    <ID>LongMethod:ToolsHomeScreen.kt$@Composable fun ToolsHomeScreen( navigationManager: NavigationManager )</ID>
+    <ID>LongMethod:ToolsHomeScreen.kt$@Composable private fun VolumeControlDialog( audioPreferences: AudioPreferences, onDismiss: () -&gt; Unit )</ID>
+    <ID>LongParameterList:OddsCalculatorScreen.kt$( playerCount: Int, onPlayerCountChange: (Int) -&gt; Unit, isSimulating: Boolean, canCalculate: Boolean, validCommunityCards: Boolean, onCalculate: () -&gt; Unit )</ID>
+    <ID>LongParameterList:OddsCalculatorScreen.kt$( title: String, cards: List&lt;PlayingCard&gt;, maxCards: Int, onCardClick: () -&gt; Unit, onRemoveCard: (Int) -&gt; Unit, startIndex: Int, modifier: Modifier = Modifier )</ID>
+    <ID>MagicNumber:ChipCalculatorScreen.kt$0.7</ID>
+    <ID>MagicNumber:ChipCalculatorScreen.kt$0.8</ID>
+    <ID>MagicNumber:ChipCalculatorScreen.kt$0.9</ID>
+    <ID>MagicNumber:ChipCalculatorScreen.kt$0xFF8BC34A</ID>
+    <ID>MagicNumber:ChipCalculatorScreen.kt$0xFFFF5722</ID>
+    <ID>MagicNumber:ChipCalculatorScreen.kt$0xFFFFC107</ID>
+    <ID>MagicNumber:ChipCalculatorViewModel.kt$ChipCalculatorViewModel$100</ID>
+    <ID>MagicNumber:ChipCalculatorViewModel.kt$ChipCalculatorViewModel$3</ID>
+    <ID>MagicNumber:ChipCalculatorViewModel.kt$ChipCalculatorViewModel$8</ID>
+    <ID>MagicNumber:OddsCalculatorScreen.kt$3</ID>
+    <ID>MagicNumber:OddsCalculatorScreen.kt$4</ID>
+    <ID>MagicNumber:OddsCalculatorScreen.kt$5</ID>
+    <ID>MagicNumber:OddsCalculatorViewModel.kt$OddsCalculatorViewModel$5</ID>
+    <ID>MagicNumber:TexasHoldemOdds.kt$14</ID>
+    <ID>MagicNumber:TexasHoldemOdds.kt$24</ID>
+    <ID>MagicNumber:TexasHoldemOdds.kt$3</ID>
+    <ID>MagicNumber:TexasHoldemOdds.kt$4</ID>
+    <ID>MagicNumber:TexasHoldemOdds.kt$5</ID>
+    <ID>MagicNumber:TexasHoldemOdds.kt$52</ID>
+    <ID>MagicNumber:TexasHoldemOdds.kt$7</ID>
+    <ID>MagicNumber:ToolsHomeScreen.kt$10f</ID>
+    <ID>MatchingDeclarationName:ToolsHomeScreen.kt$ToolItem</ID>
+    <ID>MaxLineLength:ChipCalculatorScreen.kt$contentDescription = if (advancedSettingsExpanded) "Collapse advanced settings" else "Expand advanced settings"</ID>
+    <ID>MaxLineLength:ChipCalculatorScreen.kt$imageVector = if (advancedSettingsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown</ID>
+    <ID>MaxLineLength:OddsCalculatorIntent.kt$OddsCalculatorIntent$SimulationComplete : OddsCalculatorIntent</ID>
+    <ID>MaxLineLength:OddsCalculatorIntent.kt$OddsCalculatorIntent$StartSimulation : OddsCalculatorIntent</ID>
+    <ID>MaxLineLength:OddsCalculatorViewModel.kt$OddsCalculatorViewModel$_uiState.update { it.copy(showCardPicker = true, selectedPlayerForCard = playerId, selectedCardType = CardType.PLAYER_CARD) }</ID>
+    <ID>MaxLineLength:TexasHoldemOdds.kt$for (i in localResults.indices) if (i != w) localResults[i] = localResults[i].copy(simulations = localResults[i].simulations + 1)</ID>
+    <ID>MaxLineLength:TexasHoldemOdds.kt$localResults[w] = localResults[w].copy(ties = localResults[w].ties + 1, simulations = localResults[w].simulations + 1)</ID>
+    <ID>MaxLineLength:TexasHoldemOdds.kt$localResults[w] = localResults[w].copy(wins = localResults[w].wins + 1, simulations = localResults[w].simulations + 1)</ID>
+    <ID>NewLineAtEndOfFile:OddsCalculatorScreen.kt$com.huntercoles.pokerpayout.tools.presentation.composable.OddsCalculatorScreen.kt</ID>
+    <ID>NewLineAtEndOfFile:PokerHandEvaluationTest.kt$com.huntercoles.pokerpayout.tools.presentation.composable.PokerHandEvaluationTest.kt</ID>
+    <ID>NewLineAtEndOfFile:ToolsNavigationFactory.kt$com.huntercoles.pokerpayout.tools.presentation.ToolsNavigationFactory.kt</ID>
+    <ID>ReturnCount:TexasHoldemOdds.kt$private fun evaluate5(cards: List&lt;Card&gt;): Int</ID>
+    <ID>SwallowedException:OddsCalculatorScreen.kt$e: Exception</ID>
+    <ID>TooManyFunctions:ChipCalculatorViewModel.kt$ChipCalculatorViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:OddsCalculatorScreen.kt$com.huntercoles.pokerpayout.tools.presentation.composable.OddsCalculatorScreen.kt</ID>
+    <ID>TooManyFunctions:OddsCalculatorViewModel.kt$OddsCalculatorViewModel : ViewModel</ID>
+    <ID>UnusedParameter:OddsCalculatorScreen.kt$modifier: Modifier = Modifier</ID>
+    <ID>UnusedParameter:OddsCalculatorScreen.kt$title: String</ID>
+    <ID>UnusedParameter:OddsCalculatorViewModel.kt$OddsCalculatorViewModel$communityCards: List&lt;PlayingCard&gt;</ID>
+    <ID>UnusedParameter:OddsCalculatorViewModel.kt$OddsCalculatorViewModel$players: List&lt;Player&gt;</ID>
+    <ID>UnusedPrivateProperty:ChipCalculatorScreen.kt$val scope = rememberCoroutineScope()</ID>
+    <ID>UnusedPrivateProperty:TexasHoldemOdds.kt$sim</ID>
+    <ID>UnusedPrivateProperty:TexasHoldemOdds.kt$val chunks = sims / chunkSize</ID>
+    <ID>WildcardImport:ChipCalculatorScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:ChipCalculatorScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:ChipCalculatorScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:HandRanksScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:HandRanksScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:OddsCalculatorScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:OddsCalculatorScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:OddsCalculatorScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:OddsCalculatorScreen.kt$import com.huntercoles.pokerpayout.tools.poker.*</ID>
+    <ID>WildcardImport:PokerHandEvaluationTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:RulesPopup.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:RulesPopup.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:TexasHoldemOdds.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:TexasHoldemOddsTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:ToolsHomeScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:ToolsHomeScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:ToolsHomeScreen.kt$import androidx.compose.runtime.*</ID>
+  </CurrentIssues>
+</SmellBaseline>

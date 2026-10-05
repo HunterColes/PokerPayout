@@ -73,6 +73,7 @@ timber                              = { group = "com.jakewharton.timber", name =
 # test libraries
 test-junit                          = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "test-junit" }
 test-junit4                         = { group = "junit", name = "junit", version = "4.13.2" }
+test-junit-vintage                  = { group = "org.junit.vintage", name = "junit-vintage-engine", version.ref = "test-junit" } # runs the JUnit4/Robolectric tests on the JUnit Platform
 test-kotlin                         = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 test-kotlin-coroutines              = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlin-coroutines" }
 test-mockk                          = { group = "io.mockk", name = "mockk", version.ref = "test-mockk" }
@@ -97,6 +98,7 @@ debug-compose-manifest              = { group = "androidx.compose.ui", name = "u
 common-test = [
     "test-junit",
     "test-junit4",
+    "test-junit-vintage",
     "test-kotlin",
     "test-kotlin-coroutines",
     "test-mockk",

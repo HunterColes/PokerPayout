@@ -1,0 +1,110 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun adjustWithSmallPerturbations( denominations: List&lt;Int&gt;, baseQuantities: List&lt;Int&gt;, idealY: List&lt;Double&gt;, targetValue: Int, curve: ChipDistributionCurve ): List&lt;Int&gt;</ID>
+    <ID>CyclomaticComplexMethod:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun balanceQuantities( denominations: List&lt;Int&gt;, baseQuantities: List&lt;Int&gt;, idealQuantities: List&lt;Double&gt;, targetValue: Int, curve: ChipDistributionCurve ): List&lt;Int&gt;</ID>
+    <ID>CyclomaticComplexMethod:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun findExactQuantitiesBySearch( denominations: List&lt;Int&gt;, baseQuantities: List&lt;Int&gt;, targetValue: Int, curve: ChipDistributionCurve ): List&lt;Int&gt;?</ID>
+    <ID>CyclomaticComplexMethod:PokerNumberField.kt$@Composable fun PokerNumberField( value: Int, onValueChange: (Int) -&gt; Unit, label: String, modifier: Modifier = Modifier, minValue: Int = 0, maxValue: Int = 999_999_999, isLocked: Boolean = false )</ID>
+    <ID>CyclomaticComplexMethod:WeightsEditorDialog.kt$@Composable fun WeightsEditorDialog( currentWeights: List&lt;Int&gt;, onWeightsChanged: (List&lt;Int&gt;) -&gt; Unit, onDismiss: () -&gt; Unit, isLocked: Boolean = false )</ID>
+    <ID>ImplicitDefaultLocale:FormatUtils.kt$FormatUtils$String.format("%.2f", value)</ID>
+    <ID>LongMethod:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun adjustWithSmallPerturbations( denominations: List&lt;Int&gt;, baseQuantities: List&lt;Int&gt;, idealY: List&lt;Double&gt;, targetValue: Int, curve: ChipDistributionCurve ): List&lt;Int&gt;</ID>
+    <ID>LongMethod:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun optimizeForDenominations( targetValue: Int, denominations: List&lt;Int&gt;, curve: ChipDistributionCurve ): ChipDistributionResult</ID>
+    <ID>LongMethod:WeightsEditorDialog.kt$@Composable fun WeightsEditorDialog( currentWeights: List&lt;Int&gt;, onWeightsChanged: (List&lt;Int&gt;) -&gt; Unit, onDismiss: () -&gt; Unit, isLocked: Boolean = false )</ID>
+    <ID>LongParameterList:PokerCard.kt$( card: PlayingCard, onClick: (() -&gt; Unit)? = null, width: Dp = PokerDimens.CardWidth, height: Dp = PokerDimens.CardHeight, fontSize: Int = 14, modifier: Modifier = Modifier )</ID>
+    <ID>LongParameterList:PokerConfirmationDialog.kt$( title: String, description: String, onDismiss: () -&gt; Unit, onConfirm: () -&gt; Unit, cancelText: String = "Cancel", confirmText: String = "Reset", isVisible: Boolean = true )</ID>
+    <ID>LongParameterList:PokerDialog.kt$( onDismissRequest: () -&gt; Unit, modifier: Modifier = Modifier.fillMaxWidth(), contentPadding: PaddingValues = PaddingValues(24.dp), cornerRadius: Dp = 24.dp, tonalElevation: Dp = 12.dp, properties: DialogProperties = DialogProperties(), content: @Composable ColumnScope.() -&gt; Unit )</ID>
+    <ID>LongParameterList:PokerDialogButtons.kt$( onCancel: () -&gt; Unit, onConfirm: () -&gt; Unit, cancelText: String = "Cancel", confirmText: String = "Confirm", isConfirmDestructive: Boolean = true, modifier: Modifier = Modifier )</ID>
+    <ID>LongParameterList:PokerNumberField.kt$( value: Int, onValueChange: (Int) -&gt; Unit, label: String, modifier: Modifier = Modifier, minValue: Int = 0, maxValue: Int = 999_999_999, isLocked: Boolean = false )</ID>
+    <ID>LoopWithTooManyJumpStatements:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$for</ID>
+    <ID>LoopWithTooManyJumpStatements:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$while</ID>
+    <ID>MagicNumber:BlindFittingAlgorithm.kt$BlindFittingAlgorithm$0.05</ID>
+    <ID>MagicNumber:BlindFittingAlgorithm.kt$BlindFittingAlgorithm$0.5</ID>
+    <ID>MagicNumber:BlindFittingAlgorithm.kt$BlindFittingAlgorithm$10</ID>
+    <ID>MagicNumber:ChipCalculatorPreferences.kt$ChipCalculatorPreferences$5</ID>
+    <ID>MagicNumber:ChipDistributionCurve.kt$ChipDistributionCurve.ExponentialDecay$3</ID>
+    <ID>MagicNumber:ChipDistributionCurve.kt$ChipDistributionCurve.LinearModerate$0.5</ID>
+    <ID>MagicNumber:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$0.5</ID>
+    <ID>MagicNumber:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$12</ID>
+    <ID>MagicNumber:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$120</ID>
+    <ID>MagicNumber:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$3</ID>
+    <ID>MagicNumber:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$40</ID>
+    <ID>MagicNumber:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$4000</ID>
+    <ID>MagicNumber:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$6</ID>
+    <ID>MagicNumber:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$60</ID>
+    <ID>MagicNumber:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$80</ID>
+    <ID>MagicNumber:OddsCalculatorPreferences.kt$OddsCalculatorPreferences$10</ID>
+    <ID>MagicNumber:PokerNumberField.kt$9</ID>
+    <ID>MagicNumber:TimerPreferences.kt$TimerPreferences$1000</ID>
+    <ID>MagicNumber:TimerPreferences.kt$TimerPreferences$180</ID>
+    <ID>MagicNumber:TimerPreferences.kt$TimerPreferences$20</ID>
+    <ID>MagicNumber:TimerPreferences.kt$TimerPreferences$25</ID>
+    <ID>MagicNumber:TimerPreferences.kt$TimerPreferences$5000</ID>
+    <ID>MagicNumber:TimerPreferences.kt$TimerPreferences$60</ID>
+    <ID>MagicNumber:TournamentPreferences.kt$TournamentPreferences$3</ID>
+    <ID>MagicNumber:WeightsEditorDialog.kt$0.85f</ID>
+    <ID>MagicNumber:WeightsEditorDialog.kt$10</ID>
+    <ID>MagicNumber:WeightsEditorDialog.kt$100</ID>
+    <ID>MagicNumber:WeightsEditorDialog.kt$20</ID>
+    <ID>MagicNumber:WeightsEditorDialog.kt$3</ID>
+    <ID>MatchingDeclarationName:ChipColors.kt$ChipDenominations</ID>
+    <ID>MatchingDeclarationName:PokerCard.kt$PlayingCard</ID>
+    <ID>MaxLineLength:BlindFittingAlgorithmTest.kt$BlindFittingAlgorithmTest$"At least 60% of blinds &gt; ${BlindStructureConstants.SMOOTH_NUMBER_THRESHOLD} should end in 0, got ${smoothPercentage.toInt()}%"</ID>
+    <ID>MaxLineLength:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$"Optimized distribution must sum to $targetValue but was $actualValue with denominations=$sortedDenoms and quantities=$finalQuantities"</ID>
+    <ID>MaxLineLength:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$val score = if (inPreferredRange) result.fitScore * PREFERRED_RANGE_FIT_BOOST else result.fitScore // Boost preferred solutions</ID>
+    <ID>MaxLineLength:ChipDistributionOptimizerTest.kt$ChipDistributionOptimizerTest$assertTrue(result.denominations.size &lt;= count, "Should return at most $count denominations (may be fewer due to max chip constraint)")</ID>
+    <ID>MayBeConst:PokerDimens.kt$PokerDimens$val BlindPanelCollapsedLevels: Int = 1</ID>
+    <ID>MayBeConst:PokerDimens.kt$PokerDimens$val BlindPanelExpandedLevels: Int = 5</ID>
+    <ID>NestedBlockDepth:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun adjustWithSmallPerturbations( denominations: List&lt;Int&gt;, baseQuantities: List&lt;Int&gt;, idealY: List&lt;Double&gt;, targetValue: Int, curve: ChipDistributionCurve ): List&lt;Int&gt;</ID>
+    <ID>NestedBlockDepth:SoundManager.kt$SoundManager$fun playSound(@RawRes soundResId: Int)</ID>
+    <ID>NewLineAtEndOfFile:BankPreferences.kt$com.huntercoles.pokerpayout.core.preferences.BankPreferences.kt</ID>
+    <ID>NewLineAtEndOfFile:BlindStructureCalculator.kt$com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator.kt</ID>
+    <ID>NewLineAtEndOfFile:BlindStructureConstants.kt$com.huntercoles.pokerpayout.core.constants.BlindStructureConstants.kt</ID>
+    <ID>NewLineAtEndOfFile:PokerColors.kt$com.huntercoles.pokerpayout.core.design.PokerColors.kt</ID>
+    <ID>NewLineAtEndOfFile:PokerConfirmationDialog.kt$com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog.kt</ID>
+    <ID>NewLineAtEndOfFile:PokerDialogButtons.kt$com.huntercoles.pokerpayout.core.design.components.PokerDialogButtons.kt</ID>
+    <ID>NewLineAtEndOfFile:PokerHeaderWithAction.kt$com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction.kt</ID>
+    <ID>NewLineAtEndOfFile:PokerNumberField.kt$com.huntercoles.pokerpayout.core.design.components.PokerNumberField.kt</ID>
+    <ID>NewLineAtEndOfFile:PokerResetButton.kt$com.huntercoles.pokerpayout.core.design.components.PokerResetButton.kt</ID>
+    <ID>NewLineAtEndOfFile:TimerPreferences.kt$com.huntercoles.pokerpayout.core.preferences.TimerPreferences.kt</ID>
+    <ID>NewLineAtEndOfFile:TournamentConstants.kt$com.huntercoles.pokerpayout.core.constants.TournamentConstants.kt</ID>
+    <ID>NewLineAtEndOfFile:TournamentPreferences.kt$com.huntercoles.pokerpayout.core.preferences.TournamentPreferences.kt</ID>
+    <ID>NewLineAtEndOfFile:WeightsEditorDialog.kt$com.huntercoles.pokerpayout.core.design.components.WeightsEditorDialog.kt</ID>
+    <ID>ReturnCount:BankPreferences.kt$BankPreferences$fun isInDefaultState(playerCount: Int): Boolean</ID>
+    <ID>ReturnCount:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$fun optimize( targetValue: Int, smallestChip: Int, denominationCount: Int = 5, curve: ChipDistributionCurve ): ChipDistributionResult</ID>
+    <ID>ReturnCount:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$fun search(index: Int, remaining: Int, adjustmentsUsed: Int): Boolean</ID>
+    <ID>ReturnCount:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun &lt;T&gt; combinations(list: List&lt;T&gt;, k: Int): List&lt;List&lt;T&gt;&gt;</ID>
+    <ID>ReturnCount:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun adjustWithSmallPerturbations( denominations: List&lt;Int&gt;, baseQuantities: List&lt;Int&gt;, idealY: List&lt;Double&gt;, targetValue: Int, curve: ChipDistributionCurve ): List&lt;Int&gt;</ID>
+    <ID>ReturnCount:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun findExactQuantitiesBySearch( denominations: List&lt;Int&gt;, baseQuantities: List&lt;Int&gt;, targetValue: Int, curve: ChipDistributionCurve ): List&lt;Int&gt;?</ID>
+    <ID>ReturnCount:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun isValidCurvePattern(quantities: List&lt;Int&gt;, curve: ChipDistributionCurve): Boolean</ID>
+    <ID>ReturnCount:OddsCalculatorPreferences.kt$OddsCalculatorPreferences$fun isInDefaultState(): Boolean</ID>
+    <ID>ReturnCount:SoundManager.kt$SoundManager$fun playSound(@RawRes soundResId: Int)</ID>
+    <ID>ReturnCount:WeightsEditorDialog.kt$internal fun isValidWeightChange(weights: List&lt;Int&gt;, index: Int, newWeight: Int): Boolean</ID>
+    <ID>SwallowedException:SoundManager.kt$SoundManager$e: Exception</ID>
+    <ID>ThrowsCount:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$fun optimize( targetValue: Int, smallestChip: Int, denominationCount: Int = 5, curve: ChipDistributionCurve ): ChipDistributionResult</ID>
+    <ID>TooManyFunctions:BankPreferences.kt$BankPreferences</ID>
+    <ID>TooManyFunctions:ChipCalculatorPreferences.kt$ChipCalculatorPreferences</ID>
+    <ID>TooManyFunctions:ChipDistributionOptimizer.kt$ChipDistributionOptimizer</ID>
+    <ID>TooManyFunctions:TimerPreferences.kt$TimerPreferences</ID>
+    <ID>TooManyFunctions:TournamentPreferences.kt$TournamentPreferences</ID>
+    <ID>UnusedParameter:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$idealY: List&lt;Double&gt;</ID>
+    <ID>UnusedParameter:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$targetValue: Int</ID>
+    <ID>UnusedParameter:WeightsEditorDialog.kt$isError: Boolean</ID>
+    <ID>UnusedPrivateMember:BlindFittingAlgorithm.kt$BlindFittingAlgorithm$private fun lcm(a: Int, b: Int): Int</ID>
+    <ID>UnusedPrivateMember:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun computeFitPenalty(quantities: List&lt;Int&gt;, idealY: List&lt;Double&gt;): Double</ID>
+    <ID>UnusedPrivateMember:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun isValidForCurve(newQty: Int, index: Int, baseQuantities: List&lt;Int&gt;, curve: ChipDistributionCurve): Boolean</ID>
+    <ID>UnusedPrivateMember:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$private fun selectBestDenominations( available: List&lt;Int&gt;, count: Int, targetValue: Int ): List&lt;Int&gt;</ID>
+    <ID>UnusedPrivateProperty:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$val finalValue = sortedDenoms.zip(finalQuantities).sumOf { (d, q) -&gt; d * q }</ID>
+    <ID>UnusedPrivateProperty:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$var bestScore = Double.MAX_VALUE</ID>
+    <ID>UnusedPrivateProperty:ThemePreferences.kt$val systemDarkTheme = isSystemInDarkTheme()</ID>
+    <ID>UseCheckOrError:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$throw IllegalStateException("Cannot create valid distribution with single chip")</ID>
+    <ID>UseCheckOrError:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$throw IllegalStateException("No valid chip distribution found")</ID>
+    <ID>UseCheckOrError:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$throw IllegalStateException("No valid denominations found for targetValue=$targetValue, smallestChip=$smallestChip")</ID>
+    <ID>UseCheckOrError:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$throw IllegalStateException("smallestChip=$smallestChip not in available denominations")</ID>
+    <ID>WildcardImport:PokerCard.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:PokerNumberField.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:WeightsEditorDialog.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:WeightsEditorDialog.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:WeightsEditorDialog.kt$import androidx.compose.runtime.*</ID>
+  </CurrentIssues>
+</SmellBaseline>

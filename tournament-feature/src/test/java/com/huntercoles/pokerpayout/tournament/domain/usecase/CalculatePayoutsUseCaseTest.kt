@@ -2,8 +2,10 @@ package com.huntercoles.pokerpayout.tournament.domain.usecase
 
 import com.huntercoles.pokerpayout.tournament.domain.model.TournamentConfig
 import com.huntercoles.pokerpayout.core.constants.TournamentConstants
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CalculatePayoutsUseCaseTest {
 
@@ -49,7 +51,7 @@ class CalculatePayoutsUseCaseTest {
     }
 
     @Test
-    fun `custom weights should show all positions regardless of player count`() {
+    fun `custom weights within the player count are all paid`() {
         // Given: 6 players with 4 custom weight positions
         val customWeights = listOf(40, 30, 20, 10) // 4 positions
         val config = TournamentConfig(
@@ -61,7 +63,7 @@ class CalculatePayoutsUseCaseTest {
         // When: calculating payouts
         val payouts = useCase(config)
 
-        // Then: should show all 4 positions, not be limited by player count
+        // Then: all 4 positions are paid, not just the 6 / 3 = 2 default places
         assertEquals(4, payouts.size)
         assertEquals(1, payouts[0].position)
         assertEquals(2, payouts[1].position)
@@ -119,24 +121,36 @@ class CalculatePayoutsUseCaseTest {
         }
     }
 
+    @Ignore(
+        "PP-016: custom weights can pay more places than there are players (here 6 places for 3 " +
+            "players, so half the pool goes to places nobody can finish in). Enable when capped."
+    )
     @Test
-    fun `few players with many custom weights should show all custom weight positions`() {
-        // Given: 3 players (would normally limit to 1 position) with 6 custom weights
-        val customWeights = listOf(40, 25, 15, 10, 6, 4) // 6 positions
+    fun `never pays more places than there are players`() {
         val config = TournamentConfig(
             numPlayers = 3,
             buyIn = 20.0,
-            payoutWeights = customWeights
+            payoutWeights = listOf(40, 25, 15, 10, 6, 4)
         )
 
-        // When: calculating payouts
         val payouts = useCase(config)
 
-        // Then: should show all 6 positions from custom weights (not limited to 1)
-        assertEquals(6, payouts.size)
-        for (i in 0 until 6) {
-            assertEquals(i + 1, payouts[i].position)
-            assertEquals(customWeights[i], payouts[i].weight)
+        assertTrue(payouts.size <= 3, "paid ${payouts.size} places for 3 players")
+        assertEquals(60.0, payouts.sumOf { it.payout }, 1e-9)
+    }
+
+    @Test
+    fun `payouts always add up to the prize pool`() {
+        listOf(
+            TournamentConfig(numPlayers = 7, buyIn = 13.0, payoutWeights = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS),
+            TournamentConfig(numPlayers = 30, buyIn = 33.33, payoutWeights = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS),
+            TournamentConfig(numPlayers = 12, buyIn = 25.0, payoutWeights = listOf(7, 5, 3, 1))
+        ).forEach { config ->
+            val payouts = useCase(config)
+            assertEquals(config.prizePool, payouts.sumOf { it.payout }, 1e-9, "pool for $config")
+            assertEquals(100.0, payouts.sumOf { it.percentage }, 1e-9, "percentages for $config")
+            assertEquals((1..payouts.size).toList(), payouts.map { it.position })
+            assertTrue(payouts.zipWithNext().all { (a, b) -> a.payout >= b.payout }, "1st pays most: $payouts")
         }
     }
 }

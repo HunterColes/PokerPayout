@@ -1,104 +1,65 @@
 package com.huntercoles.pokerpayout.tournament.presentation
 
-import com.huntercoles.pokerpayout.core.constants.TournamentConstants
-import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
-import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import org.junit.After
+import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import kotlin.math.max
 import kotlin.test.assertEquals
 
-/**
- * Test to verify that payout weights are properly reset when resetAllTournamentData is called
- */
+/** How TournamentPreferences keeps payout weights in step with the player count and resets. */
 @RunWith(RobolectricTestRunner::class)
 class PayoutWeightsResetTest {
 
     private lateinit var tournamentPreferences: TournamentPreferences
-    private lateinit var context: Context
 
     @Before
     fun setup() {
-        context = ApplicationProvider.getApplicationContext()
+        val context: Context = ApplicationProvider.getApplicationContext()
+        context.getSharedPreferences("tournament_prefs", Context.MODE_PRIVATE).edit().clear().commit()
         tournamentPreferences = TournamentPreferences(context)
     }
 
-    @After
-    fun teardown() {
-        // Clean up preferences
+    @Test
+    fun `reset replaces custom weights with the default for 5 players`() {
+        tournamentPreferences.setPayoutWeights(listOf(50, 30, 20))
+        assertEquals(listOf(50, 30, 20), tournamentPreferences.getPayoutWeights())
+
         tournamentPreferences.resetAllTournamentData()
+
+        assertEquals(listOf(35), tournamentPreferences.getPayoutWeights())
     }
 
     @Test
-    fun `payout weights should reset to defaults when resetAllTournamentData is called`() {
-        // Given: custom payout weights are set
-        val customWeights = listOf(50, 30, 20) // Different from defaults
-        tournamentPreferences.setPayoutWeights(customWeights)
-        
-        // Verify custom weights are set
-        assertEquals(customWeights, tournamentPreferences.getPayoutWeights())
-        
-        // When: resetting all tournament data
-        tournamentPreferences.resetAllTournamentData()
-        
-        // Then: payout weights should be back to defaults for current player count
-        val expectedDefaults = expectedDefaultWeights()
-        assertEquals(expectedDefaults, tournamentPreferences.getPayoutWeights())
-    }
-
-    @Test
-    fun `payout weights should reset to defaults with correct count`() {
-        // Given: custom weights with different count are set (6 positions instead of default 9)
-        val customWeights = listOf(40, 25, 20, 10, 3, 2) // 6 positions
-        tournamentPreferences.setPayoutWeights(customWeights)
-        
-        // Verify custom weights are set
-        assertEquals(6, tournamentPreferences.getPayoutWeights().size)
-        assertEquals(customWeights, tournamentPreferences.getPayoutWeights())
-        
-        // When: resetting all tournament data
-        tournamentPreferences.resetAllTournamentData()
-        
-        // Then: should be back to default number of positions based on player count
-        val resetWeights = tournamentPreferences.getPayoutWeights()
-        val expectedDefaults = expectedDefaultWeights()
-        assertEquals(expectedDefaults.size, resetWeights.size)
-        assertEquals(expectedDefaults, resetWeights)
-    }
-
-    @Test
-    fun `reset should restore default player count and matching weights`() {
-        // Given: a non-default player count with custom weights
+    fun `reset restores default player count and matching weights`() {
         tournamentPreferences.setPlayerCount(18)
-        val customWeights = listOf(50, 25, 15, 5, 3, 2)
-        tournamentPreferences.setPayoutWeights(customWeights)
+        tournamentPreferences.setPayoutWeights(listOf(50, 25, 15, 5, 3, 2))
 
-        // Sanity check the custom state
-        assertEquals(18, tournamentPreferences.getPlayerCount())
-        assertEquals(customWeights, tournamentPreferences.getPayoutWeights())
-
-        // When: resetting tournament data
         tournamentPreferences.resetAllTournamentData()
 
-        // Then: player count and weights should return to defaults
-        assertEquals(TournamentDefaults.PLAYER_COUNT, tournamentPreferences.getPlayerCount())
-        assertEquals(expectedDefaultWeights(TournamentDefaults.PLAYER_COUNT), tournamentPreferences.getPayoutWeights())
+        assertEquals(5, tournamentPreferences.getPlayerCount())
+        assertEquals(listOf(35), tournamentPreferences.getPayoutWeights())
     }
 
     @Test
-    fun `default weights constant should be correct`() {
-        // Verify the default weights are as expected
-        assertEquals(listOf(35, 20, 15, 10, 8, 6, 3, 2, 1), TournamentConstants.DEFAULT_PAYOUT_WEIGHTS)
-        assertEquals("35,20,15,10,8,6,3,2,1", TournamentConstants.DEFAULT_PAYOUT_WEIGHTS_STRING)
+    fun `default weights follow the player count until the user customises them`() {
+        tournamentPreferences.setPlayerCount(9)
+        assertEquals(listOf(35, 20, 15), tournamentPreferences.getPayoutWeights())
+
+        tournamentPreferences.setPlayerCount(18)
+        assertEquals(listOf(35, 20, 15, 10, 8, 6), tournamentPreferences.getPayoutWeights())
+
+        tournamentPreferences.setPayoutWeights(listOf(60, 40))
+        tournamentPreferences.setPlayerCount(12)
+        assertEquals(listOf(60, 40), tournamentPreferences.getPayoutWeights())
     }
 
-    private fun expectedDefaultWeights(playerCount: Int = tournamentPreferences.getPlayerCount()): List<Int> {
-        val defaultCount = max(1, playerCount / 3)
-        return TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.take(defaultCount)
+    @Test
+    fun `stored weights that fail to parse fall back to the defaults`() {
+        tournamentPreferences.setPayoutWeights(emptyList())
+
+        assertEquals(listOf(35), tournamentPreferences.getPayoutWeights())
     }
 }

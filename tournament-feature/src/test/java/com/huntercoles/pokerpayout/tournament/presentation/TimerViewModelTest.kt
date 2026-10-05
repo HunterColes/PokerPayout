@@ -1,250 +1,237 @@
 package com.huntercoles.pokerpayout.tournament.presentation
 
+import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.test.core.app.ApplicationProvider
+import com.huntercoles.pokerpayout.core.R
 import com.huntercoles.pokerpayout.core.audio.SoundManager
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
-import com.huntercoles.pokerpayout.core.utils.BlindLevel
-import io.mockk.clearAllMocks
-import io.mockk.clearMocks
-import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+/**
+ * TimerViewModel on virtual time (StandardTestDispatcher) with real preferences.
+ *
+ * Only SoundManager is mocked. The preferences are real because MockK can't stub their Flow
+ * properties: each one shares its JVM getter name with a plain getter (`timerRunning` vs
+ * `getTimerRunning()`), and which one MockK records depends on JVM method order.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
 class TimerViewModelTest {
 
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testDispatcher = StandardTestDispatcher()
     private lateinit var timerPreferences: TimerPreferences
     private lateinit var tournamentPreferences: TournamentPreferences
-    private lateinit var soundManager: SoundManager
-    private lateinit var viewModel: TimerViewModel
-    private lateinit var playerCountFlow: MutableStateFlow<Int>
+    private val soundManager: SoundManager = mockk(relaxed = true)
+    private val store = ViewModelStore()
 
-    @BeforeEach
+    // Defaults: 3 h, 20-minute rounds, smallest chip 50, starting stack 5000
+    private val durationSeconds = 180 * 60
+
+    @Before
     fun setUp() {
-        System.setProperty("io.mockk.useImplClassLoader", "true")
         Dispatchers.setMain(testDispatcher)
-
-        playerCountFlow = MutableStateFlow(10)
-        
-        // Create relaxed mocks to avoid MockK exceptions
-        timerPreferences = mockk(relaxed = true)
-        tournamentPreferences = mockk(relaxed = true)
-        soundManager = mockk(relaxed = true)
-
-        every { tournamentPreferences.playerCount } returns playerCountFlow
-        every { tournamentPreferences.getPlayerCount() } returns 10
-        
-        every { timerPreferences.calculateActualTime() } returns 180 * 60
-        every { timerPreferences.getTimerDirection() } returns "COUNTDOWN"
-        every { timerPreferences.getTimerRunning() } returns false
-        every { timerPreferences.getIsFinished() } returns false
-        every { timerPreferences.getHasTimerStarted() } returns false
-        every { timerPreferences.getGameDurationMinutes() } returns 180
-
-        viewModel = TimerViewModel(timerPreferences, tournamentPreferences, soundManager)
-        
-        // Allow coroutines to complete
-        testDispatcher.scheduler.advanceUntilIdle()
-        
-        clearMocks(timerPreferences, answers = false)
-        clearMocks(tournamentPreferences, answers = false)
+        val context: Context = ApplicationProvider.getApplicationContext()
+        listOf("tournament_prefs", "timer_prefs").forEach {
+            context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
+        }
+        tournamentPreferences = TournamentPreferences(context)
+        timerPreferences = TimerPreferences(context).apply { resetAllTimerData() }
     }
 
-    @AfterEach
+    @After
     fun tearDown() {
+        store.clear() // cancels a running clock
         Dispatchers.resetMain()
-        clearAllMocks()
+    }
+
+    private fun newViewModel(): TimerViewModel {
+        val factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                TimerViewModel(timerPreferences, tournamentPreferences, soundManager) as T
+        }
+        return ViewModelProvider(store, factory)[TimerViewModel::class.java]
+            .also { testDispatcher.scheduler.advanceUntilIdle() }
+    }
+
+    private fun TimerViewModel.send(vararg intents: TimerIntent) {
+        intents.forEach { acceptIntent(it) }
+        testDispatcher.scheduler.runCurrent()
+    }
+
+    private fun advanceSeconds(seconds: Int) {
+        testDispatcher.scheduler.advanceTimeBy(seconds * 1000L)
+        testDispatcher.scheduler.runCurrent()
+    }
+
+    private val TimerViewModel.state get() = uiState.value
+
+    @Test
+    fun `default configuration produces a valid nine level schedule`() {
+        val viewModel = newViewModel()
+
+        val levels = viewModel.state.baseBlindLevels
+        assertEquals(9, levels.size)
+        assertEquals(50, levels.first().smallBlind)
+        assertEquals(5000, levels.last().smallBlind)
+        assertEquals((0..8).map { it * 20 }, levels.map { it.roundStartMinute })
+        assertEquals((1..9).toList(), levels.map { it.level })
+        assertTrue(levels.all { it.bigBlind == 2 * it.smallBlind })
+        assertEquals(levels, viewModel.state.blindLevels)
+        // The last regular level ends exactly when the tournament does
+        assertEquals(durationSeconds, viewModel.state.finalTimeSeconds)
+        assertTrue(viewModel.isValidBlindConfiguration(viewModel.state))
     }
 
     @Test
-    fun `isValidBlindConfiguration returns true for valid configuration`() {
-        // Create a valid blind configuration (default 3-hour tournament)
-        val validLevels = listOf(
-            BlindLevel(1, 25, 50, 0, 0),      // Level 1: 0-20 minutes
-            BlindLevel(2, 50, 100, 0, 20),    // Level 2: 20-40 minutes
-            BlindLevel(3, 75, 150, 0, 40),    // Level 3: 40-60 minutes
-            BlindLevel(4, 100, 200, 0, 60),   // Level 4: 60-80 minutes
-            BlindLevel(5, 150, 300, 25, 80),  // Level 5: 80-100 minutes
-            BlindLevel(6, 200, 400, 50, 100), // Level 6: 100-120 minutes
-            BlindLevel(7, 300, 600, 75, 120), // Level 7: 120-140 minutes
-            BlindLevel(8, 400, 800, 100, 140), // Level 8: 140-160 minutes
-            BlindLevel(9, 600, 1200, 150, 160), // Level 9: 160-180 minutes
-            BlindLevel(10, 800, 1600, 200, 180), // Level 10: 180-200 minutes (overtime)
-            BlindLevel(11, 1000, 2000, 250, 200), // Level 11: 200-220 minutes (overtime)
-            BlindLevel(12, 1500, 3000, 375, 220)  // Level 12: 220-240 minutes (overtime)
-        )
-        
-        val state = TimerUiState(
-            gameDurationMinutes = 180,
-            blindConfiguration = BlindConfiguration(roundLengthMinutes = 20),
-            blindLevels = validLevels
-        )
-        
-        // Method is now internal for testing
-        val result = viewModel.isValidBlindConfiguration(state)
-        
-        assertTrue(result, "Valid blind configuration should return true")
+    fun `running clock counts down once per second, persists, and locks the tournament`() {
+        val viewModel = newViewModel()
+
+        viewModel.send(TimerIntent.ToggleTimer)
+        advanceSeconds(5)
+
+        assertTrue(viewModel.state.isRunning)
+        assertEquals(durationSeconds - 5, viewModel.state.currentTimeSeconds)
+        assertEquals("2:59:55", viewModel.state.formattedTime)
+        assertEquals(durationSeconds - 5, timerPreferences.getCurrentTimeSeconds())
+        assertTrue(timerPreferences.getTimerRunning())
+        assertTrue(tournamentPreferences.getTournamentLocked())
+
+        viewModel.send(TimerIntent.ToggleTimer)
+        advanceSeconds(5)
+
+        assertFalse(viewModel.state.isRunning)
+        assertEquals(durationSeconds - 5, viewModel.state.currentTimeSeconds)
+        assertFalse(timerPreferences.getTimerRunning())
+        assertFalse(tournamentPreferences.getTournamentLocked())
     }
 
     @Test
-    fun `isValidBlindConfiguration returns false for empty levels`() {
-        val state = TimerUiState(
-            gameDurationMinutes = 180,
-            blindConfiguration = BlindConfiguration(roundLengthMinutes = 20),
-            blindLevels = emptyList()
-        )
-        
-        val method = TimerViewModel::class.java.getDeclaredMethod("isValidBlindConfiguration", TimerUiState::class.java)
-        method.isAccessible = true
-        val result = method.invoke(viewModel, state) as Boolean
-        
-        assertFalse(result, "Empty blind levels should return false")
+    fun `blind level advances when the clock crosses a round boundary`() {
+        val viewModel = newViewModel()
+        // One second before level 2 (20 minutes in)
+        viewModel.send(TimerIntent.TimerTick(durationSeconds - 20 * 60 + 1))
+        assertEquals(0, viewModel.state.currentBlindLevelIndex)
+        assertEquals(1, viewModel.state.nextLevelStartsInSeconds)
+
+        viewModel.send(TimerIntent.ToggleTimer)
+        advanceSeconds(1)
+
+        assertEquals(1, viewModel.state.currentBlindLevelIndex)
+        assertEquals(100, viewModel.state.currentBlindLevel?.smallBlind)
     }
 
     @Test
-    fun `isValidBlindConfiguration returns false for non-monotonic start times`() {
-        val invalidLevels = listOf(
-            BlindLevel(1, 25, 50, 0, 0),
-            BlindLevel(2, 50, 100, 0, 40), // Starts at 40, but should be 20
-            BlindLevel(3, 75, 150, 0, 20)  // Starts at 20, which is before level 2
-        )
-        
-        val state = TimerUiState(
-            gameDurationMinutes = 180,
-            blindConfiguration = BlindConfiguration(roundLengthMinutes = 20),
-            blindLevels = invalidLevels
-        )
-        
-        val method = TimerViewModel::class.java.getDeclaredMethod("isValidBlindConfiguration", TimerUiState::class.java)
-        method.isAccessible = true
-        val result = method.invoke(viewModel, state) as Boolean
-        
-        assertFalse(result, "Non-monotonic start times should return false")
+    fun `level change sound plays four seconds before the next level`() {
+        val viewModel = newViewModel()
+        // Six seconds before level 2
+        viewModel.send(TimerIntent.TimerTick(durationSeconds - 20 * 60 + 6), TimerIntent.ToggleTimer)
+
+        advanceSeconds(1) // 5 s to go
+        verify(exactly = 0) { soundManager.playSound(any()) }
+
+        advanceSeconds(1) // 4 s to go
+        verify(exactly = 1) { soundManager.playSound(R.raw.blind_level_up) }
+
+        advanceSeconds(3) // past the change: no replay
+        verify(exactly = 1) { soundManager.playSound(any()) }
     }
 
     @Test
-    fun `isValidBlindConfiguration returns false for non-increasing blinds`() {
-        val invalidLevels = listOf(
-            BlindLevel(1, 25, 50, 0, 0),
-            BlindLevel(2, 50, 100, 0, 20),
-            BlindLevel(3, 25, 50, 0, 40) // Same blinds as level 1
-        )
-        
-        val state = TimerUiState(
-            gameDurationMinutes = 180,
-            blindConfiguration = BlindConfiguration(roundLengthMinutes = 20),
-            blindLevels = invalidLevels
-        )
-        
-        val method = TimerViewModel::class.java.getDeclaredMethod("isValidBlindConfiguration", TimerUiState::class.java)
-        method.isAccessible = true
-        val result = method.invoke(viewModel, state) as Boolean
-        
-        assertFalse(result, "Non-increasing blinds should return false")
+    fun `countdown switches to overtime count-up when it reaches zero`() {
+        val viewModel = newViewModel()
+        viewModel.send(TimerIntent.TimerTick(3), TimerIntent.ToggleTimer)
+
+        advanceSeconds(3)
+
+        assertEquals(TimerDirection.COUNTUP, viewModel.state.timerDirection)
+        assertEquals(0, viewModel.state.currentTimeSeconds)
+        assertTrue(viewModel.state.isOvertime)
+        assertEquals("COUNTUP", timerPreferences.getTimerDirection())
     }
 
     @Test
-    fun `isValidBlindConfiguration returns false when final level ends before tournament duration`() {
-        val invalidLevels = listOf(
-            BlindLevel(1, 25, 50, 0, 0),
-            BlindLevel(2, 50, 100, 0, 20) // Ends at 40 minutes, but tournament is 180 minutes
-        )
-        
-        val state = TimerUiState(
-            gameDurationMinutes = 180,
-            blindConfiguration = BlindConfiguration(roundLengthMinutes = 20),
-            blindLevels = invalidLevels
-        )
-        
-        val method = TimerViewModel::class.java.getDeclaredMethod("isValidBlindConfiguration", TimerUiState::class.java)
-        method.isAccessible = true
-        val result = method.invoke(viewModel, state) as Boolean
-        
-        assertFalse(result, "Final level ending before tournament duration should return false")
+    fun `next level past the schedule reveals a doubled overtime level`() {
+        val viewModel = newViewModel()
+        repeat(8) { viewModel.send(TimerIntent.NextBlindLevel) }
+        assertEquals(8, viewModel.state.currentBlindLevelIndex)
+        assertEquals(TimerDirection.COUNTDOWN, viewModel.state.timerDirection)
+        assertEquals(20 * 60, viewModel.state.currentTimeSeconds)
+
+        viewModel.send(TimerIntent.NextBlindLevel)
+
+        val overtime = viewModel.state.blindLevels.last()
+        assertEquals(10, viewModel.state.blindLevels.size)
+        assertEquals(9, viewModel.state.currentBlindLevelIndex)
+        assertEquals(1, viewModel.state.overtimeLevelsRevealed)
+        assertEquals(10_000, overtime.smallBlind)
+        assertEquals(180, overtime.roundStartMinute)
+        assertEquals((180 + 20) * 60, viewModel.state.finalTimeSeconds)
+        assertEquals(TimerDirection.COUNTUP, viewModel.state.timerDirection)
+        assertEquals(1, timerPreferences.getOvertimeLevelsRevealed())
+
+        // Going back drops the overtime level again
+        viewModel.send(TimerIntent.PreviousBlindLevel)
+        assertEquals(9, viewModel.state.blindLevels.size)
+        assertEquals(0, viewModel.state.overtimeLevelsRevealed)
     }
 
     @Test
-    fun `isValidBlindConfiguration returns true for 1-hour game with 5-minute rounds`() {
-        // 1 hour = 60 minutes, 5 minute rounds = 15 levels total
-        // Level 15 starts at 70 minutes (10 minutes overtime)
-        // Final time should be 70 + 5 = 75 minutes (15 minutes overtime)
-        val validLevels = listOf(
-            BlindLevel(1, 25, 50, 0, 0),
-            BlindLevel(2, 50, 100, 0, 5),
-            BlindLevel(3, 75, 150, 0, 10),
-            BlindLevel(4, 100, 200, 0, 15),
-            BlindLevel(5, 150, 300, 25, 20),
-            BlindLevel(6, 200, 400, 50, 25),
-            BlindLevel(7, 300, 600, 75, 30),
-            BlindLevel(8, 400, 800, 100, 35),
-            BlindLevel(9, 600, 1200, 150, 40),
-            BlindLevel(10, 800, 1600, 200, 45),
-            BlindLevel(11, 1000, 2000, 250, 50),
-            BlindLevel(12, 1500, 3000, 375, 55),  // Base level 12 ends at 60 minutes
-            BlindLevel(13, 2000, 4000, 500, 60),  // Overtime starts
-            BlindLevel(14, 3000, 6000, 750, 65),
-            BlindLevel(15, 4000, 8000, 1000, 70) // Level 15 starts at 70 minutes (10 min overtime)
-        )
-        
-        val state = TimerUiState(
-            gameDurationMinutes = 60,
-            blindConfiguration = BlindConfiguration(roundLengthMinutes = 5),
-            blindLevels = validLevels
-        )
-        
-        // Use reflection to access private method
-        val method = TimerViewModel::class.java.getDeclaredMethod("isValidBlindConfiguration", TimerUiState::class.java)
-        method.isAccessible = true
-        val result = method.invoke(viewModel, state) as Boolean
-        
-        assertTrue(result, "1-hour game with 5-minute rounds should be valid")
+    fun `an impossible blind setup refuses to start and shows the invalid config dialog`() {
+        val viewModel = newViewModel()
+        // Starting stack below the smallest chip: no schedule exists
+        viewModel.send(TimerIntent.UpdateSmallestChip(100), TimerIntent.UpdateStartingChips(50))
+        assertTrue(viewModel.state.baseBlindLevels.isEmpty())
+
+        viewModel.send(TimerIntent.ToggleTimer)
+        advanceSeconds(3)
+
+        assertTrue(viewModel.state.showInvalidConfigDialog)
+        assertFalse(viewModel.state.isRunning)
+        assertEquals(durationSeconds, viewModel.state.currentTimeSeconds)
+        assertFalse(timerPreferences.getTimerRunning())
+
+        viewModel.send(TimerIntent.HideInvalidConfigDialog)
+        assertFalse(viewModel.state.showInvalidConfigDialog)
     }
 
     @Test
-    fun `calculateFinalTimeSeconds returns correct time for 1-hour game with 5-minute rounds`() {
-        // 1 hour = 60 minutes, 5 minute rounds = 15 levels total
-        // Level 15 starts at 70 minutes (10 minutes overtime)
-        // Final time should be 70 + 5 = 75 minutes = 4500 seconds
-        val validLevels = listOf(
-            BlindLevel(1, 25, 50, 0, 0),
-            BlindLevel(2, 50, 100, 0, 5),
-            BlindLevel(3, 75, 150, 0, 10),
-            BlindLevel(4, 100, 200, 0, 15),
-            BlindLevel(5, 150, 300, 25, 20),
-            BlindLevel(6, 200, 400, 50, 25),
-            BlindLevel(7, 300, 600, 75, 30),
-            BlindLevel(8, 400, 800, 100, 35),
-            BlindLevel(9, 600, 1200, 150, 40),
-            BlindLevel(10, 800, 1600, 200, 45),
-            BlindLevel(11, 1000, 2000, 250, 50),
-            BlindLevel(12, 1500, 3000, 375, 55),  // Base level 12 ends at 60 minutes
-            BlindLevel(13, 2000, 4000, 500, 60),  // Overtime starts
-            BlindLevel(14, 3000, 6000, 750, 65),
-            BlindLevel(15, 4000, 8000, 1000, 70) // Level 15 starts at 70 minutes
+    fun `validation rejects schedules that don't reach the stack, aren't increasing, or end early`() {
+        val viewModel = newViewModel()
+        val valid = viewModel.state
+        val levels = valid.baseBlindLevels
+        assertTrue(viewModel.isValidBlindConfiguration(valid))
+
+        assertFalse("empty", viewModel.isValidBlindConfiguration(valid.copy(baseBlindLevels = emptyList())))
+        assertFalse(
+            "last level isn't the starting stack",
+            viewModel.isValidBlindConfiguration(valid.copy(baseBlindLevels = levels.dropLast(1)))
         )
-        
-        val state = TimerUiState(
-            gameDurationMinutes = 60,
-            blindConfiguration = BlindConfiguration(roundLengthMinutes = 5),
-            blindLevels = validLevels
+        val flatStep = levels.toMutableList().apply { this[3] = this[3].copy(smallBlind = this[2].smallBlind) }
+        assertFalse("blinds must strictly increase", viewModel.isValidBlindConfiguration(valid.copy(baseBlindLevels = flatStep)))
+        val backwardsTime = levels.toMutableList().apply { this[3] = this[3].copy(roundStartMinute = this[2].roundStartMinute) }
+        assertFalse("start times must increase", viewModel.isValidBlindConfiguration(valid.copy(baseBlindLevels = backwardsTime)))
+        assertFalse(
+            "levels end an hour before a 4 h tournament",
+            viewModel.isValidBlindConfiguration(valid.copy(gameDurationMinutes = 240))
         )
-        
-        // Use reflection to access private method
-        val method = TimerViewModel::class.java.getDeclaredMethod("calculateFinalTimeSeconds", TimerUiState::class.java)
-        method.isAccessible = true
-        val result = method.invoke(viewModel, state) as Int
-        
-        val expectedSeconds = 75 * 60 // 75 minutes * 60 seconds
-        assertEquals(expectedSeconds, result, "Final time should be 75 minutes (4500 seconds) for 1-hour game with 5-minute rounds")
     }
 }

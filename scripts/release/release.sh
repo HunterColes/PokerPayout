@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Poker Payout release pipeline: preflight -> tests -> device tour -> version bump ->
-# signed release build -> APK checks -> reproducibility check -> (publish) commit, tag,
-# push, GitHub release. F-Droid then picks the tag up on its own (see docs/RELEASING.md).
+# signed release build -> APK checks -> reproducibility check -> (publish) release PR,
+# green CI, merge, tag, GitHub release. F-Droid then picks the tag up on its own (see
+# docs/RELEASING.md). master is protected, so the release commit always lands via a PR.
 #
 #   scripts/release/release.sh                      # dry run (the default): changes nothing
 #   scripts/release/release.sh --publish --notes-file build/notes/1.2.0.md --bump minor
@@ -94,16 +95,17 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/pokerpayout-release.XXXXXX")"
 exec > >(tee "$OUT/summary.txt") 2>&1
 
 SRC="" PRE_SHA="" NEW_SHA="" COMMITTED=0 TAGGED=0 PUSHED=0 CHANGELOG_EXISTED=0
+REL_BRANCH="release/$TAG" START_BRANCH="" BRANCHED=0
 on_exit() {
   local rc=$?
-  if [[ $MODE == publish && $COMMITTED == 1 && $PUSHED == 0 && $rc != 0 ]]; then
+  # Before anything is pushed, a failed publish leaves no trace: the release edits live only
+  # on the local release branch (the tree was clean at preflight), so drop that branch.
+  if [[ $MODE == publish && $BRANCHED == 1 && $PUSHED == 0 && $rc != 0 ]]; then
     [[ $TAGGED == 1 ]] && git -C "$SRC" tag -d "$TAG" >/dev/null 2>&1 || true
-    git -C "$SRC" reset -q --soft "$PRE_SHA"
-    git -C "$SRC" reset -q -- app/build.gradle.kts "$META_REL" "$CHANGELOG_DIR_REL" 2>/dev/null || true
-    cp "$WORK/backup/build.gradle.kts" "$SRC/app/build.gradle.kts"
-    cp "$WORK/backup/mirror.yml" "$SRC/$META_REL"
+    git -C "$SRC" switch -q -f "$START_BRANCH"
+    git -C "$SRC" branch -q -D "$REL_BRANCH" 2>/dev/null || true
     [[ $CHANGELOG_EXISTED == 1 ]] || rm -f "$SRC/$CHANGELOG_DIR_REL/$NEW_CODE.txt"
-    note "rolled back: local release commit$([[ $TAGGED == 1 ]] && echo " and tag") undone, files restored (HEAD ${PRE_SHA:0:9})"
+    note "rolled back: local $REL_BRANCH deleted, back on $START_BRANCH at ${PRE_SHA:0:9}"
   fi
   # Keep the clones for debugging when something failed after they were made.
   if [[ $KEEP_WORK == 1 || ($rc != 0 && (-d $WORK/src || -d $WORK/repro)) ]]; then
@@ -283,7 +285,9 @@ elif [[ ! -x $TOUR ]]; then
   line_skip "device tour" "skipped (scripts/device/tour.sh not in this tree)"
 else
   t0=$(date +%s); newlog device-tour
-  "$TOUR" >"$log" 2>&1 || fail_step "device tour" "failed (report: build/device-reports/latest)" "$log"
+  # One emulator per machine: wait for any agent's tour to finish, and shut it down after.
+  flock /tmp/pokerpayout-emulator.lock "$TOUR" --stop >"$log" 2>&1 \
+    || fail_step "device tour" "failed (report: build/device-reports/latest)" "$log"
   line_ok "device tour" "passed ($(elapsed "$t0"))"
 fi
 
@@ -346,6 +350,11 @@ cp "$SRC/$META_REL" "$OUT/fdroiddata.yml"
 
 GIT_ID=()
 [[ $MODE == dry-run ]] && GIT_ID=(-c user.name="release dry run" -c user.email=dry-run@localhost)
+if [[ $MODE == publish ]]; then
+  START_BRANCH="$(git -C "$SRC" symbolic-ref --short HEAD)"
+  git -C "$SRC" switch -q -c "$REL_BRANCH"
+  BRANCHED=1
+fi
 git -C "$SRC" add app/build.gradle.kts "$META_REL" "$CHANGELOG_DIR_REL/$NEW_CODE.txt"
 git -C "$SRC" "${GIT_ID[@]}" commit -q -m "$TAG $TITLE"
 COMMITTED=1
@@ -424,35 +433,92 @@ else
 fi
 
 # ---------------------------------------------------------------- GitHub notes
+# The release page reads: our blurb, then GitHub's generated "What's Changed" (merged PRs
+# since the last tag, added once the tag exists), then the APK/signing footer.
 {
   [[ $ROTATION == 1 ]] && ! grep -qi reinstall "$OUT/notes-body.md" && { echo "> $ROTATION_MD"; echo; }
   cat "$OUT/notes-body.md"
-  echo
+} >"$OUT/notes-head.md"
+{
   echo "---"
   echo "\`$APK_NAME\` · SHA-256 \`$APK_SHA256\`  "
   echo "Signing certificate SHA-256 \`$SIGNER\`  "
   echo "Also on F-Droid: https://f-droid.org/packages/$APP_ID/"
-} >"$OUT/release-notes.md"
+} >"$OUT/notes-foot.md"
+{ cat "$OUT/notes-head.md"; echo; cat "$OUT/notes-foot.md"; } >"$OUT/release-notes.md"
 
 if [[ $MODE == dry-run ]]; then
   line_ok "dry run" "nothing committed, tagged, pushed or released"
-  note "publish would: commit \"$TAG $TITLE\" (+ $CHANGELOG_DIR_REL/$NEW_CODE.txt), tag $TAG, push master+tag,"
-  note "               gh release \"$TAG $TITLE\" with $APK_NAME -> $EXPECTED_URL"
+  note "publish would: commit \"$TAG $TITLE\" on $REL_BRANCH, open a PR, wait for green CI, merge it,"
+  note "               tag the release commit $TAG, gh release \"$TAG $TITLE\" with $APK_NAME -> $EXPECTED_URL"
   note "artifacts: $OUT (release-notes.md, fdroid-changelog.txt, fdroiddata.yml, release-commit.diff)"
   [[ $ROTATION == 1 ]] && note "key rotation: after publishing, run scripts/release/fdroid-mr.sh --publish"
   exit 0
 fi
 
 # ---------------------------------------------------------------- publish
-git -C "$SRC" tag -a "$TAG" -F - <<<"$TAG $TITLE
+# master only accepts PRs with green CI, so the release commit goes in through a PR. The tag
+# points at the release commit itself (exactly what was built and verified above); merging
+# with a merge commit puts that commit on master.
+
+# Waits for every check on the PR to finish; fails on the first failed or cancelled one.
+wait_for_checks() {
+  local url=$1 deadline=$(($(date +%s) + 45 * 60)) counts total pending failed
+  while (($(date +%s) < deadline)); do
+    counts="$(gh pr view "$url" --repo "$GH_REPO" --json statusCheckRollup --jq '
+      [.statusCheckRollup[] | (.conclusion // .state // "") | ascii_upcase] as $c
+      | "\($c | length) \([$c[] | select(. == "" or . == "PENDING" or . == "EXPECTED")] | length) \([$c[] | select(. == "FAILURE" or . == "CANCELLED" or . == "TIMED_OUT" or . == "ERROR" or . == "ACTION_REQUIRED" or . == "STARTUP_FAILURE")] | length)"' 2>/dev/null || echo "0 0 0")"
+    read -r total pending failed <<<"$counts"
+    echo "$(date +%T) checks: $total, pending $pending, failed $failed"
+    ((failed > 0)) && return 1
+    ((total > 0 && pending == 0)) && return 0
+    sleep 30
+  done
+  echo "timed out after 45 min"
+  return 1
+}
+
+newlog push
+git -C "$SRC" push -q origin "refs/heads/$REL_BRANCH" >"$log" 2>&1 \
+  || fail_step push "could not push $REL_BRANCH (nothing is public yet)" "$log"
+PUSHED=1
+newlog pr
+PR_URL="$(gh pr create --repo "$GH_REPO" --base master --head "$REL_BRANCH" \
+  --title "$TAG $TITLE" --body-file "$OUT/release-notes.md" 2>"$log")" \
+  || fail_step pr "could not open the release PR ($REL_BRANCH is pushed; nothing released)" "$log"
+line_ok pr "$PR_URL"
+
+t0=$(date +%s); newlog ci
+sleep 20 # let GitHub register the checks
+wait_for_checks "$PR_URL" >"$log" 2>&1 \
+  || fail_step ci "CI failed or timed out on $PR_URL; nothing released. Fix on $REL_BRANCH, then merge, tag and release by hand" "$log"
+line_ok ci "all checks green ($(elapsed "$t0"))"
+
+newlog merge
+# Run outside the checkout so gh only deletes the remote branch and leaves the local tree alone.
+(cd "$WORK" && gh pr merge "$PR_URL" --repo "$GH_REPO" --merge --delete-branch \
+  --subject "$TAG $TITLE (#${PR_URL##*/})") >"$log" 2>&1 \
+  || fail_step merge "could not merge $PR_URL; nothing released" "$log"
+line_ok merge "release commit ${NEW_SHA:0:9} is on master"
+
+git -C "$SRC" tag -a "$TAG" "$NEW_SHA" -F - <<<"$TAG $TITLE
 
 $(cat "$OUT/notes-body.md")"
 TAGGED=1
-newlog push
-git -C "$SRC" push --atomic origin "HEAD:refs/heads/master" "refs/tags/$TAG" >"$log" 2>&1 \
-  || fail_step push "git push failed (nothing is public yet)" "$log"
-PUSHED=1
-line_ok push "master + $TAG pushed"
+newlog tag
+git -C "$SRC" push -q origin "refs/tags/$TAG" >"$log" 2>&1 \
+  || fail_step tag "could not push $TAG (master has the release commit; retry: git push origin $TAG)" "$log"
+line_ok tag "$TAG -> ${NEW_SHA:0:9}"
+
+newlog notes-generated
+GENERATED="$(gh api "repos/$GH_REPO/releases/generate-notes" -f tag_name="$TAG" \
+  ${LAST_TAG:+-f previous_tag_name="$LAST_TAG"} --jq .body 2>"$log" || true)"
+{
+  cat "$OUT/notes-head.md"
+  [[ -n $GENERATED ]] && { echo; echo "$GENERATED"; }
+  echo
+  cat "$OUT/notes-foot.md"
+} >"$OUT/release-notes.md"
 
 newlog gh-release
 if ! gh release create "$TAG" "$APK" --repo "$GH_REPO" --title "$TAG $TITLE" \
@@ -471,6 +537,13 @@ for _ in 1 2 3 4 5 6; do
 done
 if [[ $ok_dl == 0 ]]; then line_ok binaries "F-Droid's Binaries URL serves this exact APK"
 else line_bad binaries "could not download $BIN_URL with the expected sha256; check the release asset"; fi
+
+if git -C "$SRC" switch -q "$START_BRANCH" && git -C "$SRC" pull -q --ff-only origin "$START_BRANCH" \
+   && git -C "$SRC" branch -q -D "$REL_BRANCH"; then
+  line_ok local "back on $START_BRANCH at $(git -C "$SRC" rev-parse --short HEAD)"
+else
+  line_warn local "couldn't return to an up-to-date $START_BRANCH; run: git switch $START_BRANCH && git pull --ff-only"
+fi
 
 echo
 if [[ $ROTATION == 1 ]]; then

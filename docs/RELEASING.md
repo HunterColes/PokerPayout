@@ -38,7 +38,9 @@ Nothing goes in `~/.gradle/gradle.properties`. Gradle reads signing from
 
 The notes file is Markdown. If the first line is `# Title`, it becomes the release title
 (`v1.2.0 Title`), the commit message and the tag message. The rest becomes the GitHub release
-body. The script appends the APK's SHA-256 and the signing certificate fingerprint.
+body. Below it, the script adds GitHub's generated "What's Changed" (every PR merged since the
+last tag, with a full-changelog link), then the APK's SHA-256 and the signing certificate
+fingerprint.
 
 ```markdown
 # Smoother tournament timer
@@ -61,16 +63,17 @@ Without `--notes-file`, the script drafts notes from `git log <last tag>..HEAD`.
 |---|---|---|
 | preflight | Problems are warnings, except missing tools or JDK | Every check must pass: main checkout, `master`, clean tree, in sync with `origin`, `gh` logged in, tag and release free, versionCode above F-Droid's, `verify-signing.sh` passes, F-Droid's buildserver has the JDK the build needs |
 | unit tests | `testDebugUnitTest`: every module's JVM tests; fails if a module runs fewer tests than it declares (`--skip-tests`) | same |
-| device tour | `scripts/device/tour.sh` if present (`--skip-tour`) | same |
-| bump | versionName (`--bump` / `--version`), versionCode +1, metadata mirror rebuilt from fdroiddata's current file plus the new `Builds` entry, What's New file, commit | same, in the main checkout |
+| device tour | `scripts/device/tour.sh --stop` if present, holding `/tmp/pokerpayout-emulator.lock` so it never fights an agent for the emulator (`--skip-tour`) | same |
+| bump | versionName (`--bump` / `--version`), versionCode +1, metadata mirror rebuilt from fdroiddata's current file plus the new `Builds` entry, What's New file, commit | same, committed on a new local branch `release/vX.Y.Z` in the main checkout |
 | build | `clean :app:assembleRelease`, signed with the debug key | signed with the release key |
 | APK checks | name, package/version, not debuggable, v2 signature, no baseline profile, embedded commit = release commit, signer vs `AllowedAPKSigningKeys` (a mismatch is a warning; `--require-release-key` makes it fatal, exit 3) | signer mismatch is fatal |
 | repro check | `--repro-check`: fresh clone, F-Droid's signing-config strip, `gradle clean` + `gradle assembleRelease` from `app/`, byte compare outside the signing block | on by default |
-| ship | prints what it would do | annotated tag, `git push --atomic` of master + tag, `gh release create` with the APK, then checks that F-Droid's `Binaries:` URL serves the same bytes |
+| ship | prints what it would do | master is protected (PR + green CI), so: push `release/vX.Y.Z`, open a PR with the notes, wait for every check, merge it with a merge commit, tag the release commit itself (the exact tree that was built and verified), push the tag, `gh release create` with the APK, check that F-Droid's `Binaries:` URL serves the same bytes, and return the checkout to an up-to-date `master` |
 
-If anything fails before the push, `--publish` rolls back its own commit and tag and puts
-the files back as they were. After the push nothing is rolled back. The script prints the
-exact `gh release create …` command to retry with.
+If anything fails before the release branch is pushed, `--publish` deletes its local branch
+and leaves you on `master` exactly as before. After the push nothing is rolled back: a red CI
+leaves the PR open for a fix, and a failed `gh release create` prints the exact command to
+retry with.
 
 ## How F-Droid picks up a release
 

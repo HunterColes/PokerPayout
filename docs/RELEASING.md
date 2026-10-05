@@ -60,7 +60,7 @@ Without `--notes-file`, the script drafts notes from `git log <last tag>..HEAD`.
 | Stage | Dry run (default) | `--publish` |
 |---|---|---|
 | preflight | Problems are warnings, except missing tools or JDK | Every check must pass: main checkout, `master`, clean tree, in sync with `origin`, `gh` logged in, tag and release free, versionCode above F-Droid's, `verify-signing.sh` passes, F-Droid's buildserver has the JDK the build needs |
-| unit tests | `testDebugUnitTest` (`--skip-tests`) | same |
+| unit tests | `testDebugUnitTest`: every module's JVM tests; fails if a module runs fewer tests than it declares (`--skip-tests`) | same |
 | device tour | `scripts/device/tour.sh` if present (`--skip-tour`) | same |
 | bump | versionName (`--bump` / `--version`), versionCode +1, metadata mirror rebuilt from fdroiddata's current file plus the new `Builds` entry, What's New file, commit | same, in the main checkout |
 | build | `clean :app:assembleRelease`, signed with the debug key | signed with the release key |

@@ -5,9 +5,9 @@ sound. It is written so that a person *or* an AI agent can run it unattended.
 
 | Tier | Command | Needs | Typical time |
 |------|---------|-------|--------------|
-| JVM unit tests | `./gradlew testDebugUnitTest` | JDK 21 | ~45 s warm |
+| JVM unit tests | `./gradlew testDebugUnitTest` | JDK 21 | ~15 s warm (143 tests) |
 | Device smoke tour (screenshots + UI dumps + logcat) | `scripts/device/tour.sh` | emulator (auto-booted) | ~6 min incl. build |
-| Instrumented tests | `./gradlew connectedDebugAndroidTest` | running emulator | ~11 min (currently fails to compile, see below) |
+| Instrumented tests | `./gradlew connectedDebugAndroidTest` | running emulator | compiles; there are 0 instrumented tests (see below) |
 | JVM screenshot tests (Roborazzi) | not set up yet | n/a | n/a |
 
 ## 1. Prerequisites
@@ -169,34 +169,94 @@ that UI dump for the step's `.xml`, which saves a second dump.
 
 ```bash
 ./gradlew testDebugUnitTest -Dorg.gradle.jvmargs=-Xmx4g        # all modules
-./gradlew :tools-feature:testDebugUnitTest --tests '*TexasHoldemOdds*'
+./gradlew :core:testDebugUnitTest --tests '*BlindStructureCalculator*'
+./gradlew lintDebug detekt                                       # what CI runs after the tests
 ```
 
 Reports: `<module>/build/reports/tests/testDebugUnitTest/index.html`. JUnit XML is in
-`<module>/build/test-results/testDebugUnitTest/`.
+`<module>/build/test-results/testDebugUnitTest/`. CI (`.github/workflows/ci.yml`) runs the
+same three commands on every push and pull request and uploads these reports when it fails.
 
-The `core`, `bank-feature` and `tools-feature` modules use the `de.mannodermaus.android-junit5`
-plugin (JUnit Platform). `tournament-feature` does not. Know these pitfalls about the current setup:
+### What runs
 
-* **Tests that are silently skipped.** No `junit-vintage-engine` is on the classpath, so
-  JUnit4-style tests (`org.junit.Test`, including every Robolectric test) never run in the
-  three JUnit5 modules. In `tournament-feature` the reverse happens: the JUnit5
-  `TimerViewModelTest` never runs. That is 54 tests in total. The build stays green and shows
-  no warning.
-* **Duplicated tests.** `bank-feature` and `tools-feature` add `core/src/test` as a source
-  dir, so core's 72 tests run three times.
+Every module with tests applies the `de.mannodermaus.android-junit5` plugin, so its test task
+runs on the JUnit Platform with two engines from the `common-test` bundle: Jupiter for JUnit 5
+tests and Vintage for JUnit 4 tests. Robolectric tests (`@RunWith(RobolectricTestRunner::class)`)
+are JUnit 4, so Vintage runs them. Each test runs once, in its own module.
+
+Last measured (v1.2.0 test foundation): **143 tests, 135 pass, 8 skipped, 0 fail**, about 15 s
+with compilation up to date. `ChipDistributionOptimizerTest` accounts for about 12 s of that.
+
+| Module | Tests | Skipped | What they cover |
+|---|---|---|---|
+| core | 73 | 3 | Blind engine: 6,600-config property sweep plus exact ladders. Chip optimizer, FormatUtils. |
+| bank-feature | 36 | 2 | BankViewModel money flows on real prefs: buy-ins, rebuys, knockouts, money conservation over 14 configs, weights, reset. |
+| tools-feature | 8 | 0 | Odds engine (owned by the odds rework). |
+| tournament-feature | 26 | 3 | Payout use case, TournamentConfigViewModel, TimerViewModel on virtual time: countdown, levels, sound cue, overtime, validation. |
+
+Before v1.2.0 the green run proved little: 245 executions but 101 unique tests (core's ran 3
+times), and 54 tests in JUnit 4/5-mismatched modules never ran. Turning them on surfaced 43
+failures.
+
+### Skipped tests are specs for open board items
+
+A skipped test asserts what the code *should* do, and is disabled until its board item lands.
+Gradle prints each one as `SKIPPED` on every run. To enable one, remove its
+`@Ignore`/`@Disabled` together with the fix.
+
+| Test | Board item |
+|---|---|
+| `BankViewModelTest.purchasesSurviveTheAmountBeingClearedAndRetyped`, `TournamentConfigViewModelTest.purchasesSurviveTheAmountBeingClearedAndRetyped` | PP-014 |
+| `CalculatePayoutsUseCaseTest` / `TournamentConfigViewModelWeightsTest`: `never pays more places than there are players` | PP-016 |
+| `BankViewModelTest.bankTotalsFollowTournamentConfigChanges` | PP-018 |
+| `BlindStructureCalculatorTest`: `every step of an accepted schedule stays within the documented growth bounds` | PP-020 |
+| `BlindFittingAlgorithmTest`: `levels strictly increase, or the configuration is rejected`; `every level is a multiple of the smallest chip, or the configuration is rejected` | PP-020 |
+
+### Rules the build enforces
+
+* **No silently skipped tests.** The root `build.gradle.kts` fails a module's test task if it
+  executed fewer tests than its `src/test` declares `@Test` methods. Skipped tests count as
+  executed. The check is off for `--tests` runs. If you see "ran 0 tests but src/test declares N
+  @Test methods", the module lost the junit5 plugin or the `common-test` bundle.
+* **Fixed locale.** Test JVMs run with `user.language=en`, `user.country=US`. A test about
+  another locale must set `Locale` itself.
+* **Lint and detekt fail only on new findings.** Pre-existing findings are listed in
+  `<module>/lint-baseline.xml` and `<module>/detekt-baseline.xml`. After fixing some of them,
+  regenerate with `./gradlew updateLintBaseline detektBaseline` and commit the smaller files.
+  Don't regenerate just to hide a new finding.
+
+### Writing tests that mean something
+
+* Call production code and assert exact known answers or invariants, e.g. "paid out = paid in
+  minus food" or "every level is a multiple of the smallest chip". Don't re-implement the
+  logic in the test, don't assert on a mock's output, and don't write assertions that can't
+  fail.
+* **Don't mock `TimerPreferences` or `TournamentPreferences`.** Each declares a Flow property
+  next to a same-named getter (`val timerRunning: Flow<Boolean>` and
+  `fun getTimerRunning(): Boolean`). On the JVM those are two methods that differ only in return
+  type. MockK can't tell them apart, so `every { prefs.timerRunning }` fails with "Missing mocked
+  calls inside every { ... } block", depending on JVM method order. Use the real classes in a
+  Robolectric test (Robolectric gives each test fresh SharedPreferences) instead.
+* ViewModel tests: set `Dispatchers.Main` to a `StandardTestDispatcher`, and create the
+  ViewModel through a `ViewModelStore` so `store.clear()` cancels its coroutines. For a running
+  clock, step it with `advanceTimeBy` + `runCurrent`. `TimerViewModelTest` shows the pattern.
 
 ## 7. Instrumented tests
 
 ```bash
+./gradlew assembleDebugAndroidTest                # compiles every module's test APK, no device needed
 scripts/device/boot.sh
 ANDROID_SERIAL=emulator-5580 ./gradlew connectedDebugAndroidTest --continue -Dorg.gradle.jvmargs=-Xmx4g
 scripts/device/install.sh --no-build     # connected* tasks uninstall the app afterwards
 ```
 
-Right now this fails at compile time. `bank-feature`'s `PlayerRowLayoutTest` uses a private
-`PlayerRow` and wrong imports, and `tournament-feature`'s `DecimalTextFieldTest` is missing
-new `PoolConfigurationSection` parameters. The other modules have 0 instrumented tests.
+There are no instrumented tests right now. The two old ones no longer compiled, and were
+deleted in v1.2.0:
+* `PlayerRowLayoutTest` targeted a now-private composable.
+* `DecimalTextFieldTest` used a stale `PoolConfigurationSection` signature.
+
+The device tour (section 5) covers on-device behaviour. The proposed Roborazzi tier (section 9)
+would cover composables on the JVM. Library modules use the stock `AndroidJUnitRunner`.
 
 ## 8. Troubleshooting
 
@@ -222,4 +282,5 @@ under `src/test/screenshots`. An agent would run `./gradlew verifyRoborazziDebug
 `build/test-results/roborazzi/results-summary.json`, and open the `*_compare.png` diffs for
 any failures. The versions that fit this toolchain, and the setup steps, are in the
 device-harness report. In short: Roborazzi **1.60.0**, the last release whose Kotlin
-metadata Kotlin 2.0.21 can read, plus Robolectric 4.14.1 and the JUnit vintage engine.
+metadata Kotlin 2.0.21 can read, plus Robolectric 4.14.1. The JUnit vintage engine it needs is
+already on the test classpath.

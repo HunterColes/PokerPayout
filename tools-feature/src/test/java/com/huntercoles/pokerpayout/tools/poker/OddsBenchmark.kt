@@ -32,7 +32,8 @@ class OddsBenchmark {
                 Cards.parseAll("Ad 9c 2h"),
             )
             val tenHanded = OddsRequest(
-                listOf("As Ah", "Ks Kh", "Qs Qh", "Js Jh", "Ts Th", "9s 9h", "8s 8h", "7s 7h", "6s 6h", "5s 5h").map { Seat.of(it) },
+                listOf("As Ah", "Ks Kh", "Qs Qh", "Js Jh", "Ts Th", "9s 9h", "8s 8h", "7s 7h", "6s 6h", "5s 5h")
+                    .map { Seat.of(it) },
             )
             val mc50k = OddsSettings(maxSamples = 50_000, exactBudget = 0, seed = 1)
             for ((name, dispatcher) in listOf("all cores" to Dispatchers.Default, "1 thread" to single)) {
@@ -62,7 +63,10 @@ class OddsBenchmark {
             System.nanoTime() - t0
         }.sorted()
         val ns = runs[runs.size / 2].toDouble() / hands.size
-        println("HandEvaluator.evaluate(7 cards): %.1f ns/eval = %.1fM evals/s single-thread (sink %d)".format(ns, 1e3 / ns, sink and 1))
+        println(
+            "HandEvaluator.evaluate(7 cards): %.1f ns/eval = %.1fM evals/s single-thread (sink %d)"
+                .format(ns, 1e3 / ns, sink and 1)
+        )
     }
 
     private fun time(label: String, dispatcher: CoroutineDispatcher, request: OddsRequest, settings: OddsSettings) {

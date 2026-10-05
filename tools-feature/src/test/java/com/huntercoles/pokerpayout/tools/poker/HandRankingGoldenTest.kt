@@ -167,6 +167,7 @@ class HandRankingGoldenTest {
      * high-card ranks).
      */
     @Test
+    @Suppress("NestedBlockDepth") // one loop per card of an exhaustive enumeration
     fun `all 2,598,960 five-card hands match the published category and rank counts`() {
         val hands = LongArray(GoldenCategory.entries.size)
         val distinct = Array(GoldenCategory.entries.size) { HashSet<Int>() }

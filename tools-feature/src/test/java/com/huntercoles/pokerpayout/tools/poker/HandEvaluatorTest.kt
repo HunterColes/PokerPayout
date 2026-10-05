@@ -18,6 +18,7 @@ class HandEvaluatorTest {
      * distinct hand values per category, 4,824 in total.
      */
     @Test
+    @Suppress("NestedBlockDepth") // one loop per card of an exhaustive enumeration
     fun `all 133,784,560 seven-card hands match the published category and rank counts`() {
         val hands = LongArray(9)
         val seen = BitSet(9 shl 20)
@@ -57,13 +58,16 @@ class HandEvaluatorTest {
 
     /** 200,000 random 7-card hands (fixed seed) agree with the brute-force best-of-21 reference. */
     @Test
-    fun `random seven-card hands agree with the brute-force reference`() = agreesWithReference(cards = 7, hands = 200_000, seed = 7_2026)
+    fun `random seven-card hands agree with the brute-force reference`() =
+        agreesWithReference(cards = 7, hands = 200_000, seed = 7_2026)
 
     @Test
-    fun `random six-card hands agree with the brute-force reference`() = agreesWithReference(cards = 6, hands = 50_000, seed = 6_2026)
+    fun `random six-card hands agree with the brute-force reference`() =
+        agreesWithReference(cards = 6, hands = 50_000, seed = 6_2026)
 
     @Test
-    fun `random five-card hands agree with the brute-force reference`() = agreesWithReference(cards = 5, hands = 50_000, seed = 5_2026)
+    fun `random five-card hands agree with the brute-force reference`() =
+        agreesWithReference(cards = 5, hands = 50_000, seed = 5_2026)
 
     /**
      * For each hand, the strength must decode to exactly the reference key (category and

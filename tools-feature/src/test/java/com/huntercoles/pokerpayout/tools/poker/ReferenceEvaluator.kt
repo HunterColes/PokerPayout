@@ -27,6 +27,7 @@ internal object ReferenceEvaluator {
         return a.size.compareTo(b.size)
     }
 
+    @Suppress("CyclomaticComplexMethod") // the textbook ranking rules, one branch per category
     private fun rankFive(cards: List<Int>): List<Int> {
         val ranks = cards.map { it / 4 }.sortedDescending()
         val suits = cards.map { it % 4 }

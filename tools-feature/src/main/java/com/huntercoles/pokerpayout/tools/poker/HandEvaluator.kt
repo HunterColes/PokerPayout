@@ -38,7 +38,11 @@ enum class HandCategory(val displayName: String) {
  * The work is a handful of bit operations on the four 13-bit suit masks plus two table
  * lookups: no branches on individual cards, no allocation.
  */
+@Suppress("MagicNumber") // the shifts and masks are the strength layout documented above, not tunables
 object HandEvaluator {
+
+    /** Bit position of the category in a strength; `strength ushr CATEGORY_SHIFT` is its ordinal. */
+    internal const val CATEGORY_SHIFT = 20
 
     private const val RANK_MASK = 0x1FFF
 
@@ -52,6 +56,7 @@ object HandEvaluator {
     private val TOP5 = IntArray(1 shl 13) { topRanksSlow(it, 5) }
 
     /** Strength of the best five-card hand in [hand], a card-set mask holding 5..7 cards. */
+    @Suppress("ReturnCount", "CyclomaticComplexMethod") // one early return per category, strongest first
     fun evaluate(hand: Long): Int {
         val c = hand.toInt() and RANK_MASK
         val d = (hand ushr 16).toInt() and RANK_MASK
@@ -122,7 +127,7 @@ object HandEvaluator {
 
     fun evaluate(cards: Collection<Int>): Int = evaluate(checkedMask(cards))
 
-    fun category(strength: Int): HandCategory = HandCategory.entries[strength ushr 20]
+    fun category(strength: Int): HandCategory = HandCategory.entries[strength ushr CATEGORY_SHIFT]
 
     /** The tie-break ranks of [strength] that are in use for its category, most significant first. */
     fun ranks(strength: Int): List<Int> {
@@ -141,15 +146,15 @@ object HandEvaluator {
         val r = ranks(strength)
         return when (category(strength)) {
             HandCategory.STRAIGHT_FLUSH ->
-                if (r[0] == Cards.ACE) "Royal flush" else "Straight flush, ${name(r[0])} high"
-            HandCategory.QUADS -> "Four ${plural(r[0])}"
-            HandCategory.FULL_HOUSE -> "Full house, ${plural(r[0])} full of ${plural(r[1])}"
-            HandCategory.FLUSH -> "Flush, ${name(r[0])} high"
-            HandCategory.STRAIGHT -> "Straight, ${name(r[0])} high"
-            HandCategory.TRIPS -> "Three ${plural(r[0])}"
-            HandCategory.TWO_PAIR -> "Two pair, ${plural(r[0])} and ${plural(r[1])}"
-            HandCategory.PAIR -> "Pair of ${plural(r[0])}"
-            HandCategory.HIGH_CARD -> "${name(r[0]).replaceFirstChar { it.uppercaseChar() }} high"
+                if (r[0] == Cards.ACE) "Royal flush" else "Straight flush, ${NAMES[r[0]]} high"
+            HandCategory.QUADS -> "Four ${PLURALS[r[0]]}"
+            HandCategory.FULL_HOUSE -> "Full house, ${PLURALS[r[0]]} full of ${PLURALS[r[1]]}"
+            HandCategory.FLUSH -> "Flush, ${NAMES[r[0]]} high"
+            HandCategory.STRAIGHT -> "Straight, ${NAMES[r[0]]} high"
+            HandCategory.TRIPS -> "Three ${PLURALS[r[0]]}"
+            HandCategory.TWO_PAIR -> "Two pair, ${PLURALS[r[0]]} and ${PLURALS[r[1]]}"
+            HandCategory.PAIR -> "Pair of ${PLURALS[r[0]]}"
+            HandCategory.HIGH_CARD -> "${NAMES[r[0]].replaceFirstChar { it.uppercaseChar() }} high"
         }
     }
 
@@ -173,7 +178,7 @@ object HandEvaluator {
     private fun topRanksSlow(mask: Int, k: Int): Int {
         var m = mask
         var packed = 0
-        for (i in 0 until k) {
+        repeat(k) {
             val r = if (m == 0) 0 else highest(m)
             packed = (packed shl 4) or r
             if (m != 0) m = m xor (1 shl r)
@@ -181,10 +186,10 @@ object HandEvaluator {
         return packed
     }
 
-    private val NAMES = listOf("deuce", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "jack", "queen", "king", "ace")
-    private val PLURALS = listOf("deuces", "threes", "fours", "fives", "sixes", "sevens", "eights", "nines", "tens", "jacks", "queens", "kings", "aces")
-
-    private fun name(rank: Int) = NAMES[rank]
-
-    private fun plural(rank: Int) = PLURALS[rank]
+    private val NAMES = listOf(
+        "deuce", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "jack", "queen", "king", "ace",
+    )
+    private val PLURALS = listOf(
+        "deuces", "threes", "fours", "fives", "sixes", "sevens", "eights", "nines", "tens", "jacks", "queens", "kings", "aces",
+    )
 }

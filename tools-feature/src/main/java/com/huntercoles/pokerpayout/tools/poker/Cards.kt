@@ -13,20 +13,25 @@ object Cards {
     const val RANK_CHARS = "23456789TJQKA"
     const val SUIT_CHARS = "cdhs"
 
+    const val RANKS = 13
+    const val SUITS = 4
+
     const val DEUCE = 0
     const val ACE = 12
+
+    /** The rank index of a ten, which also parses from "10". */
+    private const val TEN = 8
+
+    /** The longest single-card token, "10h". */
+    private const val MAX_CARD_TEXT = 3
 
     private val BITS = LongArray(COUNT) { 1L shl ((it and 3) * 16 + (it ushr 2)) }
 
     fun of(rank: Int, suit: Int): Int {
-        require(rank in 0..12) { "rank must be 0..12, was $rank" }
-        require(suit in 0..3) { "suit must be 0..3, was $suit" }
-        return rank * 4 + suit
+        require(rank in DEUCE..ACE) { "rank must be $DEUCE..$ACE, was $rank" }
+        require(suit in 0 until SUITS) { "suit must be 0..${SUITS - 1}, was $suit" }
+        return rank * SUITS + suit
     }
-
-    fun rank(card: Int): Int = card ushr 2
-
-    fun suit(card: Int): Int = card and 3
 
     /** The bitmask bit of [card]. */
     fun bit(card: Int): Long = BITS[card]
@@ -46,9 +51,6 @@ object Cards {
     /** Number of cards in a card-set mask. */
     fun count(mask: Long): Int = java.lang.Long.bitCount(mask)
 
-    /** The cards of a card-set mask, in ascending card order. */
-    fun cardsOf(mask: Long): List<Int> = (0 until COUNT).filter { mask and BITS[it] != 0L }
-
     /**
      * Parses one card such as `"As"`, `"td"`, `"10h"` or `"Qc"`. Rank first, then suit
      * (`c`, `d`, `h`, `s`; case-insensitive).
@@ -61,12 +63,12 @@ object Cards {
         val suitChar = t.lastOrNull()?.lowercaseChar()
             ?: throw IllegalArgumentException("Empty card")
         val rank = when (rankText.uppercase()) {
-            "10" -> 8
+            "10" -> TEN
             else -> if (rankText.length == 1) RANK_CHARS.indexOf(rankText[0].uppercaseChar()) else -1
         }
         val suit = SUIT_CHARS.indexOf(suitChar)
         require(rank >= 0 && suit >= 0) { "Not a card: \"$text\"" }
-        return rank * 4 + suit
+        return rank * SUITS + suit
     }
 
     /**
@@ -76,7 +78,7 @@ object Cards {
     fun parseAll(text: String): List<Int> {
         val tokens = text.split(' ', ',', '\t', '\n').filter { it.isNotBlank() }
         return tokens.flatMap { token ->
-            if (token.length > 3 || (token.length == 3 && !token.startsWith("10"))) {
+            if (token.length > MAX_CARD_TEXT || (token.length == MAX_CARD_TEXT && !token.startsWith("10"))) {
                 token.chunked(2).map(::parse)
             } else {
                 listOf(parse(token))
@@ -87,7 +89,7 @@ object Cards {
     /** `"As"`, `"Td"`, ... */
     fun format(card: Int): String {
         require(card in 0 until COUNT) { "Not a card index: $card" }
-        return "${RANK_CHARS[card ushr 2]}${SUIT_CHARS[card and 3]}"
+        return "${RANK_CHARS[card / SUITS]}${SUIT_CHARS[card % SUITS]}"
     }
 
     fun format(cards: Iterable<Int>): String = cards.joinToString(" ") { format(it) }

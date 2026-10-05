@@ -118,7 +118,7 @@ class OddsEngine(
         }
 
         fun leaf() {
-            if (++leaves and 0x3FFF == 0) job.ensureActive()
+            if (++leaves and CANCEL_CHECK_MASK == 0) job.ensureActive()
             tally.showdown(hands, board)
         }
     }
@@ -199,9 +199,9 @@ class OddsEngine(
         val knownMasks: LongArray,
         val missing: IntArray,
         val boardMask: Long,
-        val boardMissing: Int,
         val deck: IntArray,
     ) {
+        val boardMissing: Int = BOARD_CARDS - Cards.count(boardMask)
         val cardsToDeal: Int = missing.sum() + boardMissing
 
         fun groups(): List<Group> = buildList {
@@ -223,17 +223,17 @@ class OddsEngine(
         companion object {
             fun of(request: OddsRequest): Plan {
                 val seats = request.seats
-                if (seats.size < 2) throw OddsInputException("Add at least two players.")
-                if (seats.size > MAX_SEATS) throw OddsInputException("At most $MAX_SEATS players.")
-                if (request.board.size > 5) throw OddsInputException("The board has at most five cards.")
+                requireInput(seats.size >= 2) { "Add at least two players." }
+                requireInput(seats.size <= MAX_SEATS) { "At most $MAX_SEATS players." }
+                requireInput(request.board.size <= BOARD_CARDS) { "The board has at most five cards." }
                 seats.forEachIndexed { i, s ->
-                    if (s.cards.size > 2) throw OddsInputException("Player ${i + 1} has more than two hole cards.")
+                    requireInput(s.cards.size <= 2) { "Player ${i + 1} has more than two hole cards." }
                 }
                 var used = 0L
                 fun take(card: Int) {
-                    if (card !in 0 until Cards.COUNT) throw OddsInputException("Unknown card index $card.")
+                    requireInput(card in 0 until Cards.COUNT) { "Unknown card index $card." }
                     val bit = Cards.bit(card)
-                    if (used and bit != 0L) throw OddsInputException("${Cards.format(card)} is used twice.")
+                    requireInput(used and bit == 0L) { "${Cards.format(card)} is used twice." }
                     used = used or bit
                 }
                 seats.forEach { it.cards.forEach(::take) }
@@ -241,19 +241,18 @@ class OddsEngine(
                 request.dead.forEach(::take)
 
                 val contestants = seats.indices.filter { !seats[it].folded }.toIntArray()
-                if (contestants.size < 2) throw OddsInputException("At least two players must stay in the hand.")
+                requireInput(contestants.size >= 2) { "At least two players must stay in the hand." }
                 val known = LongArray(contestants.size) { Cards.mask(seats[contestants[it]].cards) }
                 val missing = IntArray(contestants.size) { 2 - seats[contestants[it]].cards.size }
                 val deck = (0 until Cards.COUNT).filter { used and Cards.bit(it) == 0L }.toIntArray()
-                val boardMissing = 5 - request.board.size
-                if (missing.sum() + boardMissing > deck.size) throw OddsInputException("Not enough cards left to deal.")
+                val boardMissing = BOARD_CARDS - request.board.size
+                requireInput(missing.sum() + boardMissing <= deck.size) { "Not enough cards left to deal." }
                 return Plan(
                     seatCount = seats.size,
                     contestants = contestants,
                     knownMasks = known,
                     missing = missing,
                     boardMask = Cards.mask(request.board),
-                    boardMissing = boardMissing,
                     deck = deck,
                 )
             }
@@ -279,7 +278,7 @@ class OddsEngine(
             for (p in 0 until n) {
                 val s = HandEvaluator.evaluate(hands[p] or board)
                 strengths[p] = s
-                categories[p * CATEGORIES + (s ushr 20)]++
+                categories[p * CATEGORIES + (s ushr HandEvaluator.CATEGORY_SHIFT)]++
                 if (s > best) {
                     best = s
                     winners = 1
@@ -315,7 +314,7 @@ class OddsEngine(
             val mean = shares[p] / unit / deals
             val meanSq = sharesSq[p] / (unit * unit) / deals
             val variance = (meanSq - mean * mean).coerceAtLeast(0.0) * deals / (deals - 1)
-            return 100.0 * sqrt(variance / deals)
+            return PERCENT * sqrt(variance / deals)
         }
 
         fun maxStdErrPct(): Double = (0 until n).maxOf { stdErrPct(it) }
@@ -329,11 +328,11 @@ class OddsEngine(
                     wins = wins[p],
                     ties = ties[p],
                     potShares = shares[p],
-                    winPct = 100.0 * wins[p] / d,
-                    tiePct = 100.0 * ties[p] / d,
-                    equityPct = 100.0 * shares[p] / (d * OddsResult.SHARE_UNIT),
+                    winPct = PERCENT * wins[p] / d,
+                    tiePct = PERCENT * ties[p] / d,
+                    equityPct = PERCENT * shares[p] / (d * OddsResult.SHARE_UNIT),
                     equityStdErr = if (exact) 0.0 else stdErrPct(p),
-                    handCategoryPct = List(CATEGORIES) { 100.0 * categories[p * CATEGORIES + it] / d },
+                    handCategoryPct = List(CATEGORIES) { PERCENT * categories[p * CATEGORIES + it] / d },
                 )
             }
             val players = List(seats) { seat -> bySeat[seat] ?: FOLDED }
@@ -350,7 +349,12 @@ class OddsEngine(
         private const val MAX_ROUND_BATCHES = 32
 
         private const val BOARD = -1
+        private const val BOARD_CARDS = 5
+        private const val PERCENT = 100.0
         private val CATEGORIES = HandCategory.entries.size
+
+        /** Exact enumeration checks for cancellation every 16,384 showdowns. */
+        private const val CANCEL_CHECK_MASK = 0x3FFF
 
         private val FOLDED = PlayerOdds(
             folded = true, wins = 0, ties = 0, potShares = 0,
@@ -369,7 +373,13 @@ class OddsEngine(
         private fun saturatingMultiply(a: Long, b: Long): Long =
             if (a != 0L && b > Long.MAX_VALUE / a) Long.MAX_VALUE else a * b
 
+        /** Like [require], but throws the [OddsInputException] the UI shows to the user. */
+        private inline fun requireInput(valid: Boolean, message: () -> String) {
+            if (!valid) throw OddsInputException(message())
+        }
+
         /** SplitMix64 finalizer: well-spread, independent per-batch seeds. */
+        @Suppress("MagicNumber") // SplitMix64's published shifts and multipliers
         private fun mix(seed: Long, batch: Int): Long {
             var z = seed + (batch + 1).toLong() * -0x61c8864680b583ebL
             z = (z xor (z ushr 30)) * -0x40a7b892e31b1a47L

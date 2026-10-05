@@ -54,8 +54,8 @@ android {
     }
 
     lint {
+        // Baseline and abortOnError come from the root build script.
         checkReleaseBuilds = false
-        abortOnError = false
     }
 
     signingConfigs {

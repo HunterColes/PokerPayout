@@ -21,6 +21,25 @@ allprojects {
     detekt {
         buildUponDefaultConfig = true
         config.setFrom(files("$rootDir/gradle/detekt.yml"))
+        // Pre-existing findings live in each module's detekt-baseline.xml, so only new ones fail
+        // the build. Regenerate with ./gradlew detektBaseline after fixing old findings.
+        baseline = file("detekt-baseline.xml")
+    }
+
+    // Same for Android Lint: errors not in the module's lint-baseline.xml fail the build.
+    // Regenerate with ./gradlew updateLintBaseline.
+    listOf("com.android.application", "com.android.library").forEach { pluginId ->
+        plugins.withId(pluginId) {
+            (extensions.getByName("android") as com.android.build.api.dsl.CommonExtension<*, *, *, *, *, *>).lint {
+                baseline = file("lint-baseline.xml")
+                abortOnError = true
+                // Toolchain noise, not code findings: "a newer version of X is available" changes
+                // with every upstream release and needs the network, and ObsoleteLintCustomCheck
+                // (library lint jars built for an older lint) points into build/intermediates, so it
+                // can't be baselined. The toolchain refresh (PP-023) deals with both.
+                disable += setOf("GradleDependency", "AndroidGradlePluginVersion", "ObsoleteLintCustomCheck")
+            }
+        }
     }
     
     // Ensure all projects use the same JVM toolchain

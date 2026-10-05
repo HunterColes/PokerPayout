@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.7.2" type="baseline" client="gradle" dependencies="false" name="AGP (8.7.2)" variant="all" version="8.7.2">
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="        mutableStateOf(baseCount)"
+        errorLine2="        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/huntercoles/pokerpayout/bank/presentation/composable/BankScreen.kt"
+            line="760"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var countAnimationDirection by remember(pendingAction.playerId) { mutableStateOf(1) }"
+        errorLine2="                                                                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/huntercoles/pokerpayout/bank/presentation/composable/BankScreen.kt"
+            line="765"
+            column="71"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var currentCountIndex by remember(pendingAction.playerId, baseCount) { mutableStateOf(baseCount) }"
+        errorLine2="                                                                           ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/huntercoles/pokerpayout/bank/presentation/composable/BankScreen.kt"
+            line="766"
+            column="76"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var animationDirection by remember(pendingAction.playerId) { mutableStateOf(1) }"
+        errorLine2="                                                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/huntercoles/pokerpayout/bank/presentation/composable/BankScreen.kt"
+            line="808"
+            column="66"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var currentOptionIndex by remember(pendingAction.playerId) { mutableStateOf(0) }"
+        errorLine2="                                                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/huntercoles/pokerpayout/bank/presentation/composable/BankScreen.kt"
+            line="809"
+            column="66"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    implementation(&quot;androidx.compose.material:material-icons-extended&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="58"
+            column="20"/>
+    </issue>
+
+</issues>

@@ -36,3 +36,53 @@ buildscript {
         classpath(libs.compose.rules)
     }
 }
+
+// Unit tests. Every module with tests applies the android-junit5 plugin, so its test tasks run on
+// the JUnit Platform with both engines from the common-test bundle: Jupiter for JUnit 5 tests and
+// Vintage for JUnit 4 tests (which includes every Robolectric test). See docs/TESTING.md.
+subprojects {
+    val testSourceDir = layout.projectDirectory.dir("src/test")
+    tasks.withType<Test>().configureEach {
+        // Same number formatting on every machine and in CI. A test about another locale must
+        // set Locale itself.
+        systemProperty("user.language", "en")
+        systemProperty("user.country", "US")
+
+        testLogging {
+            events(
+                org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED,
+                org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
+            )
+            exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        }
+
+        // Guard against tests that silently never run (until v1.2.0, 54 of them didn't because of
+        // a JUnit 4/5 engine mismatch). Fail if this task executed fewer tests than src/test
+        // declares @Test methods. Skipped (@Disabled/@Ignore) tests count as executed.
+        var executed = 0L
+        addTestListener(object : TestListener {
+            override fun beforeSuite(suite: TestDescriptor) = Unit
+            override fun beforeTest(testDescriptor: TestDescriptor) = Unit
+            override fun afterTest(testDescriptor: TestDescriptor, result: TestResult) = Unit
+            override fun afterSuite(suite: TestDescriptor, result: TestResult) {
+                if (suite.parent == null) executed = result.testCount
+            }
+        })
+        doLast {
+            val filtered = filter.includePatterns.isNotEmpty() ||
+                gradle.startParameter.taskRequests.any { "--tests" in it.args }
+            if (filtered) return@doLast
+            val testAnnotation = Regex("""^\s*@(org\.junit\.(jupiter\.api\.)?|kotlin\.test\.)?Test\b.*""")
+            val declared = testSourceDir.asFileTree
+                .matching { include("**/*.kt", "**/*.java") }
+                .sumOf { file -> file.readLines().count { testAnnotation.matches(it) } }
+            if (executed < declared) {
+                throw GradleException(
+                    "$path ran $executed tests but src/test declares $declared @Test methods. " +
+                        "Some tests were not discovered: check that the module applies the " +
+                        "android-junit5 plugin and uses the common-test bundle (Jupiter + Vintage)."
+                )
+            }
+        }
+    }
+}

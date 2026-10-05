@@ -48,12 +48,6 @@ android {
             )
         }
     }
-
-    sourceSets {
-        getByName("test") {
-            java.srcDir(project(":core").file("src/test/java"))
-        }
-    }
 }
 
 dependencies {

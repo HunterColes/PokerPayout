@@ -86,7 +86,7 @@ if [[ $UP_KEY != "$KEY" ]]; then
   fi
 fi
 if ! "${META_PY[@]}" has-build "$WORK/proposed.yml" "$CODE"; then
-  "${META_PY[@]}" add-build "$WORK/proposed.yml" "$NAME" "$CODE" "$COMMIT"
+  "${META_PY[@]}" add-build "$WORK/proposed.yml" "$NAME" "$CODE" "$COMMIT" "$CHECKOUT"
   CHANGES+=("add $NAME ($CODE)")
 fi
 if ((${#CHANGES[@]} == 0)); then

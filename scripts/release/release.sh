@@ -341,7 +341,7 @@ if [[ $ROTATION == 1 ]]; then
   "${META_PY[@]}" rotate-key "$SRC/$META_REL" "$MIRROR_KEY" "$NEW_CODE" \
     "signing key lost; superseded by $NEW_NAME, signed with a new key"
 fi
-"${META_PY[@]}" add-build "$SRC/$META_REL" "$NEW_NAME" "$NEW_CODE" "$TAG"
+"${META_PY[@]}" add-build "$SRC/$META_REL" "$NEW_NAME" "$NEW_CODE" "$TAG" "$SRC"
 "${META_PY[@]}" check-yml "$SRC/$META_REL" "$NEW_NAME" "$NEW_CODE" \
   || fail_step bump "metadata mirror failed validation"
 mkdir -p "$(dirname "$CHANGELOG")"

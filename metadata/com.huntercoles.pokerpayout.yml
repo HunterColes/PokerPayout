@@ -34,7 +34,7 @@ Builds:
     scandelete:
       - build-cache
 
-AllowedAPKSigningKeys: 0558e11420a97f212d7048f6b04351fdc82498f9d69cc5c0115270b5e2853de7
+AllowedAPKSigningKeys: 223c397a82d6ed7b50659d30ed907ed23b200509b84fdcf8412f4ed859db35c0
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags

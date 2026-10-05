@@ -103,7 +103,9 @@ android {
     }
 
     kotlin {
-        jvmToolchain(17)
+        // Same JDK in every module and on F-Droid's buildserver (Debian 13 ships only JDK 21).
+        // The javac major version changes the APK bytes, so release builds must use 21 too.
+        jvmToolchain(21)
     }
 
     packaging {

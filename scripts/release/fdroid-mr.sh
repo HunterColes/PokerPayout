@@ -171,7 +171,11 @@ api() {
   code=$(curl -sS -K "$WORK/curl.cfg" -X "$method" "${extra[@]}" -o "$WORK/resp.json" \
     -w '%{http_code}' --max-time 120 "$API$path") || return 1
   cat "$WORK/resp.json"
-  [[ $code -lt 400 ]] || { echo "HTTP $code for $method $path" >&2; return 1; }
+  if [[ $code -ge 400 ]]; then
+    # GitLab's error body says why (it never contains the token); show it, truncated.
+    echo "HTTP $code for $method $path: $(head -c 400 "$WORK/resp.json")" >&2
+    return 1
+  fi
 }
 jget() { python3 -c 'import json,sys; v=json.load(sys.stdin).get(sys.argv[1]); print("" if v is None else v)' "$1"; }
 
@@ -200,7 +204,22 @@ if [[ -z $FORK_ID ]]; then
   [[ $status == finished || $status == none ]] || die "fork is still being created ($status); rerun later"
 fi
 FORK_PATH="$(api GET "/projects/$FORK_ID" | jget path_with_namespace)"
-line_ok fork "$FORK_PATH"
+
+# Branching from fdroiddata's tip inside a long-stale fork makes GitLab time out ("Deadline
+# Exceeded"), and GitLab has no API to update a fork, so stop with the one-click fix instead.
+branch_date() {
+  api GET "/projects/$1/repository/branches/master" \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["commit"]["committed_date"])'
+}
+days_behind="$(python3 -c 'import sys
+from datetime import datetime
+a, b = (datetime.fromisoformat(x.replace("Z", "+00:00")) for x in sys.argv[1:])
+print(max(0, (b - a).days))' "$(branch_date "$FORK_ID")" "$(branch_date "$UP_ID")")"
+if ((days_behind > 14)); then
+  die "your fork's master is $days_behind days behind fdroiddata, which makes GitLab time out.
+       Open https://gitlab.com/$FORK_PATH, click \"Update fork\", wait for it to finish, then rerun."
+fi
+line_ok fork "$FORK_PATH (master $days_behind day(s) behind fdroiddata)"
 
 BRANCH="$APP_ID-$TAG"
 if api GET "/projects/$FORK_ID/repository/branches/$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=""))' "$BRANCH")" >/dev/null 2>&1; then

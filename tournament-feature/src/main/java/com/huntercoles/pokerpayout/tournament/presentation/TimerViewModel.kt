@@ -6,18 +6,22 @@ import com.huntercoles.pokerpayout.core.R
 import com.huntercoles.pokerpayout.core.audio.SoundManager
 import com.huntercoles.pokerpayout.core.constants.AudioConstants.LEVEL_CHANGE_SOUND_LEAD_SECONDS
 import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
+import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.time.ClockAnchor
 import com.huntercoles.pokerpayout.core.time.TimeSource
+import com.huntercoles.pokerpayout.core.utils.BlindLevel
 import com.huntercoles.pokerpayout.core.utils.BlindSetupAdvisor
 import com.huntercoles.pokerpayout.core.utils.BlindSetupFix
+import com.huntercoles.pokerpayout.core.utils.BlindSetupProblem
 import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
 import com.huntercoles.pokerpayout.core.utils.BlindStructureInput
 import com.huntercoles.pokerpayout.core.utils.SmallestChipChoices
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSettings
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockTimeline
 import com.huntercoles.pokerpayout.tournament.domain.clock.LevelSegment
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,8 +42,8 @@ import javax.inject.Inject
  * Time is never counted: the clock is a [ClockAnchor] (play time at an instant, plus the monotonic
  * clock's reading then), and every tick derives play time from [TimeSource.elapsedRealtimeMillis].
  * The tick loop only decides when to look; a late, skipped or sleep-delayed tick can't make the clock
- * drift. The anchor is saved when the clock starts, pauses, jumps, finishes or resets, so a killed
- * process resumes exactly where the clock would be, overtime included.
+ * drift. The anchor is saved when the clock starts, pauses, jumps, is nudged, finishes or resets, so a
+ * killed process resumes exactly where the clock would be, overtime included.
  */
 @HiltViewModel
 class TimerViewModel @Inject constructor(
@@ -47,7 +51,8 @@ class TimerViewModel @Inject constructor(
     private val tournamentPreferences: TournamentPreferences,
     private val bankPreferences: BankPreferences,
     private val soundManager: SoundManager,
-    private val timeSource: TimeSource
+    private val timeSource: TimeSource,
+    private val audioPreferences: AudioPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimerUiState())
@@ -55,6 +60,9 @@ class TimerViewModel @Inject constructor(
 
     private var anchor = ClockAnchor()
     private var tickJob: Job? = null
+
+    /** While paused, the projected end time moves with the wall clock; this keeps it current. */
+    private var wallJob: Job? = null
 
     /** Play time at the previous look, to detect sound cues crossed since. */
     private var lastSeenMillis = 0L
@@ -67,6 +75,7 @@ class TimerViewModel @Inject constructor(
         normalizeStoredSmallestChip()
         restore()
         observeTable()
+        observeSettings()
     }
 
     fun acceptIntent(intent: TimerIntent) {
@@ -75,24 +84,29 @@ class TimerViewModel @Inject constructor(
             TimerIntent.ResetTimer -> resetTimer()
             TimerIntent.NextBlindLevel -> jumpToSegment(_uiState.value.currentSegmentIndex + 1)
             TimerIntent.PreviousBlindLevel -> jumpToSegment(_uiState.value.currentSegmentIndex - 1)
+            is TimerIntent.NudgeMinutes -> nudge(intent.minutes)
+            TimerIntent.EndBreakNow -> endBreakNow()
+            is TimerIntent.MarkColorUpDone -> markColorUpDone(intent.done)
+            else -> acceptViewIntent(intent)
+        }
+    }
+
+    private fun acceptViewIntent(intent: TimerIntent) {
+        when (intent) {
             TimerIntent.ShowInvalidConfigDialog -> _uiState.update { it.copy(showInvalidConfigDialog = true) }
             TimerIntent.HideInvalidConfigDialog -> _uiState.update { it.copy(showInvalidConfigDialog = false) }
             is TimerIntent.SetTableView -> _uiState.update { it.copy(isTableView = intent.enabled) }
+            TimerIntent.ToggleMute -> audioPreferences.toggleMute()
+            is TimerIntent.UpdateRebuyUntil -> tournamentPreferences.setRebuyUntilLevel(intent.level)
             is TimerIntent.ApplyFix -> applyFix(intent.fix)
+            is TimerIntent.KeepingLevel -> changeKeepingLevel(intent.edit)
             else -> acceptSetupIntent(intent)
         }
     }
 
     private fun acceptSetupIntent(intent: TimerIntent) {
+        blindChange(intent)?.let { changeSetup(it) }
         when (intent) {
-            is TimerIntent.GameDurationHoursChanged -> changeSetup {
-                it.copy(gameDurationMinutes = intent.hours.coerceIn(1, MAX_HOURS) * MINUTES_PER_HOUR)
-            }
-            is TimerIntent.UpdateSmallestChip -> changeSetup { it.copy(smallestChip = intent.value.coerceAtLeast(1)) }
-            is TimerIntent.UpdateStartingChips -> changeSetup { it.copy(startingChips = intent.value.coerceAtLeast(1)) }
-            is TimerIntent.UpdateRoundLength -> changeSetup {
-                it.copy(roundLengthMinutes = intent.minutes.coerceAtLeast(1))
-            }
             is TimerIntent.UpdateBreakEvery -> changeBreaks {
                 it.copy(everyLevels = intent.levels.coerceIn(0, MAX_BREAK_EVERY))
             }
@@ -107,6 +121,21 @@ class TimerViewModel @Inject constructor(
         }
     }
 
+    /** The change a blind setup intent makes to the levels, or null for any other intent. */
+    private fun blindChange(intent: TimerIntent): ((BlindConfiguration) -> BlindConfiguration)? = when (intent) {
+        is TimerIntent.GameDurationHoursChanged -> { config ->
+            config.copy(gameDurationMinutes = intent.hours.coerceIn(1, MAX_HOURS) * MINUTES_PER_HOUR)
+        }
+        is TimerIntent.UpdateSmallestChip -> { config -> config.copy(smallestChip = intent.value.coerceAtLeast(1)) }
+        is TimerIntent.UpdateStartingChips -> { config -> config.copy(startingChips = intent.value.coerceAtLeast(1)) }
+        is TimerIntent.UpdateRoundLength -> { config -> config.copy(roundLengthMinutes = intent.minutes.coerceAtLeast(1)) }
+        is TimerIntent.ApplyFix -> when (val fix = intent.fix) {
+            is BlindSetupFix.UseRoundLength -> { config -> config.copy(roundLengthMinutes = fix.minutes) }
+            is BlindSetupFix.UseStartingChips -> { config -> config.copy(startingChips = fix.chips) }
+        }
+        else -> null
+    }
+
     private fun changeBreaks(transform: (BreakSettings) -> BreakSettings) =
         changeKeepingPosition { it.copy(breaks = transform(it.breaks)) }
 
@@ -118,7 +147,8 @@ class TimerViewModel @Inject constructor(
             it.copy(
                 config = loadConfig(frozen = hasStarted),
                 hasTimerStarted = hasStarted,
-                isFinished = timerPreferences.getIsFinished()
+                isFinished = timerPreferences.getIsFinished(),
+                colorUpDoneAfterLevels = timerPreferences.getColorUpDoneAfterLevels()
             )
         }
         rebuildSchedule()
@@ -138,6 +168,7 @@ class TimerViewModel @Inject constructor(
                 timerPreferences.saveClock(anchor)
             }
             show(elapsed, playCues = false)
+            followWallClockWhilePaused()
         }
     }
 
@@ -201,6 +232,7 @@ class TimerViewModel @Inject constructor(
 
     private fun start() {
         markStarted()
+        stopFollowingWallClock()
         val elapsed = anchor.elapsedAt(timeSource)
         anchor = ClockAnchor.runningFrom(elapsed, timeSource)
         timerPreferences.saveClock(anchor)
@@ -220,18 +252,22 @@ class TimerViewModel @Inject constructor(
         tournamentPreferences.setTournamentLocked(false)
         _uiState.update { it.copy(isRunning = false) }
         show(elapsed, playCues = false)
+        followWallClockWhilePaused()
     }
 
     /** The first start (or jump) freezes the setup so the schedule survives until reset. */
     private fun markStarted() {
         if (_uiState.value.hasTimerStarted) return
-        val config = _uiState.value.config
-        timerPreferences.setSmallestChipAtStart(config.smallestChip)
-        timerPreferences.setStartingChipsAtStart(config.startingChips)
-        timerPreferences.setRoundLengthAtStart(config.roundLengthMinutes)
+        freezeSetup(_uiState.value.config)
         timerPreferences.setHasTimerStarted(true)
         timerPreferences.setIsFinished(false)
         _uiState.update { it.copy(hasTimerStarted = true) }
+    }
+
+    private fun freezeSetup(config: BlindConfiguration) {
+        timerPreferences.setSmallestChipAtStart(config.smallestChip)
+        timerPreferences.setStartingChipsAtStart(config.startingChips)
+        timerPreferences.setRoundLengthAtStart(config.roundLengthMinutes)
     }
 
     private fun startTicking() {
@@ -245,6 +281,27 @@ class TimerViewModel @Inject constructor(
                 delay(MILLIS_PER_SECOND - elapsed % MILLIS_PER_SECOND)
             }
         }
+    }
+
+    /**
+     * While the clock is started but paused, the projected end slides with the wall clock: look once
+     * a minute (on the minute) so "ends about 11:10" stays true. Reads only; writes nothing.
+     */
+    private fun followWallClockWhilePaused() {
+        wallJob?.cancel()
+        val state = _uiState.value
+        if (!state.hasTimerStarted || state.isRunning || state.isFinished) return
+        wallJob = viewModelScope.launch {
+            while (isActive) {
+                delay(MILLIS_PER_MINUTE - timeSource.wallClockMillis() % MILLIS_PER_MINUTE)
+                refreshEndTime(anchor.elapsedAt(timeSource))
+            }
+        }
+    }
+
+    private fun stopFollowingWallClock() {
+        wallJob?.cancel()
+        wallJob = null
     }
 
     /** Shows play time [elapsedMillis], plays any cue crossed since the last look, and finishes at the end. */
@@ -261,6 +318,20 @@ class TimerViewModel @Inject constructor(
         }
         val seconds = (elapsedMillis / MILLIS_PER_SECOND).toInt()
         if (seconds != state.elapsedSeconds) _uiState.update { it.copy(elapsedSeconds = seconds) }
+        refreshEndTime(elapsedMillis)
+    }
+
+    /** "Tournament ends about 11:10": now plus the scheduled play left, to the second. */
+    private fun refreshEndTime(elapsedMillis: Long) {
+        val state = _uiState.value
+        val regularEndMillis = state.timeline.regularEndSeconds * MILLIS_PER_SECOND
+        val endsAt = if (state.isFinished || state.timeline.isEmpty || elapsedMillis >= regularEndMillis) {
+            null
+        } else {
+            val exact = timeSource.wallClockMillis() + regularEndMillis - elapsedMillis
+            (exact + MILLIS_PER_SECOND / 2) / MILLIS_PER_SECOND * MILLIS_PER_SECOND
+        }
+        if (endsAt != state.endsAtWallClock) _uiState.update { it.copy(endsAtWallClock = endsAt) }
     }
 
     /**
@@ -282,11 +353,12 @@ class TimerViewModel @Inject constructor(
     private fun finish(endSeconds: Int) {
         tickJob?.cancel()
         tickJob = null
+        stopFollowingWallClock()
         anchor = ClockAnchor.stopped(endSeconds * MILLIS_PER_SECOND)
         timerPreferences.saveClock(anchor)
         timerPreferences.setIsFinished(true)
         lastSeenMillis = anchor.elapsedMillis
-        _uiState.update { it.copy(isRunning = false, isFinished = true, elapsedSeconds = endSeconds) }
+        _uiState.update { it.copy(isRunning = false, isFinished = true, elapsedSeconds = endSeconds, endsAtWallClock = null) }
     }
 
     private fun jumpToSegment(index: Int) {
@@ -299,18 +371,64 @@ class TimerViewModel @Inject constructor(
         timerPreferences.setIsFinished(false)
         lastSeenMillis = elapsed
         _uiState.update { it.copy(isFinished = false, elapsedSeconds = target.startSeconds) }
+        refreshEndTime(elapsed)
+        followWallClockWhilePaused()
+    }
+
+    /**
+     * D5: ± [minutes] of time left in the current level or break. Adding time can't go past the
+     * segment's full length; taking it off stops a second before the end, so the change (and its
+     * chime, if the clock is running) still happens. Saved like any jump.
+     */
+    private fun nudge(minutes: Int) {
+        val state = _uiState.value
+        val segment = state.currentSegment
+        val live = state.hasTimerStarted && !state.isFinished
+        if (segment == null || !live || minutes == 0) return
+        val elapsed = anchor.elapsedAt(timeSource)
+        val first = segment.startSeconds * MILLIS_PER_SECOND
+        val last = (segment.endSeconds * MILLIS_PER_SECOND - MILLIS_PER_SECOND).coerceAtLeast(first)
+        val target = (elapsed - minutes * MILLIS_PER_MINUTE).coerceIn(first, last)
+        if (target == elapsed) return
+        anchor = anchorAt(target, running = anchor.running)
+        timerPreferences.saveClock(anchor)
+        // Time added: the level's end (and its chime) are ahead again. Time taken off: a chime the
+        // nudge skipped over is played by the next look, as when a tick runs late.
+        if (target < elapsed) lastSeenMillis = target
+        show(target, playCues = anchor.running)
+    }
+
+    private fun endBreakNow() {
+        val state = _uiState.value
+        if (state.isOnBreak && !state.isFinished) jumpToSegment(state.currentSegmentIndex + 1)
+    }
+
+    private fun markColorUpDone(done: Boolean) {
+        val currentBreak = _uiState.value.currentBreak ?: return
+        timerPreferences.setColorUpDone(currentBreak.afterLevel, done)
+        _uiState.update { it.copy(colorUpDoneAfterLevels = timerPreferences.getColorUpDoneAfterLevels()) }
     }
 
     private fun resetTimer() {
         tickJob?.cancel()
         tickJob = null
+        stopFollowingWallClock()
         anchor = ClockAnchor()
         lastSeenMillis = 0
         timerPreferences.resetTimer()
         tournamentPreferences.setTournamentLocked(false)
-        _uiState.update { TimerUiState(config = loadConfig(frozen = false), table = it.table) }
+        _uiState.update {
+            TimerUiState(
+                config = loadConfig(frozen = false),
+                table = it.table,
+                rebuyUntilLevel = it.rebuyUntilLevel,
+                purchases = it.purchases,
+                isMuted = it.isMuted
+            )
+        }
         rebuildSchedule()
         refreshTable()
+        refreshEndTime(0L)
     }
 
     private fun anchorAt(elapsedMillis: Long, running: Boolean) =
@@ -319,6 +437,7 @@ class TimerViewModel @Inject constructor(
     override fun onCleared() {
         // The anchor is already saved; a running clock resumes from it in the next process.
         tickJob?.cancel()
+        wallJob?.cancel()
         super.onCleared()
     }
 
@@ -333,16 +452,80 @@ class TimerViewModel @Inject constructor(
         if (_uiState.value.hasTimerStarted || anchor.elapsedMillis > 0) {
             tickJob?.cancel()
             tickJob = null
+            stopFollowingWallClock()
             anchor = ClockAnchor()
             lastSeenMillis = 0
             timerPreferences.resetTimer()
             tournamentPreferences.setTournamentLocked(false)
         }
         _uiState.update {
-            it.copy(config = new, elapsedSeconds = 0, isRunning = false, isFinished = false, hasTimerStarted = false)
+            it.copy(
+                config = new,
+                elapsedSeconds = 0,
+                isRunning = false,
+                isFinished = false,
+                hasTimerStarted = false,
+                colorUpDoneAfterLevels = emptySet(),
+                midGameProblem = null
+            )
         }
         rebuildSchedule()
         refreshTable()
+        refreshEndTime(0L)
+    }
+
+    /**
+     * S1 v2, "Unlock to edit…": a blind change mid-game rebuilds the schedule and keeps the clock on
+     * the same level (or break) with the same time left (cut to the new level length if that's
+     * shorter). A change that can't be played isn't applied: [TimerUiState.midGameProblem] says why
+     * and offers the fixes, and the clock runs on. Before the start it's an ordinary change.
+     */
+    private fun changeKeepingLevel(edit: TimerIntent) {
+        val transform = blindChange(edit)
+        val before = _uiState.value
+        when {
+            transform == null -> Unit
+            !before.hasTimerStarted -> acceptViewIntent(edit)
+            else -> rebuildKeepingLevel(before, transform(before.config))
+        }
+    }
+
+    private fun rebuildKeepingLevel(before: TimerUiState, new: BlindConfiguration) {
+        val (problem, levels) = scheduleFor(new)
+        if (new == before.config || levels.isEmpty()) {
+            _uiState.update { it.copy(midGameProblem = if (new == before.config) null else problem) }
+            return
+        }
+        val elapsedBefore = anchor.elapsedAt(timeSource)
+        val segment = before.currentSegment
+        val leftMillis = segment?.let { it.endSeconds * MILLIS_PER_SECOND - elapsedBefore } ?: 0L
+        persist(new)
+        freezeSetup(new)
+        _uiState.update { it.copy(config = new, midGameProblem = null) }
+        rebuildSchedule()
+
+        val target = segment?.let { sameSegmentIn(_uiState.value.timeline, it) }
+        val elapsedAfter = target?.let { seg ->
+            val duration = seg.durationSeconds * MILLIS_PER_SECOND
+            seg.startSeconds * MILLIS_PER_SECOND + duration - leftMillis.coerceIn(1L, duration)
+        } ?: elapsedBefore
+        anchor = anchorAt(elapsedAfter, running = anchor.running)
+        timerPreferences.saveClock(anchor)
+        lastSeenMillis = elapsedAfter
+        show(elapsedAfter, playCues = false)
+        refreshTable()
+    }
+
+    /** [segment]'s place in a rebuilt [timeline]: the same level, or the break after the same level. */
+    private fun sameSegmentIn(timeline: ClockTimeline, segment: ClockSegment): ClockSegment? {
+        val levels = timeline.levels
+        return when (segment) {
+            is LevelSegment -> levels.getOrNull(segment.index) ?: levels.lastOrNull()
+            is BreakSegment -> timeline.segments.filterIsInstance<BreakSegment>()
+                .firstOrNull { it.afterLevel == segment.afterLevel }
+                ?: levels.getOrNull(segment.afterLevel)
+                ?: levels.lastOrNull()
+        }
     }
 
     /**
@@ -401,8 +584,8 @@ class TimerViewModel @Inject constructor(
         tournamentPreferences.setStartingChips(config.startingChips)
     }
 
-    private fun rebuildSchedule() {
-        val config = _uiState.value.config
+    /** Why [config] can't be played (or null), and its regular levels (empty when it can't). */
+    private fun scheduleFor(config: BlindConfiguration): Pair<BlindSetupProblem?, List<BlindLevel>> {
         val problem = BlindSetupAdvisor.check(
             durationMinutes = config.gameDurationMinutes,
             roundLengthMinutes = config.roundLengthMinutes,
@@ -425,6 +608,12 @@ class TimerViewModel @Inject constructor(
         } else {
             emptyList()
         }
+        return problem to levels
+    }
+
+    private fun rebuildSchedule() {
+        val config = _uiState.value.config
+        val (problem, levels) = scheduleFor(config)
         val timeline = ClockTimeline.build(
             regularLevels = levels,
             roundLengthMinutes = config.roundLengthMinutes,
@@ -449,7 +638,7 @@ class TimerViewModel @Inject constructor(
             levels.size * state.config.roundLengthMinutes == state.config.gameDurationMinutes
     }
 
-    // ------------------------------------------------------------------ table numbers
+    // ------------------------------------------------------------------ table numbers and settings
 
     private data class BankCounts(val eliminated: List<Int> = emptyList(), val rebuys: Int = 0, val addOns: Int = 0)
 
@@ -478,6 +667,19 @@ class TimerViewModel @Inject constructor(
         }
     }
 
+    /** The rebuy cutoff (Tournament setup) and the chime's mute (Tools, Sound), as they change. */
+    private fun observeSettings() {
+        _uiState.update {
+            it.copy(rebuyUntilLevel = tournamentPreferences.getRebuyUntilLevel(), isMuted = audioPreferences.getIsMuted())
+        }
+        viewModelScope.launch {
+            tournamentPreferences.rebuyUntilLevel.collect { level -> _uiState.update { it.copy(rebuyUntilLevel = level) } }
+        }
+        viewModelScope.launch {
+            audioPreferences.isMuted.collect { muted -> _uiState.update { it.copy(isMuted = muted) } }
+        }
+    }
+
     private fun refreshTable() {
         val players = tableConfig.numPlayers
         val out = bank.eliminated.filter { it in 1..players }.distinct().size
@@ -491,11 +693,18 @@ class TimerViewModel @Inject constructor(
             // The same prize pool the Payouts table splits (buy-ins, rebuys and add-ons; no food or bounty)
             prizePoolCents = PoolBreakdown.of(tableConfig.money, players, bank.rebuys, bank.addOns).prizePoolCents
         )
-        _uiState.update { it.copy(table = table) }
+        val purchases = Purchases(
+            rebuyCents = tableConfig.money.rebuyCents,
+            addOnCents = tableConfig.money.addOnCents,
+            rebuysTaken = bank.rebuys,
+            addOnsTaken = bank.addOns
+        )
+        _uiState.update { it.copy(table = table, purchases = purchases) }
     }
 
     private companion object {
         const val MILLIS_PER_SECOND = 1_000L
+        const val MILLIS_PER_MINUTE = 60_000L
         const val MINUTES_PER_HOUR = 60
         const val MAX_HOURS = 24
         const val MAX_BREAK_EVERY = 20

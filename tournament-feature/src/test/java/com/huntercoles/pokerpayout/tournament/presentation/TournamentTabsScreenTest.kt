@@ -11,6 +11,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.audio.SoundManager
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.navigation.NavTab
+import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
@@ -80,7 +81,14 @@ class TournamentTabsScreenTest(private val config: ScreenConfig) {
         val setup = configViewModel()
         val timer = viewModel {
             val sound = mockk<SoundManager>(relaxed = true)
-            TimerViewModel(timerPreferences, tournamentPreferences, bankPreferences, sound, StillClock)
+            TimerViewModel(
+                timerPreferences,
+                tournamentPreferences,
+                bankPreferences,
+                sound,
+                StillClock,
+                AudioPreferences(ApplicationProvider.getApplicationContext()),
+            )
         }
         screen.compose.setContent {
             val configState by setup.uiState.collectAsState()

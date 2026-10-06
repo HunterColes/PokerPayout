@@ -181,8 +181,37 @@ def parse(xml_text):
     return nodes
 
 
+APP_LABEL = "Poker Payout"
+FOREIGN_ANR_RE = re.compile(r"^(.+) isn['’]t responding$")
+
+
+def dismiss_foreign_anr(nodes):
+    """Tap "Wait" on another app's "X isn't responding" dialog; True if one was dismissed.
+
+    On a loaded host the emulator's own apps (usually Pixel Launcher, right after a quick boot)
+    can ANR, and the system dialog then covers the app under test. That is not the app's fault, so
+    wait it out. An ANR of the app under test is left on screen: tour.sh fails the step on it.
+    """
+    for n in nodes:
+        m = FOREIGN_ANR_RE.match(n.text)
+        if m and m.group(1) != APP_LABEL:
+            wait = next((w for w in nodes if w.text == "Wait" and w.area > 0), None)
+            if wait is None:
+                return False
+            x, y = wait.center
+            shell("input tap %d %d" % (x, y))
+            sys.stderr.write("[ui] dismissed system dialog: %r (tapped Wait)\n" % n.text)
+            time.sleep(1)
+            return True
+    return False
+
+
 def snapshot():
     xml_text = dump_xml()
+    for _ in range(3):
+        if not dismiss_foreign_anr(parse(xml_text)):
+            break
+        xml_text = dump_xml()
     last = os.environ.get("PP_UI_LAST_XML")  # tour.sh reuses the final dump of a step
     if last:
         with open(last, "w", encoding="utf-8") as f:
@@ -300,7 +329,15 @@ def clear_focused(nodes=None):
     focused = [n for n in nodes if n.flag("focused") and "EditText" in n.cls]
     count = (len(focused[0].text) if focused else 0) + 4
     count = max(count, 8)
-    shell("input keyevent KEYCODE_MOVE_END " + " ".join(["KEYCODE_DEL"] * count))
+    shell(clear_keys(count))
+
+
+def clear_keys(count):
+    # Compose places the cursor where the tap landed a frame or two after the tap, so a
+    # MOVE_END sent right behind it can be overtaken and DEL alone leaves the text after
+    # the cursor ("Player 1" became "Alice1"). FORWARD_DEL removes that tail too.
+    keys = ["KEYCODE_MOVE_END"] + ["KEYCODE_DEL"] * count + ["KEYCODE_FORWARD_DEL"] * count
+    return "input keyevent " + " ".join(keys)
 
 
 # ----------------------------------------------------------------------------- commands
@@ -403,9 +440,10 @@ def cmd_set_text(a):
         target = p
     x, y = target.center
     shell("input tap %d %d" % (x, y))
+    time.sleep(0.3)   # let focus and the tap's cursor placement land before the keys
     # Clear using the length we already know (saves a second ~2s dump).
     count = max(len(target.text) + 4, 8) if "EditText" in target.cls else 32
-    shell("input keyevent KEYCODE_MOVE_END " + " ".join(["KEYCODE_DEL"] * count))
+    shell(clear_keys(count))
     if a.value:
         type_text(a.value)
     print("[ui] set %s = %r" % (" ".join(a.selector), a.value))

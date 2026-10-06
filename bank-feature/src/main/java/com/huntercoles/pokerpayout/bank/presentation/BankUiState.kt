@@ -1,8 +1,13 @@
 package com.huntercoles.pokerpayout.bank.presentation
 
 import android.os.Parcelable
+import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
+import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
+import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.domain.model.PayoutTable
+import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import kotlinx.parcelize.Parcelize
-import kotlinx.parcelize.RawValue
 
 const val MAX_PURCHASE_COUNT = 20
 
@@ -18,47 +23,46 @@ data class PlayerData(
     val eliminatedBy: Int? = null // Player id who eliminated this player
 ) : Parcelable
 
-@Parcelize
-data class PayoutPosition(
-    val position: Int,
-    val payout: Double,
-    val formattedPayout: String,
-    val formattedPercentage: String,
-    val positionSuffix: String
-) : Parcelable
-
-@Parcelize
+/** Bank screen state. Every amount is in cents and comes from one [SettleTournamentUseCase] run. */
 data class BankUiState(
     val players: List<PlayerData> = emptyList(),
-    val totalPool: Double = 0.0,
-    val totalPaidIn: Double = 0.0,
-    val totalPayedOut: Double = 0.0,
-    val prizePool: Double = 0.0,
-    val buyInPool: Double = 0.0,
-    val foodPool: Double = 0.0,
-    val bountyPool: Double = 0.0,
-    val rebuyPool: Double = 0.0,
-    val addonPool: Double = 0.0,
+    val pool: PoolBreakdown = PoolBreakdown.EMPTY,
+    /** Entry fees of players marked as bought in, plus every recorded rebuy and add-on. */
+    val totalPaidInCents: Long = 0L,
+    /** Winnings of the players marked as paid out. */
+    val totalPaidOutCents: Long = 0L,
     val totalRebuyCount: Int = 0,
     val totalAddonCount: Int = 0,
     val activePlayers: Int = 0,
     val payedOutCount: Int = 0,
-    val buyInAmount: Double = 20.0,
-    val foodAmount: Double = 5.0,
-    val bountyAmount: Double = 2.0,
-    val rebuyAmount: Double = 0.0,
-    val addonAmount: Double = 0.0,
+    val money: MoneySettings = MoneySettings.DEFAULT,
     val showResetDialog: Boolean = false,
     val eliminationOrder: List<Int> = emptyList(),
     val pendingAction: PendingPlayerAction? = null,
-    val knockoutCounts: @RawValue Map<Int, Int> = emptyMap(),
-    val payoutEligiblePlayerIds: @RawValue Set<Int> = emptySet(),
-    val payoutPositions: @RawValue List<PayoutPosition> = emptyList(),
-    val payoutWeights: @RawValue List<Int> = emptyList(),
+    val knockoutCounts: Map<Int, Int> = emptyMap(),
+    /** Players who have won something: a paid place, a bounty or both. */
+    val payoutEligiblePlayerIds: Set<Int> = emptySet(),
+    val payoutTable: PayoutTable = PayoutTable.EMPTY,
+    val payoutSettings: PayoutSettings = PayoutSettings(
+        weights = emptyList(),
+        preset = PayoutPreset.DEFAULT,
+        rounding = PayoutRounding.DEFAULT
+    ),
+    /** Player id to finishing place, for places already decided. */
+    val placeByPlayer: Map<Int, Int> = emptyMap(),
     val isTimerRunning: Boolean = false,
     val showWeightsDialog: Boolean = false,
     val showPoolSummaryDialog: Boolean = false
-) : Parcelable
+) {
+    val totalPoolCents: Long get() = pool.totalCents
+    val prizePoolCents: Long get() = pool.prizePoolCents
+
+    /** What the bank pays back out in total: the prize pool plus the bounty pool. */
+    val payableCents: Long get() = pool.payableCents
+    val payoutWeights: List<Int> get() = payoutSettings.weights
+    val isRebuyEnabled: Boolean get() = money.rebuyCents > 0L
+    val isAddOnEnabled: Boolean get() = money.addOnCents > 0L
+}
 
 @Parcelize
 data class PendingPlayerAction(
@@ -71,10 +75,14 @@ data class PendingPlayerAction(
     val selectablePlayerIds: List<Int> = emptyList(),
     val selectedPlayerId: Int? = null,
     val allowUnassignedSelection: Boolean = false,
-    val payoutAmount: Double = 0.0,
-    val buyInPayout: Double = 0.0,
-    val buyInCost: Double = 0.0,
-    val knockoutBonus: Double = 0.0,
-    val kingsBounty: Double = 0.0,
+    /** Net pay: everything won minus everything paid in. */
+    val payoutAmountCents: Long = 0L,
+    /** This player's row of the payout table. */
+    val buyInPayoutCents: Long = 0L,
+    val buyInCostCents: Long = 0L,
+    val knockoutBonusCents: Long = 0L,
+    val kingsBountyCents: Long = 0L,
+    /** Bounties of knockouts nobody was credited with, which the champion collects. */
+    val unclaimedBountyCents: Long = 0L,
     val knockoutCount: Int = 0
 ) : Parcelable

@@ -2,7 +2,8 @@
 # One-command headless smoke tour of the whole app.
 #
 #   scripts/device/tour.sh                 # boot (if needed) + build + install + tour
-#   scripts/device/tour.sh --no-build      # reuse the last built debug APK
+#   scripts/device/tour.sh --no-build      # reuse the last built APK
+#   scripts/device/tour.sh --release       # tour the minified (R8) release build instead of debug
 #   scripts/device/tour.sh --keep-going    # don't stop at the first failing step
 #   scripts/device/tour.sh --stop          # shut the emulator down afterwards
 #
@@ -14,13 +15,14 @@
 #         (also symlinked as build/device-reports/latest). Exit code 0 == all steps passed.
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-BUILD=1; KEEP_GOING=0; STOP_AFTER=0
+BUILD=1; KEEP_GOING=0; STOP_AFTER=0; VARIANT=debug
 for arg in "$@"; do
   case "$arg" in
     --no-build) BUILD=0 ;;
+    --release) VARIANT=release ;;
     --keep-going) KEEP_GOING=1 ;;
     --stop) STOP_AFTER=1 ;;
-    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
     *) die "unknown option: $arg" ;;
   esac
 done
@@ -46,8 +48,8 @@ t=$(date +%s)
 BOOT_SECS=$(since "$t")
 
 t=$(date +%s)
-if (( BUILD )); then "$DEVICE_SCRIPTS/install.sh" | tee -a "$LOG"
-else "$DEVICE_SCRIPTS/install.sh" --no-build | tee -a "$LOG"; fi
+if (( BUILD )); then "$DEVICE_SCRIPTS/install.sh" "--$VARIANT" | tee -a "$LOG"
+else "$DEVICE_SCRIPTS/install.sh" "--$VARIANT" --no-build | tee -a "$LOG"; fi
 INSTALL_SECS=$(since "$t")
 
 adb_ logcat -b all -c >/dev/null 2>&1 || true
@@ -80,7 +82,16 @@ step() {
   t1=$(date +%s%N)
   local log_mark; log_mark=$(wc -l < "$LOG"); LAST_UI=""
   echo "=== $id: $desc" >>"$LOG"
-  if "$fn" >>"$LOG" 2>&1 && crash_check >>"$LOG" 2>&1; then
+  # Run the step with errexit so ANY failing command fails it, not just the last one. (Called
+  # as an `if` condition, bash ignores `set -e` inside the function, so an assertion in the
+  # middle of a step could fail unnoticed.) The subshell keeps LAST_UI, so hand it back.
+  local rc
+  set +e
+  ( set -e; "$fn"; printf '%s' "$LAST_UI" > "$OUT/.last-ui" ) >>"$LOG" 2>&1
+  rc=$?
+  set -e
+  LAST_UI="$(cat "$OUT/.last-ui" 2>/dev/null || true)"; rm -f "$OUT/.last-ui"
+  if (( rc == 0 )) && crash_check >>"$LOG" 2>&1; then
     status=PASS; PASSED=$((PASSED + 1)); detail=""
   else
     status=FAIL; FAILED=$((FAILED + 1))
@@ -106,7 +117,7 @@ finish() {
     echo "# Device tour report: $verdict"
     echo
     echo "- When: $(date -Is)"
-    echo "- App: $APP_ID $APP_VERSION (debug)"
+    echo "- App: $APP_ID $APP_VERSION ($VARIANT)"
     echo "- Device: $ANDROID_SERIAL, AVD \`$PP_AVD\`, Android $(adb_ shell getprop ro.build.version.release | tr -d '\r') (API $(adb_ shell getprop ro.build.version.sdk | tr -d '\r')), $(adb_ shell wm size | awk '{print $NF}' | tr -d '\r') @ $(adb_ shell wm density | awk '{print $NF}' | tr -d '\r')dpi"
     echo "- Steps: $PASSED passed, $FAILED failed, of $STEP_NO run"
     echo "- Logcat: $fatal FATAL EXCEPTION, $anr ANR (full log: [logcat.txt](logcat.txt))"
@@ -128,36 +139,180 @@ finish() {
 # Tournament ---------------------------------------------------------------
 s_launch() {
   ui launch --clear
-  ui assert-text "Poker Payout" "text~=Tournament" Bank Tools "Tournament Configuration" "Buy-in (\$)" "Start timer"
+  # The clock card sits below the configuration; its controls are below the fold until it collapses
+  ui assert-text "Poker Payout" "text~=Tournament" Bank Tools "Tournament Configuration" "Buy-in (\$)" "LEVEL 1" READY
 }
 s_tournament_config() {
-  ui set-text 'text=Buy-in ($)' --value 25
+  # One keystroke at a time, with recomposition in between: v1.1.12 moved the cursor in front of
+  # the '.' after every change and turned "12.50" into "120.5" (B10).
+  ui set-text 'text=Buy-in ($)' --value ""
+  for key in 1 2 . 5 0; do ui type "$key"; done
+  ui assert-text text=12.50 || return 1
   ui set-text 'text=Bounty ($)' --value 5
-  ui slide class=SeekBar --frac 0.22          # players slider 3..30 -> ~9
-  ui assert-text text=25 text=5
-  ui find 're=^(8|9|10)$'                     # player count label moved off the default 5
+  ui slide class=SeekBar --frac 0.26          # players slider 3..30 -> ~10
+  ui assert-text text=12.50 text=5            # leaving the field shows the saved amount
+  ui find 're=^(9|10|11)$'                    # player count label moved off the default 5
 }
+
+# The payout table on screen: the place rows must add up to the "Prize pool" shown above them,
+# to the cent; with a unit (cents) every place below 1st must be a whole number of units.
+check_payout_table() { # $1 = ui dump, $2 = rounding unit in cents (default 100)
+  python3 - "$1" "${2:-100}" <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+unit = int(sys.argv[2])
+nodes = []
+for n in ET.parse(sys.argv[1]).iter("node"):
+    b = [int(v) for v in re.findall(r"-?\d+", n.get("bounds", ""))]
+    if n.get("text") and len(b) == 4:
+        nodes.append((n.get("text"), (b[1] + b[3]) // 2, b[0]))
+money = re.compile(r"^\$([\d,]+)\.(\d\d)$")
+cents = lambda t: int(money.match(t).group(1).replace(",", "")) * 100 + int(money.match(t).group(2))
+def on_row(y):
+    return [t for t, cy, _ in nodes if abs(cy - y) < 25 and money.match(t)]
+label = next((n for n in nodes if n[0] == "Prize pool"), None)
+if not label:
+    sys.exit("[ui] FAIL no 'Prize pool' on screen")
+pool = cents(on_row(label[1])[0])
+rows = sorted((cy, t) for t, cy, _ in nodes if re.fullmatch(r"\d+(st|nd|rd|th)", t) and cy > label[1])
+amounts = []
+for cy, place in rows:
+    found = on_row(cy)
+    if not found:
+        sys.exit("[ui] FAIL no amount on the %s row" % place)
+    amounts.append(cents(found[0]))
+print("payout table: pool %d cents, places %s = %d" % (pool, amounts, sum(amounts)))
+if not amounts:
+    sys.exit("[ui] FAIL no payout rows under the prize pool")
+if sum(amounts) != pool:
+    sys.exit("[ui] FAIL payout rows add up to %d cents, prize pool is %d" % (sum(amounts), pool))
+if any(a % unit for a in amounts[1:]):
+    sys.exit("[ui] FAIL places below 1st are not whole multiples of %d cents: %s" % (unit, amounts))
+if amounts != sorted(amounts, reverse=True):
+    sys.exit("[ui] FAIL a lower place pays more than a higher one: %s" % amounts)
+PY
+}
+s_payouts_tab() {
+  ui tap text=Payouts
+  ui assert-text "Prize pool" Top-heavy Standard Flat 1st "desc=Edit payout structure" || return 1
+  check_payout_table "$PP_UI_LAST_XML"
+}
+s_payouts_preset() {
+  ui tap text=Top-heavy
+  ui assert-text 'text=60%' 'text=30%' 'text=10%' || return 1   # 10 players -> 3 places, 60/30/10
+  check_payout_table "$PP_UI_LAST_XML"
+}
+s_payouts_editor() {
+  ui tap "desc=Edit payout structure"
+  ui assert-text "text~=Payout Structure" "Round to" 'text=$5' "Places paid" Save Cancel
+}
+s_payouts_rounded() {
+  ui tap 'text=$5'
+  ui tap text=Save
+  ui assert-text "text~=rounded to \$5" || return 1
+  check_payout_table "$PP_UI_LAST_XML" 500
+}
+# The blind setup and the clock (PP-015/020/025/026/051). Default setup: 3 h of 20-minute
+# rounds from a 50 chip to 5,000 = 9 levels, 50/100 to 5,000/10,000.
 s_blinds_tab() {
   ui tap text=Blinds
-  ui assert-text "Duration (Hours)" "Round Length (Min)" "Smallest Chip" "Starting Chips"
+  ui assert-text "Duration (Hours)" "Round Length (Min)" "Smallest Chip" "Starting Chips" Breaks \
+    "Big-blind ante" "text~=9 levels, 50 / 100 to 5,000 / 10,000"
+}
+s_smallest_chip() {
+  # PP-051: a menu of real chip values, each with its chip colour, not a free-entry field. The menu
+  # is its own window, so a dump shows only its visible items (the list scrolls on past 250).
+  ui tap "has=Smallest Chip|50" clickable
+  ui assert-text text=1 text=5 text=10 text=25 text=50 text=100 text=250 || return 1
+  ui tap text=25
+  ui wait-gone text=250
+  ui assert-text "has=Smallest Chip|25" "text~=9 levels, 25 / 50 to 5,000 / 10,000"
+}
+s_invalid_setup() {
+  # PP-020: an invalid setup says why and offers the nearest valid round length
+  ui set-text "text=Round Length (Min)" --value 25
+  ui enter
+  ui assert-text "text~=Can't build blinds" "text~=doesn't divide into 25-minute rounds" "Use 20-min rounds (9 levels)"
+}
+s_invalid_setup_fixed() {
+  ui tap "text=Use 20-min rounds (9 levels)"
+  ui wait-gone "text~=Can't build blinds"
+  ui assert-text "has=Round Length (Min)|20" "text~=9 levels, 25 / 50 to 5,000 / 10,000"
+}
+s_breaks() {
+  # PP-026: a break every 4 levels with a note; the verdict counts the breaks and the new end
+  ui tap "has=Breaks|Off" clickable
+  ui tap "text=Every 4 levels"
+  ui assert-text "Break (Min)" "Break note" "text~=9 levels, 25 / 50 to 5,000 / 10,000 · 2 breaks · ends at 3:20" || return 1
+  ui set-text "text=Break note" --value "Last rebuy"
+  ui enter                                    # leaves the note; it used to click Reset instead
+  ui assert-text "text=Last rebuy" "has=Breaks|Every 4 levels" "has=Break (Min)|10"
 }
 s_config_collapsed() {
+  ui scroll up --times 4
   ui tap desc=Collapse
   ui wait desc=Expand
   ui wait-gone "text=Buy-in (\$)"
+  # Before the start the clock already shows level 1, labelled, with its full time
+  ui assert-text "LEVEL 1" READY "LEVEL TIME LEFT" text=20:00 BLINDS "text=25 / 50" "text=Next: 50 / 100" "Start timer"
 }
 s_timer_running() {
   ui tap "desc=Start timer"
-  ui assert-text "Level 1" "Level 2" "Tournament Locked" "Next blind level"
-  ui find 're=^[0-9]+:[0-9]{2}:[0-9]{2}$'
+  ui assert-text "LEVEL 1" "LEVEL TIME LEFT" "text=Next: 50 / 100" "Tournament Locked" "Pause timer" \
+    "text=Tournament:" "Next blind level" || return 1
+  ui find 're=^1[0-9]:[0-9]{2}$'            # the level countdown, under 20:00
 }
 s_timer_next_level() {
   ui tap "desc=Next blind level"
-  ui assert-text "Level 2" "Previous blind level"
+  ui assert-text "LEVEL 2" "text=50 / 100" "text~=Next: " "Previous blind level"
+}
+s_timer_break() {
+  ui tap "desc=Next blind level"; ui wait "LEVEL 3"
+  ui tap "desc=Next blind level"; ui wait "LEVEL 4"
+  # The last level before the break says what comes next, and the schedule (below the clock)
+  # shows the break with its note
+  ui assert-text "text=Next: Break · 10 min" || return 1
+  ui scroll-to "text=☕ Break · 10 min" --max 3
+  ui assert-text "text=☕ Break · 10 min" "text~=Last rebuy" || return 1
+  ui scroll up --times 3
+  ui tap "desc=Next blind level"
+  ui assert-text BREAK "BREAK TIME LEFT" "text=Last rebuy" "text~=Next: Level 5 · " || return 1
+  ui find 're=^(10:00|9:[0-9]{2})$'
 }
 s_timer_paused() {
-  ui tap 're=^[0-9]+:[0-9]{2}:[0-9]{2}$'
-  ui assert-text "Resume timer"
+  # PP-046: the play button sits below the digits instead of over them
+  ui tap "desc=Pause timer"
+  ui assert-text "Resume timer" PAUSED "BREAK TIME LEFT"
+}
+# Width x height of the current screen, from the PNG header of a screencap.
+screen_size() {
+  adb_ exec-out screencap -p | python3 -c 'import sys,struct; d=sys.stdin.buffer.read(24); print("%dx%d" % struct.unpack(">II", d[16:24]))'
+}
+require_landscape() {
+  local size; size="$(screen_size)"; echo "screen $size"
+  [[ "${size%x*}" -gt "${size#*x}" ]] || { echo "[ui] FAIL table view isn't landscape ($size)"; return 1; }
+}
+s_table_view() {
+  # PP-025: a full-screen landscape clock, here on the paused break
+  ui tap "desc=Table view"
+  ui wait "desc=Exit table view"
+  ui assert-text BREAK "BREAK TIME LEFT" "text=Last rebuy" "Resume timer" PAUSED || return 1
+  require_landscape
+}
+s_table_view_level() {
+  # The table view's own controls: resume, then on to level 5 with the clock running
+  ui tap "desc=Resume timer"
+  ui wait "desc=Pause timer"
+  ui tap "desc=Next blind level"
+  ui assert-text "LEVEL 5" "LEVEL TIME LEFT" BLINDS "text~=Next: " "Pause timer" "text=Tournament:" || return 1
+  require_landscape
+}
+s_table_view_exit() {
+  ui tap "desc=Exit table view"
+  ui wait-gone "desc=Exit table view"
+  sleep 2
+  local size; size="$(screen_size)"; echo "screen $size"
+  [[ "${size%x*}" -lt "${size#*x}" ]] || { echo "[ui] FAIL not back to portrait ($size)"; return 1; }
+  ui assert-text "LEVEL 5" "Pause timer"
 }
 s_tournament_reset_dialog() {
   ui tap "desc=Reset All Data"
@@ -166,7 +321,17 @@ s_tournament_reset_dialog() {
 s_tournament_reset_confirm() {
   ui tap text=Reset
   ui wait-gone "text=Reset tournament?"
-  ui assert-text "Start timer"
+  # The configuration opens again, so the clock card is below it: scroll to it, then back up
+  ui assert-text "LEVEL 1" READY || return 1
+  ui scroll-to "Start timer" --max 4
+  ui assert-text "LEVEL TIME LEFT" text=20:00 "text=50 / 100" "Start timer" || return 1
+  ui scroll up --times 4
+}
+s_rebuy_amount() {
+  ui tap text=Player
+  ui set-text 'text=Rebuy ($)' --value 10
+  ui enter
+  ui assert-text text=10
 }
 
 # Bank ---------------------------------------------------------------------
@@ -175,8 +340,11 @@ s_bank() {
   ui assert-text "text~=Bank Tracker" "text~=Pool Summary" "Player 1" "Buy-in pending" "Payout pending"
 }
 s_bank_rename() {
+  # No Done/Enter: switching tabs must keep the name (B18; v1.1.12 dropped it)
   ui set-text "text=Player 1" class=EditText --value Alice
-  ui enter                                    # names are only committed on the IME action (Done/Enter)
+  ui tap text=Tournament --index 0
+  ui wait "text~=Tournament Configuration"
+  ui tap text=Bank
   ui assert-text text=Alice
 }
 s_bank_buyin_dialog() {
@@ -187,30 +355,83 @@ s_bank_buyin_done() {
   ui tap text=Okay
   ui assert-text "Buy-in completed"
 }
+s_bank_rebuy() {
+  ui tap "desc=Rebuy available" --index 0
+  ui assert-text "text~=has purchased a rebuy" Okay || return 1
+  ui tap text=Okay
+  ui assert-text "desc=Rebuy active" "text=1x"
+}
 s_bank_knockout_dialog() {
   ui tap "desc=Still in" --index 1
   ui assert-text Okay Cancel
 }
 s_bank_knockout_done() {
   ui tap text=Okay
-  ui assert-text "Knocked out"
+  ui assert-text "Knocked out" "desc~=Finished " || return 1
+  check_placement_badge "$PP_UI_LAST_XML"
+}
+# The knocked-out player's place sits on the name field's top edge, clear of the name (PP-047;
+# v1.1.12 painted a big number over it).
+check_placement_badge() {
+  python3 - "$1" <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+def box(n):
+    return [int(v) for v in re.findall(r"-?\d+", n.get("bounds", ""))]
+all_nodes = list(ET.parse(sys.argv[1]).iter("node"))
+badges = [n for n in all_nodes if re.fullmatch(r"Finished \d+(st|nd|rd|th)", n.get("content-desc") or "")]
+fields = [n for n in all_nodes if "EditText" in (n.get("class") or "")]
+if not badges:
+    sys.exit("[ui] FAIL no placement badge")
+for badge in badges:
+    bx1, by1, bx2, by2 = box(badge)
+    field = next((f for f in fields if box(f)[0] <= bx1 <= box(f)[2] and box(f)[1] - 40 <= by2 <= box(f)[3]), None)
+    if field is None:
+        sys.exit("[ui] FAIL badge %r is not on a name field" % badge.get("content-desc"))
+    fx1, fy1, fx2, fy2 = box(field)
+    text_top = fy1 + (fy2 - fy1) * 0.3   # the name is centred; its glyphs start below this line
+    print("badge %r %s on field %r %s" % (badge.get("content-desc"), box(badge), field.get("text"), box(field)))
+    if by2 > text_top:
+        sys.exit("[ui] FAIL badge bottom %d reaches into the name (text starts ~%d)" % (by2, text_top))
+PY
 }
 s_weights_editor() {
   ui tap "desc=Edit payout weights"
-  ui assert-text "text~=Edit Payout Weights" "Higher weights = larger payouts." Save Cancel
+  ui assert-text "text~=Payout Structure" "Higher weights = larger payouts." "Round to" Save Cancel
 }
 s_weights_close() {
   ui tap text=Cancel
-  ui wait-gone "text~=Edit Payout Weights"
+  ui wait-gone "text~=Payout Structure"
 }
 s_pool_summary() {
   ui tap "desc=Pool Summary Details"
-  ui assert-text "text~=Pool Summary Breakdown" "Prize Pool:" "Total Pool:" Close
+  ui assert-text "text~=Pool Summary Breakdown" "Prize Pool:" "Rebuy Pool:" "Total Pool:" Payouts 1st Close
 }
 s_bank_scrolled() {
   ui tap text=Close
   ui scroll down --times 2
   ui assert-text "Buy-in pending"
+}
+
+# Clearing the Rebuy amount to retype it must not wipe recorded rebuys (PP-014).
+s_rebuy_retype() {
+  ui tap text=Tournament --index 0
+  ui set-text 'text=Rebuy ($)' --value ""
+  for key in 1 5; do ui type "$key"; done
+  ui tap text=Bank                            # leave the field by switching tabs
+  ui assert-text "desc=Rebuy active" "text=1x"
+}
+s_rebuy_zero_prompt() {
+  ui tap text=Tournament --index 0
+  ui set-text 'text=Rebuy ($)' --value ""
+  ui enter                                    # leave it empty: asks before clearing anything
+  ui assert-text "Turn rebuys off?" Keep "text~=Clear rebuy"
+}
+s_rebuy_kept() {
+  ui tap text=Keep
+  ui wait-gone "Turn rebuys off?"
+  ui assert-text text=15 || return 1          # the saved amount comes back into the field
+  ui tap text=Bank
+  ui assert-text "desc=Rebuy active" "text=1x"
 }
 
 # Tools --------------------------------------------------------------------
@@ -335,7 +556,7 @@ s_chip_calc_scrolled() {
 }
 s_back_to_tournament() {
   ui tap text=Tournament --index 0
-  ui assert-text "text~=Tournament Configuration" "Start timer"
+  ui assert-text "text~=Tournament Configuration" "LEVEL 1" READY
 }
 s_app_alive() {
   local pid; pid="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"
@@ -344,24 +565,41 @@ s_app_alive() {
 }
 
 step launch               "Fresh launch (data cleared), Tournament tab"         s_launch
-step tournament-config    "Enter buy-in 25, bounty 5, players ~9"               s_tournament_config
-step blinds-tab           "Blinds tab of the configuration panel"               s_blinds_tab
-step config-collapsed     "Collapse configuration (timer not started)"          s_config_collapsed
-step timer-running        "Start the timer; blind levels appear"                s_timer_running
-step timer-next-level     "Skip to the next blind level"                        s_timer_next_level
-step timer-paused         "Pause the timer"                                     s_timer_paused
+step tournament-config    "Type buy-in 12.50 key by key, bounty 5, players ~10" s_tournament_config
+step payouts-tab          "Payouts tab: rows add up to the prize pool"          s_payouts_tab
+step payouts-preset       "Top-heavy preset: 60/30/10, still adds up"           s_payouts_preset
+step payouts-editor       "Payout structure editor"                             s_payouts_editor
+step payouts-rounded      "Round to \$5: lower places in \$5, adds up"           s_payouts_rounded
+step blinds-tab           "Blinds tab: setup, breaks, ante, verdict"            s_blinds_tab
+step smallest-chip        "Smallest chip picker: pick 25"                       s_smallest_chip
+step invalid-setup        "25-minute rounds: reason and nearest fix shown"      s_invalid_setup
+step invalid-setup-fixed  "Apply the fix: 20-minute rounds"                     s_invalid_setup_fixed
+step breaks               "Breaks every 4 levels, note 'Last rebuy'"            s_breaks
+step config-collapsed     "Collapse configuration; clock shows level 1 ready"   s_config_collapsed
+step timer-running        "Start: level countdown, Next, tournament line"       s_timer_running
+step timer-next-level     "Skip to level 2"                                     s_timer_next_level
+step timer-break          "Skip to the first break"                             s_timer_break
+step timer-paused         "Pause on the break"                                  s_timer_paused
+step table-view           "Table view: full-screen landscape clock, on break"   s_table_view
+step table-view-level     "Table view: resume, next level, clock running"       s_table_view_level
+step table-view-exit      "Leave table view: back to portrait"                  s_table_view_exit
 step tournament-reset     "Reset confirmation dialog"                           s_tournament_reset_dialog
 step tournament-reset-ok  "Confirm reset; timer cleared"                        s_tournament_reset_confirm
+step rebuy-amount         "Rebuy amount \$10 for the Bank steps"                 s_rebuy_amount
 step bank                 "Bank tab, default players"                           s_bank
-step bank-rename          "Rename Player 1 to Alice"                            s_bank_rename
+step bank-rename          "Rename Player 1 to Alice, switch tabs, name kept"    s_bank_rename
 step bank-buyin-dialog    "Buy-in action dialog"                                s_bank_buyin_dialog
 step bank-buyin-done      "Buy-in confirmed"                                    s_bank_buyin_done
+step bank-rebuy           "Record a rebuy"                                      s_bank_rebuy
 step bank-knockout-dialog "Knock-out dialog for Player 2"                       s_bank_knockout_dialog
-step bank-knockout-done   "Knock-out confirmed"                                 s_bank_knockout_done
+step bank-knockout-done   "Knock-out confirmed; place badge clear of the name" s_bank_knockout_done
 step weights-editor       "Payout weights editor dialog"                        s_weights_editor
 step weights-closed       "Cancel weights editor"                               s_weights_close
 step pool-summary         "Pool summary breakdown dialog"                       s_pool_summary
 step bank-scrolled        "Bank list scrolled down"                             s_bank_scrolled
+step rebuy-retype         "Clear and retype the Rebuy amount; rebuy kept"       s_rebuy_retype
+step rebuy-zero-prompt    "Leave Rebuy empty: asks before clearing"             s_rebuy_zero_prompt
+step rebuy-kept           "Keep: amount and rebuy stay"                         s_rebuy_kept
 step tools                "Tools home grid"                                     s_tools
 step settings-dialog      "Settings tile (volume dialog)"                       s_settings_dialog
 step odds-empty           "Odds calculator, empty state"                        s_odds_empty

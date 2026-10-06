@@ -38,6 +38,15 @@ adb_() { "$ADB" -s "$ANDROID_SERIAL" "$@"; }
 
 [[ -x "$ADB" ]] || die "adb not found at $ADB (set ANDROID_HOME)"
 
+# Run a command without the caller's file descriptors above 2. Under
+# `flock /tmp/pokerpayout-emulator.lock scripts/device/tour.sh`, the lock is an inherited fd; a
+# daemon started inside (the emulator, the adb server) would keep it, and the lock would stay held
+# after the tour ends, so the next run waits forever.
+without_fds() { python3 -c 'import os, sys; os.closerange(3, 65536); os.execvp(sys.argv[1], sys.argv[1:])' "$@"; }
+
+# Any adb call starts the adb server if it isn't running; start it here, without our fds.
+without_fds "$ADB" start-server >/dev/null 2>&1 || true
+
 device_online() {
   [[ "$("$ADB" -s "$ANDROID_SERIAL" get-state 2>/dev/null || true)" == "device" ]]
 }

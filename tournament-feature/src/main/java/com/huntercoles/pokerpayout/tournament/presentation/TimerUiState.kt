@@ -1,97 +1,134 @@
 package com.huntercoles.pokerpayout.tournament.presentation
 
-import android.os.Parcelable
-import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
-import kotlinx.parcelize.Parcelize
+import com.huntercoles.pokerpayout.core.utils.BlindSetupProblem
+import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
+import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSegment
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockTimeline
+import com.huntercoles.pokerpayout.tournament.domain.clock.LevelSegment
 
-enum class TimerDirection {
-    COUNTDOWN, COUNTUP
-}
+/** How urgent the time left in the current level is. Checked most urgent first (B14). */
+enum class TimeTone { NORMAL, LOW, CRITICAL }
 
-@Parcelize
 data class TimerUiState(
-    val gameDurationMinutes: Int = TournamentDefaults.GAME_DURATION_HOURS * 60,
-    val currentTimeSeconds: Int = TournamentDefaults.GAME_DURATION_HOURS * 60 * 60,
-    val timerDirection: TimerDirection = TimerDirection.COUNTDOWN,
+    val config: BlindConfiguration = BlindConfiguration(),
+    /** Seconds of play since the start, pauses excluded. The one clock value; all else derives from it. */
+    val elapsedSeconds: Int = 0,
     val isRunning: Boolean = false,
     val isFinished: Boolean = false,
-    val blindConfiguration: BlindConfiguration = BlindConfiguration(),
-    val isBlindConfigCollapsed: Boolean = false, // Start auto open
-    val hasTimerStarted: Boolean = false, // Track if timer has ever been started (stays true until reset)
-    val playerCount: Int = TournamentDefaults.PLAYER_COUNT,
+    /** True from the first start until reset. */
+    val hasTimerStarted: Boolean = false,
+    /** The regular levels, empty when the setup is invalid. */
     val baseBlindLevels: List<BlindLevel> = emptyList(),
-    val blindLevels: List<BlindLevel> = emptyList(),
-    val currentBlindLevelIndex: Int = 0,
-    val overtimeLevelsRevealed: Int = 0, // Number of overtime levels added dynamically (0-3)
-    val finalTimeSeconds: Int = TournamentDefaults.GAME_DURATION_HOURS * 60 * 60, // Default to tournament duration
-    val showInvalidConfigDialog: Boolean = false
-) : Parcelable {
+    val timeline: ClockTimeline = ClockTimeline.EMPTY,
+    /** Why the blind setup can't be played, or null when it can. */
+    val setupProblem: BlindSetupProblem? = null,
+    val showInvalidConfigDialog: Boolean = false,
+    val table: TableStats = TableStats(),
+    val isTableView: Boolean = false
+) {
+    val gameDurationMinutes: Int get() = config.gameDurationMinutes
 
-    // Convert minutes to hours for UI display
-    val gameDurationHours: Int
-        get() = gameDurationMinutes / 60
-    
-    val totalDurationSeconds: Int
-        get() = gameDurationMinutes * 60
+    val currentSegmentIndex: Int get() = timeline.segmentIndexAt(elapsedSeconds)
 
-    val isOvertime: Boolean
-        get() = timerDirection == TimerDirection.COUNTUP
+    val currentSegment: ClockSegment? get() = timeline.segmentAt(elapsedSeconds)
 
-    val formattedTime: String
+    val isOnBreak: Boolean get() = currentSegment is BreakSegment
+
+    val currentBreak: BreakSegment? get() = currentSegment as? BreakSegment
+
+    /** Regular levels plus the overtime levels that have started. */
+    val blindLevels: List<BlindLevel>
+        get() = timeline.levels.filter { !it.isOvertime || it.startSeconds <= elapsedSeconds }.map { it.level }
+
+    /** The level being played, or during a break the one just played. */
+    val currentLevelSegment: LevelSegment?
         get() {
-            val rawSeconds = when (timerDirection) {
-                TimerDirection.COUNTDOWN -> if (currentTimeSeconds >= 0) currentTimeSeconds else -currentTimeSeconds
-                TimerDirection.COUNTUP -> currentTimeSeconds.coerceAtLeast(0)
-            }
-
-            val hours = rawSeconds / 3600
-            val minutes = (rawSeconds % 3600) / 60
-            val seconds = rawSeconds % 60
-            val formatted = String.format("%d:%02d:%02d", hours, minutes, seconds)
-            return if (isOvertime) "+$formatted" else formatted
+            val index = currentSegmentIndex
+            if (index < 0) return null
+            return timeline.segments.take(index + 1).lastOrNull { it is LevelSegment } as LevelSegment?
         }
 
-    val progress: Float
-        get() = when (timerDirection) {
-            TimerDirection.COUNTDOWN -> {
-                if (totalDurationSeconds > 0) {
-                    val remaining = currentTimeSeconds.coerceAtLeast(0)
-                    (1f - (remaining.toFloat() / totalDurationSeconds)).coerceIn(0f, 1f)
-                } else 0f
-            }
-            TimerDirection.COUNTUP -> {
-                // Stay at 100% (red/maxed out) for all of overtime
-                1f
-            }
-        }
+    val currentBlindLevelIndex: Int get() = currentLevelSegment?.index ?: 0
 
-    val currentBlindLevel: BlindLevel?
-        get() = blindLevels.getOrNull(currentBlindLevelIndex)
+    val currentBlindLevel: BlindLevel? get() = if (isOnBreak) null else currentLevelSegment?.level
 
-    val nextBlindLevel: BlindLevel?
-        get() = blindLevels.getOrNull(currentBlindLevelIndex + 1)
+    /** The level after the current segment (after a break: the level it leads into). */
+    val nextLevelSegment: LevelSegment? get() = timeline.nextLevelAfter(currentSegmentIndex)
 
-    val nextLevelStartsInSeconds: Int?
+    val nextBlindLevel: BlindLevel? get() = nextLevelSegment?.level
+
+    val overtimeLevelsRevealed: Int get() = timeline.overtimeLevelsRevealedAt(elapsedSeconds)
+
+    val isOvertime: Boolean get() = !timeline.isEmpty && elapsedSeconds >= timeline.regularEndSeconds
+
+    /** Seconds left in the current level or break. */
+    val segmentRemainingSeconds: Int
+        get() = currentSegment?.let { (it.endSeconds - elapsedSeconds).coerceIn(0, it.durationSeconds) } ?: 0
+
+    val segmentProgress: Float
+        get() = currentSegment?.let { 1f - segmentRemainingSeconds.toFloat() / it.durationSeconds } ?: 0f
+
+    /** Until the scheduled end (regular levels and breaks); negative in overtime. */
+    val tournamentRemainingSeconds: Int get() = timeline.regularEndSeconds - elapsedSeconds
+
+    val tone: TimeTone
         get() {
-            val next = nextBlindLevel ?: return null
-            val targetSeconds = next.roundStartMinute * 60
-            val elapsedSeconds = when (timerDirection) {
-                TimerDirection.COUNTDOWN -> totalDurationSeconds - currentTimeSeconds
-                TimerDirection.COUNTUP -> totalDurationSeconds + currentTimeSeconds // Add overtime to tournament duration
+            val segment = currentSegment ?: return TimeTone.NORMAL
+            if (isFinished || !hasTimerStarted) return TimeTone.NORMAL
+            val fractionLeft = segmentRemainingSeconds.toDouble() / segment.durationSeconds
+            return when {
+                fractionLeft <= CRITICAL_FRACTION -> TimeTone.CRITICAL
+                fractionLeft <= LOW_FRACTION -> TimeTone.LOW
+                else -> TimeTone.NORMAL
             }
-            return (targetSeconds - elapsedSeconds).takeIf { it > 0 }
         }
 
-    val isTimeLow: Boolean
-        get() = when (timerDirection) {
-            TimerDirection.COUNTDOWN -> currentTimeSeconds <= totalDurationSeconds * 0.25 // Last 25%
-            TimerDirection.COUNTUP -> false // No "time low" warnings during overtime
-        }
+    val canGoBack: Boolean get() = currentSegmentIndex > 0
 
-    val isTimeCritical: Boolean
-        get() = when (timerDirection) {
-            TimerDirection.COUNTDOWN -> currentTimeSeconds <= totalDurationSeconds * 0.1 // Last 10%
-            TimerDirection.COUNTUP -> true // Keep progress bar red during all of overtime
+    /** Next is possible until the last overtime level. */
+    val canGoForward: Boolean
+        get() = currentSegmentIndex in 0 until timeline.segments.lastIndex
+
+    val maxOvertimeLevels: Int get() = BlindStructureCalculator.MAX_OVERTIME_LEVELS
+
+    companion object {
+        const val LOW_FRACTION = 0.25
+        const val CRITICAL_FRACTION = 0.10
+    }
+}
+
+/** Clock text: "12:34" under an hour, "1:02:03" from an hour. */
+object ClockFormat {
+    private const val SECONDS_PER_MINUTE = 60
+    private const val SECONDS_PER_HOUR = 3600
+
+    fun clock(totalSeconds: Int): String {
+        val seconds = totalSeconds.coerceAtLeast(0)
+        val hours = seconds / SECONDS_PER_HOUR
+        val minutes = seconds % SECONDS_PER_HOUR / SECONDS_PER_MINUTE
+        val rest = seconds % SECONDS_PER_MINUTE
+        return if (hours > 0) {
+            "%d:%02d:%02d".format(hours, minutes, rest)
+        } else {
+            "%d:%02d".format(minutes, rest)
         }
+    }
+
+    /** "2:47:12" for the tournament line; always shows hours. */
+    fun long(totalSeconds: Int): String {
+        val seconds = totalSeconds.coerceAtLeast(0)
+        return "%d:%02d:%02d".format(
+            seconds / SECONDS_PER_HOUR,
+            seconds % SECONDS_PER_HOUR / SECONDS_PER_MINUTE,
+            seconds % SECONDS_PER_MINUTE
+        )
+    }
+
+    /** "+0:20" style offset of a level from the start. */
+    fun offset(seconds: Int): String {
+        val minutes = seconds / SECONDS_PER_MINUTE
+        return "+%d:%02d".format(minutes / SECONDS_PER_MINUTE, minutes % SECONDS_PER_MINUTE)
+    }
 }

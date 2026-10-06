@@ -1,16 +1,14 @@
 package com.huntercoles.pokerpayout.tournament.di
 
-import com.huntercoles.pokerpayout.tournament.domain.usecase.CalculatePayoutsUseCase
-import com.huntercoles.pokerpayout.tournament.presentation.TournamentNavigationFactory
 import com.huntercoles.pokerpayout.core.navigation.NavigationFactory
+import com.huntercoles.pokerpayout.tournament.presentation.TournamentNavigationFactory
 import dagger.Binds
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
-import javax.inject.Singleton
 
+// CalculatePayoutsUseCase lives in core (shared with the Bank) and has an @Inject constructor.
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class TournamentFeatureModule {
@@ -18,12 +16,4 @@ abstract class TournamentFeatureModule {
     @Binds
     @IntoSet
     abstract fun bindTournamentNavigationFactory(factory: TournamentNavigationFactory): NavigationFactory
-
-    companion object {
-        @Provides
-        @Singleton
-        fun provideCalculatePayoutsUseCase(): CalculatePayoutsUseCase {
-            return CalculatePayoutsUseCase()
-        }
-    }
 }

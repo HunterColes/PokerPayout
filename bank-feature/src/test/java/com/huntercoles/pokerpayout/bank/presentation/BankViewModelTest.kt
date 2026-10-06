@@ -5,9 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
+import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
+import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
+import com.huntercoles.pokerpayout.core.utils.Money
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -19,13 +22,14 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.random.Random
 
 /**
- * BankViewModel against real preferences (Robolectric's in-memory SharedPreferences).
+ * BankViewModel against real preferences (Robolectric's in-memory SharedPreferences). Every amount
+ * is in cents and compared exactly.
  *
  * The preferences are deliberately not mocked. TimerPreferences and TournamentPreferences declare
  * a Flow property and a same-named getter (`val timerRunning: Flow<Boolean>` next to
@@ -66,8 +70,12 @@ class BankViewModelTest {
         val store = ViewModelStore().also { viewModelStores += it }
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                BankViewModel(tournamentPreferences, bankPreferences, timerPreferences) as T
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = BankViewModel(
+                tournamentPreferences,
+                bankPreferences,
+                timerPreferences,
+                SettleTournamentUseCase(CalculatePayoutsUseCase())
+            ) as T
         }
         val viewModel = ViewModelProvider(store, factory)[BankViewModel::class.java]
         settle()
@@ -88,19 +96,19 @@ class BankViewModelTest {
 
     private fun BankViewModel.player(id: Int) = uiState.value.players.first { it.id == id }
 
-    /** Eliminates [playerId] through the knock-out dialog, crediting [eliminatorId]. */
-    private fun BankViewModel.knockOut(playerId: Int, eliminatorId: Int) = send(
+    /** Eliminates [playerId] through the knock-out dialog, crediting [eliminatorId] (null: "Nobody"). */
+    private fun BankViewModel.knockOut(playerId: Int, eliminatorId: Int?) = send(
         BankIntent.ShowPlayerActionDialog(playerId, PlayerActionType.OUT),
         BankIntent.ConfirmPlayerActionWithCount(selectedPlayerId = eliminatorId)
     )
 
     /** Net pay the Pay-Out dialog shows for [playerId] (winnings minus everything they paid). */
-    private fun BankViewModel.netPayShownFor(playerId: Int): Double {
+    private fun BankViewModel.netPayShownFor(playerId: Int): Long {
         send(BankIntent.ShowPlayerActionDialog(playerId, PlayerActionType.PAYED_OUT))
         val pending = requireNotNull(uiState.value.pendingAction)
         assertTrue("dialog for player $playerId should offer to pay out", pending.apply)
         send(BankIntent.CancelPlayerAction)
-        return pending.payoutAmount
+        return pending.payoutAmountCents
     }
 
     private fun configure(
@@ -125,14 +133,14 @@ class BankViewModelTest {
     fun totalPaidInReflectsBuyIns() {
         configure(players = 5, buyIn = 20.0, food = 5.0)
         val viewModel = newViewModel()
-        assertEquals(0.0, viewModel.uiState.value.totalPaidIn, 0.001)
-        assertEquals(125.0, viewModel.uiState.value.totalPool, 0.001)
+        assertEquals(0L, viewModel.uiState.value.totalPaidInCents)
+        assertEquals(12_500L, viewModel.uiState.value.totalPoolCents)
 
         (1..3).forEach { viewModel.send(BankIntent.BuyInToggled(it)) }
-        assertEquals(75.0, viewModel.uiState.value.totalPaidIn, 0.001)
+        assertEquals(7_500L, viewModel.uiState.value.totalPaidInCents)
 
         (4..5).forEach { viewModel.send(BankIntent.BuyInToggled(it)) }
-        assertEquals(125.0, viewModel.uiState.value.totalPaidIn, 0.001)
+        assertEquals(12_500L, viewModel.uiState.value.totalPaidInCents)
     }
 
     @Test
@@ -150,19 +158,29 @@ class BankViewModelTest {
     }
 
     @Test
-    fun totalPayedOutTracksPayoutPositions() {
-        // Prize pool 5 x 20 = 100, split 35:20:15 -> 50.00, 28.57, 21.43
+    fun totalPaidOutTracksTheRoundedPayoutTable() {
+        // Prize pool 5 x 20 = 100, split 35:20:15 -> 2nd 28.57 -> $29, 3rd 21.43 -> $21, 1st $50
         configure(players = 5, buyIn = 20.0, food = 5.0, weights = listOf(35, 20, 15))
         val viewModel = newViewModel()
+        assertEquals(listOf(5_000L, 2_900L, 2_100L), viewModel.uiState.value.payoutTable.places.map { it.amountCents })
         (1..5).forEach { viewModel.send(BankIntent.BuyInToggled(it)) }
         (5 downTo 2).forEach { viewModel.send(BankIntent.OutToggled(it)) }
 
         listOf(3, 2, 1).forEach { viewModel.send(BankIntent.PayedOutToggled(it)) }
-        assertEquals(100.0, viewModel.uiState.value.totalPayedOut, 0.001)
+        assertEquals(10_000L, viewModel.uiState.value.totalPaidOutCents)
 
-        // Un-paying 2nd place (player 2) takes its 20/70 share back out of the total
+        // Un-paying 2nd place (player 2) takes its $29 back out of the total
         viewModel.send(BankIntent.PayedOutToggled(2))
-        assertEquals(71.428571, viewModel.uiState.value.totalPayedOut, 0.0001)
+        assertEquals(7_100L, viewModel.uiState.value.totalPaidOutCents)
+    }
+
+    @Test
+    fun theBankUsesTheSamePayoutTableAsTheTournamentTab() {
+        configure(players = 10, buyIn = 25.0, weights = listOf(35, 20, 15))
+        val viewModel = newViewModel()
+
+        val expected = CalculatePayoutsUseCase()(25_000, listOf(35, 20, 15), 10)
+        assertEquals(expected, viewModel.uiState.value.payoutTable)
     }
 
     @Test
@@ -200,7 +218,7 @@ class BankViewModelTest {
         assertEquals(PlayerActionType.BUY_IN, pending.actionType)
         assertTrue(pending.apply)
         // 100 buy-in + 10 food + 1 x 25 add-on
-        assertEquals(135.0, pending.buyInCost, 0.001)
+        assertEquals(13_500L, pending.buyInCostCents)
 
         viewModel.send(
             BankIntent.ConfirmPlayerAction,
@@ -210,7 +228,7 @@ class BankViewModelTest {
             BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.BUY_IN)
         )
         // 100 + 10 + 2 x 25
-        assertEquals(160.0, requireNotNull(viewModel.uiState.value.pendingAction).buyInCost, 0.001)
+        assertEquals(16_000L, requireNotNull(viewModel.uiState.value.pendingAction).buyInCostCents)
     }
 
     @Test
@@ -233,7 +251,7 @@ class BankViewModelTest {
         // The dialog's stepper can take the count back down to zero...
         viewModel.send(BankIntent.ConfirmPlayerActionWithCount(count = 0))
         assertEquals(0, viewModel.player(1).rebuys)
-        assertEquals(0.0, viewModel.uiState.value.rebuyPool, 0.001)
+        assertEquals(0L, viewModel.uiState.value.pool.rebuyCents)
 
         // ...and never past the cap.
         viewModel.send(
@@ -241,7 +259,7 @@ class BankViewModelTest {
             BankIntent.ConfirmPlayerActionWithCount(count = 999)
         )
         assertEquals(MAX_PURCHASE_COUNT, viewModel.player(1).rebuys)
-        assertEquals(MAX_PURCHASE_COUNT * 10.0, viewModel.uiState.value.rebuyPool, 0.001)
+        assertEquals(MAX_PURCHASE_COUNT * 1_000L, viewModel.uiState.value.pool.rebuyCents)
     }
 
     @Test
@@ -252,7 +270,7 @@ class BankViewModelTest {
         viewModel.send(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.REBUY))
 
         assertNull(viewModel.uiState.value.pendingAction)
-        assertEquals(0.0, viewModel.uiState.value.rebuyAmount, 0.001)
+        assertFalse(viewModel.uiState.value.isRebuyEnabled)
     }
 
     @Test
@@ -265,8 +283,8 @@ class BankViewModelTest {
             BankIntent.ConfirmPlayerAction
         )
         assertEquals(1, viewModel.player(1).addons)
-        assertEquals(15.0, viewModel.uiState.value.addonAmount, 0.001)
-        assertEquals(15.0, viewModel.uiState.value.addonPool, 0.001)
+        assertEquals(1_500L, viewModel.uiState.value.money.addOnCents)
+        assertEquals(1_500L, viewModel.uiState.value.pool.addOnCents)
 
         viewModel.send(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.ADDON))
         val pending = requireNotNull(viewModel.uiState.value.pendingAction)
@@ -275,7 +293,7 @@ class BankViewModelTest {
 
         viewModel.send(BankIntent.ConfirmPlayerActionWithCount(count = 0))
         assertEquals(0, viewModel.player(1).addons)
-        assertEquals(0.0, viewModel.uiState.value.addonPool, 0.001)
+        assertEquals(0L, viewModel.uiState.value.pool.addOnCents)
     }
 
     @Test
@@ -286,7 +304,7 @@ class BankViewModelTest {
         viewModel.send(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.ADDON))
 
         assertNull(viewModel.uiState.value.pendingAction)
-        assertEquals(0.0, viewModel.uiState.value.addonAmount, 0.001)
+        assertFalse(viewModel.uiState.value.isAddOnEnabled)
     }
 
     @Test
@@ -318,6 +336,7 @@ class BankViewModelTest {
         assertTrue(viewModel.player(1).out)
         assertEquals(listOf(1), viewModel.uiState.value.eliminationOrder)
         assertEquals(listOf(1), bankPreferences.getEliminationOrder())
+        assertEquals(mapOf(1 to 5), viewModel.uiState.value.placeByPlayer)
 
         viewModel.send(BankIntent.ShowPlayerActionDialog(playerId = 1, action = PlayerActionType.OUT))
         assertEquals(false, viewModel.uiState.value.pendingAction?.apply)
@@ -381,18 +400,18 @@ class BankViewModelTest {
         val viewModel = newViewModel()
 
         viewModel.send(BankIntent.BuyInToggled(1), BankIntent.BuyInToggled(2))
-        assertEquals(400.0, viewModel.uiState.value.totalPool, 0.001)
-        assertEquals(200.0, viewModel.uiState.value.totalPaidIn, 0.001)
+        assertEquals(40_000L, viewModel.uiState.value.totalPoolCents)
+        assertEquals(20_000L, viewModel.uiState.value.totalPaidInCents)
 
         viewModel.send(
             BankIntent.PlayerRebuyChanged(playerId = 1, rebuys = 2),
             BankIntent.PlayerRebuyChanged(playerId = 2, rebuys = 1)
         )
         with(viewModel.uiState.value) {
-            assertEquals(300.0, rebuyPool, 0.001)
+            assertEquals(30_000L, pool.rebuyCents)
             assertEquals(3, totalRebuyCount)
-            assertEquals(700.0, totalPool, 0.001)
-            assertEquals(500.0, totalPaidIn, 0.001)
+            assertEquals(70_000L, totalPoolCents)
+            assertEquals(50_000L, totalPaidInCents)
         }
 
         viewModel.send(
@@ -400,23 +419,19 @@ class BankViewModelTest {
             BankIntent.PlayerAddonChanged(playerId = 2, addons = 2)
         )
         with(viewModel.uiState.value) {
-            assertEquals(150.0, addonPool, 0.001)
+            assertEquals(15_000L, pool.addOnCents)
             assertEquals(3, totalAddonCount)
-            assertEquals(850.0, totalPool, 0.001)
-            assertEquals(650.0, totalPaidIn, 0.001)
-            assertEquals(850.0, prizePool, 0.001)
+            assertEquals(85_000L, totalPoolCents)
+            assertEquals(65_000L, totalPaidInCents)
+            assertEquals(85_000L, prizePoolCents)
         }
 
         (4 downTo 2).forEach { viewModel.send(BankIntent.OutToggled(it)) }
         listOf(3, 2, 1).forEach { viewModel.send(BankIntent.PayedOutToggled(it)) }
 
-        assertEquals(850.0, viewModel.uiState.value.totalPayedOut, 0.001)
+        assertEquals(85_000L, viewModel.uiState.value.totalPaidOutCents)
     }
 
-    @Ignore(
-        "PP-014: clearing the Rebuy/Add-on amount field (which emits 0) wipes every recorded " +
-            "purchase. Enable this when PP-014 lands; it is the spec for the fix."
-    )
     @Test
     fun purchasesSurviveTheAmountBeingClearedAndRetyped() {
         configure(players = 3, buyIn = 20.0, rebuy = 25.0, addOn = 15.0)
@@ -439,9 +454,25 @@ class BankViewModelTest {
         with(viewModel.uiState.value) {
             assertEquals(3, totalRebuyCount)
             assertEquals(3, totalAddonCount)
+            assertEquals(7_500L, pool.rebuyCents)
         }
         assertEquals(2, bankPreferences.getPlayerRebuys(1))
         assertEquals(2, bankPreferences.getPlayerAddons(3))
+    }
+
+    @Test
+    fun purchasesClearedOnTheTournamentTabDisappearFromTheBank() {
+        configure(players = 3, buyIn = 20.0, rebuy = 25.0)
+        val viewModel = newViewModel()
+        viewModel.send(BankIntent.PlayerRebuyChanged(playerId = 1, rebuys = 2))
+
+        // The Tournament tab's "Clear rebuys" after the user confirmed a zero amount
+        bankPreferences.clearAllRebuys()
+        tournamentPreferences.setRebuyAmount(0.0)
+        settle()
+
+        assertEquals(0, viewModel.player(1).rebuys)
+        assertEquals(0L, viewModel.uiState.value.pool.rebuyCents)
     }
 
     @Test
@@ -450,30 +481,35 @@ class BankViewModelTest {
         val viewModel = newViewModel()
 
         with(viewModel.uiState.value) {
-            assertEquals(400.0, buyInPool, 0.001)
-            assertEquals(40.0, bountyPool, 0.001)
-            assertEquals(400.0, prizePool, 0.001)
-            assertEquals(440.0, totalPool, 0.001)
+            assertEquals(40_000L, pool.buyInCents)
+            assertEquals(4_000L, pool.bountyPoolCents)
+            assertEquals(40_000L, prizePoolCents)
+            assertEquals(44_000L, totalPoolCents)
+            assertEquals(44_000L, payableCents)
         }
     }
 
     @Test
-    fun winnerCollectsKingsBountyWhenNoKnockoutsWereCredited() {
+    fun withNoKnockoutsCreditedTheChampionCollectsEveryBounty() {
         configure(players = 4, buyIn = 100.0, bounty = 10.0, weights = listOf(3, 2, 1))
         val viewModel = newViewModel()
         (1..4).forEach { viewModel.send(BankIntent.BuyInToggled(it)) }
         (4 downTo 2).forEach { viewModel.send(BankIntent.OutToggled(it)) }
 
+        // The champion's Pay-Out breakdown lists both
+        viewModel.send(BankIntent.ShowPlayerActionDialog(1, PlayerActionType.PAYED_OUT))
+        val pending = requireNotNull(viewModel.uiState.value.pendingAction)
+        assertEquals(20_000L, pending.buyInPayoutCents)
+        assertEquals(1_000L, pending.kingsBountyCents)
+        assertEquals(3_000L, pending.unclaimedBountyCents)
+        viewModel.send(BankIntent.CancelPlayerAction)
+
         listOf(3, 2, 1).forEach { viewModel.send(BankIntent.PayedOutToggled(it)) }
 
-        // 400 prize pool + the winner's own 10 bounty
-        assertEquals(410.0, viewModel.uiState.value.totalPayedOut, 0.001)
+        // 400 prize pool + the winner's own 10 bounty + the 3 bounties nobody claimed
+        assertEquals(44_000L, viewModel.uiState.value.totalPaidOutCents)
     }
 
-    @Ignore(
-        "PP-018: BankViewModel doesn't observe buy-in, food or bounty changes, so a live Bank " +
-            "screen shows stale pools until its next action. Enable when the Bank recalculates."
-    )
     @Test
     fun bankTotalsFollowTournamentConfigChanges() {
         configure(players = 4, buyIn = 100.0, weights = listOf(3, 2, 1))
@@ -484,8 +520,9 @@ class BankViewModelTest {
         settle()
 
         with(viewModel.uiState.value) {
-            assertEquals(40.0, bountyPool, 0.001)
-            assertEquals(200.0, prizePool, 0.001)
+            assertEquals(4_000L, pool.bountyPoolCents)
+            assertEquals(20_000L, prizePoolCents)
+            assertEquals(20_000L, payoutTable.totalCents)
         }
     }
 
@@ -503,9 +540,9 @@ class BankViewModelTest {
 
         listOf(2, 1, 3).forEach { viewModel.send(BankIntent.PayedOutToggled(it)) }
 
-        // 1st (player 2): 200 + 10 KO + 10 king's bounty; 2nd (player 1): 133.33 + 10 KO;
-        // 3rd (player 3): 66.67
-        assertEquals(430.0, viewModel.uiState.value.totalPayedOut, 0.001)
+        // 1st (player 2): $200 + 10 KO + 10 king's bounty + player 3's unclaimed 10;
+        // 2nd (player 1): $133 + 10 KO; 3rd (player 3): $67
+        assertEquals(44_000L, viewModel.uiState.value.totalPaidOutCents)
     }
 
     @Test
@@ -523,18 +560,15 @@ class BankViewModelTest {
         // Player 1 knocks everyone out
         (4 downTo 2).forEach { viewModel.knockOut(playerId = it, eliminatorId = 1) }
 
-        // Prize pool 400 + 50 + 25 = 475, split 3:2:1 -> 237.50, 158.33, 79.17
-        // P1: 237.50 + 3 KOs x 10 + king's bounty 10 - (130 + 50 rebuy) =  97.50
-        // P2: 158.33 - (130 + 25 add-on)                                  =   3.33
-        // P3:  79.17 - 130                                                = -50.83
-        // P4:   0.00 - 130                                                = -130.00
+        // Prize pool 400 + 50 + 25 = 475, split 3:2:1 -> 2nd 158.33 -> $158, 3rd 79.17 -> $79, 1st $238
+        // P1: 238 + 3 KOs x 10 + king's bounty 10 - (130 + 50 rebuy) =  98
+        // P2: 158 - (130 + 25 add-on)                                 =   3
+        // P3:  79 - 130                                               = -51
+        // P4:   0 - 130                                               = -130
         val netPays = (1..4).map { viewModel.netPayShownFor(it) }
-        assertEquals(97.5, netPays[0], 0.0001)
-        assertEquals(3.333333, netPays[1], 0.0001)
-        assertEquals(-50.833333, netPays[2], 0.0001)
-        assertEquals(-130.0, netPays[3], 0.0001)
+        assertEquals(listOf(9_800L, 300L, -5_100L, -13_000L), netPays)
         // Players as a group are down exactly what was spent on food
-        assertEquals(-80.0, netPays.sum(), 0.0001)
+        assertEquals(-8_000L, netPays.sum())
     }
 
     @Test
@@ -545,8 +579,8 @@ class BankViewModelTest {
         (1..4).forEach { viewModel.send(BankIntent.BuyInToggled(it)) }
 
         // 4 x (50 + 10 + 5)
-        assertEquals(260.0, viewModel.uiState.value.totalPool, 0.001)
-        assertEquals(260.0, viewModel.uiState.value.totalPaidIn, 0.001)
+        assertEquals(26_000L, viewModel.uiState.value.totalPoolCents)
+        assertEquals(26_000L, viewModel.uiState.value.totalPaidInCents)
     }
 
     @Test
@@ -562,20 +596,80 @@ class BankViewModelTest {
 
         val buyInCosts = (1..3).map { id ->
             viewModel.send(BankIntent.ShowPlayerActionDialog(playerId = id, action = PlayerActionType.BUY_IN))
-            val cost = requireNotNull(viewModel.uiState.value.pendingAction).buyInCost
+            val cost = requireNotNull(viewModel.uiState.value.pendingAction).buyInCostCents
             viewModel.send(BankIntent.CancelPlayerAction)
             cost
         }
 
         // P1: 130 + 2 x 50 + 1 x 25; P2: 130 + 50; P3: 130 + 2 x 25
-        assertEquals(listOf(255.0, 180.0, 180.0), buyInCosts)
-        assertEquals(615.0, viewModel.uiState.value.totalPool, 0.001)
+        assertEquals(listOf(25_500L, 18_000L, 18_000L), buyInCosts)
+        assertEquals(61_500L, viewModel.uiState.value.totalPoolCents)
+    }
+
+    // ---- PP-018: bank data hygiene ------------------------------------------------------------
+
+    @Test
+    fun removedPlayersDoNotComeBackAfterARestart() {
+        configure(players = 10, buyIn = 20.0, rebuy = 10.0)
+        val viewModel = newViewModel()
+        viewModel.send(
+            BankIntent.PlayerNameChanged(10, "Zed"),
+            BankIntent.PlayerRebuyChanged(10, 2),
+            BankIntent.BuyInToggled(10)
+        )
+        assertEquals(2, viewModel.uiState.value.totalRebuyCount)
+
+        // Slide to 9 players and back to 10 on the Tournament tab
+        tournamentPreferences.setPlayerCount(9)
+        settle()
+        tournamentPreferences.setPlayerCount(10)
+        settle()
+        assertEquals("Player 10", viewModel.player(10).name)
+
+        // "Restart": a fresh ViewModel over the same preferences
+        clearViewModels()
+        val restarted = newViewModel()
+        with(restarted.player(10)) {
+            assertEquals("Player 10", name)
+            assertEquals(0, rebuys)
+            assertFalse(buyIn)
+        }
+        assertEquals(0, restarted.uiState.value.totalRebuyCount)
+        assertEquals(0, bankPreferences.getTotalRebuyCount())
+    }
+
+    @Test
+    fun knockoutsCreditedToARemovedPlayerBecomeUnclaimed() {
+        configure(players = 6, buyIn = 10.0, bounty = 5.0, weights = listOf(1))
+        val viewModel = newViewModel()
+        viewModel.knockOut(playerId = 3, eliminatorId = 6)
+        assertEquals(mapOf(6 to 1), viewModel.uiState.value.knockoutCounts)
+
+        tournamentPreferences.setPlayerCount(5)
+        settle()
+
+        assertNull(viewModel.player(3).eliminatedBy)
+        assertEquals(emptyMap<Int, Int>(), viewModel.uiState.value.knockoutCounts)
+        assertNull(bankPreferences.getPlayerEliminatedBy(3))
+    }
+
+    @Test
+    fun namesAreSavedAndABlankNameFallsBackToTheDefault() {
+        val viewModel = newViewModel()
+
+        viewModel.send(BankIntent.PlayerNameChanged(2, "Ana"))
+        assertEquals("Ana", bankPreferences.getPlayerName(2))
+        assertEquals("Ana", newViewModel().player(2).name)
+
+        viewModel.send(BankIntent.PlayerNameChanged(2, "  "))
+        assertEquals("Player 2", viewModel.player(2).name)
+        assertEquals("Player 2", bankPreferences.getPlayerName(2))
     }
 
     /**
      * Money conservation over a range of tournaments. With every knockout credited and everyone in
-     * the money paid: what the Bank paid out = what it took in - the food pool, and the players'
-     * net pays sum to -food pool.
+     * the money paid: what the Bank paid out = what it took in - the food pool, to the cent, and the
+     * players' net pays sum to -food pool.
      */
     @Test
     fun moneyIsConservedAcrossTournamentConfigurations() {
@@ -594,7 +688,10 @@ class BankViewModelTest {
                 "high roller", 3, 10_000.0, food = 5_000.0, bounty = 1_000.0, rebuy = 2_000.0,
                 rebuysEach = 1, weights = listOf(2, 1)
             ),
-            MoneyCase("prime players", 7, 13.0, food = 7.0, bounty = 3.0, rebuy = 5.0, rebuysEach = 1, weights = listOf(4, 3, 2, 1)),
+            MoneyCase(
+                "prime players", 7, 13.0, food = 7.0, bounty = 3.0, rebuy = 5.0, rebuysEach = 1,
+                weights = listOf(4, 3, 2, 1)
+            ),
             MoneyCase("equal weights", 4, 25.0, food = 25.0, bounty = 25.0, rebuy = 25.0, weights = listOf(1, 1, 1)),
             MoneyCase("single player", 1, 100.0, food = 50.0, bounty = 25.0, weights = listOf(1)),
             MoneyCase(
@@ -602,7 +699,10 @@ class BankViewModelTest {
                 rebuysEach = MAX_PURCHASE_COUNT, addOnsEach = MAX_PURCHASE_COUNT, weights = listOf(2, 1)
             ),
             MoneyCase("bounty only", 3, 0.0, food = 100.0, bounty = 20.0, weights = listOf(2, 1)),
-            MoneyCase("odd amounts", 3, 14.14, food = 7.07, bounty = 3.54, rebuy = 1.77, rebuysEach = 1, weights = listOf(2, 1))
+            MoneyCase(
+                "odd amounts", 3, 14.14, food = 7.07, bounty = 3.54, rebuy = 1.77, rebuysEach = 1,
+                weights = listOf(2, 1)
+            )
         )
 
         cases.forEach { case ->
@@ -621,20 +721,83 @@ class BankViewModelTest {
             // Player 1 wins and is credited with every knockout
             (case.players downTo 2).forEach { viewModel.knockOut(playerId = it, eliminatorId = 1) }
 
-            // Amounts are stored as Float, so compare to the cent
-            val expectedPaidIn = case.players * (case.buyIn + case.food + case.bounty +
-                case.rebuysEach * case.rebuy + case.addOnsEach * case.addOn)
+            val perPlayer = Money.centsOf(case.buyIn) + Money.centsOf(case.food) + Money.centsOf(case.bounty) +
+                case.rebuysEach * Money.centsOf(case.rebuy) + case.addOnsEach * Money.centsOf(case.addOn)
             val state = viewModel.uiState.value
-            assertEquals("${case.name}: total paid in", expectedPaidIn, state.totalPaidIn, 0.01)
-            assertEquals("${case.name}: total pool", expectedPaidIn, state.totalPool, 0.01)
+            assertEquals("${case.name}: total paid in", case.players * perPlayer, state.totalPaidInCents)
+            assertEquals("${case.name}: total pool", case.players * perPlayer, state.totalPoolCents)
 
             val netPays = (1..case.players).map { viewModel.netPayShownFor(it) }
-            assertEquals("${case.name}: sum of net pays", -state.foodPool, netPays.sum(), 0.01)
+            assertEquals("${case.name}: sum of net pays", -state.pool.foodCents, netPays.sum())
 
             state.payoutEligiblePlayerIds.forEach { viewModel.send(BankIntent.PayedOutToggled(it)) }
             val paid = viewModel.uiState.value
-            assertEquals("${case.name}: places paid", case.weights.size, paid.payedOutCount)
-            assertEquals("${case.name}: paid out", paid.totalPaidIn - paid.foodPool, paid.totalPayedOut, 0.01)
+            assertEquals("${case.name}: paid out", paid.totalPaidInCents - paid.pool.foodCents, paid.totalPaidOutCents)
+            assertEquals("${case.name}: paid out", paid.payableCents, paid.totalPaidOutCents)
+        }
+    }
+
+    /**
+     * The conservation property through the ViewModel: random sequences of buy-ins, rebuys,
+     * add-ons, knockouts (credited or not), payouts and undos. After every action the Bank has paid
+     * out no more than the prize pool + bounty pool; once the tournament is over and everyone owed
+     * has been paid, it has paid out exactly that, to the cent. Seeded for reproducible failures.
+     */
+    @Test
+    fun moneyIsConservedThroughRandomBankSessions() {
+        val random = Random(4_10_2026)
+        repeat(SESSIONS) { session ->
+            clearViewModels()
+            bankPreferences.resetAllBankData()
+            val players = random.nextInt(2, 11)
+            configure(
+                players = players,
+                buyIn = listOf(5.0, 20.0, 14.14, 100.0).random(random),
+                food = listOf(0.0, 5.0, 7.07).random(random),
+                bounty = listOf(0.0, 2.5, 10.0).random(random),
+                rebuy = listOf(0.0, 10.0, 1.77).random(random),
+                addOn = listOf(0.0, 15.0).random(random),
+                weights = listOf(listOf(1), listOf(3, 2, 1), listOf(35, 20, 15, 10), listOf(50, 30, 20)).random(random)
+            )
+            val viewModel = newViewModel()
+            val context = { "session $session: ${viewModel.uiState.value.eliminationOrder}" }
+
+            repeat(random.nextInt(5, ACTIONS)) {
+                randomAction(viewModel, random, players)
+                val state = viewModel.uiState.value
+                assertTrue(context(), state.totalPaidOutCents <= state.payableCents)
+                assertEquals(context(), state.prizePoolCents, state.payoutTable.totalCents)
+            }
+
+            // Finish: knock out all but one (some credited, some not), then pay everyone owed
+            while (viewModel.uiState.value.activePlayers > 1) {
+                val stillIn = viewModel.uiState.value.players.filterNot { it.out }.map { it.id }
+                val target = stillIn.random(random)
+                viewModel.knockOut(target, (stillIn - target).randomOrNull(random)?.takeIf { random.nextBoolean() })
+            }
+            val paidEarly = viewModel.uiState.value.players.filter { it.payedOut }.map { it.id }
+            paidEarly.forEach { viewModel.send(BankIntent.PayedOutToggled(it)) }
+            val netPays = (1..players).sumOf { viewModel.netPayShownFor(it) }
+            assertEquals(context(), -viewModel.uiState.value.pool.foodCents, netPays)
+
+            viewModel.uiState.value.payoutEligiblePlayerIds.forEach { viewModel.send(BankIntent.PayedOutToggled(it)) }
+            val done = viewModel.uiState.value
+            assertEquals(context(), done.payableCents, done.totalPaidOutCents)
+        }
+    }
+
+    private fun randomAction(viewModel: BankViewModel, random: Random, players: Int) {
+        val id = random.nextInt(1, players + 1)
+        val stillIn = viewModel.uiState.value.players.filterNot { it.out }.map { it.id }
+        when (random.nextInt(7)) {
+            0 -> viewModel.send(BankIntent.BuyInToggled(id))
+            1 -> viewModel.send(BankIntent.PlayerRebuyChanged(id, random.nextInt(0, 4)))
+            2 -> viewModel.send(BankIntent.PlayerAddonChanged(id, random.nextInt(0, 3)))
+            3 -> if (id in stillIn && stillIn.size > 1) {
+                viewModel.knockOut(id, (stillIn - id).randomOrNull(random)?.takeIf { random.nextBoolean() })
+            }
+            4 -> if (id !in stillIn) viewModel.send(BankIntent.OutToggled(id)) // back in
+            else -> viewModel.send(BankIntent.PayedOutToggled(id))
         }
     }
 
@@ -650,4 +813,9 @@ class BankViewModelTest {
         val addOnsEach: Int = 0,
         val weights: List<Int>
     )
+
+    private companion object {
+        const val SESSIONS = 60
+        const val ACTIONS = 30
+    }
 }

@@ -202,6 +202,15 @@ are:
 3. **Payouts tab** (3 steps). The finished night: Alice and Player 5 by name in their rows,
    adding up to the prize pool; the structure sheet; Back returns to Tournament (B16: Back no
    longer walks through every tab tapped).
+
+   **Cash game** (8 steps, S13). In the Bank, switch to Cash game (nobody in yet). Dana $40, Sam
+   $20 and Theo $40 buy in from the add sheet, each with its snackbar; Theo tops up $20 from his
+   sheet. Each player's chips are entered and saved with Enter ($75, $0, $45): the chip check must
+   say BALANCED, with every line's in, out and net. The settle-up must list "Sam pays Dana $20" and
+   "Theo pays Dana $15"; ticking Theo's shows it checked. Share as text opens the share sheet with
+   the settle-up; UNDO on the snackbar takes back Sam's tick and the top bar's Undo Theo's. Switching
+   back to Tournament must show the tournament's Bank as the steps above left it (Alice the champion,
+   paid).
 4. **Tools** (4 steps). The tool list and the Sound section (S7); turn the sound off (the
    volume and Test chime rest) and on again, and play the test chime; Hand ranks (S12), with a
    back arrow, the Tools tab still selected, "1 in 30,940" for a royal flush and a kicker.
@@ -552,6 +561,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tournament-feature` | `TournamentInteractionTest`, `TournamentRotationTest`, `SetupFoldTest` | none | What each control sends; rotation per device class (Robolectric `+land` shows the table view, `+port` the clock, other tabs portrait on phones, tablets free, state kept through recreation); the fold plays once and is cut under Reduce motion |
 | `tournament-feature` | `PayoutsTabScreenTest` | `S6_payouts_{standard,topheavy,custom,finished}`, `S6_payouts_font2x` | All three, at every scroll position, and locked while the clock runs |
 | `bank-feature` | `BankScreensTest` | `S5_bank_{before_buyins,midgame,rebuys_open,no_rebuys,champion,30players}`, `S5_bank_font2x`, `S5b_knockout_sheet`, `S5b_count_sheet`, `S5c_payout_{champion,second}`, `S5c_pool_breakdown`, `Z2_bank_small`, `Z5_bank_tablet` | All three, at every scroll position. A sheet is rendered as its content over the screen behind, since a modal window doesn't capture under Robolectric |
+| `bank-feature` | `CashScreensTest` | `S13_cash_{balanced,off,settle,player}`, `S13_cash_font2x` | The cash game (M7): all three, at every scroll position, also counting, the split difference, nobody yet and the add-player sheet. The Bank's goldens above show the Tournament / Cash game switch, as the app does |
 
 The screens' ViewModels are the real ones over Robolectric's in-memory preferences, set up as the
 mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app shows.
@@ -569,6 +579,7 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 | `TypographyTest` | 5 | Barlow loads; `tnum` makes every digit the same width (and without it they differ); the licence ships |
 | `UndoSnackbarTest` | 4 | Undo inside the 8 s window counts, after it doesn't (virtual time) |
 | `MoneyComponentsTest` | 3 x 24 cells = 72 | `MoneyMeter`, `PlaceBadge` and `PayoutStructureSheet`: goldens on the 10, all three layout checks on all 24 |
+| `MoneyFieldTest` | 4 | `MoneyField`: typed text kept key by key, cents out, one commit on Done, focus loss or the field going away; 0 is an amount, empty is none |
 | `LayoutAssertionsTest` | 11 | The checks themselves catch what they claim |
 | `ScreenOrientationTest` | 3 | Phones portrait unless the screen on show asks for more, and portrait again when it goes; free from 600 dp; a screen can take the full width beside the rail, or the whole window |
 

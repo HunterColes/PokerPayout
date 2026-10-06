@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,7 +48,9 @@ import kotlinx.coroutines.flow.flowOf
  * from 25s. Try 5,000.").
  *
  * Stateless: the caller owns [value]. Callers that commit on blur (money fields, B18) watch focus
- * through [interactionSource].
+ * through [interactionSource]; [keyboardActions] and [fieldModifier] (the text field itself, for
+ * key handling and its TalkBack name) are theirs too. A field for words rather than numbers (a
+ * name) passes [textStyle] to type in the body face.
  */
 @Suppress("LongParameterList") // a component API: one parameter per visual option
 @Composable
@@ -62,6 +65,9 @@ fun PokerField(
     isError: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Number,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    fieldModifier: Modifier = Modifier,
+    textStyle: TextStyle? = null,
 ) {
     val focused by interactionSource.collectIsFocusedAsState()
     val shape = RoundedCornerShape(PokerDimens.CornerControl)
@@ -75,12 +81,13 @@ fun PokerField(
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier
+            modifier = fieldModifier
                 .fillMaxWidth()
                 .semantics { if (isError && supportingText != null) error(supportingText) },
-            textStyle = FieldValue,
+            textStyle = textStyle?.copy(color = PokerColors.CardWhite) ?: FieldValue,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
+            keyboardActions = keyboardActions,
             interactionSource = interactionSource,
             cursorBrush = SolidColor(PokerColors.PokerGold),
             decorationBox = { innerTextField ->

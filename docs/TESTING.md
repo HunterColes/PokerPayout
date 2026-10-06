@@ -188,6 +188,15 @@ are:
 3. **Payouts tab** (3 steps). The finished night: Alice and Player 5 by name in their rows,
    adding up to the prize pool; the structure sheet; Back returns to Tournament (B16: Back no
    longer walks through every tab tapped).
+
+   **Cash game** (8 steps, S13). In the Bank, switch to Cash game (nobody in yet). Dana $40, Sam
+   $20 and Theo $40 buy in from the add sheet, each with its snackbar; Theo tops up $20 from his
+   sheet. Each player's chips are entered and saved with Enter ($75, $0, $45): the chip check must
+   say BALANCED, with every line's in, out and net. The settle-up must list "Sam pays Dana $20" and
+   "Theo pays Dana $15"; ticking Theo's shows it checked. Share as text opens the share sheet with
+   the settle-up; UNDO on the snackbar takes back Sam's tick and the top bar's Undo Theo's. Switching
+   back to Tournament must show the tournament's Bank as the steps above left it (Alice the champion,
+   paid).
 4. **Tools** (4 steps). The tool list and the Sound section (S7); turn the sound off (the
    volume and Test chime rest) and on again, and play the test chime; Hand ranks (S12), with a
    back arrow, the Tools tab still selected, "1 in 30,940" for a royal flush and a kicker.

@@ -1100,7 +1100,7 @@ s_chip_calc_settings() {
   # color-up plan counts them as in play
   ui scroll-to "re=(?i)stack settings" --max 6
   ui tap "re=(?i)^stack settings"
-  ui scroll-to "text=Stack shape" --max 4
+  ui scroll-to "re=Lots of small chips" --max 4   # the lowest thing checked (a fling's reach varies)
   ui assert-text "text=Starting stack" "text=Keep back for rebuys and add-ons" "text=Colours per stack, at most" \
     "re=More small chips" "re=Lots of small chips" || return 1
   ui tap "desc=Increase Keep back for rebuys and add-ons"

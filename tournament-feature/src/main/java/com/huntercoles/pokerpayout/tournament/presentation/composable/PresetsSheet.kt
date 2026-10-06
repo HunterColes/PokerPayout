@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -89,6 +90,7 @@ internal fun PresetsRow(midGame: Boolean, onOpen: () -> Unit, modifier: Modifier
 }
 
 /** The presets sheet when one is open, as a modal sheet over the tab. Its body is screenshot-tested. */
+@OptIn(ExperimentalMaterial3Api::class) // PokerSheet's default sheet state
 @Composable
 internal fun PresetsSheet(
     state: PresetsUiState,

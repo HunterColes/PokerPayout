@@ -635,8 +635,12 @@ s_rotate_close() {
   # dump puts the user rotation back to the display's (upright, once the clock is), which to the
   # app is the phone turned upright: the tap holds it on its side (PP_UI_HOLD_ROTATION, see ui.py),
   # and nothing dumps between the ✕ and the second turn.
-  { PP_UI_HOLD_ROTATION=1 ui tap "desc=Exit table view" && wait_screen port; } || { restore_rotation; return 1; }
+  rot_trace() { echo "rotation ($1): user $(adb_ shell settings get system user_rotation | tr -d '\r'), auto $(adb_ shell settings get system accelerometer_rotation | tr -d '\r'), display $(adb_ shell dumpsys display | grep -o 'mCurrentOrientation=[0-9]' | head -1)"; }
+  rot_trace "before the tap"
+  { PP_UI_HOLD_ROTATION=1 ui tap "desc=Exit table view" && rot_trace "after the tap" && wait_screen port; } || { restore_rotation; return 1; }
+  rot_trace "upright clock"
   sleep 2 # longer than the app waits before it counts the phone as upright
+  rot_trace "2 s later"
   local usr; usr="$(adb_ shell settings get system user_rotation | tr -d '\r')"
   if [[ "$usr" != 1 ]] || ! wait_screen port; then
     echo "[ui] FAIL after ✕ the clock must stay upright with the phone still on its side (user rotation $usr)"

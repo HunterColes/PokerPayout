@@ -137,4 +137,6 @@ For help or to discuss ideas, open an issue or a discussion on GitHub.
 
 • [MIT License](LICENSE.md)
 • Free and open source software
+• Bundled font: [Barlow Condensed](https://github.com/jpt/barlow) by Jeremy Tribby, SIL Open Font License 1.1 ([licence text](core/src/main/assets/licenses/OFL-BarlowCondensed.txt), shipped in the app)
+• Icons: Material Symbols paths (Apache License 2.0), plus suits, chips and cards drawn for Poker Payout
 • See also: [CONTRIBUTING.md](CONTRIBUTING.md) • [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)

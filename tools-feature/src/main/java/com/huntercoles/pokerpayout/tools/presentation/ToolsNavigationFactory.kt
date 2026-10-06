@@ -1,14 +1,19 @@
 package com.huntercoles.pokerpayout.tools.presentation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.huntercoles.pokerpayout.tools.presentation.composable.OddsCalculatorScreen
-import com.huntercoles.pokerpayout.tools.presentation.composable.ToolsHomeScreen
-import com.huntercoles.pokerpayout.tools.presentation.composable.HandRanksScreen
-import com.huntercoles.pokerpayout.tools.presentation.composable.ChipCalculatorScreen
 import com.huntercoles.pokerpayout.core.navigation.NavigationDestination
 import com.huntercoles.pokerpayout.core.navigation.NavigationFactory
 import com.huntercoles.pokerpayout.core.navigation.NavigationManager
+import com.huntercoles.pokerpayout.tools.presentation.composable.ChipCalculatorRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.HandRanksScreen
+import com.huntercoles.pokerpayout.tools.presentation.composable.OddsCalculatorScreen
+import com.huntercoles.pokerpayout.tools.presentation.composable.ToolsHomeScreen
 import javax.inject.Inject
 
 class ToolsNavigationFactory @Inject constructor(
@@ -16,24 +21,26 @@ class ToolsNavigationFactory @Inject constructor(
 ) : NavigationFactory {
 
     override fun create(builder: NavGraphBuilder) {
-        // Main tools home screen with grid
+        // The Tools tab (S7): the tools, then Sound
         builder.composable<NavigationDestination.Tools> {
             ToolsHomeScreen(navigationManager = navigationManager)
         }
-        
-        // Odds Calculator tool
+
+        // Odds. Until it has its own top bar (M5), keep it clear of the status bar now that the app
+        // draws edge to edge. A PokerTopBar inside pads for the bar itself; this padding consumes
+        // the inset, so the two never add up.
         builder.composable<NavigationDestination.OddsCalculator> {
-            OddsCalculatorScreen()
+            Box(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
+                OddsCalculatorScreen()
+            }
         }
-        
-        // Hand Rankings tool
+
         builder.composable<NavigationDestination.HandRanks> {
-            HandRanksScreen()
+            HandRanksScreen(onBack = navigationManager::navigateBack)
         }
-        
-        // Chip Calculator tool
+
         builder.composable<NavigationDestination.ChipCalculator> {
-            ChipCalculatorScreen()
+            ChipCalculatorRoute(onBack = navigationManager::navigateBack)
         }
     }
 }

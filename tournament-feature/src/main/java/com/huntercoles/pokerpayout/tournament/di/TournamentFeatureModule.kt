@@ -1,6 +1,7 @@
 package com.huntercoles.pokerpayout.tournament.di
 
 import com.huntercoles.pokerpayout.core.navigation.NavigationFactory
+import com.huntercoles.pokerpayout.tournament.presentation.PayoutsNavigationFactory
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentNavigationFactory
 import dagger.Binds
 import dagger.Module
@@ -16,4 +17,8 @@ abstract class TournamentFeatureModule {
     @Binds
     @IntoSet
     abstract fun bindTournamentNavigationFactory(factory: TournamentNavigationFactory): NavigationFactory
+
+    @Binds
+    @IntoSet
+    abstract fun bindPayoutsNavigationFactory(factory: PayoutsNavigationFactory): NavigationFactory
 }

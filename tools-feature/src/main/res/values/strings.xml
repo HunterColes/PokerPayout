@@ -8,4 +8,24 @@
     <string name="settings_dark_mode_desc">Use dark theme</string>
     <string name="settings_about">About Poker Payout</string>
     <string name="settings_about_desc">Poker Payout is a free and open-source poker tournament management app. Version 1.0\n\nMIT Licensed - No ads, no tracking, no data collection.</string>
+
+    <!-- Hand ranks (S12 restyles the list in M6) -->
+    <string name="hand_ranks_title">Hand ranks</string>
+    <string name="hand_ranks_subtitle">Best to worst</string>
+    <string name="hand_rank_royal_flush">Royal Flush - A, K, Q, J, 10 suited; the unbeatable hand</string>
+    <string name="hand_rank_straight_flush">Straight Flush - Five suited in sequence; highest card wins ties</string>
+    <string name="hand_rank_four_of_a_kind">Four of a Kind - Four matching ranks plus a kicker to break ties</string>
+    <string name="hand_rank_full_house">Full House - Three of one rank with a pair; higher triplet wins</string>
+    <string name="hand_rank_flush">Flush - Any five suited cards; compare the highest then kickers</string>
+    <string name="hand_rank_straight">Straight - Five consecutive ranks; ace may play high or low</string>
+    <string name="hand_rank_three_of_a_kind">Three of a Kind - Three matching ranks with two kickers for ties</string>
+    <string name="hand_rank_two_pair">Two Pair - Two distinct pairs plus a kicker; top pair sets the rank</string>
+    <string name="hand_rank_one_pair">One Pair - One matching pair and three kickers; kickers decide ties</string>
+    <string name="hand_rank_high_card">High Card - No combinations; rely on top card then remaining kickers</string>
+
+    <!-- Chip set (the chip calculator; S11 rebuilds it in M6) -->
+    <string name="chip_set_title">Chip set</string>
+    <string name="chip_set_reset">Reset chip set</string>
+    <string name="chip_set_reset_title">Reset chip calculator?</string>
+    <string name="chip_set_reset_description">This will reset the total chips value to tournament starting chips.</string>
 </resources>

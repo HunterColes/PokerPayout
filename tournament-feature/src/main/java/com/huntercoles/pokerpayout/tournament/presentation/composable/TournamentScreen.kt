@@ -50,6 +50,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.text.KeyboardActions
@@ -71,7 +73,9 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigViewM
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDialog
 import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
-import com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction
+import com.huntercoles.pokerpayout.core.design.components.PokerIconButton
+import com.huntercoles.pokerpayout.core.design.components.PokerTopBar
+import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.core.design.components.PayoutPreview
 import com.huntercoles.pokerpayout.core.design.components.WeightsEditorDialog
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
@@ -81,6 +85,8 @@ import com.huntercoles.pokerpayout.tournament.presentation.composable.TimerScree
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
+import com.huntercoles.pokerpayout.tournament.R
+import com.huntercoles.pokerpayout.core.R as CoreR
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,55 +128,60 @@ fun PlayContent(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Header with Reset Button
-        PokerHeaderWithAction(
-            title = "🏆 Tournament",
-            onActionClick = { onCalculatorIntent(TournamentConfigIntent.ShowResetDialog) },
-            actionContentDescription = "Reset All Data"
-        )
+    Column(modifier = Modifier.fillMaxSize()) {
+        // The tab's name is the title, so renaming the tab (D3) renames it here too
+        PokerTopBar(title = stringResource(CoreR.string.navigation_tournament)) {
+            PokerIconButton(
+                icon = PokerIcons.Restart,
+                contentDescription = stringResource(R.string.tournament_reset),
+                onClick = { onCalculatorIntent(TournamentConfigIntent.ShowResetDialog) },
+                tint = PokerColors.PokerGold
+            )
+        }
 
-        // Reset Confirmation Dialog
-        PokerConfirmationDialog(
-            title = "Reset tournament?",
-            description = resetDescription(calculatorUiState),
-            onDismiss = { onCalculatorIntent(TournamentConfigIntent.HideResetDialog) },
-            onConfirm = {
-                onCalculatorIntent(TournamentConfigIntent.ConfirmReset)
-                onTimerIntent(TimerIntent.ResetTimer)
-            },
-            isVisible = calculatorUiState.showResetDialog
-        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Reset Confirmation Dialog
+            PokerConfirmationDialog(
+                title = stringResource(R.string.tournament_reset_title),
+                description = resetDescription(calculatorUiState),
+                onDismiss = { onCalculatorIntent(TournamentConfigIntent.HideResetDialog) },
+                onConfirm = {
+                    onCalculatorIntent(TournamentConfigIntent.ConfirmReset)
+                    onTimerIntent(TimerIntent.ResetTimer)
+                },
+                isVisible = calculatorUiState.showResetDialog
+            )
 
-        PayoutDialogs(uiState = calculatorUiState, onIntent = onCalculatorIntent)
+            PayoutDialogs(uiState = calculatorUiState, onIntent = onCalculatorIntent)
 
-        // Configuration Section (Collapsible)
-        TournamentConfigurationCard(
-            uiState = calculatorUiState,
-            onIntent = onCalculatorIntent,
-            blindsPanel = {
-                BlindsConfigPanel(
-                    uiState = timerUiState,
-                    onIntent = timerIntent,
-                    isLocked = calculatorUiState.isTournamentLocked
-                )
-            },
-            isExpanded = calculatorUiState.isConfigExpanded,
-            onExpandedChange = { onCalculatorIntent(TournamentConfigIntent.ToggleConfigExpanded(it)) }
-        )
+            // Configuration Section (Collapsible)
+            TournamentConfigurationCard(
+                uiState = calculatorUiState,
+                onIntent = onCalculatorIntent,
+                blindsPanel = {
+                    BlindsConfigPanel(
+                        uiState = timerUiState,
+                        onIntent = timerIntent,
+                        isLocked = calculatorUiState.isTournamentLocked
+                    )
+                },
+                isExpanded = calculatorUiState.isConfigExpanded,
+                onExpandedChange = { onCalculatorIntent(TournamentConfigIntent.ToggleConfigExpanded(it)) }
+            )
 
-        // Timer Section (from Timer screen)
-        TimerScreen(
-            uiState = timerUiState,
-            onIntent = timerIntent,
-            isConfigExpanded = calculatorUiState.isConfigExpanded
-        )
+            // Timer Section (from Timer screen)
+            TimerScreen(
+                uiState = timerUiState,
+                onIntent = timerIntent,
+                isConfigExpanded = calculatorUiState.isConfigExpanded
+            )
+        }
     }
 }
 
@@ -187,7 +198,7 @@ fun PlayerCountSlider(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Players",
+            text = stringResource(R.string.tournament_players),
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
             color = PokerColors.CardWhite.copy(alpha = 0.7f)
@@ -245,7 +256,7 @@ fun TournamentConfigurationCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "💵 Tournament Configuration",
+                    text = stringResource(R.string.tournament_config_title),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = PokerColors.PokerGold
@@ -259,7 +270,7 @@ fun TournamentConfigurationCard(
                     if (uiState.isTournamentLocked) {
                         Icon(
                             imageVector = Icons.Default.Lock,
-                            contentDescription = "Tournament Locked",
+                            contentDescription = stringResource(R.string.tournament_locked),
                             tint = PokerColors.PokerGold,
                             modifier = Modifier.size(20.dp)
                         )
@@ -272,7 +283,9 @@ fun TournamentConfigurationCard(
                     ) {
                         Icon(
                             imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (isExpanded) "Collapse" else "Expand",
+                            contentDescription = stringResource(
+                                if (isExpanded) R.string.tournament_collapse else R.string.tournament_expand
+                            ),
                             tint = PokerColors.PokerGold
                         )
                     }
@@ -301,22 +314,29 @@ fun TournamentConfigurationCard(
 }
 
 /** The reset dialog says what a reset takes with it, including purchases recorded in the Bank. */
+@Composable
 private fun resetDescription(uiState: TournamentConfigUiState): String {
+    val rebuys = uiState.rebuyPurchases
+    val addOns = uiState.addOnPurchases
     val purchases = listOfNotNull(
-        uiState.rebuyPurchases.takeIf { it > 0 }?.let { "$it ${if (it == 1) "rebuy" else "rebuys"}" },
-        uiState.addOnPurchases.takeIf { it > 0 }?.let { "$it ${if (it == 1) "add-on" else "add-ons"}" }
+        rebuys.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.tournament_rebuys, it, it) },
+        addOns.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.tournament_add_ons, it, it) }
     )
-    val base = "This will reset all tournament settings and timer data to defaults."
-    return if (purchases.isEmpty()) {
-        base
-    } else {
-        "$base The ${purchases.joinToString(" and ")} recorded in the Bank will be cleared too."
+    val base = stringResource(R.string.tournament_reset_description)
+    return when (purchases.size) {
+        0 -> base
+        1 -> stringResource(R.string.tournament_reset_purchases, base, purchases[0])
+        else -> stringResource(
+            R.string.tournament_reset_purchases,
+            base,
+            stringResource(R.string.tournament_and, purchases[0], purchases[1])
+        )
     }
 }
 
-/** The payout editor and the "clear recorded purchases?" question (PP-014). */
+/** The payout editor and the "clear recorded purchases?" question (PP-014). The Payouts tab shows them too. */
 @Composable
-private fun PayoutDialogs(uiState: TournamentConfigUiState, onIntent: (TournamentConfigIntent) -> Unit) {
+internal fun PayoutDialogs(uiState: TournamentConfigUiState, onIntent: (TournamentConfigIntent) -> Unit) {
     if (uiState.showWeightsEditor) {
         WeightsEditorDialog(
             current = PayoutSettings(
@@ -334,14 +354,18 @@ private fun PayoutDialogs(uiState: TournamentConfigUiState, onIntent: (Tournamen
     uiState.purchaseClearPrompt?.let { prompt ->
         val noun = if (prompt.count == 1) prompt.kind.singular else prompt.kind.plural
         PokerConfirmationDialog(
-            title = "Turn ${prompt.kind.plural} off?",
-            description = "A ${prompt.kind.singular} amount of \$0 clears the ${prompt.count} $noun recorded " +
-                "in the Bank. Keep them to leave the amount at " +
-                "${FormatUtils.formatCents(prompt.keptAmountCents)}.",
+            title = stringResource(R.string.tournament_turn_off_title, prompt.kind.plural),
+            description = stringResource(
+                R.string.tournament_turn_off_description,
+                prompt.kind.singular,
+                prompt.count,
+                noun,
+                FormatUtils.formatCents(prompt.keptAmountCents)
+            ),
             onDismiss = { onIntent(TournamentConfigIntent.DismissClearPurchases) },
             onConfirm = { onIntent(TournamentConfigIntent.ConfirmClearPurchases) },
-            cancelText = "Keep",
-            confirmText = "Clear $noun"
+            cancelText = stringResource(R.string.tournament_keep),
+            confirmText = stringResource(R.string.tournament_clear, noun)
         )
     }
 }

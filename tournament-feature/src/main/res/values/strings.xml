@@ -19,4 +19,33 @@
     <string name="place_suffix_rd">rd</string>
     <string name="place_suffix_th">th</string>
     <string name="weight_percentage" formatted="false">Weight: %d (%.1f%%)</string>
+
+    <!-- Tournament tab (the title is core's navigation_tournament, so it follows the tab's name) -->
+    <string name="tournament_reset">Reset tournament</string>
+    <string name="tournament_reset_title">Reset tournament?</string>
+    <string name="tournament_reset_description">This will reset all tournament settings and timer data to defaults.</string>
+    <!-- %1$s is tournament_reset_description; %2$s is "2 rebuys", or "2 rebuys and 1 add-on" -->
+    <string name="tournament_reset_purchases">%1$s The %2$s recorded in the Bank will be cleared too.</string>
+    <string name="tournament_and">%1$s and %2$s</string>
+    <plurals name="tournament_rebuys">
+        <item quantity="one">%d rebuy</item>
+        <item quantity="other">%d rebuys</item>
+    </plurals>
+    <plurals name="tournament_add_ons">
+        <item quantity="one">%d add-on</item>
+        <item quantity="other">%d add-ons</item>
+    </plurals>
+    <string name="tournament_players">Players</string>
+    <string name="tournament_config_title">💵 Tournament Configuration</string>
+    <string name="tournament_locked">Tournament Locked</string>
+    <string name="tournament_collapse">Collapse</string>
+    <string name="tournament_expand">Expand</string>
+    <!-- Leaving the Rebuy or Add-on amount at $0 while purchases are recorded (PP-014) -->
+    <string name="tournament_turn_off_title">Turn %1$s off?</string>
+    <string name="tournament_turn_off_description">A %1$s amount of $0 clears the %2$d %3$s recorded in the Bank. Keep them to leave the amount at %4$s.</string>
+    <string name="tournament_keep">Keep</string>
+    <string name="tournament_clear">Clear %1$s</string>
+
+    <!-- Payouts tab (S6 restyles it in M4) -->
+    <string name="payouts_locked">Locked: the clock has started</string>
 </resources>

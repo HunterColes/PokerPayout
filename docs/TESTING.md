@@ -360,6 +360,7 @@ composables on the JVM. Library modules use the stock `AndroidJUnitRunner`.
 | `Roborazzi: ... is changed.` | A golden no longer matches. Open `<module>/build/outputs/roborazzi/*_compare.png`. If the change is intended, run `./gradlew recordRoborazziDebug` and commit the new PNGs (section 9). |
 | `... doesn't fit on <config>: it is N px tall` | A gallery is taller than that screen's window, so its golden would be cut off. Split it into smaller previews. |
 | A layout assertion fails only at font 2.0 | Real: at 200% the text needs more room. Let it wrap (no fixed heights, no `maxLines = 1` on labels), or reflow to one column. Shrinking text is only for fixed-width slots (see `rememberFittedStyle`). |
+| A golden folder you deleted comes back as untracked after a test run | Roborazzi keeps a copy of every golden under `<module>/build/intermediates/roborazzi/` and restores it into `src/test/screenshots/`. Delete a retired golden in both places (or run `./gradlew clean`). Never `git add -A` after a test run without checking `git status`. CI starts clean, so it is unaffected. |
 
 ## 9. Screenshot goldens and layout checks (Roborazzi)
 

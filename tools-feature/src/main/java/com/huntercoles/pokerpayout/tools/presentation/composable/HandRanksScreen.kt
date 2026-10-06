@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -79,18 +81,22 @@ fun HandRanksScreen(onBack: () -> Unit) {
 
 @Composable
 private fun HandRankItem(visual: List<String>, @StringRes description: Int) {
+    // At least 56 dp, and taller when large text wraps the description (a fixed 56 dp cut it to
+    // its first line at 200%)
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .heightIn(min = 56.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         border = BorderStroke(1.dp, PokerColors.PokerGold),
         shape = RoundedCornerShape(0.dp)
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp),
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+                .heightIn(min = 56.dp)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
@@ -129,6 +135,7 @@ private fun HandRankItem(visual: List<String>, @StringRes description: Int) {
                     }
                 },
                 fontSize = 12.sp,
+                lineHeight = 16.sp,
                 color = PokerColors.CardWhite,
                 modifier = Modifier
                     .weight(1f)

@@ -329,7 +329,15 @@ def clear_focused(nodes=None):
     focused = [n for n in nodes if n.flag("focused") and "EditText" in n.cls]
     count = (len(focused[0].text) if focused else 0) + 4
     count = max(count, 8)
-    shell("input keyevent KEYCODE_MOVE_END " + " ".join(["KEYCODE_DEL"] * count))
+    shell(clear_keys(count))
+
+
+def clear_keys(count):
+    # Compose places the cursor where the tap landed a frame or two after the tap, so a
+    # MOVE_END sent right behind it can be overtaken and DEL alone leaves the text after
+    # the cursor ("Player 1" became "Alice1"). FORWARD_DEL removes that tail too.
+    keys = ["KEYCODE_MOVE_END"] + ["KEYCODE_DEL"] * count + ["KEYCODE_FORWARD_DEL"] * count
+    return "input keyevent " + " ".join(keys)
 
 
 # ----------------------------------------------------------------------------- commands
@@ -432,9 +440,10 @@ def cmd_set_text(a):
         target = p
     x, y = target.center
     shell("input tap %d %d" % (x, y))
+    time.sleep(0.3)   # let focus and the tap's cursor placement land before the keys
     # Clear using the length we already know (saves a second ~2s dump).
     count = max(len(target.text) + 4, 8) if "EditText" in target.cls else 32
-    shell("input keyevent KEYCODE_MOVE_END " + " ".join(["KEYCODE_DEL"] * count))
+    shell(clear_keys(count))
     if a.value:
         type_text(a.value)
     print("[ui] set %s = %r" % (" ".join(a.selector), a.value))

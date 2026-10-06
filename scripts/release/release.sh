@@ -167,13 +167,22 @@ elif [[ -n $LAST_TAG ]]; then
 else
   FDROID_KEY="$MIRROR_KEY" FDROID_CODE=0
 fi
-ROTATION=0
+ROTATION=0 ROTATION_PENDING=0
 [[ -n $FDROID_KEY && $FDROID_KEY != "$MIRROR_KEY" ]] && ROTATION=1
+# The new key already shipped in $LAST_TAG and its fdroiddata MR is still open: this is not a
+# second rotation. Build on the mirror, which has $LAST_TAG's build entry that upstream lacks.
+if [[ $ROTATION == 1 && -n $LAST_TAG ]]; then
+  git show "$LAST_TAG:$META_REL" >"$WORK/last-tag.yml" 2>/dev/null || true
+  LAST_KEY="$("${META_PY[@]}" field "$WORK/last-tag.yml" AllowedAPKSigningKeys 2>/dev/null || true)"
+  [[ $LAST_KEY == "$MIRROR_KEY" ]] && ROTATION=0 ROTATION_PENDING=1
+fi
 
 pf publish "$([[ $HAVE_UPSTREAM == 1 ]]; echo $?)" fdroiddata \
   "$([[ $HAVE_UPSTREAM == 1 ]] && echo "upstream metadata fetched (CurrentVersionCode $FDROID_CODE)" || echo "could not fetch upstream metadata; using the in-repo mirror")"
 if [[ $ROTATION == 1 ]]; then
   line_warn "signing key" "rotation: F-Droid pins ${FDROID_KEY:0:12}…, this release pins ${MIRROR_KEY:0:12}… → fdroiddata MR needed (fdroid-mr.sh)"
+elif [[ $ROTATION_PENDING == 1 ]]; then
+  line_warn "signing key" "F-Droid still pins ${FDROID_KEY:0:12}…; ${MIRROR_KEY:0:12}… shipped in $LAST_TAG and waits on its fdroiddata MR (fdroid-status.sh)"
 else
   pf always "$([[ ${#MIRROR_KEY} == 64 ]]; echo $?)" "signing key" "pinned ${MIRROR_KEY:0:12}… (AllowedAPKSigningKeys)"
 fi
@@ -310,24 +319,34 @@ fi
 TITLE="${TITLE:-Maintenance update}"
 [[ -s $OUT/notes-body.md ]] || fail_step notes "release notes are empty"
 
-ROTATION_MD="**One-time reinstall needed.** This release is signed with a new signing key (the old key was lost), so Android cannot install it over an older Poker Payout. Uninstall Poker Payout, then install this version. Uninstalling deletes the app's saved data. Later updates install normally."
-ROTATION_TXT="One-time reinstall needed: this version is signed with a new key (the old key was lost), so it cannot update the installed app. Uninstall Poker Payout, then install this version. Uninstalling deletes saved data. Later updates install normally."
+NOTICE_MD="" NOTICE_TXT=""
+if [[ $ROTATION == 1 ]]; then
+  NOTICE_MD="**One-time reinstall needed.** This release is signed with a new signing key (the old key was lost), so Android cannot install it over an older Poker Payout. Uninstall Poker Payout, then install this version. Uninstalling deletes the app's saved data. Later updates install normally."
+  NOTICE_TXT="One-time reinstall needed: this version is signed with a new key (the old key was lost), so it cannot update the installed app. Uninstall Poker Payout, then install this version. Uninstalling deletes saved data. Later updates install normally."
+elif [[ $ROTATION_PENDING == 1 ]]; then
+  # F-Droid users are still on the old key, and may jump straight to this release.
+  # rotate-key marked the old-key builds "superseded by X.Y.Z": the first new-key version.
+  KEY_NAME="$(grep -oE 'superseded by [0-9]+\.[0-9]+\.[0-9]+' "$META_REL" | head -1 | cut -d' ' -f3 || true)"
+  KEY_NAME="${KEY_NAME:-${LAST_TAG#v}}"
+  NOTICE_MD="**Updating from an older version?** Poker Payout $KEY_NAME changed the signing key, so going from an earlier version to this one needs a one-time reinstall: uninstall Poker Payout, then install this version. Uninstalling deletes the app's saved data. Updating from $KEY_NAME or later works normally."
+  NOTICE_TXT="Coming from a version before $KEY_NAME? The signing key changed in $KEY_NAME, so uninstall Poker Payout once, then install this version. Uninstalling deletes saved data."
+fi
 
 if [[ -n $FDROID_NOTES ]]; then
   sed -e 's/[[:space:]]*$//' "$FDROID_NOTES" >"$OUT/fdroid-changelog.txt"
 else
   limit=$FDROID_WHATSNEW_LIMIT
-  [[ $ROTATION == 1 ]] && limit=$((FDROID_WHATSNEW_LIMIT - ${#ROTATION_TXT} - 2))
+  [[ -n $NOTICE_TXT ]] && limit=$((FDROID_WHATSNEW_LIMIT - ${#NOTICE_TXT} - 2))
   "${META_PY[@]}" fdroid-changelog "$NOTES_SRC" "$limit" >"$OUT/fdroid-changelog.txt"
 fi
-if [[ $ROTATION == 1 ]] && ! head -c 300 "$OUT/fdroid-changelog.txt" | grep -qi reinstall; then
-  { echo "$ROTATION_TXT"; echo; cat "$OUT/fdroid-changelog.txt"; } >"$WORK/cl" && mv "$WORK/cl" "$OUT/fdroid-changelog.txt"
+if [[ -n $NOTICE_TXT ]] && ! head -c 300 "$OUT/fdroid-changelog.txt" | grep -qiE 'reinstall|uninstall'; then
+  { echo "$NOTICE_TXT"; echo; cat "$OUT/fdroid-changelog.txt"; } >"$WORK/cl" && mv "$WORK/cl" "$OUT/fdroid-changelog.txt"
 fi
 CL_LEN="$(python3 -c 'import sys; print(len(open(sys.argv[1], encoding="utf-8").read().rstrip("\n")))' "$OUT/fdroid-changelog.txt")"
 [[ -s $OUT/fdroid-changelog.txt ]] || fail_step notes "F-Droid changelog is empty"
 ((CL_LEN <= FDROID_WHATSNEW_LIMIT)) \
   || fail_step notes "F-Droid changelog is $CL_LEN chars; F-Droid cuts at $FDROID_WHATSNEW_LIMIT (shorten $FDROID_NOTES)"
-line_ok notes "\"$TITLE\"; F-Droid What's New $CL_LEN/$FDROID_WHATSNEW_LIMIT chars$([[ $ROTATION == 1 ]] && echo ", with reinstall notice")"
+line_ok notes "\"$TITLE\"; F-Droid What's New $CL_LEN/$FDROID_WHATSNEW_LIMIT chars$([[ -n $NOTICE_TXT ]] && echo ", with reinstall notice")"
 
 # ---------------------------------------------------------------- bump
 mkdir -p "$WORK/backup"
@@ -337,7 +356,7 @@ CHANGELOG="$SRC/$CHANGELOG_DIR_REL/$NEW_CODE.txt"
 [[ -e $CHANGELOG ]] && CHANGELOG_EXISTED=1
 
 "${META_PY[@]}" set-version "$SRC/app/build.gradle.kts" "$NEW_NAME" "$NEW_CODE"
-if [[ $HAVE_UPSTREAM == 1 ]]; then cp "$UPSTREAM" "$SRC/$META_REL"; fi
+if [[ $HAVE_UPSTREAM == 1 && $ROTATION_PENDING == 0 ]]; then cp "$UPSTREAM" "$SRC/$META_REL"; fi
 if [[ $ROTATION == 1 ]]; then
   "${META_PY[@]}" rotate-key "$SRC/$META_REL" "$MIRROR_KEY" "$NEW_CODE" \
     "signing key lost; superseded by $NEW_NAME, signed with a new key"
@@ -437,7 +456,7 @@ fi
 # The release page reads: our blurb, then GitHub's generated "What's Changed" (merged PRs
 # since the last tag, added once the tag exists), then the APK/signing footer.
 {
-  [[ $ROTATION == 1 ]] && ! grep -qi reinstall "$OUT/notes-body.md" && { echo "> $ROTATION_MD"; echo; }
+  [[ -n $NOTICE_MD ]] && ! grep -qiE 'reinstall|uninstall' "$OUT/notes-body.md" && { echo "> $NOTICE_MD"; echo; }
   cat "$OUT/notes-body.md"
 } >"$OUT/notes-head.md"
 {
@@ -552,6 +571,9 @@ if [[ $ROTATION == 1 ]]; then
   echo "  Its checkupdates bot will still add the build from the tag, but the build fails the signer"
   echo "  check until fdroiddata pins the new key. Open the merge request now:"
   echo "    scripts/release/fdroid-mr.sh --publish        (dry run first: scripts/release/fdroid-mr.sh)"
+elif [[ $ROTATION_PENDING == 1 ]]; then
+  echo "F-Droid: still pins the old key until the fdroiddata MR for $LAST_TAG's new key merges."
+  echo "  After that its checkupdates bot adds $TAG from the tag and builds it as usual; nothing to do."
 else
   echo "F-Droid (nothing to do; v1.1.12 took ~16 h from tag to built, published the same day):"
   echo "  1. checkupdates bot sees tag $TAG and commits 'Update Poker Payout to $NEW_CODE' to fdroiddata (hours)"

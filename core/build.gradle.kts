@@ -60,6 +60,8 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.navigation)
     implementation(libs.timber)
+    implementation(libs.compose.ui.tooling.preview)
+    debugImplementation(libs.debug.compose.ui.tooling)
     testImplementation(libs.bundles.common.test)
     androidTestImplementation(libs.bundles.common.android.test)
 

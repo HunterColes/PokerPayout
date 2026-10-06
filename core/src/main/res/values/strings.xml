@@ -5,4 +5,34 @@
     <string name="navigation_tournament">Tournament</string>
     <string name="navigation_bank">Bank</string>
     <string name="navigation_tools">Tools</string>
+    <string name="navigation_payouts">Payouts</string>
+
+    <!-- Design-system components (core/design/components) -->
+    <string name="design_back">Back</string>
+    <string name="design_undo">Undo</string>
+    <string name="design_decrease">Decrease %1$s</string>
+    <string name="design_increase">Increase %1$s</string>
+    <string name="design_locked">Locked</string>
+    <string name="design_toggle_taken">%1$s, %2$d taken</string>
+    <plurals name="design_knockouts">
+        <item quantity="one">%d knockout</item>
+        <item quantity="other">%d knockouts</item>
+    </plurals>
+    <string name="design_equity">Win %1$s, tie %2$s</string>
+    <string name="design_equity_estimate">Win about %1$s, tie about %2$s, still estimating</string>
+    <string name="design_chip">%1$s %2$s chip</string>
+
+    <!-- Playing cards: "Ace of spades", "10 of hearts" -->
+    <string name="card_name">%1$s of %2$s</string>
+    <string name="card_rank_ace">Ace</string>
+    <string name="card_rank_king">King</string>
+    <string name="card_rank_queen">Queen</string>
+    <string name="card_rank_jack">Jack</string>
+    <string name="card_suit_spades">spades</string>
+    <string name="card_suit_hearts">hearts</string>
+    <string name="card_suit_diamonds">diamonds</string>
+    <string name="card_suit_clubs">clubs</string>
+    <string name="card_slot_empty">Empty card slot</string>
+    <string name="card_slot_next">Next card</string>
+    <string name="card_slot_random">Random card</string>
 </resources>

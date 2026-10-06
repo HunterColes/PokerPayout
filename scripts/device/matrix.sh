@@ -132,7 +132,7 @@ demo_status_bar() { # SystemUI drops its demo mode when the display size changes
   done
 }
 
-TOUR_PID=""; INTERRUPTED=0
+TOUR_PID=""; INTERRUPTED=0; CUR_ROW=""; CUR_T0=0
 on_exit() {
   local rc=$?
   if device_online; then
@@ -152,6 +152,8 @@ on_signal() {
     local i; for i in $(seq 1 120); do kill -0 "$TOUR_PID" 2>/dev/null || break; sleep 0.5; done
   fi
   device_online && reset_display
+  # The profile that was running goes in the report with what it got through
+  [[ -z "$CUR_ROW" ]] || printf '%s\t%s\t130\n' "$CUR_ROW" "$(since "$CUR_T0")" >> "$M/profiles.tsv"
   write_report || true
   exit 130
 }
@@ -236,12 +238,15 @@ for name in "${RUN_PROFILES[@]}"; do
   # PP_UI_SCROLL: what a step expects may be below the fold on this screen; ui.py drags the page
   # to look for it (see ui.py). The plain tour never sets it.
   # PP_TOUR_RECOVER: after a failed step, close a dialog it left open (one bug, one failure).
-  PP_UI_SCROLL=1 PP_TOUR_RECOVER=1 PP_PROFILE="$name" PP_PROFILE_FONT="$font" PP_PROFILE_ROTATION="$rot" PP_PROFILE_TURNS="$turns" \
+  # PP_UI_HOLD_ROTATION: a rotated profile stays rotated through uiautomator's dumps (see ui.py).
+  hold=""; [[ "$rot" == 0 ]] || hold="$rot"
+  PP_UI_HOLD_ROTATION="$hold" PP_UI_SCROLL=1 PP_TOUR_RECOVER=1 PP_PROFILE="$name" PP_PROFILE_FONT="$font" PP_PROFILE_ROTATION="$rot" PP_PROFILE_TURNS="$turns" \
     "$DEVICE_SCRIPTS/tour.sh" --no-boot --no-install --keep-going --out "$M/$name" --only "$(xargs <<<"$steps")" \
     > "$M/$name/tour.out" 2>&1 &
   TOUR_PID=$!
+  CUR_ROW="$(printf '%s\t%s\t%s\t%s\t%s\t%s\t%s' "$name" "$size" "$density" "$font" "$rot" "$turns" "$desc")"; CUR_T0=$t
   rc=0; wait "$TOUR_PID" || rc=$?
-  TOUR_PID=""
+  TOUR_PID=""; CUR_ROW=""
   secs=$(since "$t")
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$size" "$density" "$font" "$rot" "$turns" "$desc" "$secs" "$rc" >> "$M/profiles.tsv"
   grep -E '^\[tour\] FAIL ' "$M/$name/tour.out" | sed "s/^/[matrix]   /" || true

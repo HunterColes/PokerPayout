@@ -45,11 +45,19 @@ rotate_to() {
   [[ -f "$ROTATION_MARK" ]] || adb_ shell settings get system user_rotation | tr -d '\r' > "$ROTATION_MARK"
   adb_ shell settings put system accelerometer_rotation 0
   adb_ shell settings put system user_rotation "$r"
+  # Every uiautomator dump freezes the rotation back at the display's (0 under a portrait-only
+  # screen): ui.py puts r back after each dump for the rest of this step
+  if [[ "$r" == 0 ]]; then unset PP_UI_HOLD_ROTATION; else export PP_UI_HOLD_ROTATION="$r"; fi
   # The display either turns to r or, under a portrait-only screen, stays upright: wait up to 2 s
   # for the first, then let a rotation (and the activity's recreation) settle.
   local i; for i in 1 2 3 4; do sleep 0.5; [[ "$(display_rotation)" == "$r" ]] && break; done
   sleep 0.5
   echo "user rotation $r, display rotation $(display_rotation)"
+}
+# The user rotation is still $1 (the display was really turned while the step worked)
+require_user_rotation() {
+  local got; got="$(adb_ shell settings get system user_rotation | tr -d '\r')"
+  [[ "$got" == "$1" ]] || { echo "[ui] FAIL the user rotation is $got, not $1"; return 1; }
 }
 # The orientation of what's on screen, from a screenshot: port or land.
 screen_orientation() { local s; s="$(screen_size)"; [[ "${s%x*}" -gt "${s#*x}" ]] && echo land || echo port; }
@@ -90,7 +98,8 @@ if (b[2] - b[0], b[3] - b[1]) != (w, h):
 if abs(float(font) - float(want_font)) > 0.01:
     sys.exit("[ui] FAIL font scale is %s, the profile wants %s" % (font, want_font))
 PY
-  require_orientation "$(orientation_at "$rot")"
+  require_user_rotation "$PP_PROFILE_ROTATION" || return 1   # still turned after the dumps
+  require_orientation "$(orientation_at "$PP_PROFILE_ROTATION")"
 }
 
 # The four tabs for the window's width: a bar along the bottom below 600 dp, a rail down the left
@@ -126,11 +135,13 @@ s_rotate() {
   tab Tools
   ui assert-text text=Odds "text=Hand ranks" || return 1
   require_tab_selected Tools
+  require_user_rotation 1 || return 1
   rotate_to seascape
   require_orientation "$(orientation_at 3)" || return 1
   tab Tournament
   ui assert-text "text~=Tournament Configuration" || return 1
   require_tab_selected Tournament
+  require_user_rotation 3 || return 1
   rotate_to "$PP_PROFILE_ROTATION"
   require_orientation "$(orientation_at "$PP_PROFILE_ROTATION")" || return 1
   local now; now="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"

@@ -146,6 +146,16 @@ def kill_uiautomator():
         pass
 
 
+def hold_rotation():
+    """uiautomator re-freezes the rotation at the display's current one when it disconnects, so under
+    a portrait-only screen every dump turned a user rotation of 90 back to 0. With
+    PP_UI_HOLD_ROTATION=N (steps-matrix.sh's rotate_to, a rotated matrix profile) put N back."""
+    want = os.environ.get("PP_UI_HOLD_ROTATION")
+    if want and shell("settings get system user_rotation", check=False).strip() != want:
+        shell("settings put system accelerometer_rotation 0; settings put system user_rotation %s" % want,
+              check=False)
+
+
 def dump_xml(retries=4):
     last = ""
     for attempt in range(retries):
@@ -162,6 +172,7 @@ def dump_xml(retries=4):
             kill_uiautomator()
             last = "timed out"
             continue
+        hold_rotation()
         end = out.rfind("</hierarchy>")
         if os.environ.get("PP_UI_TRACE"):
             sys.stderr.write("[ui] dump %.1fs%s\n" % (time.time() - t0, "" if end != -1 else " (failed)"))

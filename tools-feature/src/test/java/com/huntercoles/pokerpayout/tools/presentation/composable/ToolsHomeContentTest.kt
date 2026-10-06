@@ -52,8 +52,14 @@ class ToolsHomeContentTest {
         compose.onNodeWithText("Odds").performClick()
         compose.onNodeWithText("Chip set").performClick()
         compose.onNodeWithText("Hand ranks").performClick()
+        compose.onNodeWithText("Seat draw").performClick()
         assertEquals(
-            listOf(NavigationDestination.OddsCalculator, NavigationDestination.ChipCalculator, NavigationDestination.HandRanks),
+            listOf(
+                NavigationDestination.OddsCalculator,
+                NavigationDestination.ChipCalculator,
+                NavigationDestination.HandRanks,
+                NavigationDestination.SeatDraw,
+            ),
             opened,
         )
     }

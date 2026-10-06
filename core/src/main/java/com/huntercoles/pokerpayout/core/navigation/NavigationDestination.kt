@@ -29,6 +29,10 @@ sealed class NavigationDestination {
     @Serializable
     data object ChipCalculator : NavigationDestination()
 
+    /** Random seats across the tables, and the high-card draw for the button (PP-036). */
+    @Serializable
+    data object SeatDraw : NavigationDestination()
+
     @Serializable
     data object Back : NavigationDestination()
 }

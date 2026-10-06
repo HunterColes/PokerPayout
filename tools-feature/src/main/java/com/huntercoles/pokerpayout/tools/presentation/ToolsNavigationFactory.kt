@@ -13,6 +13,7 @@ import com.huntercoles.pokerpayout.core.navigation.NavigationManager
 import com.huntercoles.pokerpayout.tools.presentation.composable.ChipSetRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.HandRanksScreen
 import com.huntercoles.pokerpayout.tools.presentation.composable.OddsCalculatorScreen
+import com.huntercoles.pokerpayout.tools.presentation.composable.SeatDrawRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ToolsHomeScreen
 import javax.inject.Inject
 
@@ -41,6 +42,10 @@ class ToolsNavigationFactory @Inject constructor(
 
         builder.composable<NavigationDestination.ChipCalculator> {
             ChipSetRoute(onBack = navigationManager::navigateBack)
+        }
+
+        builder.composable<NavigationDestination.SeatDraw> {
+            SeatDrawRoute(onBack = navigationManager::navigateBack)
         }
     }
 }

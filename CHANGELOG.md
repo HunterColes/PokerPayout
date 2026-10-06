@@ -3,6 +3,13 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.3.5 (on master, not published)
+
+- **Seat draw** (Tools): seats the Bank's players at random across one or two tables, kept within
+  one player of each other, then deals a card to every seat for the button. The high card takes it
+  (ties go spades, hearts, diamonds, clubs) and the next seats post the blinds. Redraw with Undo,
+  and share the seating as text.
+
 ## 1.3.4 (on master, not published)
 
 The Tournament tab is rebuilt around the clock.

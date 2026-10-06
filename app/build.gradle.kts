@@ -10,12 +10,9 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    // Baseline profile plugin disabled for F-Droid reproducible builds
-    // alias(libs.plugins.baseline.profile)
     alias(libs.plugins.detekt)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin)
-    alias(libs.plugins.kotlin.compose.compiler)
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
 }
@@ -39,8 +36,8 @@ android {
         applicationId = "com.huntercoles.pokerpayout"
         minSdk = 26
         targetSdk = 34
-        versionCode = 34
-        versionName = "1.3.8"
+        versionCode = 37
+        versionName = "1.3.11"
     }
 
     dependenciesInfo {
@@ -49,8 +46,7 @@ android {
     }
 
     buildFeatures {
-        buildConfig = true
-        compose = true
+        buildConfig = true // the app module has no Compose code; the features and core do
     }
 
     lint {
@@ -171,20 +167,9 @@ dependencies {
     implementation(project(":tools-feature"))
 
     implementation(libs.hilt)
-    implementation(libs.navigation) // needed for Room
-    implementation(libs.room.ktx)
     implementation(libs.timber)
 
-    // Baseline profiles disabled for F-Droid reproducible builds
-    // implementation(libs.test.android.profile.installer)
-    // baselineProfile(project(":baseline-profiles"))
-
     ksp(libs.hilt.compiler)
-    ksp(libs.room.compiler)
-}
-
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 abstract class StripBaselineProfilesTask : DefaultTask() {

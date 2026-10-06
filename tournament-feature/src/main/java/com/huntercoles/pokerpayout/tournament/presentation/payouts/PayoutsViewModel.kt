@@ -97,7 +97,8 @@ class PayoutsViewModel @Inject constructor(
                 paidOut = bankPreferences.getPlayerPayedOutStatus(id),
                 eliminatedBy = bankPreferences.getPlayerEliminatedBy(id),
                 rebuyPricesCents = bankPreferences.getPlayerRebuyPrices(id),
-                addOnPricesCents = bankPreferences.getPlayerAddonPrices(id)
+                addOnPricesCents = bankPreferences.getPlayerAddonPrices(id),
+                bountyDrawCents = bankPreferences.getPlayerBountyDraw(id)
             )
         }
         val names = ids.associateWith { bankPreferences.getPlayerName(it) }
@@ -169,6 +170,11 @@ class PayoutsViewModel @Inject constructor(
         )
     }
 
+    /**
+     * Who claimed which bounties, and for how much: in every bounty mode (PP-035) a claim is what the
+     * settlement pays its eliminator for knockouts (a bounty each, the cash halves, or the envelopes
+     * drawn), so the card and the share text agree with the Bank to the cent.
+     */
     private fun bounties(settlement: Settlement, names: Map<Int, String>, perHead: Long, foodCents: Long): BountiesModel {
         val champion = settlement.championId
         val victimsBy = settlement.standings.eliminated
@@ -176,7 +182,11 @@ class PayoutsViewModel @Inject constructor(
             .mapNotNull { victim -> creditOf(settlement, victim, names)?.let { it to victim } }
             .groupBy({ it.first }, { it.second })
         val claims = victimsBy.map { (eliminator, victims) ->
-            BountyClaim(names[eliminator].orEmpty(), victims.map { names[it].orEmpty() }, victims.size * perHead)
+            BountyClaim(
+                names[eliminator].orEmpty(),
+                victims.map { names[it].orEmpty() },
+                settlement.forPlayer(eliminator)?.knockoutBountyCents ?: 0L
+            )
         }
         val championOwed = champion?.let { settlement.forPlayer(it) }
         val championCents = (championOwed?.kingsBountyCents ?: 0L) + (championOwed?.unclaimedBountyCents ?: 0L)
@@ -186,7 +196,9 @@ class PayoutsViewModel @Inject constructor(
             stillOutCents = (settlement.pool.bountyPoolCents - claims.sumOf { it.cents } - championCents).coerceAtLeast(0L),
             championName = champion?.let { names[it] },
             championCents = championCents,
-            foodCents = foodCents
+            foodCents = foodCents,
+            mode = settlement.bountyMode,
+            envelopes = if (perHead > 0L) names.size else 0
         )
     }
 

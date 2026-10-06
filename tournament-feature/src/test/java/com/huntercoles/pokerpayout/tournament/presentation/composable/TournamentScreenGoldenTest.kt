@@ -10,9 +10,11 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.navigation.NavTab
 import com.huntercoles.pokerpayout.core.testing.Device
 import com.huntercoles.pokerpayout.core.testing.DeviceMatrix
@@ -28,6 +30,7 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiSta
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentMode
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentUi
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -87,6 +90,21 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
     fun setup() {
         check("S1_setup_before", fixture.ready, TournamentUi(), scroll = true)
         check("S1_setup_invalid", fixture.invalid(), TournamentUi())
+    }
+
+    /**
+     * PP-035: mystery bounties picked before anyone is out, so the bounty type is open and the
+     * envelopes are listed under it (1 × $15 · 2 × $6 · 6 × $3).
+     */
+    @Test
+    fun setupMystery() {
+        val mystery = setup.copy(
+            config = setup.config.copy(money = setup.money.copy(bountyMode = BountyMode.MYSTERY)),
+            knockoutsRecorded = false,
+        )
+        showAndCheck("S1_setup_mystery", scroll = true) {
+            TournamentContent(mystery, fixture.ready, TournamentUi(), TournamentActions())
+        }
     }
 
     @Test
@@ -190,6 +208,39 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         screen.compose.onRoot().captureGolden("screens", name, config)
     }
 
+    /**
+     * The top bar's buttons are 48 dp both ways on every cell, before the start and on the clock, at
+     * every scroll position of the page below. (On 1.3.4 the device matrix once read "Reset
+     * tournament" as 48 x 32 dp while setup scrolled.) The screen checks above accept a smaller
+     * target with nothing next to it; these must keep their full size.
+     */
+    @Test
+    fun topBarButtonsStayFullSize() {
+        show("top bar, setup", fixture.ready, TournamentUi())
+        val inSetup = topBarButtons()
+        assertTrue("no top bar buttons found in setup on ${config.id}", inSetup.isNotEmpty())
+        screen.compose.forEachScrollPosition { position -> assertFullSize("setup on ${config.id}, $position") }
+
+        // A phone held sideways shows the table view on the clock, without the top bar.
+        show("top bar, clock", fixture.running, TournamentUi(mode = TournamentMode.Running))
+        screen.compose.forEachScrollPosition { position -> assertFullSize("clock on ${config.id}, $position") }
+    }
+
+    private fun topBarButtons() = TOP_BAR_BUTTONS.flatMap { label ->
+        screen.compose.onAllNodesWithContentDescription(label).fetchSemanticsNodes()
+    }
+
+    private fun assertFullSize(where: String) {
+        val shrunk = topBarButtons().filter { node ->
+            val minPx = with(node.layoutInfo.density) { MIN_TOUCH.toPx() }
+            node.size.width + 1 < minPx || node.size.height + 1 < minPx
+        }
+        assertTrue(
+            "$where: ${shrunk.map { "${it.config} is ${it.size.width} x ${it.size.height} px" }}",
+            shrunk.isEmpty(),
+        )
+    }
+
     private fun check(name: String, timer: TimerUiState, ui: TournamentUi, scroll: Boolean = false) {
         showAndCheck(name, scroll) { TournamentContent(setup, timer, ui, TournamentActions()) }
     }
@@ -225,6 +276,8 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         private const val SMALL_BELOW_DP = 360
         private const val LEVEL_ONE_LEFT = 20 * 60
         private const val FOLD_FRAME_MILLIS = 300f
+        private val MIN_TOUCH = 48.dp
+        private val TOP_BAR_BUTTONS = listOf("Reset tournament", "Mute chimes", "Unmute chimes", "Table view", "More options")
 
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")

@@ -25,11 +25,12 @@ import com.huntercoles.pokerpayout.core.design.ChipDenominations
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.PokerChip
+import com.huntercoles.pokerpayout.core.design.components.chipColourWord
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
+import com.huntercoles.pokerpayout.core.utils.ChipColour
 import com.huntercoles.pokerpayout.core.utils.ChipSetChips
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.domain.clock.ColorUpSwap
-import java.util.Locale
 
 /**
  * The swap as chips: four green 25s, an arrow, one black 100. Ratios above [MAX_DRAWN] chips draw
@@ -123,11 +124,10 @@ private fun chipPaint(value: Int, chipSet: ChipSetChips): Color? =
 @Composable
 private fun chipPhrase(value: Int, plural: Boolean, chipSet: ChipSetChips?): String {
     val formatter = rememberChipFormatter()
-    val standardValue = chipSet?.colourOf(value)?.standardValue ?: value
-    val colour = ChipDenominations.getChipByValue(standardValue)?.name?.lowercase(Locale.ROOT).orEmpty()
+    val colour = (chipSet?.colourOf(value) ?: ChipColour.forStandardValue(value))?.let { chipColourWord(it) }.orEmpty()
     val amount = formatter.format(value)
     return when {
-        colour.isEmpty() && plural -> "${amount}s"
+        colour.isEmpty() && plural -> stringResource(R.string.break_chips_number_plural, amount)
         colour.isEmpty() -> amount
         plural -> stringResource(R.string.break_chips_plural, colour, amount)
         else -> stringResource(R.string.break_chip_single, colour, amount)

@@ -34,6 +34,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
@@ -136,11 +138,13 @@ private fun StackField(state: ChipSetUiState, onIntent: (ChipSetIntent) -> Unit)
         commit()
     }
     LaunchedEffect(focused) { if (!focused) commit() }
+    val label = stringResource(R.string.chip_set_starting_stack)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         PokerField(
             value = text,
             onValueChange = { typed -> text = typed.filter(Char::isDigit).take(MAX_STACK_DIGITS) },
-            label = stringResource(R.string.chip_set_starting_stack),
+            label = label,
+            fieldModifier = Modifier.semantics { contentDescription = label },
             supportingText = if (state.stackFromTournament) {
                 stringResource(R.string.chip_set_starting_stack_tournament)
             } else {

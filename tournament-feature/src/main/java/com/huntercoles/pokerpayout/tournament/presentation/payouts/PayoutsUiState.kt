@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tournament.presentation.payouts
 
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
@@ -36,7 +37,6 @@ data class PayoutsUiState(
     val preset: PayoutPreset? get() = settings.preset
 
     val canPlaceMore: Boolean get() = !isLocked && places < maxPlaces
-    val canPlaceFewer: Boolean get() = !isLocked && places > 1
 }
 
 /** One paid place. [sharePercent] is the rounded amount's share of the pool, not the raw weight. */
@@ -81,8 +81,15 @@ data class BountiesModel(
     val claims: List<BountyClaim> = emptyList(),
     /** Bounties not claimed yet; the champion's share once the night is over. */
     val stillOutCents: Long = 0L,
-    /** Once there is a champion: their own bounty plus the unclaimed ones (PP-055). */
+    /**
+     * Once there is a champion: their own bounty plus the unclaimed ones (PP-055); progressive, their
+     * grown bounty; mystery, the envelopes left.
+     */
     val championName: String? = null,
     val championCents: Long = 0L,
-    val foodCents: Long = 0L
+    val foodCents: Long = 0L,
+    /** How knockouts pay (PP-035); a claim's [BountyClaim.cents] is what it paid in this mode. */
+    val mode: BountyMode = BountyMode.STANDARD,
+    /** Mystery bounties: how many envelopes the pool started with (one per player). */
+    val envelopes: Int = 0
 )

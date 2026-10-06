@@ -229,6 +229,64 @@ class BankScreensTest(private val config: ScreenConfig) {
         check("Pool breakdown sheet")
     }
 
+    // Progressive and mystery bounties (PP-035) ------------------------------------------------------
+
+    /** Progressive bounties: every player still in shows the bounty on their head under their name. */
+    @Test
+    fun progressiveBounties() {
+        show(BankScenes.progressive(kit).state())
+        golden("S5_bank_pko")
+        check("Bank with progressive bounties")
+    }
+
+    /** Theo's knockout with Marcus picked: what Marcus takes now and what his bounty grows to. */
+    @Test
+    fun knockoutSheetProgressive() = with(kit) {
+        val viewModel = BankScenes.progressive(kit)
+        viewModel.send(BankIntent.OpenKnockout(BankScenes.THEO))
+        val sheet = viewModel.state().sheet as BankSheet.Knockout
+        show(viewModel.state()) {
+            KnockoutSheetContent(sheet, onKnockOut = {}, onDismiss = {}, initialChoice = BankScenes.MARCUS)
+        }
+        golden("S5b_knockout_sheet_pko")
+        check("Knockout sheet, progressive")
+    }
+
+    /** The progressive night played out: Dana's knockouts, her grown bounty and the one nobody claimed. */
+    @Test
+    fun payOutSheetProgressiveChampion() = with(kit) {
+        val viewModel = BankScenes.progressive(kit)
+        viewModel.knockOut(BankScenes.SAM, BankScenes.DANA)
+        viewModel.knockOut(BankScenes.JO, BankScenes.THEO)
+        viewModel.knockOut(BankScenes.THEO, BankScenes.DANA)
+        viewModel.knockOut(BankScenes.PRIYA, null)
+        viewModel.knockOut(BankScenes.MARCUS, BankScenes.DANA)
+        viewModel.send(BankIntent.OpenPayOut(BankScenes.DANA))
+        val sheet = viewModel.state().sheet as BankSheet.PayOut
+        show(viewModel.state()) { PayOutSheetContent(sheet, onSetPaid = {}, onDismiss = {}) }
+        golden("S5c_payout_champion_pko")
+        check("Pay-out sheet, progressive champion")
+    }
+
+    /** Mystery bounties: the envelope Priya drew for knocking Theo out, opened. */
+    @Test
+    fun envelopeReveal() = with(kit) {
+        val viewModel = BankScenes.mystery(kit)
+        viewModel.send(BankIntent.KnockOut(BankScenes.THEO, BankScenes.PRIYA))
+        val sheet = viewModel.state().sheet as BankSheet.Envelope
+        show(viewModel.state()) { EnvelopeSheetContent(sheet, onDismiss = {}) }
+        golden("S5d_envelope_reveal")
+        check("Envelope sheet")
+    }
+
+    /** Mystery bounties: the pool breakdown says what is still in the envelopes (layout only). */
+    @Test
+    fun poolBreakdownSheetMystery() {
+        val state = BankScenes.mystery(kit).state()
+        show(state) { PoolBreakdownSheetContent(state, onPayoutStructure = {}, onDismiss = {}) }
+        check("Pool breakdown sheet, mystery")
+    }
+
     companion object {
         private const val SCRIM = 0.62f
 

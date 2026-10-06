@@ -31,6 +31,7 @@ import com.huntercoles.pokerpayout.core.design.components.PokerPill
 import com.huntercoles.pokerpayout.core.design.components.PokerPillTone
 import com.huntercoles.pokerpayout.core.design.components.PokerSheet
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
 import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 
@@ -118,21 +119,38 @@ private fun StandingPill(sheet: BankSheet.PayOut) {
 @Composable
 private fun breakdownLines(sheet: BankSheet.PayOut): List<Pair<String, Long>> {
     val owed = sheet.owed
-    val bounty = sheet.money.bountyCents
     return buildList {
         owed.place?.takeIf { owed.prizeCents > 0L }?.let {
             add(stringResource(R.string.bank_pay_place, ordinalOf(it)) to owed.prizeCents)
         }
-        if (owed.knockouts > 0 && owed.knockoutBountyCents > 0L) {
-            add(stringResource(R.string.bank_pay_knockouts, owed.knockouts, formatMoney(bounty)) to owed.knockoutBountyCents)
-        }
-        if (owed.kingsBountyCents > 0L) {
-            add(stringResource(R.string.bank_pay_kings_bounty, formatMoney(owed.kingsBountyCents)) to owed.kingsBountyCents)
-        }
+        if (owed.knockouts > 0 && owed.knockoutBountyCents > 0L) add(knockoutsLabel(sheet) to owed.knockoutBountyCents)
+        if (owed.kingsBountyCents > 0L) add(kingsBountyLabel(sheet) to owed.kingsBountyCents)
         if (owed.unclaimedBountyCents > 0L) {
             val count = sheet.unclaimedKnockouts.coerceAtLeast(1)
             add(pluralStringResource(R.plurals.bank_pay_unclaimed, count, count) to owed.unclaimedBountyCents)
         }
+    }
+}
+
+/** "Knockouts · 2 × $5"; progressive: half of each bounty; mystery: the envelopes drawn (PP-035). */
+@Composable
+private fun knockoutsLabel(sheet: BankSheet.PayOut): String {
+    val count = sheet.owed.knockouts
+    return when (sheet.money.bountyMode) {
+        BountyMode.STANDARD -> stringResource(R.string.bank_pay_knockouts, count, formatMoney(sheet.money.bountyCents))
+        BountyMode.PROGRESSIVE -> pluralStringResource(R.plurals.bank_pay_knockouts_pko, count, count)
+        BountyMode.MYSTERY -> pluralStringResource(R.plurals.bank_pay_envelopes, count, count)
+    }
+}
+
+/** The champion's own bounty: as paid in, grown (progressive), or the envelopes left (mystery). */
+@Composable
+private fun kingsBountyLabel(sheet: BankSheet.PayOut): String = when (sheet.money.bountyMode) {
+    BountyMode.STANDARD -> stringResource(R.string.bank_pay_kings_bounty, formatMoney(sheet.owed.kingsBountyCents))
+    BountyMode.PROGRESSIVE -> stringResource(R.string.bank_pay_kings_bounty_pko)
+    BountyMode.MYSTERY -> {
+        val left = sheet.envelopesLeft.coerceAtLeast(1)
+        pluralStringResource(R.plurals.bank_pay_envelopes_left, left, left)
     }
 }
 

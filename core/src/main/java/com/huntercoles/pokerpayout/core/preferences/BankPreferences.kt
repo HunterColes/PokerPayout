@@ -103,6 +103,27 @@ class BankPreferences @Inject constructor(
     }
 
     /**
+     * Mystery bounties (PP-035): the envelope drawn when [playerId] was knocked out, in cents, won
+     * by whoever is credited with the knockout; null if none was drawn. Its key starts with
+     * "player_", so the Bank's reset and removing players clear it with the rest of the player.
+     */
+    fun getPlayerBountyDraw(playerId: Int): Long? {
+        val key = "$PLAYER_BOUNTY_DRAW_PREFIX$playerId"
+        return if (prefs.contains(key)) prefs.getLong(key, 0L).coerceAtLeast(0L) else null
+    }
+
+    fun savePlayerBountyDraw(playerId: Int, cents: Long?) {
+        val editor = prefs.edit()
+        if (cents == null) {
+            editor.remove("$PLAYER_BOUNTY_DRAW_PREFIX$playerId")
+        } else {
+            editor.putLong("$PLAYER_BOUNTY_DRAW_PREFIX$playerId", cents.coerceAtLeast(0L))
+        }
+        editor.apply()
+        changed()
+    }
+
+    /**
      * Sets [playerId]'s rebuy count. Rebuys kept keep their prices; new ones are priced at the
      * newest recorded one, or today's rebuy amount. The Bank records prices itself through
      * [savePlayerRebuyPrices]; this is for callers that only count.
@@ -469,6 +490,9 @@ class BankPreferences @Inject constructor(
         private const val REBUY_PRICES_PREFIX = "player_rebuy_prices_"
         private const val ADDON_PRICES_PREFIX = "player_addon_prices_"
         private const val PLAYER_OUT_LEVEL_PREFIX = "player_out_level_"
+
+        /** PP-035, mystery bounties: a new key; never rename it. */
+        private const val PLAYER_BOUNTY_DRAW_PREFIX = "player_bounty_draw_"
 
         // The cash game (PP-029): new keys; never rename them
         private const val BANK_MODE_KEY = "bank_mode"

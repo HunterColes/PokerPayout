@@ -1,9 +1,7 @@
 package com.huntercoles.pokerpayout.tools.presentation.composable
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -11,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,7 +43,9 @@ import java.util.Locale
 /**
  * "The sweat" (S10): each hand's equity after every street, one line per seat (gold for the first,
  * Chalk for the second), with the numbers at each point heads-up, a dashed 50% line and a dashed
- * marker where the next street will land. TalkBack reads the numbers.
+ * marker where the next street will land. TalkBack reads the numbers. Each seat's line also has its
+ * own pattern (solid, long dashes, short dashes, dash-dot), in the legend too, so the seats are told
+ * apart without colour (PP-024).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -64,7 +63,16 @@ internal fun SweatCard(runOut: RunOutState) {
             )
             runOut.contestants.forEachIndexed { i, seat ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Box(Modifier.size(width = 14.dp, height = 3.dp).background(lineColour(i), RoundedCornerShape(2.dp)))
+                    Canvas(Modifier.size(width = SWATCH_WIDTH, height = 3.dp)) {
+                        val middle = size.height / 2
+                        drawLine(
+                            color = lineColour(i),
+                            start = Offset(0f, middle),
+                            end = Offset(size.width, middle),
+                            strokeWidth = size.height,
+                            pathEffect = linePattern(i),
+                        )
+                    }
                     Text(
                         text = runOut.request.seats[seat].cards.joinToString("", transform = ::cardText),
                         style = MaterialTheme.typography.bodySmall,
@@ -125,7 +133,8 @@ private fun DrawScope.drawSweat(runOut: RunOutState, measurer: TextMeasurer, str
         val points = runOut.history.map { Offset(xs[it.street.ordinal], y(it.equityPct[seat])) }
         val path = Path().apply { points.forEachIndexed { i, p -> if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) } }
         val width = if (line == 0) LEAD_LINE else OTHER_LINE
-        drawPath(path, lineColour(line), style = Stroke(width = width.toPx(), join = StrokeJoin.Round))
+        val stroke = Stroke(width = width.toPx(), join = StrokeJoin.Round, pathEffect = linePattern(line))
+        drawPath(path, lineColour(line), style = stroke)
         points.forEachIndexed { i, p ->
             val radius = if (i == points.lastIndex) LAST_DOT else DOT
             drawCircle(lineColour(line), radius = radius.toPx(), center = p)
@@ -173,6 +182,16 @@ private fun DrawScope.drawNumbers(
 
 private fun DrawScope.dashes(on: Dp, off: Dp): PathEffect = PathEffect.dashPathEffect(floatArrayOf(on.toPx(), off.toPx()))
 
+/** Each seat's line pattern: solid, long dashes, short dashes, dash-dot, then round again. */
+private fun DrawScope.linePattern(index: Int): PathEffect? = when (index % LINE_PATTERNS) {
+    0 -> null
+    1 -> dashes(LONG_DASH, PATTERN_GAP)
+    2 -> dashes(SHORT_DASH, PATTERN_GAP)
+    else -> PathEffect.dashPathEffect(
+        floatArrayOf(LONG_DASH.toPx(), PATTERN_GAP.toPx(), SHORT_DASH.toPx(), PATTERN_GAP.toPx()),
+    )
+}
+
 /** Line colours, one per seat in the hand: gold, Chalk, then the signal colours. */
 internal fun lineColour(index: Int): Color = LINE_COLOURS[index % LINE_COLOURS.size]
 
@@ -201,5 +220,10 @@ private val LEAD_LINE = 3.dp
 private val OTHER_LINE = 2.5.dp
 private val DASH = 3.dp
 private val GAP = 4.dp
+private const val LINE_PATTERNS = 4
+private val LONG_DASH = 7.dp
+private val SHORT_DASH = 2.5.dp
+private val PATTERN_GAP = 3.dp
+private val SWATCH_WIDTH = 20.dp
 private val NUMBER_GLYPH = 15.dp
 private val LABEL_GLYPH = 11.dp

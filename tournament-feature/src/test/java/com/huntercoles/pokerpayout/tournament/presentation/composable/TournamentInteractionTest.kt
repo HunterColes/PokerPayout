@@ -19,6 +19,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.requestFocus
 import androidx.lifecycle.ViewModelStore
 import com.huntercoles.pokerpayout.core.design.PokerTheme
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.utils.ChipColour
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
@@ -103,6 +104,24 @@ class TournamentInteractionTest {
     private fun SemanticsNodeInteraction.scrolledTo(): SemanticsNodeInteraction =
         runCatching { performScrollTo() }.getOrDefault(this)
 
+    /**
+     * PP-035: the bounty type sends its choice while nobody is out; from the first knockout it is
+     * fixed (a tap sends nothing) and the line under it says so.
+     */
+    @Test
+    fun `the bounty type sends its choice until the first knockout`() {
+        val open = fixture.setupState().copy(knockoutsRecorded = false)
+        show(fixture.ready, TournamentUi(), open)
+        tapText("Progressive")
+        assertEquals(listOf(TournamentConfigIntent.UpdateBountyMode(BountyMode.PROGRESSIVE)), setupIntents)
+
+        setupIntents.clear()
+        show(fixture.ready, TournamentUi(), open.copy(knockoutsRecorded = true))
+        tapText("Mystery")
+        assertTrue(setupIntents.isEmpty())
+        compose.onNodeWithText("Fixed now that someone is out.", substring = true).assertExists()
+    }
+
     @Test
     fun `the clock's controls send the nudges, play-pause and the level skips`() {
         show(fixture.running, TournamentUi(mode = TournamentMode.Running))
@@ -145,12 +164,12 @@ class TournamentInteractionTest {
         assertEquals(TournamentMode.PanelOpen, ui.mode)
         compose.onNodeWithText("Locked while the clock runs", ignoreCase = true).assertExists()
         compose.onNodeWithText("Unlock to edit…").assertExists()
-        compose.onNode(hasSetTextAction() and hasText("Levels", substring = true)).assertDoesNotExist()
+        compose.onNode(hasSetTextAction() and hasText("Level length", substring = true)).assertDoesNotExist()
 
         ui = ui.unlock()
         compose.waitForIdle()
         compose.onNodeWithText("Unlocked: money and blinds", ignoreCase = true).assertExists()
-        val levels = compose.onNode(hasSetTextAction() and hasText("Levels", substring = true))
+        val levels = compose.onNode(hasSetTextAction() and hasText("Level length", substring = true))
         levels.performScrollTo().requestFocus()
         levels.performTextReplacement("15")
         levels.performImeAction()

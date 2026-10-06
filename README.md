@@ -16,7 +16,9 @@
 </p>
 
 <h4 align="center">
-  Professional poker tournament management with payouts, timers, and calculators for Android. Complete toolkit for home games and casino tournaments with beautiful poker-themed interface.
+  A free app for home poker nights: a tournament clock with blinds that fit your chips and your
+  evening, payouts that add up to the cent, a bank of who paid what, and tools for the table.
+  No ads, no accounts, no tracking. It works offline and doesn't even ask for internet access.
 </h4>
 
 # Download
@@ -42,75 +44,60 @@
 </p>
 
 <p align="center">
-  <img src="metadata/en-US/images/phoneScreenshots/01_tournament.png" alt="Tournament" width="160"/>
-  <img src="metadata/en-US/images/phoneScreenshots/02_bank.png" alt="Bank Tracker" width="160"/>
-  <img src="metadata/en-US/images/phoneScreenshots/03_tools_splits.png" alt="Tools - Splits" width="160"/>
-  <img src="metadata/en-US/images/phoneScreenshots/04_tools_odds.png" alt="Tools - Odds" width="160"/>
+  <img src="tournament-feature/src/test/screenshots/screens/S2_clock_running/S2_clock_running_phone-360x780_font1.0.png" alt="The tournament clock" width="160"/>
+  <img src="bank-feature/src/test/screenshots/screens/S5_bank_midgame/S5_bank_midgame_phone-360x780_font1.0.png" alt="The bank" width="160"/>
+  <img src="tournament-feature/src/test/screenshots/screens/S6_payouts_standard/S6_payouts_standard_phone-360x780_font1.0.png" alt="Payouts" width="160"/>
+  <img src="tools-feature/src/test/screenshots/screens/S9_odds_flop_exact/S9_odds_flop_exact_phone-360x780_font1.0.png" alt="Odds" width="160"/>
 </p>
+
+<p align="center"><sub>Pictures from the screenshot tests, so they always show the current app.</sub></p>
 
 # Features
 
-• **Tournament Management**
-  ◦ Payout calculator with customizable weight distributions
-  ◦ Bank tracker for buy-ins, food pools, and bounty payments
-  ◦ Real-time payment status and pool summaries
-  ◦ Professional blind timer with countdown/countup modes
+• **Tournament**
+  ◦ Set up the night once: players, buy-in, bounty, rebuys (with a cutoff level), add-ons and food
+  ◦ A blind clock with big digits, the next level, ±1 minute nudges, breaks with a note, and a
+    big-blind ante; it keeps time through sleep, restarts and reboots
+  ◦ Blinds built from four numbers (game length, level length, starting stack, smallest chip):
+    every level is a multiple of the smallest chip and grows 1.3x to 2x, and a setup that can't
+    work says why and offers the nearest fix
+  ◦ Color-ups on breaks, and up to three overtime levels if the game runs long
+  ◦ Turn the phone sideways for a full-screen table view
 
-• **Advanced Tools**
-  ◦ Dynamic blind structure engine (scales ~33% per level)
-  ◦ Skip forward/backward controls for level preview
-  ◦ Chip distribution calculator
-  ◦ Tournament setup and management
+• **Payouts and the bank**
+  ◦ Top-heavy, standard and flat presets, or your own weights, rounded to $1, $5 or $10; the
+    places always add up to the prize pool to the cent
+  ◦ The bank: who has paid the buy-in, rebuys, add-ons, knockouts and bounties, and who has been
+    paid out, with Undo
+  ◦ A cash game mode: buy-ins and top-ups, a chip count check, and who pays whom at the end
+  ◦ Share the payouts or the settle-up as text
 
-• **Design & Privacy**
-  ◦ Authentic poker green color scheme
-  ◦ Material 3 design with Jetpack Compose
-  ◦ All data stored locally (no internet required)
-  ◦ Clean interface optimized for tournament play
+• **Tools**
+  ◦ Odds for two to ten hands (exact, or a close estimate when there are too many runouts), and run
+    it out card by card
+  ◦ Chip set: stacks from the chips you own, and a color-up plan
+  ◦ Seat draw: random, balanced seats across your tables, and the high card for the button
+  ◦ Hand ranks, with how often each hand comes up
 
-• **Free and Open Source**
-• **Privacy-friendly**
+• **Free and private**
+  ◦ No ads, no accounts, no tracking, no internet permission: everything stays on your phone
+  ◦ Free and open source (MIT)
 
 ---
 
-# Build & Installation
+# Build
 
-## Prerequisites
-- Android Studio
-- Java 17 (JDK 17) — required for building
-- Android SDK (API 26+)
+Linux, macOS or Windows with JDK 21 and the Android SDK (API 34). The modules target Java 17
+bytecode but build with a JDK 21 toolchain, the same JDK F-Droid builds with.
 
-## Build Commands
 ```bash
-.\gradlew clean                    # Clean project
-.\gradlew assembleRelease         # Build release APK
-.\gradlew installRelease          # Install release APK
-.\gradlew test                    # Run tests
-.\gradlew --stop                  # Stop Gradle daemons (if stuck)
+./gradlew assembleDebug                         # debug APK in app/build/outputs/apk/debug/
+./gradlew testDebugUnitTest lintDebug detekt    # what CI checks on every pull request
 ```
 
-## Release Signing
-For production releases, set environment variables:
-```bash
-export ORG_GRADLE_PROJECT_RELEASE_STORE_FILE="../pokerpayout-release.keystore"
-export ORG_GRADLE_PROJECT_RELEASE_STORE_PASSWORD="your_password"
-export ORG_GRADLE_PROJECT_RELEASE_KEY_ALIAS="pokerpayout"
-export ORG_GRADLE_PROJECT_RELEASE_KEY_PASSWORD="your_password"
-```
-
-## F-Droid Reproducible Builds
-For reproducible builds matching F-Droid:
-```bash
-docker-shell.bat                  # Start Linux container
-dos2unix gradlew                  # Fix line endings (first time only)
-./gradlew clean assembleRelease   # Build with Ubuntu 22.04 + Java 17
-```
-
-## Verify APK Signature
-To verify the signature of the built release APK:
-```bash
-apksigner verify --print-certs app/build/outputs/apk/release/PokerPayout-*-release.apk
-```
+Testing, including the screenshot tests and the device tour, is described in
+[docs/TESTING.md](docs/TESTING.md). Releases, signing and F-Droid's reproducible builds are in
+[docs/RELEASING.md](docs/RELEASING.md).
 
 # Contribute
 
@@ -125,13 +112,12 @@ For help or to discuss ideas, open an issue or a discussion on GitHub.
 
 # Libraries & Architecture
 
-• Gradle modularised project by features
-• MVVM pattern with modern Android architecture  
-• Jetpack Compose with Material 3 design
-• Kotlin Coroutines & Flow for concurrency
-• Hilt for Dependency Injection
-• Room for local database
-• Version Catalog for dependency management
+• Kotlin, Jetpack Compose and Material 3
+• One module per tab (tournament, bank, tools) on a shared core with the design system
+• MVI: each screen is a ViewModel, its UI state and intents, and a stateless composable
+• Hilt for dependency injection; settings and game state in SharedPreferences
+• Kotlin Coroutines and Flow
+• Version catalog for dependencies
 
 # License
 

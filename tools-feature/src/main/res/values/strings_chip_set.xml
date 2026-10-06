@@ -173,6 +173,8 @@
         <item>Brown</item>
     </string-array>
     <!-- Lower case, in running text: "Short 12 black 100s" -->
+    <!-- "green 25s": a colour and value of chips, in running text -->
+    <string name="chip_set_spoken_chips">%1$s %2$ss</string>
     <string-array name="chip_set_colour_adjectives">
         <item>white</item>
         <item>red</item>

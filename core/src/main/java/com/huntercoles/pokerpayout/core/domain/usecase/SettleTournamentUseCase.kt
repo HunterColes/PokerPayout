@@ -17,6 +17,8 @@ import javax.inject.Inject
  * - Each knocked-out player's bounty goes to whoever was credited with the knockout.
  * - The champion keeps their own bounty (the "King's Bounty") and also collects the bounty of every
  *   player knocked out with nobody credited, so no bounty is left in the box.
+ * - Progressive and mystery bounties (PP-035) follow their own rules ([BountyLedger]); every bounty
+ *   still ends with exactly one player.
  * - Rebuys and add-ons count at the price each was bought at (PP-085), in the pool and in what each
  *   player paid, so changing the rebuy amount mid-game doesn't re-value earlier rebuys.
  */
@@ -31,8 +33,7 @@ class SettleTournamentUseCase @Inject constructor(
         weights: List<Int>,
         rounding: PayoutRounding
     ): Settlement {
-        val ids = players.map { it.id }
-        val standings = Standings(ids, eliminationOrder)
+        val standings = Standings(players.map { it.id }, eliminationOrder)
         val pool = PoolBreakdown.withRecordedPurchases(
             money = money,
             playerCount = players.size,
@@ -41,19 +42,10 @@ class SettleTournamentUseCase @Inject constructor(
         )
         val table = calculatePayouts(pool.prizePoolCents, weights, players.size, rounding)
         val champion = standings.championId
-
-        // The champion was never knocked out, whatever a stale record says.
-        val knockedOut = standings.eliminated.toSet() - setOfNotNull(champion)
-        val credits = players
-            .filter { it.id in knockedOut && it.eliminatedBy != it.id && it.eliminatedBy in ids }
-            .mapNotNull { it.eliminatedBy }
-            .groupingBy { it }
-            .eachCount()
-        val unclaimed = knockedOut.size - credits.values.sum()
+        val bounties = BountyLedger.of(players, standings, money)
 
         val settlements = players.map { player ->
             val place = standings.placeOf(player.id)
-            val knockouts = credits[player.id] ?: 0
             val isChampion = player.id == champion
             val rebuyCost = player.rebuyCostCents(money)
             val addOnCost = player.addOnCostCents(money)
@@ -61,14 +53,15 @@ class SettleTournamentUseCase @Inject constructor(
                 playerId = player.id,
                 place = place,
                 prizeCents = place?.let { table.amountFor(it) } ?: 0L,
-                knockouts = knockouts,
-                knockoutBountyCents = knockouts * money.bountyCents,
-                kingsBountyCents = if (isChampion) money.bountyCents else 0L,
-                unclaimedBountyCents = if (isChampion) unclaimed * money.bountyCents else 0L,
+                knockouts = bounties.knockouts[player.id] ?: 0,
+                knockoutBountyCents = bounties.knockoutCents[player.id] ?: 0L,
+                kingsBountyCents = if (isChampion) bounties.championCents else 0L,
+                unclaimedBountyCents = if (isChampion) bounties.unclaimedCents else 0L,
                 costCents = money.entryCents + rebuyCost + addOnCost,
                 paidOut = player.paidOut,
                 rebuyCostCents = rebuyCost,
-                addOnCostCents = addOnCost
+                addOnCostCents = addOnCost,
+                headBountyCents = bounties.heads[player.id] ?: 0L
             )
         }
 
@@ -78,7 +71,9 @@ class SettleTournamentUseCase @Inject constructor(
             payoutTable = table,
             standings = standings,
             players = settlements,
-            paidInCents = entriesPaid + pool.rebuyCents + pool.addOnCents
+            paidInCents = entriesPaid + pool.rebuyCents + pool.addOnCents,
+            bountyMode = money.bountyMode,
+            envelopesLeft = bounties.envelopesLeft
         )
     }
 }

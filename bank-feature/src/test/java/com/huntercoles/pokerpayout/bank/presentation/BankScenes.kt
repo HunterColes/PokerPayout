@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.bank.presentation
 
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 
 /**
@@ -20,8 +21,14 @@ object BankScenes {
     const val BEN = 9
     private val BREAKS = listOf(4, 8)
 
-    private fun BankTestKit.game(players: List<String> = NAMES, rebuy: Double = 40.0, addOn: Double = 10.0): BankViewModel {
+    private fun BankTestKit.game(
+        players: List<String> = NAMES,
+        rebuy: Double = 40.0,
+        addOn: Double = 10.0,
+        bounties: BountyMode = BountyMode.STANDARD,
+    ): BankViewModel {
         configure(players = players.size, buyIn = 40.0, food = 5.0, bounty = 5.0, rebuy = rebuy, addOn = addOn)
+        tournamentPreferences.setBountyMode(bounties)
         tournamentPreferences.setRebuyUntilLevel(4)
         tournamentPreferences.setPayoutRounding(PayoutRounding.FIVE_DOLLARS)
         val viewModel = newViewModel()
@@ -53,6 +60,44 @@ object BankScenes {
         viewModel.knockOut(RITA, MARCUS)
         clock.at(level = 6, breaks = BREAKS)
         settle()
+        viewModel
+    }
+
+    /**
+     * S5 with progressive bounties (PP-035), level 6: everyone bought in, Marcus rebought, five
+     * add-ons. Ben out at level 3 and Alex at level 6, both by Dana, whose bounty grew to $10; Rita
+     * out at level 5 by Marcus, whose bounty is $7.50. Everyone else still carries $5.
+     */
+    fun progressive(kit: BankTestKit): BankViewModel = with(kit) {
+        val viewModel = game(bounties = BountyMode.PROGRESSIVE)
+        buyIns(viewModel, 9)
+        viewModel.send(BankIntent.AddPurchase(MARCUS, Purchase.REBUY))
+        (DANA..JO).forEach { viewModel.send(BankIntent.AddPurchase(it, Purchase.ADD_ON)) }
+        clock.at(level = 3, breaks = BREAKS)
+        settle()
+        viewModel.knockOut(BEN, DANA)
+        clock.at(level = 5, breaks = BREAKS)
+        settle()
+        viewModel.knockOut(RITA, MARCUS)
+        clock.at(level = 6, breaks = BREAKS)
+        settle()
+        viewModel.knockOut(ALEX, DANA)
+        viewModel
+    }
+
+    /**
+     * The same night with mystery bounties (PP-035): nine envelopes (1 × $15, 2 × $6, 6 × $3). Ben out
+     * by Dana and Rita by Marcus, each with the envelope the kit's seeded draw gave them.
+     */
+    fun mystery(kit: BankTestKit): BankViewModel = with(kit) {
+        val viewModel = game(bounties = BountyMode.MYSTERY)
+        buyIns(viewModel, 9)
+        clock.at(level = 5, breaks = BREAKS)
+        settle()
+        viewModel.knockOut(BEN, DANA)
+        viewModel.send(BankIntent.DismissSheet)
+        viewModel.knockOut(RITA, MARCUS)
+        viewModel.send(BankIntent.DismissSheet)
         viewModel
     }
 

@@ -75,10 +75,15 @@ internal fun CutoffNote(state: BankUiState) {
     if (!state.isRebuyEnabled || state.rebuyWindow == PurchaseWindow.NoCutoff) return
     val rebuys = rebuyNote(state.rebuyWindow).orEmpty()
     val addOns = if (state.isAddOnEnabled) addOnNote(state.addOnWindow) else null
-    val windows = if (addOns != null) stringResource(R.string.bank_note_join, rebuys, addOns) else "$rebuys."
+    val windows = if (addOns != null) {
+        stringResource(R.string.bank_note_join, rebuys, addOns)
+    } else {
+        stringResource(R.string.bank_note_rebuys_only, rebuys)
+    }
     val anyClosed = !state.rebuyWindow.isOpen || (state.isAddOnEnabled && !state.addOnWindow.isOpen)
+    val taken = stringResource(R.string.bank_note_taken)
     Text(
-        text = if (anyClosed) "$windows ${stringResource(R.string.bank_note_taken)}" else windows,
+        text = if (anyClosed) stringResource(R.string.bank_note_then, windows, taken) else windows,
         style = MaterialTheme.typography.bodySmall,
         color = PokerColors.Chalk,
         modifier = Modifier.padding(start = 2.dp, end = 2.dp, top = 10.dp),

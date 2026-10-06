@@ -1,7 +1,6 @@
 @file:Suppress("UnstableApiUsage")
 
 include(":app")
-include(":baseline-profiles")
 include(":tournament-feature")
 include(":bank-feature")
 include(":tools-feature")

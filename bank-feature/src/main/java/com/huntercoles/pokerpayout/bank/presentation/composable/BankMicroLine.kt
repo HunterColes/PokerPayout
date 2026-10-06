@@ -28,6 +28,7 @@ import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.components.mayTruncate
 import com.huntercoles.pokerpayout.core.design.icons.MoneyIcons
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
+import com.huntercoles.pokerpayout.core.utils.FormatUtils
 
 /**
  * The line under a name, as one text with small icons in it: knockouts (☠ 2), who knocked the
@@ -83,13 +84,22 @@ private class MicroPart(val text: String, val icon: MicroIcon? = null, val spoke
 
 private enum class MicroIcon(val vector: ImageVector, val tint: Color?) {
     Skull(PokerIcons.Skull, PokerColors.PokerGold),
+    Bounty(MoneyIcons.Cash, PokerColors.PokerGold),
     Renew(MoneyIcons.Renew, null),
     Plus(PokerIcons.Plus, null),
 }
 
 @Composable
 private fun microParts(row: BankRowModel, layout: BankLayout): List<MicroPart> =
-    placeParts(row, layout) + listOfNotNull(knockoutPart(row, layout)) + collapsedParts(row, layout)
+    placeParts(row, layout) + listOfNotNull(bountyPart(row, layout), knockoutPart(row, layout)) + collapsedParts(row, layout)
+
+/** Progressive bounties (PP-035): the bounty on the player's head ($7.50), growing with each knockout. */
+@Composable
+private fun bountyPart(row: BankRowModel, layout: BankLayout): MicroPart? {
+    val cents = row.bountyCents ?: return null
+    val spoken = stringResource(R.string.bank_micro_bounty_long, FormatUtils.formatMoney(cents))
+    return MicroPart(if (layout.showAmounts) spoken else FormatUtils.formatMoney(cents), MicroIcon.Bounty, spoken)
+}
 
 /** "1st · champion", or who knocked the player out and in which level ("by Marcus · L5"). */
 @Composable

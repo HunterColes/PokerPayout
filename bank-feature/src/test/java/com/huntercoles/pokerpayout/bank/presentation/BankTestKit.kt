@@ -11,6 +11,7 @@ import com.huntercoles.pokerpayout.core.domain.model.ClockStatusProvider
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
+import com.huntercoles.pokerpayout.core.domain.usecase.DrawEnvelopeUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
@@ -18,6 +19,7 @@ import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestDispatcher
+import kotlin.random.Random
 
 /** The clock as the Bank sees it, set by hand. */
 class FakeClockStatus(start: ClockStatus = ClockStatus.NOT_STARTED) : ClockStatusProvider {
@@ -50,6 +52,9 @@ class BankTestKit(private val dispatcher: TestDispatcher) {
     val snackbars = SnackbarController()
     private val stores = mutableListOf<ViewModelStore>()
 
+    /** Where mystery-bounty envelopes are drawn from (PP-035): seeded, so a draw is the same every run. */
+    var draws: Random = Random(DRAW_SEED)
+
     init {
         listOf("tournament_prefs", "bank_prefs", "timer_prefs", "audio_prefs").forEach {
             context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
@@ -71,7 +76,8 @@ class BankTestKit(private val dispatcher: TestDispatcher) {
                 SettleTournamentUseCase(CalculatePayoutsUseCase()),
                 clock,
                 audioPreferences,
-                BankFeedback(context, snackbars)
+                BankFeedback(context, snackbars),
+                DrawEnvelopeUseCase(draws)
             ) as T
         }
         val viewModel = ViewModelProvider(store, factory)[BankViewModel::class.java]
@@ -166,5 +172,9 @@ class BankTestKit(private val dispatcher: TestDispatcher) {
     fun snackbarMessage(): String? {
         runCurrent()
         return snackbars.hostState.currentSnackbarData?.visuals?.message
+    }
+
+    private companion object {
+        const val DRAW_SEED = 35
     }
 }

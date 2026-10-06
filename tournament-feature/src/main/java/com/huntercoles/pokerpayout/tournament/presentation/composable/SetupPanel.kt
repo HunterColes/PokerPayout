@@ -43,6 +43,7 @@ import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentUi
+import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetsIntent
 
 private val PanelShape = RoundedCornerShape(bottomStart = PokerDimens.CornerSheet, bottomEnd = PokerDimens.CornerSheet)
 
@@ -54,6 +55,7 @@ private val PanelShape = RoundedCornerShape(bottomStart = PokerDimens.CornerShee
  * - **Locked while the clock runs:** money and blinds, shown read-only behind "Unlock to edit…", which
  *   says what happens first (a [ConfirmSheet]). Unlocked, blind changes rebuild the schedule from the
  *   current level and keep its time left; one that can't be played is refused with the fixes.
+ * - **Presets** (PP-032): save or share the setup; loading one waits for a new tournament.
  */
 @Composable
 internal fun SetupPanel(
@@ -97,6 +99,7 @@ internal fun SetupPanel(
                     color = PokerColors.Chalk,
                 )
             }
+            PanelPresets(actions)
         }
         Handle()
     }
@@ -215,7 +218,7 @@ private fun UnlockedFields(setup: TournamentConfigUiState, timer: TimerUiState, 
             size = PokerButtonSize.Small,
         )
     }
-    PanelMoneyGrid(setup.money, actions.onSetupIntent)
+    PanelMoneyGrid(setup, actions.onSetupIntent)
     TimingRow(timer.config, keepLevel)
     SetupNumberField(
         value = timer.config.startingChips,
@@ -225,6 +228,13 @@ private fun UnlockedFields(setup: TournamentConfigUiState, timer: TimerUiState, 
     )
     SmallestChipPicker(value = timer.config.smallestChip, onPick = { keepLevel(TimerIntent.UpdateSmallestChip(it)) })
     timer.midGameProblem?.let { problem -> ProblemBox(problem, onFix = { keepLevel(TimerIntent.ApplyFix(it)) }) }
+}
+
+/** Save or share the night's setup; loading one waits for a new tournament (PP-032). */
+@Composable
+private fun PanelPresets(actions: TournamentActions) {
+    HorizontalDivider(color = PokerColors.FeltLine)
+    PresetsRow(midGame = true, onOpen = { actions.onPresetIntent(PresetsIntent.Open) }, framed = false)
 }
 
 /** The sheet's DarkGold handle, at its foot because it unfolds downward. */

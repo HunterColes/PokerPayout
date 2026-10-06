@@ -462,7 +462,7 @@ s_blinds_tab() {
   # Scroll to the verdict itself: how far a swipe flings depends on the emulator's speed (CI's is
   # slower), so the line under the chips isn't always on screen once "Smallest chip" is.
   ui scroll-to "text~=Works: " --max 6
-  ui assert-text "has=Game length" "has=Levels" "has=Starting stack" "text=Smallest chip" \
+  ui assert-text "has=Game length" "has=Level length" "has=Starting stack" "text=Smallest chip" \
     "text~=Works: 9 levels, 50 / 100 to 5,000 / 10,000"
 }
 s_smallest_chip() {
@@ -474,7 +474,7 @@ s_smallest_chip() {
 }
 s_invalid_setup() {
   # PP-020: an invalid setup says why and offers the nearest valid round length
-  ui set-text has=Levels class=EditText --value 25
+  ui set-text "has=Level length" class=EditText --value 25
   ui enter
   ui scroll-to "Use 20-min rounds (9 levels)" --max 4   # under the verdict, can be below the fold
   ui assert-text "text~=Can't build blinds" "text~=doesn't divide into 25-minute rounds" "Use 20-min rounds (9 levels)"
@@ -482,7 +482,7 @@ s_invalid_setup() {
 s_invalid_setup_fixed() {
   ui tap "text=Use 20-min rounds (9 levels)"
   ui wait-gone "text~=Can't build blinds"
-  ui assert-text "has=Levels|20" "text~=Works: 9 levels, 25 / 50 to 5,000 / 10,000"
+  ui assert-text "has=Level length|20" "text~=Works: 9 levels, 25 / 50 to 5,000 / 10,000"
 }
 s_breaks() {
   # PP-026: a break every 4 levels with a note; the verdict counts the breaks and the new end
@@ -502,6 +502,40 @@ s_ready_ticket() {
   ui scroll up --times 8
   ui assert-text "text~=Level 1 · ready" text=20:00 "text=25 / 50" "text~=next 50 / 100" "text~=9 levels · 2 breaks" \
     "text~=3:20 in all"
+}
+# Presets (PP-032): save the night's setup under a name, change a value, load the preset back, and
+# the value returns. The row sits under the ticket; the sheet is modal, so the steps tap through it.
+s_preset_save() {
+  ui scroll-to "text=Presets" --dir up --max 4
+  ui tap "text=Presets"
+  ui wait "text=Save as preset…"
+  ui tap "text=Save as preset…"
+  ui wait "desc=Preset name"
+  ui set-text "desc=Preset name" --value Friday
+  ui tap "text=Save preset"
+  ui wait-gone "text=Save preset"
+  ui assert-text "text=Friday saved" UNDO || return 1
+  ui wait-gone text=UNDO --timeout 12            # the snackbar gone, so the next one shows at once
+  # Change a value the preset holds: the buy-in, 12.50 -> 30
+  ui scroll-to has=Buy-in class=EditText --dir up --max 4
+  ui set-text has=Buy-in class=EditText --value 30
+  ui enter
+  ui assert-text "has=Buy-in|30"
+}
+s_preset_load() {
+  # The setup now differs from the preset: loading asks once, then the buy-in is 12.50 again
+  ui scroll-to "text=Presets" --dir up --max 4
+  ui tap "text=Presets"
+  ui wait "text=Friday"
+  ui assert-text "text~=Last used" "text=Share setup as text" || return 1
+  ui tap "text=Friday"
+  ui assert-text "text=Load Friday?" "text=Keep mine" "text=Load preset" || return 1
+  ui tap "text=Load preset"
+  ui wait-gone "text=Load Friday?"
+  ui assert-text "text=Friday loaded" "has=Buy-in|12.50" || return 1
+  ui wait-gone text=UNDO --timeout 12            # so the snackbar can't cover Start
+  ui scroll up --times 4
+  ui assert-text "has=Buy-in|12.50" "text~=Level 1 · ready" "text=20:00"
 }
 s_start_fold() {
   # Start folds the setup into the clock (S1 v2 -> S2): the setup becomes a one-line strip, the
@@ -804,7 +838,9 @@ s_setup_unlock() {
   ui assert-text "Edit money and blinds?" "Keep locked" "text=Unlock to edit" || return 1
   ui tap "text=Unlock to edit"
   ui wait-gone "Edit money and blinds?"
-  ui assert-text "text~=Unlocked: money and blinds" "has=Buy-in" "has=Levels"
+  ui assert-text "text~=Unlocked: money and blinds" "has=Buy-in" || return 1
+  ui scroll-to "has=Level length" --max 4   # the blinds sit below the money (and the bounty type)
+  ui assert-text "has=Level length"
 }
 s_setup_closed() {
   # Closing setup locks it again; the clock never stopped
@@ -1140,7 +1176,7 @@ s_rebuy_zero_prompt() {
   ui scroll-to has=Rebuy class=EditText --max 3
   ui set-text has=Rebuy class=EditText --value ""
   ui enter                                    # leave it empty: asks before clearing anything
-  ui assert-text "Turn rebuys off?" Keep "text~=Clear rebuy"
+  ui assert-text "Turn rebuys off?" Keep "re=^Clear [0-9]+ rebuys?$"
 }
 s_rebuy_kept() {
   ui tap text=Keep
@@ -1619,6 +1655,37 @@ print("bottom bar back: four tabs at y=%d" % ys[0])
 PY
   require_tab_selected Payouts
 }
+
+# Progressive knockout (PP-035) --------------------------------------------------------------------
+# Last of the screens, because it clears the Bank the steps above leave (the bounty type is fixed
+# while anyone is out). A $5 bounty set to Progressive in setup; Player 1 knocks Player 2 out, takes
+# half ($2.50) in cash, and the other half goes onto Player 1's own bounty: $7.50, shown under the
+# name. Each part scrolls to what it checks last, since a swipe flings less on the CI emulator.
+s_bank_pko() {
+  tab Bank
+  ui tap "desc=More options"
+  ui tap "text=Reset bank…"
+  ui tap "re=^Clear [0-9]+ players$"
+  ui wait-gone "text=Reset the bank?"
+  tab Tournament
+  ui scroll-to has=Bounty class=EditText --max 3
+  ui set-text has=Bounty class=EditText --value 5
+  ui enter
+  ui scroll-to text=Progressive --max 3
+  ui tap text=Progressive
+  ui scroll-to "text~=adds the other half to the winner" --max 3
+  ui assert "has=Progressive" checked || return 1
+  ui assert-text "text~=adds the other half to the winner" || return 1
+  tab Bank
+  ui tap "desc=Knock out Player 2"
+  ui assert-text "text=Player 2 is out" "text~=half to whoever knocked Player 2 out" || return 1
+  ui tap "text~=Player 1"
+  ui scroll-to "text~=Player 1 takes" --max 3
+  ui assert-text "text=Player 1 takes \$2.50 now · bounty up to \$7.50" || return 1
+  ui tap "text=Knock out Player 2"
+  ui wait-gone "text=Player 2 is out"
+  ui assert-text "text~=Player 1 takes \$2.50, bounty now \$7.50" "has=Player 1|bounty \$7.50, 1 knockout"
+}
 s_app_alive() {
   local pid; pid="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"
   [[ -n "$pid" ]] || { echo "app process is not running"; return 1; }
@@ -1638,6 +1705,8 @@ step invalid-setup        "25-minute rounds: reason and nearest fix shown"      
 step invalid-setup-fixed  "Apply the fix: 20-minute rounds"                     s_invalid_setup_fixed
 step breaks               "Breaks every 4 levels, note 'Last rebuy'"            s_breaks
 step ready-ticket         "The ticket: level 1 ready, 20:00, 25 / 50, 3:20"     s_ready_ticket
+step preset-save          "Save as preset 'Friday', then change the buy-in"     s_preset_save
+step preset-load          "Load Friday back: asks once, the buy-in returns"     s_preset_load
 step start-fold           "Start: setup folds into the running clock (S2)"      s_start_fold
 step nudge                "-1 and +1: a minute off the level, and back"         s_nudge
 step live-clock-shade     "Home: the live clock notification (PP-081)"          s_live_clock_shade
@@ -1720,6 +1789,7 @@ step rail                 "720 dp wide: tabs move to a rail (PP-087)"           
 step rail-tools           "Rail: Tools tab"                                     s_rail_tools
 step rail-payouts         "Rail: Payouts tab, table adds up"                    s_rail_payouts
 step rail-restored        "Phone width again: bottom bar back, tab kept"        s_rail_restored
+step bank-pko             "PKO: Player 1 takes \$2.50, bounty up to \$7.50"     s_bank_pko
 step app-alive            "App process still alive"                             s_app_alive
 
 extra_step live-clock-pause "Pause from the shade: paused, Resume offered"      s_live_clock_pause

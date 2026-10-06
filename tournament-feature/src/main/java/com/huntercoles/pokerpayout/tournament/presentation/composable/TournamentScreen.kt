@@ -47,7 +47,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
 import com.huntercoles.pokerpayout.core.design.components.ConfirmSheet
 import com.huntercoles.pokerpayout.core.design.components.LocalWidthClass
-import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
 import com.huntercoles.pokerpayout.core.design.components.RequestShellChrome
 import com.huntercoles.pokerpayout.core.design.components.WidthClass
 import com.huntercoles.pokerpayout.core.design.components.fillShellWidth
@@ -57,6 +56,7 @@ import com.huntercoles.pokerpayout.core.presentation.RequestOrientation
 import com.huntercoles.pokerpayout.core.presentation.findActivity
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.tournament.R
+import com.huntercoles.pokerpayout.tournament.presentation.PurchaseKind
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
@@ -66,6 +66,8 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigViewM
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentMode
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentOrientation
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentUi
+import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetsViewModel
+import com.huntercoles.pokerpayout.tournament.presentation.presets.shareSetup
 
 /**
  * The Tournament tab (S1 v2, S2, S3, S4). The clock's ViewModel belongs to the activity, so the clock
@@ -80,11 +82,18 @@ fun TournamentScreen(
     calculatorViewModel: TournamentConfigViewModel = hiltViewModel(),
     timerViewModel: TimerViewModel = hiltViewModel(viewModelStoreOwner = LocalContext.current as ComponentActivity),
 ) {
+    // Saved setups (PP-032) belong to this tab alone, so their ViewModel isn't a parameter.
+    val presetsViewModel: PresetsViewModel = hiltViewModel()
     val setup by calculatorViewModel.uiState.collectAsStateWithLifecycle()
     val timer by timerViewModel.uiState.collectAsStateWithLifecycle()
+    val presets by presetsViewModel.uiState.collectAsStateWithLifecycle()
     var ui by rememberSaveable { mutableStateOf(TournamentUi.initial(timerViewModel.uiState.value.hasTimerStarted)) }
     val askForNotifications = rememberNotificationsAsk(timerViewModel)
-    val actions = remember(calculatorViewModel, timerViewModel, onOpenBank, onOpenPayouts, onOpenSound, askForNotifications) {
+    val context = LocalContext.current
+    val actions = remember(
+        calculatorViewModel, timerViewModel, presetsViewModel, context, onOpenBank, onOpenPayouts, onOpenSound,
+        askForNotifications,
+    ) {
         TournamentActions(
             onSetupIntent = calculatorViewModel::acceptIntent,
             onTimerIntent = { intent ->
@@ -101,10 +110,12 @@ fun TournamentScreen(
             openBank = onOpenBank,
             openPayouts = onOpenPayouts,
             openSound = onOpenSound,
+            onPresetIntent = presetsViewModel::acceptIntent,
+            shareText = { text -> shareSetup(context, text) },
         )
     }
     val focusManager = LocalFocusManager.current
-    val activity = LocalContext.current.findActivity()
+    val activity = context.findActivity()
     DisposableEffect(Unit) {
         onDispose {
             // Leaving the tab commits what was typed, and ends a ⤢ table view (phones turn back upright).
@@ -117,6 +128,7 @@ fun TournamentScreen(
         TournamentContent(setup = setup, timer = timer, ui = ui, actions = actions)
         CueFlash(flash)
     }
+    PresetsSheet(presets, setup, timer, actions)
 }
 
 /** PP-083: the clock's flashes while the tab is on screen; one that comes while it isn't is dropped. */
@@ -183,12 +195,13 @@ fun TournamentContent(
         clock = TournamentOrientation.TableViewInputs(clockExists, timer.isTableView, settled.rotationPaused),
     )
     if (tableView) {
+        // ✕ (or Back) shows the clock upright for this turn, whether ⤢ or a turn opened the table
+        // view (PP-094 #2). Closing a ⤢ view must hold too: with rotation locked, Android 14 keeps
+        // the landscape it was asked for as the user's rotation, so following it would bring the
+        // table view straight back.
         val exit = {
-            if (timer.isTableView) {
-                actions.onTimerIntent(TimerIntent.SetTableView(false))
-            } else {
-                actions.updateUi { it.pauseRotation(true) }
-            }
+            if (timer.isTableView) actions.onTimerIntent(TimerIntent.SetTableView(false))
+            actions.updateUi { it.pauseRotation(true) }
         }
         RequestShellChrome(immersive = true)
         HideSystemBars()
@@ -306,24 +319,34 @@ private fun resetDescription(uiState: TournamentConfigUiState): String {
     }
 }
 
-/** "Clear recorded purchases?" when a rebuy or add-on amount is left at $0 (PP-014). */
+/**
+ * "Turn rebuys off?" when a rebuy or add-on amount is left at $0 while purchases are recorded
+ * (PP-014): a sheet like every other confirmation, Keep on the left, the red "Clear 3 rebuys" on
+ * the right (PP-049; it was the last old-style dialog).
+ */
 @Composable
 private fun PurchaseClearQuestion(uiState: TournamentConfigUiState, onIntent: (TournamentConfigIntent) -> Unit) {
     uiState.purchaseClearPrompt?.let { prompt ->
-        val noun = if (prompt.count == 1) prompt.kind.singular else prompt.kind.plural
-        PokerConfirmationDialog(
-            title = stringResource(R.string.tournament_turn_off_title, prompt.kind.plural),
-            description = stringResource(
-                R.string.tournament_turn_off_description,
-                prompt.kind.singular,
-                prompt.count,
-                noun,
-                FormatUtils.formatCents(prompt.keptAmountCents)
+        val count = prompt.count
+        val kept = FormatUtils.formatCents(prompt.keptAmountCents)
+        val rebuys = prompt.kind == PurchaseKind.REBUY
+        ConfirmSheet(
+            title = stringResource(if (rebuys) R.string.tournament_turn_off_rebuys else R.string.tournament_turn_off_add_ons),
+            body = pluralStringResource(
+                if (rebuys) R.plurals.tournament_turn_off_rebuys_body else R.plurals.tournament_turn_off_add_ons_body,
+                count,
+                count,
+                kept,
+            ),
+            dismissLabel = stringResource(R.string.tournament_keep),
+            confirmLabel = pluralStringResource(
+                if (rebuys) R.plurals.tournament_clear_rebuys else R.plurals.tournament_clear_add_ons,
+                count,
+                count,
             ),
             onDismiss = { onIntent(TournamentConfigIntent.DismissClearPurchases) },
             onConfirm = { onIntent(TournamentConfigIntent.ConfirmClearPurchases) },
-            cancelText = stringResource(R.string.tournament_keep),
-            confirmText = stringResource(R.string.tournament_clear, noun)
+            destructive = true,
         )
     }
 }

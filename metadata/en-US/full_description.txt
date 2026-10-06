@@ -1,21 +1,23 @@
-Professional poker tournament toolkit that works 100% offline with no ads, no tracking, and no fees.
+Everything for a home poker night, free: a tournament clock, payouts that add up to the cent, a bank of who paid what, and tools for the table. No ads, no accounts, no tracking. It works offline and doesn't even ask for internet access.
 
-TOURNAMENT ESSENTIALS
-• Payout Calculator - Customize splits with weight distributions for fair prize pools
-• Bank Tracker - Track buy-ins, rebuys, food pools, and bounty payments with real-time status
-• Professional Blind Timer - Tournament-grade countdown with dynamic blind structure
-• Chip Calculator - Distribute denominations based on starting stacks
+TOURNAMENT
+• Set up the night once: players, buy-in, bounty, rebuys (with a cutoff level), add-ons and food
+• A blind clock with big digits, the next level, ±1 minute nudges, breaks with a note and a big-blind ante. It keeps time through sleep, restarts and reboots
+• Blinds from four numbers: game length, level length, starting stack and smallest chip. Every level is a multiple of your smallest chip, and a setup that can't work says why and offers the nearest fix
+• Color-ups on breaks, and overtime levels if the game runs long
+• Turn the phone sideways for a full-screen table view
 
-INTELLIGENT BLIND ENGINE
-Configure four simple parameters (duration, round length, starting chips, smallest chip) and let the app calculate optimal blind levels. Blinds scale exponentially at ~33% growth per level with automatic overtime rounds when the tournament runs long.
+PAYOUTS AND THE BANK
+• Top-heavy, standard and flat presets, or your own weights, rounded to $1, $5 or $10
+• Track buy-ins, rebuys, add-ons, knockouts, bounties and who has been paid, with Undo
+• Cash games: buy-ins and top-ups, a chip count check, and who pays whom at the end
+• Share the payouts or the settle-up as text
 
-PRIVACY & DESIGN
-• All data stored locally - no internet connection required
-• No ads, no tracking, no hidden agenda
-• Authentic poker green theme with Material 3 design
-• Clean interface optimized for tournament play
+TOOLS
+• Odds for two to ten hands, and run it out card by card
+• Chip set: stacks from the chips you own, and a color-up plan
+• Seat draw: random seats and the high card for the button
+• Hand ranks
 
 FREE AND OPEN SOURCE
-Built for poker enthusiasts who want professional-grade management without compromising privacy. Perfect for home games, casino tournaments, and serious players.
-
-Your tournament. Your data. Your terms.
+MIT licensed. Everything stays on your phone.

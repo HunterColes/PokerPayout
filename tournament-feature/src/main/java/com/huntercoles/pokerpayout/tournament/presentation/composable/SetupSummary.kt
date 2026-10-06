@@ -3,6 +3,8 @@ package com.huntercoles.pokerpayout.tournament.presentation.composable
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import com.huntercoles.pokerpayout.core.design.components.presetLabel
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
@@ -15,12 +17,20 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiSta
  */
 internal object SetupSummary {
 
-    /** The strip's line. [full] spells out every setting (tablets, where there's room). */
+    /** The strip's line, all of it (what TalkBack reads, and the fold's first line). */
     @Composable
-    fun strip(setup: TournamentConfigUiState, timer: TimerUiState, full: Boolean = false): String {
+    fun strip(setup: TournamentConfigUiState, timer: TimerUiState, full: Boolean = false): String =
+        stripParts(setup, timer, full).joinToString(stripSeparator())
+
+    /**
+     * The strip's settings, most important first: players, buy-in, level length, chips. [full]
+     * spells out every setting (tablets, where there's room). The strip shows as many as fit.
+     */
+    @Composable
+    fun stripParts(setup: TournamentConfigUiState, timer: TimerUiState, full: Boolean = false): List<String> {
         val formatter = rememberChipFormatter()
         val config = timer.config
-        val parts = if (full) {
+        return if (full) {
             listOf(players(setup)) + moneyParts(setup, timer) + listOf(
                 stringResource(R.string.strip_hours, config.gameDurationHours),
                 stringResource(R.string.strip_level_length, config.roundLengthMinutes),
@@ -34,8 +44,11 @@ internal object SetupSummary {
                 stringResource(R.string.strip_chips, formatter.format(config.startingChips)),
             )
         }
-        return parts.joinToString(stringResource(R.string.strip_separator))
     }
+
+    /** " · ", between the settings. */
+    @Composable
+    fun stripSeparator(): String = stringResource(R.string.strip_separator)
 
     /** "$40 buy-in · $5 bounty · rebuy to L4 · $10 add-on": the money section folded. */
     @Composable
@@ -75,7 +88,7 @@ internal object SetupSummary {
     /** "Standard · 3 paid · rounded to $5": the payouts row folded. */
     @Composable
     fun payoutsLine(setup: TournamentConfigUiState): String = listOf(
-        setup.payoutPreset?.label ?: stringResource(R.string.setup_payouts_custom),
+        setup.payoutPreset?.let { presetLabel(it) } ?: stringResource(R.string.setup_payouts_custom),
         stringResource(R.string.strip_paid, setup.paidPlaces),
         stringResource(R.string.strip_rounded, setup.config.payoutRounding.label),
     ).joinToString(stringResource(R.string.strip_separator))
@@ -89,7 +102,7 @@ internal object SetupSummary {
         val amounts = setup.money
         return listOfNotNull(
             stringResource(R.string.strip_buy_in, money(amounts.buyInCents)),
-            amounts.bountyCents.takeIf { it > 0 }?.let { stringResource(R.string.strip_bounty, money(it)) },
+            amounts.bountyCents.takeIf { it > 0 }?.let { bountyPart(amounts.bountyMode, it) },
             amounts.rebuyCents.takeIf { it > 0 }?.let {
                 if (timer.rebuyUntilLevel > 0) {
                     stringResource(R.string.strip_rebuy_to, timer.rebuyUntilLevel)
@@ -108,6 +121,17 @@ internal object SetupSummary {
         timer.config.bigBlindAnteFromLevel.takeIf { it > 0 }?.let { stringResource(R.string.strip_ante_from, it) },
     )
 }
+
+/** "$5 bounty", "$5 progressive bounty", "$5 mystery bounty" (PP-035). */
+@Composable
+private fun bountyPart(mode: BountyMode, cents: Long): String = stringResource(
+    when (mode) {
+        BountyMode.STANDARD -> R.string.strip_bounty
+        BountyMode.PROGRESSIVE -> R.string.strip_bounty_pko
+        BountyMode.MYSTERY -> R.string.strip_bounty_mystery
+    },
+    money(cents),
+)
 
 /** "$40", or "$12.50": cents only when there are some (copy rules, design spec §8). */
 internal fun money(cents: Long): String = FormatUtils.formatCents(cents).removeSuffix(".00")

@@ -185,17 +185,26 @@ class TournamentRotationTest {
 
     @Test
     @Config(qualifiers = "w360dp-h780dp-port")
-    fun `the table-view button forces landscape until it is closed`() {
+    fun `the table-view button forces landscape until it is closed, then holds the clock upright for that turn`() {
         showApp(clockStarted = true)
         compose.onNodeWithContentDescription(TABLE_VIEW).performClick()
         compose.waitForIdle()
         assertTableView()
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE, requested)
 
+        // With rotation locked, Android keeps the forced landscape as the user's rotation: following
+        // it right away would show the table view again, so ✕ holds the clock upright
         compose.onNodeWithContentDescription(EXIT_TABLE_VIEW).performClick()
         compose.waitForIdle()
         assertClock()
+        assertEquals(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, requested)
+
+        // Held upright, the tab follows the phone again
+        held.value = true
+        compose.mainClock.advanceTimeBy(UPRIGHT_HOLD_MILLIS + FRAME_MILLIS)
+        compose.waitForIdle()
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_USER, requested)
+        assertClock()
     }
 
     @Test

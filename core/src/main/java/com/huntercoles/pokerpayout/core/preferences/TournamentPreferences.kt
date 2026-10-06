@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.core.preferences
 import android.content.Context
 import android.content.SharedPreferences
 import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
@@ -54,6 +55,19 @@ class TournamentPreferences @Inject constructor(
     /** Everything the pool and payout math reads; emits after any change to it. */
     val config: StateFlow<TournamentConfigData> = _config.asStateFlow()
 
+    private val _setupRevision = MutableStateFlow(0)
+
+    /**
+     * Goes up by one each time a whole setup is put in at once (a preset loaded, PP-032). Screens that
+     * keep their own copy of the blind fields read them again. Not saved: it only counts this process.
+     */
+    val setupRevision: StateFlow<Int> = _setupRevision.asStateFlow()
+
+    /** Says the whole setup was just replaced; see [setupRevision]. */
+    fun setupReplaced() {
+        _setupRevision.value = _setupRevision.value + 1
+    }
+
     fun setPlayerCount(count: Int) {
         val oldCount = getPlayerCount()
         prefs.edit().putInt(PLAYER_COUNT_KEY, count).apply()
@@ -93,8 +107,20 @@ class TournamentPreferences @Inject constructor(
             foodCents = prefs.getLong(FOOD_CENTS_KEY, defaults.foodCents),
             bountyCents = prefs.getLong(BOUNTY_CENTS_KEY, defaults.bountyCents),
             rebuyCents = prefs.getLong(REBUY_CENTS_KEY, defaults.rebuyCents),
-            addOnCents = prefs.getLong(ADDON_CENTS_KEY, defaults.addOnCents)
+            addOnCents = prefs.getLong(ADDON_CENTS_KEY, defaults.addOnCents),
+            bountyMode = getBountyMode()
         )
+    }
+
+    /**
+     * How knockouts pay (PP-035), under its own key. Games saved before PP-035 have none stored, so
+     * they load as [BountyMode.STANDARD] and play exactly as before; nothing to migrate.
+     */
+    fun getBountyMode(): BountyMode = BountyMode.fromKey(prefs.getString(BOUNTY_MODE_KEY, null))
+
+    fun setBountyMode(mode: BountyMode) {
+        prefs.edit().putString(BOUNTY_MODE_KEY, mode.key).apply()
+        publish()
     }
 
     fun setBuyInCents(cents: Long) = putCents(BUY_IN_CENTS_KEY, cents)
@@ -291,6 +317,7 @@ class TournamentPreferences @Inject constructor(
             .putString(SELECTED_PANEL_KEY, "player")
             .putBoolean(IS_CONFIG_EXPANDED_KEY, true)
             .remove(REBUY_UNTIL_LEVEL_KEY)
+            .remove(BOUNTY_MODE_KEY)
             .apply()
 
         // Reset all state flows to default values (keep current player count)
@@ -347,6 +374,9 @@ class TournamentPreferences @Inject constructor(
         private const val STARTING_CHIPS_KEY = "starting_chips"
         private const val SELECTED_PANEL_KEY = "selected_panel"
         private const val REBUY_UNTIL_LEVEL_KEY = "rebuy_until_level"
+
+        /** PP-035: "standard", "progressive" or "mystery" ([BountyMode.key]); absent means standard. */
+        private const val BOUNTY_MODE_KEY = "bounty_mode"
         private const val DEFAULT_PLAYER_COUNT = TournamentDefaults.PLAYER_COUNT
 
         /** v1.1.x Float keys and the cents keys that replace them. */

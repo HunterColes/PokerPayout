@@ -2,6 +2,7 @@
 
 package com.huntercoles.pokerpayout.bank.presentation
 
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PurchaseWindow
 import com.huntercoles.pokerpayout.core.domain.model.Settlement
@@ -52,10 +53,15 @@ internal fun buildBankRows(input: BankRowInput): List<BankRowModel> {
             outAtLevel = player.outLevel?.takeIf { player.out },
             paidInCents = (if (player.buyIn) input.money.entryCents else 0L) +
                 player.rebuyPrices.sum() + player.addOnPrices.sum(),
-            owedCents = if (player.paidOut) 0L else winnings
+            owedCents = if (player.paidOut) 0L else winnings,
+            bountyCents = owed?.headBountyCents?.takeIf { input.showsBounties && (isChampion || !player.out) }
         )
     }
 }
+
+/** Progressive bounties (PP-035) with a bounty to grow: each player still in shows theirs. */
+private val BankRowInput.showsBounties: Boolean
+    get() = money.bountyMode == BountyMode.PROGRESSIVE && money.bountyCents > 0L
 
 /**
  * Rebuy or add-on: done (with the count) when taken, open while the window is, a dot once it has

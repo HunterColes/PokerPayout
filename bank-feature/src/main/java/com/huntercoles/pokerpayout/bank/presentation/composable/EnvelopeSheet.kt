@@ -78,28 +78,7 @@ internal fun EnvelopeSheetContent(sheet: BankSheet.Envelope, onDismiss: () -> Un
         SheetHeading(title = stringResource(R.string.bank_envelope_title, sheet.eliminatorName)) {
             PokerPill(stringResource(R.string.bank_envelope_pill), tone = PokerPillTone.Gold)
         }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = CardHeight)
-                .background(PokerColors.GoldWash, CardShape)
-                .border(2.dp, PokerColors.PokerGold, CardShape)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = formatMoney(sheet.cents),
-                style = PokerType.DisplayM,
-                color = PokerColors.PokerGold,
-                modifier = Modifier
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        alpha = fade
-                    }
-                    .semantics { liveRegion = LiveRegionMode.Polite },
-            )
-        }
+        EnvelopeAmount(cents = sheet.cents, scale = scale, alpha = fade)
         Text(
             text = pluralStringResource(R.plurals.bank_envelope_from, sheet.envelopesLeft, sheet.victimName, sheet.envelopesLeft),
             style = MaterialTheme.typography.bodyMedium,
@@ -122,6 +101,33 @@ internal fun EnvelopeSheetContent(sheet: BankSheet.Envelope, onDismiss: () -> Un
             text = stringResource(R.string.bank_close),
             onClick = onDismiss,
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/** The amount on the opened envelope's gold card, drawn at [scale] and [alpha] as it grows in. */
+@Composable
+private fun EnvelopeAmount(cents: Long, scale: Float, alpha: Float) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = CardHeight)
+            .background(PokerColors.GoldWash, CardShape)
+            .border(2.dp, PokerColors.PokerGold, CardShape)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = formatMoney(cents),
+            style = PokerType.DisplayM,
+            color = PokerColors.PokerGold,
+            modifier = Modifier
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                }
+                .semantics { liveRegion = LiveRegionMode.Polite },
         )
     }
 }

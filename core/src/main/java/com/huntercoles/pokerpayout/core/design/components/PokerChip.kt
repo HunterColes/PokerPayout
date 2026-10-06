@@ -37,7 +37,11 @@ import com.huntercoles.pokerpayout.core.design.PokerType
  *
  * The value is drawn at a fixed size, like the chip. TalkBack reads "Green 25 chip"; pass
  * [contentDescription] to add more ("Green 25 chip, 150 owned").
+ *
+ * [color] draws the chip in another colour than [denomination]'s standard one, for sets whose
+ * colours mean other values (the chip set, PP-033: white 25s). Pass [contentDescription] with it.
  */
+@Suppress("LongParameterList") // a component API: one parameter per visual option
 @Composable
 fun PokerChip(
     denomination: Int,
@@ -45,9 +49,10 @@ fun PokerChip(
     size: Dp = PokerDimens.PokerChipMedium,
     selected: Boolean = false,
     contentDescription: String? = null,
+    color: Color? = null,
 ) {
     val chip = ChipDenominations.getChipByValue(denomination)
-    val style = chipStyle(chip?.color ?: UnknownChip)
+    val style = chipStyle(color ?: chip?.color ?: UnknownChip)
     val description = contentDescription
         ?: stringResource(R.string.design_chip, chip?.name ?: "", chipLabel(denomination)).trim()
     Box(

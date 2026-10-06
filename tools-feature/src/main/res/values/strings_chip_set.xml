@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Chip set (S11, PP-033) -->
+    <string name="chip_set_title">Chip set</string>
+    <plurals name="chip_set_subtitle">
+        <item quantity="one">%1$s chips · a stack for %2$d player</item>
+        <item quantity="other">%1$s chips · stacks for %2$d players</item>
+    </plurals>
+    <string name="chip_set_reset">Reset chip set</string>
+
+    <!-- What the ViewModel shows itself -->
+    <string name="chip_set_snackbar_reset">Chip set back to the 500-chip starting set</string>
+    <string name="chip_set_snackbar_removed">%1$s %2$s removed</string>
+    <string name="chip_set_undo">Undo</string>
+
+    <!-- Chips you own -->
+    <string name="chip_set_owned">Chips you own</string>
+    <string name="chip_set_owned_total">%1$s total</string>
+    <string name="chip_set_check_counts">Set each colour to the chips you own. Tap a colour to change its value.</string>
+    <!-- "Green 25" -->
+    <string name="chip_set_chip_name">%1$s %2$s</string>
+    <string name="chip_set_edit_colour">Edit</string>
+    <!-- The stepper's TalkBack name: "Increase Green 25 chips, by 5" -->
+    <string name="chip_set_count_label">%1$s %2$s chips, by 5</string>
+    <string name="chip_set_add_colour">Add a colour</string>
+
+    <!-- Each player gets -->
+    <string name="chip_set_each_player">Each player gets</string>
+    <string name="chip_set_stack_from_tournament">%1$s from Tournament setup</string>
+    <string name="chip_set_stack_own">%1$s · your own stack</string>
+    <string name="chip_set_working">Working it out…</string>
+    <!-- One column of the stack picture: "8 × 25" over "200" -->
+    <string name="chip_set_pile_count">%1$d × %2$s</string>
+    <string name="chip_set_pile_more">+%1$d more</string>
+    <plurals name="chip_set_totals">
+        <item quantity="one">%1$d chip a stack · %2$d colour · %3$s</item>
+        <item quantity="other">%1$d chips a stack · %2$d colours · %3$s</item>
+    </plurals>
+    <string name="chip_set_shape_relaxed">Your chips can\'t follow the chosen stack shape exactly, so this stack bends it to add up.</string>
+    <plurals name="chip_set_more_colours">
+        <item quantity="one">Uses %1$d colours: no stack of %2$d colour fits your chips.</item>
+        <item quantity="other">Uses %1$d colours: no stack of %2$d colours fits your chips.</item>
+    </plurals>
+
+    <!-- The reserve check -->
+    <plurals name="chip_set_reserve_left">
+        <item quantity="one">After %2$d players, enough left for %1$d more stack (rebuys and add-ons).</item>
+        <item quantity="other">After %2$d players, enough left for %1$d more stacks (rebuys and add-ons).</item>
+    </plurals>
+    <string name="chip_set_reserve_none">After %1$d players, no full stack is left for rebuys or add-ons.</string>
+    <string name="chip_set_reserve_kept">You keep %1$d back.</string>
+    <string name="chip_set_reserve_short">You wanted %1$d kept back.</string>
+    <plurals name="chip_set_runs_out_first">
+        <item quantity="one">%1$s runs out first.</item>
+        <item quantity="other">%1$s run out first.</item>
+    </plurals>
+    <!-- "Green and black", "Green, black and purple" -->
+    <string name="chip_set_and">%1$s and %2$s</string>
+
+    <!-- Shortfalls -->
+    <plurals name="chip_set_short_players">
+        <item quantity="one">Short %1$d %2$s %3$s for %4$d players.</item>
+        <item quantity="other">Short %1$d %2$s %3$ss for %4$d players.</item>
+    </plurals>
+    <plurals name="chip_set_short_stacks">
+        <item quantity="one">Short %1$d %2$s %3$s for %4$d stacks.</item>
+        <item quantity="other">Short %1$d %2$s %3$ss for %4$d stacks.</item>
+    </plurals>
+    <plurals name="chip_set_can_make">
+        <item quantity="one">Your chips make %1$d full stack of %2$s now.</item>
+        <item quantity="other">Your chips make %1$d full stacks of %2$s now.</item>
+    </plurals>
+    <string name="chip_set_can_make_none">Your chips don\'t make a full stack of %1$s yet.</string>
+    <string name="chip_set_no_single_fix">No one colour fixes it: add more chips, or plan fewer players.</string>
+    <string name="chip_set_with_more">With %1$d more, each player gets:</string>
+
+    <!-- Problems no number of chips fixes -->
+    <string name="chip_set_no_chips">Add the colours you own to plan stacks.</string>
+    <string name="chip_set_no_small_blind_chip">None of your chips pays the %1$s small blind. Add a colour worth %1$s, or one that divides it.</string>
+    <string name="chip_set_stack_too_small">A %1$s stack is smaller than one %2$s chip. Plan a bigger stack.</string>
+    <string name="chip_set_not_reachable">%1$s can\'t be made from your chips (they are all multiples of %2$s). Try %3$s or %4$s.</string>
+    <string name="chip_set_too_big">%1$s is too big a stack to plan with chips of %2$s. Use bigger chips.</string>
+    <string name="chip_set_set_players">Set the players in Tournament to plan stacks.</string>
+    <string name="chip_set_set_stack">Set a starting stack to plan.</string>
+    <string name="chip_set_set_smallest_chip">Set the smallest chip in Tournament to plan stacks.</string>
+
+    <!-- Color-up plan -->
+    <string name="chip_set_color_up">Color-up plan</string>
+    <string name="chip_set_color_up_source">from the blind schedule</string>
+    <string name="chip_set_color_up_break">Break %1$d, after Level %2$d</string>
+    <string name="chip_set_color_up_level">Start of Level %1$d</string>
+    <!-- "About 18 blacks needed · 60 spare" -->
+    <string name="chip_set_color_up_spare">About %1$d %2$s needed · %3$d&#160;spare</string>
+    <string name="chip_set_color_up_short">About %1$d %2$s needed · short&#160;%3$d</string>
+    <!-- TalkBack: "Break 1, after Level 4: green 25s into black 100s. About 18 blacks needed · 60 spare" -->
+    <string name="chip_set_color_up_spoken">%1$s: %2$s into %3$s. %4$s</string>
+    <string name="chip_set_color_up_none">No color-up needed: every level still uses your smallest chip.</string>
+    <string name="chip_set_color_up_no_schedule">Set up the blinds in Tournament to see when to color up.</string>
+    <plurals name="chip_set_color_up_in_play">
+        <item quantity="one">Counted for %1$d stack in play.</item>
+        <item quantity="other">Counted for %1$d stacks in play.</item>
+    </plurals>
+    <string name="chip_set_color_up_in_play_reserve">Counted for %1$d stacks in play (%2$d players and %3$d kept back).</string>
+
+    <!-- Stack settings (the old advanced settings) -->
+    <string name="chip_set_settings">Stack settings</string>
+    <string name="chip_set_settings_show">Show stack settings</string>
+    <string name="chip_set_settings_hide">Hide stack settings</string>
+    <!-- "Keep back 2 · up to 5 colours · more small chips" -->
+    <string name="chip_set_settings_summary">Keep back %1$d · up to %2$d colours · %3$s</string>
+    <string name="chip_set_starting_stack">Starting stack</string>
+    <string name="chip_set_starting_stack_tournament">From Tournament setup</string>
+    <string name="chip_set_starting_stack_own">Your own · Tournament has %1$s</string>
+    <string name="chip_set_use_tournament_stack">Use Tournament\'s stack</string>
+    <string name="chip_set_reserve">Keep back for rebuys and add-ons</string>
+    <string name="chip_set_max_colours">Colours per stack, at most</string>
+    <string name="chip_set_shape">Stack shape</string>
+
+    <!-- In ChipDistributionCurve.getAllCurves() order -->
+    <string-array name="chip_set_shape_names">
+        <item>More small chips</item>
+        <item>Gentle slope</item>
+        <item>Mostly middle chips</item>
+        <item>More big chips</item>
+        <item>Lots of small chips</item>
+    </string-array>
+    <string-array name="chip_set_shape_descriptions">
+        <item>Counts fall from the smallest chip up. The classic tournament stack.</item>
+        <item>Counts fall gently, so a few more big chips.</item>
+        <item>Most chips in the middle values.</item>
+        <item>Counts rise with value, for deep stacks and late starts.</item>
+        <item>Plenty of small chips for change, as in a cash game.</item>
+    </string-array>
+
+    <!-- The colour sheet -->
+    <string name="chip_set_add_title">Add a colour</string>
+    <string name="chip_set_edit_title">Edit %1$s %2$s</string>
+    <string name="chip_set_colour">Colour</string>
+    <string name="chip_set_value">Each chip is worth</string>
+    <string name="chip_set_count">How many you own</string>
+    <string name="chip_set_value_taken">%1$s is already worth %2$s.</string>
+    <string name="chip_set_value_invalid">Enter a value from 1 to 1,000,000.</string>
+    <string name="chip_set_count_invalid">Enter how many you own, 0 to 9,999.</string>
+    <string name="chip_set_save">Save</string>
+    <string name="chip_set_add">Add colour</string>
+    <string name="chip_set_cancel">Cancel</string>
+    <string name="chip_set_remove">Remove %1$s %2$s</string>
+
+    <!-- In ChipColour order -->
+    <string-array name="chip_set_colour_names">
+        <item>White</item>
+        <item>Red</item>
+        <item>Blue</item>
+        <item>Grey</item>
+        <item>Green</item>
+        <item>Orange</item>
+        <item>Black</item>
+        <item>Pink</item>
+        <item>Purple</item>
+        <item>Yellow</item>
+        <item>Light blue</item>
+        <item>Brown</item>
+    </string-array>
+    <!-- Lower case, in running text: "Short 12 black 100s" -->
+    <string-array name="chip_set_colour_adjectives">
+        <item>white</item>
+        <item>red</item>
+        <item>blue</item>
+        <item>grey</item>
+        <item>green</item>
+        <item>orange</item>
+        <item>black</item>
+        <item>pink</item>
+        <item>purple</item>
+        <item>yellow</item>
+        <item>light blue</item>
+        <item>brown</item>
+    </string-array>
+    <!-- The chips as a noun: "about 1 black needed", "about 18 blacks needed" -->
+    <string-array name="chip_set_colour_one">
+        <item>white</item>
+        <item>red</item>
+        <item>blue</item>
+        <item>grey</item>
+        <item>green</item>
+        <item>orange</item>
+        <item>black</item>
+        <item>pink</item>
+        <item>purple</item>
+        <item>yellow</item>
+        <item>light blue</item>
+        <item>brown</item>
+    </string-array>
+    <string-array name="chip_set_colour_other">
+        <item>whites</item>
+        <item>reds</item>
+        <item>blues</item>
+        <item>greys</item>
+        <item>greens</item>
+        <item>oranges</item>
+        <item>blacks</item>
+        <item>pinks</item>
+        <item>purples</item>
+        <item>yellows</item>
+        <item>light blues</item>
+        <item>browns</item>
+    </string-array>
+</resources>

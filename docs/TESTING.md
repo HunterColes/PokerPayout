@@ -180,17 +180,18 @@ are:
    prize pool with the Bank's buy-in and rebuy; the structure editor; Back returns to Tournament
    (B16: Back no longer walks through every tab tapped).
 4. **Tools** (4 steps). The tool list and the Sound section (S7); turn the sound off (the
-   volume and Test chime rest) and on again, and play the test chime; Hand ranks, with a back
-   arrow and the Tools tab still selected.
+   volume and Test chime rest) and on again, and play the test chime; Hand ranks (S12), with a
+   back arrow, the Tools tab still selected, "1 in 30,940" for a royal flush and a kicker.
 5. **Odds.** Empty state; card picker; AsKs vs QhQd; a JsTs2c flop (the picker scrolls to
    find 2c); calculate and require the exact answer, **56.06%** under Player 1 and **43.94%**
    under Player 2 (555 and 435 of 990 runouts; v1.1.12 showed about 49.25 / 50.75 because of
    the kicker-order bug); add the 9h turn and require the old numbers to disappear; switch to
    4 players; reset.
-6. **Chip set** (the chip calculator, Tools still selected): Generate and require
-   Total Chips to be non-zero and equal to the sum of the "× N" rows (26 for the defaults;
-   v1.1.12 showed 0), and Denominations to equal the number of rows; open the advanced
-   settings; scroll.
+6. **Chip set** (S11, 6 steps; Tools still selected). The piles must add up to the Tournament's
+   5,000 and agree with the "N chips a stack · K colours" line (v1.1.12 showed "Total Chips 0");
+   the color-up plan from the clock's schedule; 10 greens in the colour sheet must give "Short
+   10 green 25s for 5 players"; reset applies at once with Undo; the stack settings keep 2
+   stacks back and the color-up plan counts 7 stacks in play.
 7. Back to Tournament.
 8. **Rail** (4 steps). `wm density 240` makes the phone's window 720 dp wide: the tabs must
    move to a rail down the left edge (PP-087), with the screen recreated where it was; Tools and
@@ -492,7 +493,9 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 
 | Module | Class | Goldens (`src/test/screenshots/screens/`) | Layout checks |
 |---|---|---|---|
-| `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted`, `Shell_handranks` | S7: all three, at every scroll position. Hand ranks (M6 restyles the list): touch targets |
+| `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted` | S7: all three, at every scroll position |
+| `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
+| `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end` | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
 | `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament`, `Shell_payouts`, `Shell_payouts_locked` | Payouts: all three. Tournament (M3 restyles the body): touch targets |
 | `bank-feature` | `BankTabScreenTest` | `Shell_bank` | The top bar's reset button (M4 restyles the body) |
 

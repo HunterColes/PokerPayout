@@ -3,6 +3,18 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.3.2 (on master, not published)
+
+Chip set and Hand ranks join the makeover.
+
+- **Chip set** (was the chip calculator): enter the chips you own, colour, value and count, and it
+  plans every player's starting stack within what you have, with stacks kept back for rebuys and
+  add-ons. If the set comes up short it says exactly what to add ("Short 10 green 25s for 5
+  players"). A colour-up plan follows the clock's breaks. It updates live (no Generate button), and
+  your old calculator settings carry over (check the counts once).
+- **Hand ranks:** real card faces with the kickers dimmed, and how often each hand turns up in seven
+  cards ("1 in 39" for a full house). Two columns on tablets; follows the four-colour deck setting.
+
 ## 1.3.1 (on master, not published)
 
 The makeover begins: the design system, the new app frame, and the new Odds tool.

@@ -10,7 +10,7 @@ import androidx.navigation.compose.composable
 import com.huntercoles.pokerpayout.core.navigation.NavigationDestination
 import com.huntercoles.pokerpayout.core.navigation.NavigationFactory
 import com.huntercoles.pokerpayout.core.navigation.NavigationManager
-import com.huntercoles.pokerpayout.tools.presentation.composable.ChipCalculatorRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.ChipSetRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.HandRanksScreen
 import com.huntercoles.pokerpayout.tools.presentation.composable.OddsCalculatorScreen
 import com.huntercoles.pokerpayout.tools.presentation.composable.ToolsHomeScreen
@@ -40,7 +40,7 @@ class ToolsNavigationFactory @Inject constructor(
         }
 
         builder.composable<NavigationDestination.ChipCalculator> {
-            ChipCalculatorRoute(onBack = navigationManager::navigateBack)
+            ChipSetRoute(onBack = navigationManager::navigateBack)
         }
     }
 }

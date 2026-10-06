@@ -631,24 +631,14 @@ wait_screen() {
   echo "[ui] FAIL the screen didn't turn $1 ($size)"; return 1
 }
 s_rotate_close() {
-  # PP-094 #2: ✕ in the turned table view shows the clock upright, but only while the phone stays
-  # on its side. Upright again, then on its side again, the table view is back. Every uiautomator
-  # dump puts the user rotation back to the display's (upright, once the clock is), which to the
-  # app is the phone turned upright: the tap holds it on its side (PP_UI_HOLD_ROTATION, see ui.py),
-  # and nothing dumps between the ✕ and the second turn.
-  rot_trace() { echo "rotation ($1): user $(adb_ shell settings get system user_rotation | tr -d '\r'), auto $(adb_ shell settings get system accelerometer_rotation | tr -d '\r'), display $(adb_ shell dumpsys display | grep -o 'mCurrentOrientation=[0-9]' | head -1)"; }
-  rot_trace "before the tap"
-  { PP_UI_HOLD_ROTATION=1 ui tap "desc=Exit table view" && rot_trace "after the tap" && wait_screen port; } || { restore_rotation; return 1; }
-  rot_trace "upright clock"
-  sleep 2 # longer than the app waits before it counts the phone as upright
-  rot_trace "2 s later"
-  local usr; usr="$(adb_ shell settings get system user_rotation | tr -d '\r')"
-  if [[ "$usr" != 1 ]] || ! wait_screen port; then
-    echo "[ui] FAIL after ✕ the clock must stay upright with the phone still on its side (user rotation $usr)"
-    restore_rotation; return 1
-  fi
-  adb_ shell settings put system user_rotation 0   # upright: the landscape spell is over
-  sleep 2.5
+  # PP-094 #2: ✕ in the turned table view shows the clock upright for this turn only; turned again,
+  # the table view is back (before, ✕ held the clock upright until you left the tab). The tour
+  # turns the phone with rotation locked (user_rotation), and Android 14 itself puts the locked
+  # rotation back to upright once the app asks for the upright clock, so "still on its side" can't
+  # be held here; on a phone with auto-rotate on the app reads the accelerometer instead (unit
+  # tested in TournamentRotationTest and PhoneHoldRulesTest).
+  { ui tap "desc=Exit table view" && wait_screen port; } || { restore_rotation; return 1; }
+  sleep 2.5 # longer than the app waits before it counts the phone as upright
   adb_ shell settings put system user_rotation 1   # on its side again
   { wait_screen land && ui wait "desc=Exit table view" && ui assert-text "text~=Level 5 · time left" "Pause timer"; } \
     || { restore_rotation; return 1; }

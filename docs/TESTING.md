@@ -182,10 +182,11 @@ are:
      emulator on its side: the clock must become the table view, landscape, still on level 5;
      `user_rotation 0` brings the clock back upright. The step puts the settings back however it
      ends.
-   * One turn only (PP-094 #2): on its side, ✕ must show the clock upright while the user rotation
-     stays 1; `user_rotation 0` (upright) and then 1 again (on its side) must bring the table view
-     back. The step takes no UI dump between the ✕ and the second turn, since every uiautomator dump
-     sets the user rotation back to the display's, which to the app is the phone turned upright.
+   * One turn only (PP-094 #2): on its side, ✕ must show the clock upright, and turning the phone
+     on its side again (`user_rotation 1`) must bring the table view back (the old rule kept the
+     clock upright until you left the tab). With rotation locked, Android 14 itself sets the user
+     rotation back to 0 when the app asks for the upright clock, so the tour can't hold the phone
+     "still on its side" after ✕; the accelerometer path a real phone uses is unit tested.
    * The strip opens setup over the running clock, money and blinds locked; "Unlock to edit…"
      asks in a sheet first, then opens them; closing locks them again.
    * New tournament… (the menu) asks first; the reset unfolds setup at LEVEL 1 · READY, 20:00,

@@ -23,7 +23,8 @@ import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.testing.forEachScrollPosition
 import com.huntercoles.pokerpayout.core.time.TimeSource
-import com.huntercoles.pokerpayout.tournament.presentation.composable.PlayContent
+import com.huntercoles.pokerpayout.tournament.presentation.composable.TournamentActions
+import com.huntercoles.pokerpayout.tournament.presentation.composable.TournamentContent
 import com.huntercoles.pokerpayout.tournament.presentation.payouts.PayoutsContent
 import io.mockk.mockk
 import org.junit.After
@@ -41,8 +42,8 @@ import org.robolectric.annotation.GraphicsMode
  * preferences, set up as the mockups' game: 9 players, $40 buy-in, $5 food, $5 bounty, $40 rebuy,
  * $10 add-on, before the clock starts.
  *
- * Payouts is checked in full. The Tournament tab's body is the pre-makeover one until M3 (S1, S2), so
- * its check covers what M2 owns there: the shell and the top bar.
+ * Payouts is checked in full. The Tournament tab here is its setup page (S1 v2) inside the shell; its
+ * own tests (TournamentScreenGoldenTest) check every state of it across the matrix.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -94,12 +95,7 @@ class TournamentTabsScreenTest(private val config: ScreenConfig) {
             val configState by setup.uiState.collectAsState()
             val timerState by timer.uiState.collectAsState()
             InAppShell(NavTab.Tournament) {
-                PlayContent(
-                    calculatorUiState = configState,
-                    timerUiState = timerState,
-                    onCalculatorIntent = {},
-                    onTimerIntent = {},
-                )
+                TournamentContent(setup = configState, timer = timerState, ui = TournamentUi(), actions = TournamentActions())
             }
         }
         LayoutAssertions.assertTouchTargets(screen.compose, "Tournament tab on ${config.id}", strict = false)

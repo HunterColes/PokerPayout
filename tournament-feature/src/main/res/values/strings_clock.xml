@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Tournament tab (M3): setup that folds into the clock (S1 v2), the clock (S2), the table
+     view (S3) and breaks (S4). A file of its own so it can't collide with the Payouts strings. -->
+<resources>
+    <!-- Top bar -->
+    <string name="clock_subtitle_setup">Setup · not started</string>
+    <string name="clock_subtitle_starting">Starting · Level %1$d</string>
+    <string name="clock_subtitle_running">Level %1$d of %2$d · running</string>
+    <string name="clock_subtitle_paused">Level %1$d of %2$d · paused</string>
+    <string name="clock_subtitle_break">Break %1$d · %2$d of %3$d left</string>
+    <string name="clock_subtitle_overtime">Level %1$d · overtime</string>
+    <string name="clock_subtitle_finished">Finished</string>
+    <!-- Tablets: "Level 6 of 9 · running · 7 of 9 left" -->
+    <string name="clock_subtitle_with_players">%1$s · %2$d of %3$d left</string>
+    <string name="clock_mute">Mute chimes</string>
+    <string name="clock_unmute">Unmute chimes</string>
+    <string name="clock_sound_settings">Sound settings</string>
+    <string name="clock_table_view">Table view</string>
+    <string name="clock_exit_table_view">Exit table view</string>
+    <string name="clock_more">More options</string>
+    <string name="clock_new_tournament">New tournament…</string>
+    <string name="clock_reset_confirm">Reset tournament</string>
+    <string name="clock_cancel">Cancel</string>
+
+    <!-- S1 v2: the ready ticket -->
+    <string name="setup_ticket_ready">Level 1 · ready</string>
+    <string name="setup_ticket_cant_start">Level 1 · can\'t start</string>
+    <string name="setup_ticket_fix_below">Fix the blinds below to start</string>
+    <string name="setup_blinds">Blinds</string>
+    <string name="setup_ticket_next">next %1$s</string>
+    <string name="setup_ticket_shape">%1$s · %2$s</string>
+    <string name="setup_ticket_total">%1$s in all</string>
+    <plurals name="setup_levels">
+        <item quantity="one">%d level</item>
+        <item quantity="other">%d levels</item>
+    </plurals>
+    <plurals name="setup_breaks">
+        <item quantity="one">%d break</item>
+        <item quantity="other">%d breaks</item>
+    </plurals>
+    <string name="setup_no_breaks">no breaks</string>
+
+    <!-- S1 v2: the setup page -->
+    <string name="setup_players">Players</string>
+    <string name="setup_players_hint">Bank gets one row per player</string>
+    <string name="setup_players_late_entry">A late entry adds a Bank row</string>
+    <string name="setup_money_title">Money · per player</string>
+    <string name="setup_money_to_sit_down">%1$s to sit down</string>
+    <string name="setup_buy_in">Buy-in</string>
+    <string name="setup_bounty">Bounty</string>
+    <string name="setup_rebuy">Rebuy</string>
+    <string name="setup_rebuys_until">Rebuys until</string>
+    <string name="setup_rebuys_until_none">No cutoff</string>
+    <string name="setup_rebuys_until_level">End of L%1$d</string>
+    <string name="setup_add_on">Add-on</string>
+    <string name="setup_food">Food</string>
+    <!-- %1$s is the amount, shown in gold -->
+    <string name="setup_prize_pool_starts">Prize pool starts at %1$s and grows with rebuys and add-ons.</string>
+    <string name="setup_game_length">Game length</string>
+    <string name="setup_hours">hours</string>
+    <string name="setup_level_length">Levels</string>
+    <string name="setup_minutes">min</string>
+    <string name="setup_starting_stack">Starting stack</string>
+    <string name="setup_breaks_label">Breaks</string>
+    <string name="setup_breaks_off">Off</string>
+    <string name="setup_breaks_every">Every %1$d</string>
+    <string name="setup_smallest_chip">Smallest chip</string>
+    <string name="setup_break_length">Break length</string>
+    <string name="setup_break_note">Break note</string>
+    <string name="setup_break_note_hint">e.g. Last rebuy</string>
+    <string name="setup_ante">Big-blind ante</string>
+    <string name="setup_ante_on">From Level %1$d · one big blind</string>
+    <string name="setup_ante_off">The big blind antes for the whole table</string>
+    <string name="setup_ante_from">BB ante</string>
+    <string name="setup_ante_from_level">From L%1$d</string>
+    <string name="setup_ante_none">Off</string>
+    <string name="setup_works">Works:</string>
+    <!-- "9 levels, 25 / 50 to 1,000 / 2,000" -->
+    <string name="setup_works_levels">%1$s, %2$s to %3$s</string>
+    <!-- ", 2 breaks, ends at 3:20" -->
+    <string name="setup_works_breaks">, %1$s, ends at %2$s</string>
+    <plurals name="setup_color_ups">
+        <item quantity="one">Color-up after Level %2$s.</item>
+        <item quantity="other">Color-ups after Levels %2$s.</item>
+    </plurals>
+    <string name="setup_and">%1$s and %2$s</string>
+    <string name="setup_cant_build">Can\'t build blinds</string>
+    <string name="setup_payouts">Payouts</string>
+    <string name="setup_payouts_summary">%1$s · %2$s · rounded to %3$s</string>
+    <string name="setup_payouts_custom">Custom</string>
+    <plurals name="setup_places">
+        <item quantity="one">%d place</item>
+        <item quantity="other">%d places</item>
+    </plurals>
+    <string name="setup_payouts_open">Open Payouts</string>
+    <string name="setup_start_clock">Start clock</string>
+    <string name="setup_expand_section">Show %1$s</string>
+    <string name="setup_collapse_section">Hide %1$s</string>
+
+    <!-- S1 v2: the setup strip and its one-line summaries -->
+    <string name="strip_setup">Setup</string>
+    <string name="strip_description">Setup: %1$s. Opens setup</string>
+    <plurals name="strip_players">
+        <item quantity="one">%d player</item>
+        <item quantity="other">%d players</item>
+    </plurals>
+    <string name="strip_buy_in">%1$s buy-in</string>
+    <string name="strip_bounty">%1$s bounty</string>
+    <string name="strip_rebuy_to">rebuy to L%1$d</string>
+    <string name="strip_rebuy">%1$s rebuy</string>
+    <string name="strip_add_on">%1$s add-on</string>
+    <string name="strip_level_length">%1$d-min levels</string>
+    <string name="strip_hours">%1$d h</string>
+    <string name="strip_chips">%1$s chips</string>
+    <string name="strip_chip">%1$s chip</string>
+    <string name="strip_breaks_every">breaks every %1$d</string>
+    <string name="strip_ante_from">ante from L%1$d</string>
+    <string name="strip_paid">%1$d paid</string>
+    <string name="strip_rounded">rounded to %1$s</string>
+    <string name="strip_separator">" · "</string>
+
+    <!-- S1 v2: the setup panel, mid-game -->
+    <string name="panel_running">Setup · clock still running</string>
+    <string name="panel_paused">Setup · clock paused</string>
+    <string name="panel_close">Close setup</string>
+    <string name="panel_any_time">Change any time</string>
+    <string name="panel_locked">Locked while the clock runs</string>
+    <string name="panel_unlocked">Unlocked: money and blinds</string>
+    <string name="panel_money_amounts">Buy-in · rebuy · add-on</string>
+    <string name="panel_bounty_food">Bounty · food</string>
+    <string name="panel_length_levels">Game length · levels</string>
+    <string name="panel_stack_chip">Stack · smallest chip</string>
+    <string name="panel_hours_minutes">%1$d h · %2$d min</string>
+    <string name="panel_unlock">Unlock to edit…</string>
+    <string name="panel_lock_again">Lock again</string>
+    <string name="panel_rebuild_note">Blind changes rebuild the schedule from Level %1$d. The time left in this level is kept.</string>
+    <string name="panel_unlock_title">Edit money and blinds?</string>
+    <string name="panel_unlock_body">Money changes count for everyone from now on. Blind changes rebuild the schedule from Level %1$d; the time left in this level is kept.</string>
+    <string name="panel_unlock_confirm">Unlock to edit</string>
+    <string name="panel_unlock_keep">Keep locked</string>
+    <string name="panel_not_applied">Not applied: %1$s</string>
+
+    <!-- S2: the clock -->
+    <string name="clock_level_time_left">Level %1$d · time left</string>
+    <string name="clock_level_ready">Level %1$d · ready</string>
+    <string name="clock_level_overtime">Level %1$d · overtime</string>
+    <string name="clock_break_back_at">Break · back at Level %1$d</string>
+    <string name="clock_finished">Finished</string>
+    <string name="clock_no_blinds">The blind setup can\'t be played. Open setup to fix it.</string>
+    <string name="clock_pill_paused">Paused</string>
+    <string name="clock_pill_final">Final minutes</string>
+    <string name="clock_pill_overtime">Overtime</string>
+    <string name="clock_pill_ready">Ready</string>
+    <string name="clock_played">%1$s played</string>
+    <string name="clock_level_length">%1$d-min level</string>
+    <string name="clock_blinds">Blinds</string>
+    <string name="clock_bb_ante">BB ante</string>
+    <string name="clock_bb_ante_amount">BB ante %1$s</string>
+    <string name="clock_next_level">Next · Level %1$d</string>
+    <string name="clock_next_level_short">Next · L%1$d</string>
+    <string name="clock_next_overtime">Next · Level %1$d · overtime</string>
+    <string name="clock_next_break">Next · Break</string>
+    <string name="clock_next_none">Final level</string>
+    <string name="clock_break_minutes">%1$d min</string>
+    <string name="clock_ante">ante %1$s</string>
+    <string name="clock_then_level">Then · Level %1$d</string>
+    <string name="clock_previous">Previous blind level</string>
+    <string name="clock_next">Next blind level</string>
+    <string name="clock_minus_minute">Remove one minute</string>
+    <string name="clock_plus_minute">Add one minute</string>
+    <string name="clock_minus_one">−1</string>
+    <string name="clock_plus_one">+1</string>
+    <string name="clock_start">Start timer</string>
+    <string name="clock_pause">Pause timer</string>
+    <string name="clock_resume">Resume timer</string>
+    <string name="clock_stat_players">Players</string>
+    <string name="clock_stat_of">of %1$d</string>
+    <string name="clock_stat_avg">Avg stack</string>
+    <string name="clock_stat_avg_short">Avg</string>
+    <string name="clock_stat_bb">%1$s BB</string>
+    <string name="clock_stat_pool">Prize pool</string>
+    <string name="clock_stat_pool_short">Pool</string>
+    <string name="clock_info_break_after">Break after Level %1$d</string>
+    <string name="clock_in">in %1$s</string>
+    <string name="clock_info_ends">Tournament ends about %1$s</string>
+    <string name="clock_info_ends_short">Ends about %1$s</string>
+    <string name="clock_info_overtime">Overtime</string>
+    <string name="clock_info_overtime_by">+%1$s</string>
+    <string name="clock_info_finished">Tournament finished</string>
+    <string name="clock_info_rebuys_closed">Rebuys closed after Level %1$d</string>
+    <string name="clock_info_rebuys_until">Rebuys open until level %1$d</string>
+    <string name="clock_info_rebuys_open">Rebuys open all game</string>
+    <plurals name="clock_taken">
+        <item quantity="one">%d taken</item>
+        <item quantity="other">%d taken</item>
+    </plurals>
+    <string name="clock_schedule">Schedule</string>
+    <string name="clock_fix_setup">Open setup</string>
+
+    <!-- The schedule -->
+    <string name="schedule_level">L%1$d</string>
+    <string name="schedule_levels_range">%1$d–%2$d</string>
+    <string name="schedule_done_span">%1$s → %2$s</string>
+    <string name="schedule_done_breaks">%1$s · %2$s</string>
+    <string name="schedule_break_number">Break %1$d</string>
+    <string name="schedule_done">done</string>
+    <string name="schedule_now">Now</string>
+    <string name="schedule_last_level">last level</string>
+    <string name="schedule_overtime">overtime</string>
+    <string name="schedule_break">Break · %1$d min</string>
+    <string name="schedule_details">%1$s · %2$s</string>
+
+    <!-- S4: breaks and the color-up -->
+    <string name="break_add_ons_close">Add-ons close when the break ends</string>
+    <string name="break_color_up">Color up the %1$s</string>
+    <string name="break_not_needed">%1$s aren\'t needed from Level %2$d</string>
+    <!-- "Each player swaps every 4 green 25s for 1 black 100." -->
+    <string name="break_color_up_swap">Each player swaps every %1$d %2$s for 1 %3$s.</string>
+    <string name="break_color_up_race">Odd %1$s go to a chip race: one card per odd chip, high cards win the new %2$s.</string>
+    <string name="break_chips_plural">%1$s %2$ss</string>
+    <string name="break_chip_single">%1$s %2$s</string>
+    <string name="break_color_up_done">Color-up done</string>
+    <string name="break_color_up_out">%1$s are out of play</string>
+    <string name="break_undo">Undo</string>
+    <string name="break_add_ons">Add-ons · %1$s each</string>
+    <string name="break_add_ons_count">%1$d of %2$d</string>
+    <string name="break_add_ons_description">%1$d of %2$d players have taken the add-on</string>
+    <!-- %1$s is the amount, shown in gold -->
+    <string name="break_prize_pool_now">Prize pool now %1$s</string>
+    <string name="break_record_in_bank">Record in Bank</string>
+    <string name="break_end_now">End break now</string>
+    <string name="break_color_up_chips">%1$d %2$s for 1 %3$s</string>
+
+    <!-- S3: the table view's footer -->
+    <string name="table_left">%1$d of %2$d left</string>
+    <string name="table_avg">Avg %1$s · %2$s BB</string>
+    <string name="table_pool">Pool %1$s</string>
+    <string name="table_break_in">Break in %1$s</string>
+</resources>

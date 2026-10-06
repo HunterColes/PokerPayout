@@ -1,204 +1,204 @@
 package com.huntercoles.pokerpayout.tournament.presentation.composable
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
-import com.huntercoles.pokerpayout.core.design.PokerDimens
+import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.design.components.PokerPill
+import com.huntercoles.pokerpayout.core.design.components.PokerPillTone
+import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
+import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.LevelSegment
-import com.huntercoles.pokerpayout.tournament.presentation.ClockFormat
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import java.text.NumberFormat
 
-private enum class RowState { PAST, CURRENT, UPCOMING }
-
-private val SCHEDULE_ROW_HEIGHT = 58.dp
-private const val SCHEDULE_ROWS = 4
-private const val SCHEDULE_ROWS_WITH_CONFIG = 2
-private const val RESIZE_MILLIS = 150
-
 /**
- * The blind schedule with its breaks (PP-026), shown before the start too. The current level or break
- * is highlighted and kept in view; overtime levels appear as the clock reaches them.
+ * The blind schedule with its breaks (PP-026). Levels already played fold into one row ("1–5
+ * 25/50 → 200/400 · Break 1  done"); the current level or break has a GoldWash row and a NOW pill;
+ * the rest say when they start ("in 12:41"). Overtime levels appear as the clock reaches them.
  */
 @Composable
-internal fun ScheduleCard(uiState: TimerUiState, isConfigExpanded: Boolean) {
-    val formatter = rememberChipFormatter()
+internal fun ScheduleCard(uiState: TimerUiState, modifier: Modifier = Modifier) {
     val segments = uiState.timeline.visibleSegmentsAt(uiState.elapsedSeconds)
     if (segments.isEmpty()) return
-    val currentIndex = uiState.currentSegmentIndex
-    val listState = rememberLazyListState()
-    val rows = if (isConfigExpanded) SCHEDULE_ROWS_WITH_CONFIG else SCHEDULE_ROWS
-    val height by animateDpAsState(
-        targetValue = PokerDimens.BlindPanelCardPadding * 2 + SCHEDULE_ROW_HEIGHT * rows +
-            PokerDimens.BlindItemSpacing * (rows - 1),
-        animationSpec = tween(durationMillis = RESIZE_MILLIS, easing = FastOutSlowInEasing),
-        label = "schedulePanelHeight"
-    )
-
-    LaunchedEffect(currentIndex, isConfigExpanded, segments.size) {
-        if (currentIndex in segments.indices) listState.animateScrollToItem((currentIndex - 1).coerceAtLeast(0))
-    }
-
-    Card(
-        modifier = Modifier
+    val formatter = rememberChipFormatter()
+    val current = if (uiState.isFinished) segments.size else uiState.currentSegmentIndex
+    val started = uiState.hasTimerStarted
+    val done = if (started) segments.take(current) else emptyList()
+    val lastRegular = uiState.timeline.levels.lastOrNull { !it.isOvertime }?.index
+    Column(
+        modifier = modifier
             .fillMaxWidth()
-            .height(height),
-        elevation = CardDefaults.cardElevation(defaultElevation = PokerDimens.ElevationDefault),
-        colors = CardDefaults.cardColors(containerColor = PokerColors.SurfacePrimary)
+            .clip(CardShape)
+            .background(PokerColors.FeltGreen)
+            .padding(6.dp),
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(PokerDimens.BlindPanelCardPadding),
-            state = listState,
-            verticalArrangement = Arrangement.spacedBy(PokerDimens.BlindItemSpacing)
-        ) {
-            itemsIndexed(segments, key = { _, segment -> segment.startSeconds }) { index, segment ->
-                val state = when {
-                    index == currentIndex && uiState.hasTimerStarted -> RowState.CURRENT
-                    index < currentIndex -> RowState.PAST
-                    else -> RowState.UPCOMING
-                }
-                when (segment) {
-                    is LevelSegment -> LevelRow(segment, state, formatter)
-                    is BreakSegment -> BreakRow(segment, state, formatter)
-                }
+        if (done.isNotEmpty()) DoneRow(done, formatter)
+        segments.drop(done.size).forEachIndexed { offset, segment ->
+            val now = offset == 0 && !uiState.isFinished
+            if (done.isNotEmpty() || offset > 0) {
+                HorizontalDivider(color = PokerColors.FeltLine, modifier = Modifier.padding(horizontal = 6.dp))
             }
+            ScheduleRow(
+                segment = segment,
+                now = now,
+                trailing = if (now) null else inTime(segment.startSeconds - uiState.elapsedSeconds),
+                isLast = segment is LevelSegment && segment.index == lastRegular,
+                formatter = formatter,
+                pill = if (now) stringResource(if (started) R.string.schedule_now else R.string.clock_pill_ready) else null,
+            )
         }
     }
 }
 
+/** Everything already played, in one row. */
 @Composable
-private fun LevelRow(segment: LevelSegment, state: RowState, formatter: NumberFormat) {
-    val level = segment.level
-    val background by animateColorAsState(
-        if (state == RowState.CURRENT) PokerColors.PokerGold.copy(alpha = 0.18f) else Color.Transparent,
-        label = "levelBackground"
-    )
-    val primary = when {
-        segment.isOvertime -> PokerColors.ErrorRed
-        state == RowState.CURRENT -> PokerColors.PokerGold
-        state == RowState.PAST -> Faint
-        else -> PokerColors.CardWhite
+private fun DoneRow(done: List<ClockSegment>, formatter: NumberFormat) {
+    val levels = done.filterIsInstance<LevelSegment>()
+    val breaks = done.filterIsInstance<BreakSegment>()
+    val first = levels.firstOrNull()?.level
+    val last = levels.lastOrNull()?.level
+    val label = when {
+        first == null || last == null -> ""
+        first.level == last.level -> stringResource(R.string.schedule_level, first.level)
+        else -> stringResource(R.string.schedule_levels_range, first.level, last.level)
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(SCHEDULE_ROW_HEIGHT)
-            .clip(RoundedCornerShape(PokerDimens.CornerSmall))
-            .background(background)
-            .padding(horizontal = PokerDimens.BlindItemPaddingHorizontal),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Level ${level.level}" + if (segment.isOvertime) " · overtime" else "",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold,
-                color = primary
-            )
-            Text(
-                text = blindsText(level, formatter),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = primary
-            )
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            OffsetText(segment.startSeconds)
-            val note = when {
-                segment.colorUp.isNotEmpty() -> colorUpText(segment.colorUp, formatter)
-                level.ante > 0 -> "BB ante ${formatter.format(level.ante)}"
-                else -> null
-            }
-            note?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (segment.colorUp.isEmpty() && state != RowState.CURRENT) Dim else PokerColors.PokerGold,
-                    maxLines = 1
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun BreakRow(segment: BreakSegment, state: RowState, formatter: NumberFormat) {
-    val accent = if (state == RowState.PAST) Faint else PokerColors.PokerGold
-    val shape = RoundedCornerShape(PokerDimens.CornerSmall)
-    val background = if (state == RowState.CURRENT) {
-        PokerColors.PokerGold.copy(alpha = 0.18f)
+    val span = if (first != null && last != null) {
+        stringResource(R.string.schedule_done_span, blindsText(first, formatter), blindsText(last, formatter))
     } else {
-        PokerColors.FeltGreen.copy(alpha = 0.5f)
+        ""
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(SCHEDULE_ROW_HEIGHT)
-            .clip(shape)
-            .background(background)
-            .border(1.dp, accent.copy(alpha = 0.5f), shape)
-            .padding(horizontal = PokerDimens.BlindItemPaddingHorizontal),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "☕ Break · ${segment.durationSeconds / SECONDS_PER_MINUTE} min",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = accent
-            )
-            val details = listOfNotNull(
-                segment.message.takeIf { it.isNotBlank() },
-                segment.colorUp.takeIf { it.isNotEmpty() }?.let { colorUpText(it, formatter) }
-            ).joinToString(" · ")
-            if (details.isNotEmpty()) {
-                Text(
-                    text = details,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PokerColors.CardWhite,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-        OffsetText(segment.startSeconds)
+    val breakText = when (breaks.size) {
+        0 -> null
+        1 -> stringResource(R.string.schedule_break_number, breaks.single().number)
+        else -> pluralStringResource(R.plurals.setup_breaks, breaks.size, breaks.size)
+    }
+    RowFrame(background = Color.Transparent) {
+        RowLabel(label, PokerColors.ChalkDim)
+        Text(
+            text = breakText?.let { stringResource(R.string.schedule_done_breaks, span, it) } ?: span,
+            style = MaterialTheme.typography.bodySmall,
+            color = PokerColors.Chalk,
+            modifier = Modifier.weight(1f),
+        )
+        Text(stringResource(R.string.schedule_done), style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
     }
 }
 
-/** "+1:20": when the level or break starts, counting breaks. */
+@Suppress("LongParameterList") // one schedule row: what, when, and how it's marked
 @Composable
-private fun OffsetText(startSeconds: Int) {
-    Text(text = ClockFormat.offset(startSeconds), style = MaterialTheme.typography.labelSmall, color = Dim)
+private fun ScheduleRow(
+    segment: ClockSegment,
+    now: Boolean,
+    trailing: String?,
+    isLast: Boolean,
+    formatter: NumberFormat,
+    pill: String?,
+) {
+    val main = if (now) PokerColors.PokerGold else PokerColors.CardWhite
+    RowFrame(background = if (now) PokerColors.GoldWash else Color.Transparent) {
+        when (segment) {
+            is LevelSegment -> {
+                val labelColor = if (now) PokerColors.PokerGold else PokerColors.Chalk
+                RowLabel(stringResource(R.string.schedule_level, segment.level.level), labelColor)
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = blindsText(segment.level, formatter),
+                        style = PokerType.NumberM,
+                        color = if (segment.isOvertime) PokerColors.Danger else main,
+                    )
+                    levelDetails(segment, isLast, formatter)?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
+                    }
+                }
+            }
+            is BreakSegment -> {
+                Box(Modifier.widthIn(min = LabelWidth)) {
+                    Icon(PokerIcons.Coffee, contentDescription = null, tint = PokerColors.Chalk, modifier = Modifier.size(18.dp))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.schedule_break, segment.durationSeconds / SECONDS_PER_MINUTE),
+                        style = PokerType.NumberM.copy(fontSize = PokerType.NumberS.fontSize),
+                        color = main,
+                    )
+                    breakDetails(segment, formatter)?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
+                    }
+                }
+            }
+        }
+        if (pill != null) PokerPill(pill, tone = PokerPillTone.Gold)
+        trailing?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk, textAlign = TextAlign.End)
+        }
+    }
 }
+
+/** "ante 600", "ante 2,000 · last level", "Color up the 25s", "overtime". */
+@Composable
+private fun levelDetails(segment: LevelSegment, isLast: Boolean, formatter: NumberFormat): String? {
+    val parts = listOfNotNull(
+        segment.level.ante.takeIf { it > 0 }?.let { stringResource(R.string.clock_ante, formatter.format(it)) },
+        segment.colorUp.takeIf { it.isNotEmpty() }?.let { colorUpText(it, formatter) },
+        stringResource(R.string.schedule_last_level).takeIf { isLast },
+        stringResource(R.string.schedule_overtime).takeIf { segment.isOvertime },
+    )
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(stringResource(R.string.strip_separator))
+}
+
+@Composable
+private fun RowFrame(background: Color, content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = RowHeight)
+            .clip(RowShape)
+            .background(background)
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        content = content,
+    )
+}
+
+@Composable
+private fun RowLabel(text: String, color: Color) {
+    Text(
+        text = text,
+        style = PokerType.Eyebrow.copy(fontSize = PokerType.NumberS.fontSize),
+        color = color,
+        modifier = Modifier.widthIn(min = LabelWidth),
+    )
+}
+
+private val RowShape = RoundedCornerShape(10.dp)
+private val RowHeight = 48.dp
+private val LabelWidth = 28.dp

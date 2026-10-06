@@ -1,54 +1,299 @@
 package com.huntercoles.pokerpayout.tournament.presentation.composable
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import android.content.pm.ActivityInfo
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
 import com.huntercoles.pokerpayout.core.design.PokerColors
-import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSegment
-import com.huntercoles.pokerpayout.tournament.presentation.ClockFormat
+import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
+import com.huntercoles.pokerpayout.core.design.components.PokerPill
+import com.huntercoles.pokerpayout.core.design.components.PokerPillTone
+import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
+import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
+import kotlinx.coroutines.delay
 
-/** Width of "12:34" in units of the font size, roughly; sizes the hero to fill its column. */
-private const val HERO_WIDTH_EMS = 3.1f
+/**
+ * S3: the clock for a phone propped against the chip tray (PP-025). Black, no tabs, no system bars,
+ * the screen kept on. Time left fills the left 55%, fitted to the width (Barlow Condensed is about
+ * 2.2 em for "12:41", so 780 x 360 dp gives about 164 sp); blinds and ante on the right, NEXT
+ * labelled and dimmer; the numbers players ask about along the foot. Pause and exit fade to 40% after
+ * 3 s and come back on any touch.
+ *
+ * It is a full-screen state of the Tournament tab (no `Dialog` window), shown when a phone is turned
+ * sideways with a clock running, or with ⤢; ✕ leaves it.
+ */
+@Composable
+internal fun TableViewContent(
+    uiState: TimerUiState,
+    onIntent: (TimerIntent) -> Unit,
+    onExit: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var touches by remember { mutableIntStateOf(0) }
+    var dimmed by remember { mutableStateOf(false) }
+    LaunchedEffect(touches) {
+        dimmed = false
+        delay(CONTROLS_VISIBLE_MILLIS)
+        dimmed = true
+    }
+    val reduced = LocalReducedMotion.current
+    val controlsAlpha by animateFloatAsState(
+        targetValue = if (dimmed) DIMMED_ALPHA else 1f,
+        animationSpec = if (reduced) snap() else tween(FADE_MILLIS),
+        label = "tableControls",
+    )
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .background(PokerColors.PokerBlack)
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent(PointerEventPass.Initial)
+                        touches++
+                    }
+                }
+            }
+            .windowInsetsPadding(WindowInsets.displayCutout)
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+    ) {
+        val width = maxWidth
+        val height = maxHeight
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                if (width > height) {
+                    LandscapeBody(uiState, heroCap = height * HERO_MAX_HEIGHT_LANDSCAPE, width = width)
+                } else {
+                    PortraitBody(uiState, heroCap = height * HERO_MAX_HEIGHT_PORTRAIT, width = width)
+                }
+            }
+            TableFooter(uiState, controlsAlpha, onIntent, onExit)
+        }
+    }
+}
+
+@Composable
+private fun LandscapeBody(uiState: TimerUiState, heroCap: Dp, width: Dp) {
+    Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+        // The digits take whatever height the eyebrow and the bar leave, so large text never squeezes them.
+        Column(
+            modifier = Modifier
+                .weight(HERO_COLUMN_SHARE)
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+        ) {
+            TableEyebrow(uiState)
+            BoxWithConstraints(Modifier.weight(1f, fill = false), contentAlignment = Alignment.Center) {
+                TableDigits(uiState, width * HERO_COLUMN_SHARE - 24.dp, heroCap, height = maxHeight)
+            }
+            ClockProgress(uiState, labelled = false)
+        }
+        Box(
+            Modifier
+                .padding(horizontal = 20.dp)
+                .width(1.dp)
+                .fillMaxHeight(DIVIDER_HEIGHT)
+                .background(PokerColors.FeltLine),
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f - HERO_COLUMN_SHARE)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TableSide(uiState, blindsCap = heroCap * BLINDS_TO_HERO)
+        }
+    }
+}
+
+@Composable
+private fun PortraitBody(uiState: TimerUiState, heroCap: Dp, width: Dp) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        TableHero(uiState, width, heroCap)
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            TableSide(uiState, blindsCap = heroCap * BLINDS_TO_HERO)
+        }
+    }
+}
+
+@Composable
+private fun TableHero(uiState: TimerUiState, width: Dp, cap: Dp) {
+    TableEyebrow(uiState)
+    TableDigits(uiState, width, cap)
+    ClockProgress(uiState, labelled = false)
+}
+
+/** "LEVEL 6 · TIME LEFT" (or the break's pill) and any state pills. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TableEyebrow(uiState: TimerUiState) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+        if (uiState.isOnBreak) {
+            PokerPill(clockEyebrow(uiState), tone = PokerPillTone.Gold, icon = PokerIcons.Coffee)
+        } else {
+            PokerEyebrow(
+                clockEyebrow(uiState),
+                color = eyebrowColor(uiState),
+                modifier = Modifier.align(Alignment.CenterVertically),
+            )
+        }
+        clockPills(uiState).forEach { PokerPill(it.text, tone = it.tone) }
+    }
+}
+
+@Composable
+private fun TableDigits(uiState: TimerUiState, width: Dp, cap: Dp, height: Dp = Dp.Unspecified) {
+    val time = clockText(uiState.segmentRemainingSeconds)
+    val size = rememberFittedSize(time, PokerType.Clock, width, cap, height = height, lineHeightRatio = HERO_LINE_HEIGHT)
+    Text(
+        text = time,
+        style = PokerType.Clock.copy(fontSize = size, lineHeight = size * HERO_LINE_HEIGHT),
+        color = heroColor(uiState),
+        maxLines = 1,
+        softWrap = false,
+    )
+}
+
+/** Blinds and ante, then NEXT; on a break, what to do and the level it leads into. */
+@Composable
+private fun TableSide(uiState: TimerUiState, blindsCap: Dp) {
+    val formatter = rememberChipFormatter()
+    val level = if (uiState.isOnBreak) null else uiState.currentLevelSegment?.level
+    if (level != null) {
+        PokerEyebrow(stringResource(R.string.clock_blinds))
+        WithWidth { width -> FittedNumber(blindsText(level, formatter), width, blindsCap, PokerColors.CardWhite) }
+        if (level.ante > 0) {
+            Text(
+                text = stringResource(R.string.clock_bb_ante_amount, formatter.format(level.ante)),
+                style = PokerType.Title.copy(fontSize = PokerType.DisplayM.fontSize * ANTE_SCALE),
+                color = PokerColors.PokerGold,
+            )
+        }
+        HorizontalDivider(color = PokerColors.FeltLine)
+        NextBlinds(uiState)
+    } else {
+        uiState.currentBreak?.let { segment ->
+            breakDetails(segment, formatter)?.let {
+                Text(it, style = PokerType.Title, color = PokerColors.PokerGold)
+            }
+        }
+        uiState.nextLevelSegment?.let { next ->
+            PokerEyebrow(stringResource(R.string.clock_then_level, next.level.level))
+            WithWidth { width -> FittedNumber(blindsText(next.level, formatter), width, blindsCap, PokerColors.CardWhite) }
+        }
+    }
+}
+
+/** "7 of 9 left | Avg 10,714 · 18 BB | Pool $450 | Break in 52:41", pause and exit. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TableFooter(uiState: TimerUiState, controlsAlpha: Float, onIntent: (TimerIntent) -> Unit, onExit: () -> Unit) {
+    val formatter = rememberChipFormatter()
+    val table = uiState.table
+    val bigBlind = (uiState.currentLevelSegment ?: uiState.nextLevelSegment)?.level?.bigBlind ?: 0
+    val facts = listOfNotNull(
+        stringResource(R.string.table_left, table.playersLeft, table.playerCount),
+        if (table.averageStack > 0 && bigBlind > 0) {
+            stringResource(
+                R.string.table_avg,
+                formatter.format(table.averageStack),
+                bigBlinds(table.averageStack, bigBlind, formatter),
+            )
+        } else {
+            null
+        },
+        stringResource(R.string.table_pool, money(table.prizePoolCents)),
+        uiState.nextBreakInSeconds?.let { stringResource(R.string.table_break_in, clockText(it)) },
+    )
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        FlowRow(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            val factStyle = PokerType.NumberS.copy(fontSize = PokerType.NumberM.fontSize)
+            facts.forEach { Text(it, style = factStyle, color = PokerColors.Chalk) }
+        }
+        Row(Modifier.alpha(controlsAlpha), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PlayPauseButton(uiState, TableControl) { onIntent(TimerIntent.ToggleTimer) }
+            ExitButton(onExit)
+        }
+    }
+}
+
+@Composable
+private fun ExitButton(onExit: () -> Unit) {
+    val description = stringResource(R.string.clock_exit_table_view)
+    Box(
+        modifier = Modifier
+            .size(TableControl)
+            .clip(CircleShape)
+            .background(PokerColors.FeltDeep)
+            .clickable(role = Role.Button, onClick = onExit)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(PokerIcons.Close, contentDescription = null, tint = PokerColors.CardWhite, modifier = Modifier.size(22.dp))
+    }
+}
 
 /** In landscape the hero takes this share of the width; the blinds the rest. */
 private const val HERO_COLUMN_SHARE = 0.55f
-private const val BLINDS_COLUMN_SHARE = 1f - HERO_COLUMN_SHARE
 
 /** The hero's font is capped at this share of the screen height. */
 private const val HERO_MAX_HEIGHT_LANDSCAPE = 0.42f
@@ -56,156 +301,9 @@ private const val HERO_MAX_HEIGHT_PORTRAIT = 0.22f
 
 /** Blinds text relative to the hero. */
 private const val BLINDS_TO_HERO = 0.42f
-private const val HERO_LINE_HEIGHT = 1.05f
+private const val ANTE_SCALE = 0.8f
 private const val DIVIDER_HEIGHT = 0.7f
-private const val PROGRESS_WIDTH = 0.85f
-
-/**
- * Full-screen landscape clock for a propped-up phone or tablet (PP-025). Locks the activity to
- * landscape while open and restores the manifest orientation afterwards (the app is portrait otherwise).
- */
-@Composable
-internal fun TableViewDialog(uiState: TimerUiState, onIntent: (TimerIntent) -> Unit) {
-    val activity = LocalContext.current.findActivity()
-    DisposableEffect(activity) {
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        onDispose {
-            // Rotating recreates the activity; only restore when the view is really closing.
-            if (activity != null && !activity.isChangingConfigurations) {
-                activity.requestedOrientation = activity.manifestOrientation()
-            }
-        }
-    }
-    Dialog(
-        onDismissRequest = { onIntent(TimerIntent.SetTableView(false)) },
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-    ) {
-        // The dialog is its own window: keep the screen on from here too while the clock runs
-        val view = LocalView.current
-        DisposableEffect(uiState.isRunning) {
-            view.keepScreenOn = uiState.isRunning
-            onDispose { view.keepScreenOn = false }
-        }
-        TableView(uiState, onIntent)
-    }
-}
-
-@Composable
-private fun TableView(uiState: TimerUiState, onIntent: (TimerIntent) -> Unit) {
-    val formatter = rememberChipFormatter()
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(PokerColors.PokerBlack)
-            .padding(horizontal = 24.dp, vertical = 12.dp)
-    ) {
-        val landscape = maxWidth > maxHeight
-        val heroSize = heroFontSize(
-            width = if (landscape) maxWidth * HERO_COLUMN_SHARE else maxWidth,
-            height = maxHeight * if (landscape) HERO_MAX_HEIGHT_LANDSCAPE else HERO_MAX_HEIGHT_PORTRAIT
-        )
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = headline(uiState),
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 3.sp,
-                    color = PokerColors.PokerGold,
-                    modifier = Modifier.weight(1f)
-                )
-                statusText(uiState)?.let { StatusPill(it) }
-                IconButton(onClick = { onIntent(TimerIntent.SetTableView(false)) }) {
-                    Icon(Icons.Default.Close, contentDescription = "Exit table view", tint = PokerColors.PokerGold)
-                }
-            }
-            val segment = uiState.currentSegment
-            if (segment != null) {
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    TableBody(uiState, segment, heroSize, landscape, onIntent)
-                }
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        TournamentLine(uiState, fontSize = 16.sp)
-                        TableStatsLine(uiState, formatter, fontSize = 16.sp)
-                    }
-                    ClockControls(uiState, onIntent, playSize = 56.dp)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun heroFontSize(width: Dp, height: Dp): TextUnit = with(LocalDensity.current) {
-    minOf((width / HERO_WIDTH_EMS).toPx(), height.toPx()).toSp()
-}
-
-@Composable
-private fun TableBody(
-    uiState: TimerUiState,
-    segment: ClockSegment,
-    heroSize: TextUnit,
-    landscape: Boolean,
-    onIntent: (TimerIntent) -> Unit
-) {
-    val formatter = rememberChipFormatter()
-    val blinds = @Composable {
-        CurrentBlinds(segment, formatter, bigSize = heroSize * BLINDS_TO_HERO)
-        Spacer(Modifier.height(12.dp))
-        NextLevelLine(uiState, formatter, fontSize = 24.sp)
-    }
-    if (landscape) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val centered = Alignment.CenterHorizontally
-            Column(modifier = Modifier.weight(HERO_COLUMN_SHARE), horizontalAlignment = centered) {
-                TableHero(uiState, heroSize, onIntent)
-            }
-            Box(
-                modifier = Modifier
-                    .width(1.dp)
-                    .fillMaxHeight(DIVIDER_HEIGHT)
-                    .background(PokerColors.CardWhite.copy(alpha = 0.15f))
-            )
-            Column(modifier = Modifier.weight(BLINDS_COLUMN_SHARE), horizontalAlignment = centered) {
-                blinds()
-            }
-        }
-    } else {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            TableHero(uiState, heroSize, onIntent)
-            Spacer(Modifier.height(16.dp))
-            blinds()
-        }
-    }
-}
-
-@Composable
-private fun TableHero(uiState: TimerUiState, heroSize: TextUnit, onIntent: (TimerIntent) -> Unit) {
-    Text(
-        text = if (uiState.isOnBreak) "BREAK TIME LEFT" else "LEVEL TIME LEFT",
-        style = Caption.copy(fontSize = 14.sp),
-        color = Dim
-    )
-    Text(
-        text = ClockFormat.clock(uiState.segmentRemainingSeconds),
-        fontSize = heroSize,
-        lineHeight = heroSize * HERO_LINE_HEIGHT,
-        fontWeight = FontWeight.Bold,
-        color = heroColor(uiState),
-        maxLines = 1,
-        modifier = Modifier.clickable(enabled = !uiState.isFinished) { onIntent(TimerIntent.ToggleTimer) }
-    )
-    ToneProgress(uiState, Modifier.fillMaxWidth(PROGRESS_WIDTH))
-}
-
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
-}
-
-@Suppress("DEPRECATION") // the flags overload needs API 33
-private fun Activity.manifestOrientation(): Int =
-    runCatching { packageManager.getActivityInfo(componentName, 0).screenOrientation }
-        .getOrDefault(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+private const val DIMMED_ALPHA = 0.4f
+private const val CONTROLS_VISIBLE_MILLIS = 3_000L
+private const val FADE_MILLIS = 300
+private val TableControl = 48.dp

@@ -533,6 +533,11 @@ line_ok tag "$TAG -> ${NEW_SHA:0:9}"
 newlog notes-generated
 GENERATED="$(gh api "repos/$GH_REPO/releases/generate-notes" -f tag_name="$TAG" \
   ${LAST_TAG:+-f previous_tag_name="$LAST_TAG"} --jq .body 2>"$log" || true)"
+# The last release's own PR is merged after its tag (the tag is on the release commit inside
+# it), so GitHub lists it under this release too. Drop that line.
+if [[ -n $LAST_TAG && -n $GENERATED ]]; then
+  GENERATED="$(grep -vF -- "* $LAST_TAG " <<<"$GENERATED" || true)"
+fi
 {
   cat "$OUT/notes-head.md"
   [[ -n $GENERATED ]] && { echo; echo "$GENERATED"; }

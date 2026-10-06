@@ -85,7 +85,11 @@ JDK 21 toolchain (F-Droid's buildserver has only JDK 21; bytecode targets 17). T
 ## Git, CI and releases (details: docs/RELEASING.md)
 
 - `master` is protected: PRs only, and the "Unit tests, lint, detekt" check must pass. Never try to
-  bypass it. Auto-merge is on: open the PR, then `gh pr merge --auto --merge`. Merged branches are
+  bypass it. Auto-merge is on: open the PR, then `gh pr merge --auto --squash` with a short
+  `--subject` ("1.3.8: Live clock in the notifications (#33)") and `--body`. **Squash every PR**
+  (the owner's rule: one tidy commit per batch on master). The one exception is `release.sh`'s
+  release PR, which keeps a merge commit: the APK embeds its commit hash, so the tag must be the
+  very commit that was built and verified, and that commit has to be on master. Merged branches are
   deleted automatically.
 - Waiting on CI: one silent background `gh pr checks <n> --watch`; don't poll from the conversation.
 - **Versions:** each landed batch steps the patch version on master (`versionName`, `versionCode` + 1)

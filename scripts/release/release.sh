@@ -516,6 +516,8 @@ line_ok ci "all checks green ($(elapsed "$t0"))"
 
 newlog merge
 # Run outside the checkout so gh only deletes the remote branch and leaves the local tree alone.
+# A merge commit, not a squash (every other PR is squashed): the APK embeds NEW_SHA, so the tag
+# must be that very commit, and it has to be on master.
 (cd "$WORK" && gh pr merge "$PR_URL" --repo "$GH_REPO" --merge --delete-branch \
   --subject "$TAG $TITLE (#${PR_URL##*/})") >"$log" 2>&1 \
   || fail_step merge "could not merge $PR_URL; nothing released" "$log"

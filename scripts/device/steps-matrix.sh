@@ -130,9 +130,9 @@ PY
 # The rotation rules (M3, PP-079/PP-088), by the window's smallest width:
 #   phone (sw < 600 dp): every tab is portrait, except the Tournament tab once a clock exists,
 #     which follows the display: turned, the clock is the table view (S3); upright, the clock (S2).
-#     Table view (⤢) forces landscape until ✕.
 #   foldable / tablet (sw >= 600 dp): every tab turns with the display; turned, the clock stays
-#     the clock (two panes from 840 dp). ⤢ shows the table view in whatever orientation, until ✕.
+#     the clock (two panes from 840 dp).
+#   every size: the table-view button (⤢) shows the table view in landscape until ✕.
 smallest_width_dp() {
   local size density; size="$(adb_ shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)"
   density="$(display_density)"
@@ -205,8 +205,13 @@ check_turned_clock() { # $1 = the level line it must still show
   fi
   [[ "$(clock_line)" == "$1" ]] || { echo "[ui] FAIL the level changed: $1 -> $(clock_line)"; return 1; }
 }
+clock_at_top() { # the clock's page scrolled to its top, the level line in the last dump
+  ui scroll up --times 4 >/dev/null
+  ui assert "$CLOCK_LINE" >/dev/null
+}
 s_rotate_clock() {
   tab Tournament
+  clock_at_top || return 1
   ui assert-text "$CLOCK_LINE" "desc=Table view" || return 1
   clock_line > "$OUT/.clock-line"; echo "clock: $(cat "$OUT/.clock-line")"
   rotate_to land
@@ -299,7 +304,9 @@ s_process_death() {
   [[ -n "$records" ]] || { echo "[ui] FAIL no Bank records to keep"; return 1; }
   tab Tournament
   ui assert-text "$CLOCK_LINE" "Pause timer" || return 1
+  clock_at_top || return 1
   local line secs t0; line="$(clock_line)"; secs="$(hero_seconds)"; t0=$(date +%s)
+  [[ -n "$line" && "$secs" -gt 0 ]] || { echo "[ui] FAIL can't read the clock before the kill"; return 1; }
   echo "before: $line, ${secs}s left; Bank: $(tr '\n' ';' <<<"$records")"
   local pid; pid="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"
   ui home
@@ -315,6 +322,7 @@ s_process_death() {
   adb_ shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
   ui wait "$CLOCK_LINE" --timeout 20 || return 1
   ui assert-text "Pause timer" || return 1
+  clock_at_top || return 1
   local now_line now_secs elapsed
   now_line="$(clock_line)"; now_secs="$(hero_seconds)"; elapsed=$(( $(date +%s) - t0 ))
   echo "after: $now_line, ${now_secs}s left, ${elapsed}s later; new pid $(adb_ shell pidof "$APP_ID" | tr -d '\r')"

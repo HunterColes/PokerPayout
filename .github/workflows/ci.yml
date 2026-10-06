@@ -16,6 +16,7 @@ on:
   push:
     branches: ["**"] # every branch; tag pushes (releases) are covered by the commit's own run
   pull_request:
+  workflow_dispatch: # goldens.yml starts it after committing re-recorded goldens
 
 permissions:
   contents: read

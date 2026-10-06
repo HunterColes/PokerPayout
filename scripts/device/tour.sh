@@ -836,7 +836,9 @@ s_setup_unlock() {
   ui assert-text "Edit money and blinds?" "Keep locked" "text=Unlock to edit" || return 1
   ui tap "text=Unlock to edit"
   ui wait-gone "Edit money and blinds?"
-  ui assert-text "text~=Unlocked: money and blinds" "has=Buy-in" "has=Level length"
+  ui assert-text "text~=Unlocked: money and blinds" "has=Buy-in" || return 1
+  ui scroll-to "has=Level length" --max 4   # the blinds sit below the money (and the bounty type)
+  ui assert-text "has=Level length"
 }
 s_setup_closed() {
   # Closing setup locks it again; the clock never stopped

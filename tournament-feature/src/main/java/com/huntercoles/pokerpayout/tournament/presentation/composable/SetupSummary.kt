@@ -102,7 +102,7 @@ internal object SetupSummary {
         val amounts = setup.money
         return listOfNotNull(
             stringResource(R.string.strip_buy_in, money(amounts.buyInCents)),
-            amounts.bountyCents.takeIf { it > 0 }?.let { bounty(amounts.bountyMode, it) },
+            amounts.bountyCents.takeIf { it > 0 }?.let { bountyPart(amounts.bountyMode, it) },
             amounts.rebuyCents.takeIf { it > 0 }?.let {
                 if (timer.rebuyUntilLevel > 0) {
                     stringResource(R.string.strip_rebuy_to, timer.rebuyUntilLevel)
@@ -114,17 +114,6 @@ internal object SetupSummary {
         )
     }
 
-    /** "$5 bounty", "$5 progressive bounty", "$5 mystery bounty" (PP-035). */
-    @Composable
-    private fun bounty(mode: BountyMode, cents: Long): String = stringResource(
-        when (mode) {
-            BountyMode.STANDARD -> R.string.strip_bounty
-            BountyMode.PROGRESSIVE -> R.string.strip_bounty_pko
-            BountyMode.MYSTERY -> R.string.strip_bounty_mystery
-        },
-        money(cents),
-    )
-
     @Composable
     private fun breakAndAnteParts(timer: TimerUiState): List<String> = listOfNotNull(
         timer.config.breaks.everyLevels.takeIf { timer.config.breaks.enabled }
@@ -132,6 +121,17 @@ internal object SetupSummary {
         timer.config.bigBlindAnteFromLevel.takeIf { it > 0 }?.let { stringResource(R.string.strip_ante_from, it) },
     )
 }
+
+/** "$5 bounty", "$5 progressive bounty", "$5 mystery bounty" (PP-035). */
+@Composable
+private fun bountyPart(mode: BountyMode, cents: Long): String = stringResource(
+    when (mode) {
+        BountyMode.STANDARD -> R.string.strip_bounty
+        BountyMode.PROGRESSIVE -> R.string.strip_bounty_pko
+        BountyMode.MYSTERY -> R.string.strip_bounty_mystery
+    },
+    money(cents),
+)
 
 /** "$40", or "$12.50": cents only when there are some (copy rules, design spec §8). */
 internal fun money(cents: Long): String = FormatUtils.formatCents(cents).removeSuffix(".00")

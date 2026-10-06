@@ -1,6 +1,7 @@
 package com.huntercoles.pokerpayout.tournament.presentation.presets
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Resources
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.tournament.R
@@ -121,4 +122,13 @@ object SetupShareText {
         }
         return listOf(heading, pool) + places
     }
+}
+
+/** Hands [text] to any app that takes plain text (the group chat), through the system's share sheet. */
+internal fun shareSetup(context: Context, text: String) {
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    context.startActivity(Intent.createChooser(send, context.getString(R.string.presets_share)))
 }

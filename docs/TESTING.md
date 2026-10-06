@@ -9,6 +9,7 @@ sound. It is written so that a person *or* an AI agent can run it unattended.
 | Device smoke tour (screenshots + UI dumps + logcat) | `scripts/device/tour.sh` | emulator (auto-booted) | ~6 min incl. build |
 | Instrumented tests | `./gradlew connectedDebugAndroidTest` | running emulator | compiles; there are 0 instrumented tests (see below) |
 | JVM screenshot goldens + layout checks (Roborazzi, section 9) | part of `./gradlew testDebugUnitTest`; re-record with `./gradlew recordRoborazziDebug` | JDK 21 | ~20 s for core's 140 goldens and 48 matrix checks |
+| Device matrix: the real app on 10 screen sizes, fonts and rotations (section 10) | `scripts/device/matrix.sh` | emulator (auto-booted) | ~41 min (8 profiles) |
 
 ## 1. Prerequisites
 
@@ -75,10 +76,14 @@ files and stdout stays short.
 |--------|--------------|
 | `boot.sh [--cold\|--wipe]` | Starts the emulator headless (`-no-window -no-audio -no-boot-anim -gpu swiftshader_indirect`), waits for `sys.boot_completed` and a responsive package manager, then applies the deterministic settings below. Idempotent: if the emulator is already up, it only re-applies the settings. It creates the dedicated AVD `pokerpayout_test` (API 34, 1080x2400 @ 420 dpi, 2 GB RAM, 4 cores) on first use. Any other AVD selected with `PP_AVD` is started `-read-only`, so nobody else's AVD is ever changed. |
 | `stop.sh [--force]` | `adb emu kill` (saves a quick-boot snapshot); `--force` sends SIGKILL instead. |
-| `install.sh [--release] [--no-build] [--clear]` | `./gradlew :app:assembleDebug` (or `assembleRelease`), then `adb install -r`. If the signatures don't match, it uninstalls and installs again. |
+| `install.sh [--release] [--no-build] [--clear]` | `./gradlew :app:assembleDebug` (or `assembleRelease`), then `adb install -r`. If the signatures don't match, or a newer version is installed (another worktree's build), it uninstalls and installs again. |
 | `shot.sh <name> [outdir] [--ui]` | `adb exec-out screencap -p` to `<outdir>/<name>.png` (default `build/device/shots`), checks the PNG signature, and also writes the UI dump when given `--ui`. |
 | `ui.py` | Stdlib-only UI driver over `uiautomator dump` + `adb shell input` (see below). |
-| `tour.sh [--release] [--no-build] [--keep-going] [--stop]` | The one-command smoke tour (section 5). `--release` passes `--release` to `install.sh`. |
+| `tour.sh [--release] [--no-build] [--keep-going] [--stop]` | The one-command smoke tour (section 5). `--release` passes `--release` to `install.sh`. `--only`, `--steps-file`, `--list`, `--out`, `--no-boot`, `--no-install` run some of the steps (section 5). |
+| `matrix.sh [--full] [--profiles a,b] [--steps a,b] [--no-build] [--release] [--stop]` | The device matrix: the tour's steps once per screen profile, one report and contact sheet (section 10). |
+| `steps-matrix.sh` | The matrix's opt-in tour steps (profile, tab layout, rotation, table view, keyboard) and the rotation helpers. `tour.sh` sources it. |
+| `layout_check.py <report dir>..` | Layout heuristics over a tour's dumps and screenshots: off-screen text, small or overlapping targets, cut text (section 10). Works on any tour report. |
+| `matrix_report.py <matrix dir>` | Writes the matrix's `index.md` and `index.html`. |
 
 Deterministic device settings applied by `boot.sh`:
 
@@ -86,7 +91,8 @@ Deterministic device settings applied by `boot.sh`:
 * en-US locale (verified; changing it needs root), UTC timezone, 24 h clock
 * show-touches and pointer-location off
 * screen always on, keyguard dismissed
-* rotation locked to portrait, font scale 1.0
+* rotation locked to portrait, font scale 1.0, and no display size or density override (one left
+  by a killed device-matrix run is reset)
 * spell checker and autofill off
 * no Play Protect prompts on adb installs
 * SystemUI demo mode: the clock is pinned to 12:00, battery shows 100 %, notifications are hidden
@@ -195,12 +201,15 @@ are:
 8. **Rail** (4 steps). `wm density 240` makes the phone's window 720 dp wide: the tabs must
    move to a rail down the left edge (PP-087), with the screen recreated where it was; Tools and
    Payouts on the rail; then `wm density reset` brings the bottom bar back with the tab kept. The
-   tour resets the density however it ends, since the emulator keeps it across reboots.
+   tour resets the density however it ends, since the emulator keeps it across reboots. (On a
+   device-matrix profile the step picks the density that makes that screen 720 dp wide, and goes
+   back to the profile's own density.)
 9. Check that the app process is still alive.
 
 The app is locked to portrait (`android:screenOrientation` on `MainActivity` in `core`'s
 manifest), so there is no landscape step apart from the table view's own rotation; freeing
-rotation (and tablets' landscape) is M3's.
+rotation (and tablets' landscape) is M3's. The device matrix (section 10) turns the display on
+every profile and checks that the app stays upright and keeps working.
 
 Every command in a step counts: the step runs with `set -e`, so an assertion that fails in the
 middle of a step fails it, not just the last one. After every step, the tour also fails it if
@@ -228,7 +237,24 @@ If the signatures differ, `install.sh` uninstalls first, which clears the app's 
 
 To add a step, write `s_my_step() { ui tap ...; ui assert-text ...; }` and register it with
 `step my-step "description" s_my_step`. End steps with an assertion: the tour then reuses
-that UI dump for the step's `.xml`, which saves a second dump.
+that UI dump for the step's `.xml`, which saves a second dump. Steps run in the order they are
+registered. `extra_step` registers one that runs only when it is named (the device matrix's
+steps in `steps-matrix.sh`, section 10).
+
+### Running some of the steps
+
+```bash
+scripts/device/tour.sh --list                          # every step: name, tour or opt-in, what
+scripts/device/tour.sh --no-build --only launch,payouts-tab,bank   # these, in this order
+scripts/device/tour.sh --no-build --steps-file my-steps.txt        # one name per line, # comments
+scripts/device/tour.sh --no-boot --no-install --out /tmp/run       # the matrix's way in
+```
+
+Steps build on each other (`payouts-tab` expects the buy-in typed in `tournament-config`), so a
+subset must keep what its steps need; `--keep-going` shows how far it gets. Besides `index.md`,
+every run writes `steps.tsv` (one line per step) and `summary.env` (the verdict and counts) for
+scripts. A tour stopped with Ctrl-C or a signal still writes its report and puts the display
+back (the rail's density, the matrix steps' rotation and keyboard).
 
 ## 6. JVM unit tests
 
@@ -512,3 +538,187 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 | `TypographyTest` | 5 | Barlow loads; `tnum` makes every digit the same width (and without it they differ); the licence ships |
 | `UndoSnackbarTest` | 4 | Undo inside the 8 s window counts, after it doesn't (virtual time) |
 | `LayoutAssertionsTest` | 11 | The checks themselves catch what they claim |
+
+## 10. The device matrix: real screens, sizes, fonts and rotation
+
+Section 9 renders composables on the JVM. The device matrix (PP-078 layer 2) runs the **real
+app on the real emulator** at several screen sizes, densities, font scales and rotations. It
+catches what Robolectric can't: system bars and insets, the soft keyboard, real rotation and the
+activity being recreated, gestures and scrolling, and the process staying alive through it all.
+
+```bash
+flock /tmp/pokerpayout-emulator.lock scripts/device/matrix.sh --stop   # build, install, the 8 default profiles
+scripts/device/matrix.sh --no-build                    # reuse the last APK
+scripts/device/matrix.sh --profiles small,tablet       # some profiles (--list shows them; all = every one)
+scripts/device/matrix.sh --steps bank,ime,ime-done     # your own steps (launch and profile come first)
+scripts/device/matrix.sh --full                        # every tour step on every profile
+scripts/device/matrix.sh --release                     # the R8 build
+```
+
+Run it under the emulator lock like the tour, and don't edit `matrix.sh` while it runs (bash
+reads a running script as it goes).
+
+### Profiles
+
+There is one AVD (`pokerpayout_test`, 1080 x 2400 @ 420 dpi). Each profile overrides its screen
+with `adb shell wm size` and `wm density`, and sets `font_scale` and `user_rotation`. That takes
+seconds, needs no extra AVDs or system images, and the app really relays out: the `profile`
+step checks that the app's window is exactly the overridden screen.
+
+| Profile | Screen | dp | Font | Set | Why |
+|---|---|---|---|---|---|
+| `small` | 720 x 1280 @ 360 | 320 x 569 | 1.0 | smoke | The smallest phone we support; most screens run below the fold |
+| `small-f1.3` | 720 x 1280 @ 360 | 320 x 569 | 1.3 | screens | Large text on it |
+| `small-f2.0` | 720 x 1280 @ 360 | 320 x 569 | 2.0 | screens | The worst case: the largest text on the smallest screen |
+| `compact` | 1080 x 2400 @ 480 | 360 x 800 | 1.0 | screens | The commonest Android phone width (the mockups' frame) |
+| `default` | the emulator's own | 411 x 914 | 1.0 | screens | Pixel 7 class; the plain tour covers it step by step |
+| `default-f2.0` | the emulator's own | 411 x 914 | 2.0 | screens | The largest text on a common phone |
+| `foldable` | 1768 x 2208 @ 420 | 673 x 841 | 1.0 | screens | A foldable opened flat: the rail, a nearly square window |
+| `tablet` | 1600 x 2560 @ 320 | 800 x 1280 | 1.0 | smoke | A 10-inch tablet held upright: the rail, the 720 dp content cap |
+| `default-f1.3` | the emulator's own | 411 x 914 | 1.3 | screens | Not in the default run: it found nothing `default` and `default-f2.0` don't |
+| `large` | 1440 x 3120 @ 560 | 411 x 891 | 1.0 | screens | Not in the default run: the same dp as `default` at 3.5x, and it found nothing more |
+| `tablet-land` | 1600 x 2560 @ 320, turned 90 | 800 x 1280 | 1.0 | smoke | Not in the default run: the tablet turned. Today the app keeps it upright, so it is `tablet` again |
+
+The emulator scales any override onto its panel, so sizes bigger than 1080 x 2400 work too.
+Screenshots come out at the profile's own size. SystemUI forgets its demo mode when the size
+changes, so the matrix sends it again (the clock stays at 12:00).
+
+### What runs on each profile
+
+Each profile runs one of two step sets (`--list` prints them):
+
+* **smoke** (31 steps, on `small` and `tablet`): launch, the configuration and a rebuy amount,
+  Payouts (the folder tab), Blinds and the smallest chip, the collapsed clock; Bank, a rebuy, the
+  soft keyboard, the pool summary dialog, the Payouts tab, Tools, Hand ranks, Odds through to the
+  exact results, Chip set and its breakdown; back to Tournament, start the clock, the table view
+  (also from a display turned to 270), rotation, the tab layout, and the process still alive.
+* **screens** (25 steps, everywhere else): the same screens and dialogs without the keyboard, the
+  Odds keypad round and the turned table view, none of which change with the text size.
+
+`--full` runs every tour step on every profile instead, with the matrix steps added, and the
+`rail` steps (the density trick) on profiles under 600 dp. The sets can name steps the tour
+doesn't have (a step renamed on another branch, like the chip set's): the matrix warns once and
+skips them.
+
+After a failed step the matrix's tour (`PP_TOUR_RECOVER=1`) presses Back if no tabs are on screen,
+so a dialog the failure left open doesn't fail every step after it; the failed step's
+screenshot is taken first. The plain tour doesn't do this.
+
+The matrix's own steps are opt-in tour steps in `scripts/device/steps-matrix.sh`:
+
+| Step | Checks |
+|---|---|
+| `profile` | The app's window is the profile's screen (it relaid out), the font scale took, the orientation is right. Writes `display.env` (size, density, font, insets) for the checks |
+| `nav-layout` | Four tabs: a bottom bar below 600 dp, a rail down the left from 600 dp, on the profile as it is |
+| `rotate` | `user_rotation` 1, then 3, with the accelerometer off: the app stays upright (portrait-only), its tabs still work, and it is the same process |
+| `table-view-land` | The table view opens landscape on any profile (its screenshot is the landscape clock) |
+| `table-view-back` | Leaving it returns to portrait; again with the display turned to 270 |
+| `table-view-close` | Leaving it returns to portrait (the screens set) |
+| `ime`, `ime-done` | The soft keyboard over the lowest name field on the Bank: the field stays above it |
+| `payouts-screen` | The Payouts tab's table adds up (the rail step's check, at any width) |
+
+**Scroll mode.** On a 569 dp-tall screen most of the texts a step asserts are below the fold. The
+matrix sets `PP_UI_SCROLL=1`, and `ui.py` then looks for a missing target by dragging the page
+(see the docstring in `ui.py`). Assertions count a text seen anywhere on the page and put the page
+back; taps stop where the target is. Drags rest before lifting, so nothing flings. A check that
+reads a whole list (the payout table) uses `page_dump`, one dump merged from the page's top to its
+end. The plain tour never sets it and behaves exactly as before. (A selector for a screen's own
+text next to a tab with the same name, such as the Payouts folder tab beside the rail's Payouts,
+uses the `in-scroll` token: inside a scroller, a ScrollView or list, even one whose content fits.)
+
+**The keyboard.** The AVD has a hardware keyboard (the tour types through it), so when
+`show_ime_with_hard_keyboard` is on, Gboard shows only its toolbar strip (about 48 dp). The `ime`
+step still proves the app resizes for a keyboard (the insets) and keeps the focused field above
+it. A full-height keyboard would need an AVD with `hw.keyboard=no`.
+
+### Automatic layout checks
+
+After the profiles run, `layout_check.py` reads every step's UI dump and screenshot:
+
+| Check | Severity | Flags | How far to trust it |
+|---|---|---|---|
+| `offscreen` | **fail** past the screen; warn touching its left or right edge | A text running off-screen | uiautomator clips boxes to what is visible, so a box past the screen is real. Touching the edge is often a horizontal scroller |
+| `overlap` | **fail** at half the smaller node; warn above 2 x 2 dp | Two clickable nodes, neither inside the other, overlapping | A half-covered target can't be told apart from its neighbour; small overlaps are often decoration |
+| `small-target` | warn | A clickable node under 48 x 48 dp at the profile's density | Compose widens a small target's touch area when nothing is next to it, so the box can be smaller than what a finger hits |
+| `text-fit` | warn | A one-line text box (or a text field's text area) narrower than its text at the app's smallest type (9 sp, 0.38 em a letter), or a text box too short for one line of it at the profile's font scale (squeezed out) | A lower bound, so false alarms are rare; it only sees bad cuts |
+| `cut-text` | warn | The same text in the same step drawn under 70 % as long as on another profile (the ink in the screenshot, line by line; a field's value line against its own glyph height) | Wrapping doesn't count. A step that leaves a different state on two profiles can trip it |
+| `ellipsis` | warn | A text ending in "…" | Compose gives uiautomator the full string even when it draws "…", so this only sees an ellipsis in the copy itself. `text-fit` and `cut-text` find drawn ones |
+| `under-bars` | warn | A text under the status or navigation bar (portrait) | An edge-to-edge screen draws there on purpose: on the rail layout a page scrolls on under the gesture handle |
+
+Only the two reliable checks (a text past the screen, a half-covered target) fail a profile; the
+rest are warnings with a picture
+(`NN-step.checks.png`, the screenshot with each finding boxed: red = fail, orange = warn). Look at
+the picture before calling a warning a bug. To accept an intended one, add a rule to
+`scripts/device/layout-allow.txt` (`check | step glob | label regex | why`). The pictures,
+thumbnails and `cut-text` need Pillow; without it the other checks still run.
+
+### Reading the report
+
+`build/device-reports/matrix-<ts>/` (and `matrix-latest`) holds:
+
+* `index.html`, the contact sheet:
+  * the profiles table: result, steps passed, check failures, warnings, time;
+  * **the grid**: one row per profile, one column per key screen. Each cell is a thumbnail with a
+    green (passed), orange (warnings) or red (failed) border and badges; click it for the full
+    screenshot with the findings boxed;
+  * failing steps and check failures, with pictures;
+  * the distinct warnings, one row per check and node, with the profiles and steps it showed on;
+  * every step of every profile.
+* `contact-sheet.png`: the grid as one picture, with the same coloured borders (an agent can
+  open it with its image viewer, as Claude Code's Read tool does).
+* `index.md`: the same as text, for an agent.
+* `<profile>/`: that profile's tour (`NN-step.png/.xml`, `steps.tsv`, `checks.json`,
+  `display.env`, `tour.log`, `logcat.txt`).
+
+A profile fails if a step fails, the app crashes or ANRs, or a reliable check fails. Read a
+failing step's screenshot first. On a small screen a step fails either because the app really
+lost something there (the point of the matrix), or because the step assumes a default-size
+screen (then fix the step, minimally).
+
+### Time
+
+Measured on this machine (2026-10-06, host load 1 to 6), the default run took **41 minutes**:
+
+| Profile | Set | Time |
+|---|---|---|
+| `small` | smoke | 6 min 26 s |
+| `small-f1.3` | screens | 6 min 47 s |
+| `small-f2.0` | screens | 8 min 56 s |
+| `compact` | screens | 3 min 05 s |
+| `default` | screens | 2 min 57 s |
+| `default-f2.0` | screens | 4 min 13 s |
+| `foldable` | screens | 3 min 07 s |
+| `tablet` | smoke | 4 min 59 s |
+
+A UI dump costs about 2 s, and a step about 4 to 8 s. Small screens cost more: a missing text is
+looked for across the whole page, and a text that really is missing (an app bug) costs a full
+search, 30 to 50 s. So the small profiles get faster as their bugs are fixed. Ten profiles
+with the earlier, longer step sets took 53 minutes. `--full` (every step, every profile) wasn't
+timed; the plain tour alone takes 8 minutes on the default screen, so expect well over an hour.
+
+### The emulator is always put back
+
+The emulator is shared and keeps `wm size` and `wm density` across reboots, so:
+
+* `matrix.sh` resets the size, density, font scale (1.0), rotation (0, accelerometer off) and the
+  keyboard setting at the start, between profiles, at the end, and on Ctrl-C or any signal (it
+  stops its tour first). It prints the display it left behind.
+* `tour.sh` puts back whatever its own steps changed (the rail's density, a rotation, the
+  keyboard) however it ends: to the profile's values, not the device's.
+* If a matrix is killed outright (SIGKILL), the next `boot.sh` (every tour runs it) resets a
+  leftover size or density override.
+
+### Adding a profile or a rotation case
+
+* **A profile:** add a line to `PROFILES` in `matrix.sh` (name, `WxH`, dpi, font, rotation,
+  turns, step set, description). To run it by default, add its name to `DEFAULT_PROFILES`, and
+  keep an eye on the run's time.
+* **A rotated profile:** set its rotation to 1 (or 3). `turns` says whether the app's screens
+  turn with the display there: `no` today, because the app is portrait-only. Once PP-088 lets
+  tablets rotate, set `turns` to `yes` on `tablet-land` and add it to `DEFAULT_PROFILES`. The
+  `profile`, `rotate` and `table-view-back` steps then expect landscape there.
+* **A rotation step** (for example once the Clock batch rotates the clock): use the helpers in
+  `steps-matrix.sh`: `rotate_to land|port|seascape`, `require_orientation land|port` and
+  `orientation_at <rotation>`. A step that rotates leaves a mark, so the rotation comes back
+  however the tour ends. Register it with `extra_step` and add it to `SMOKE_STEPS` (and
+  `SCREENS_STEPS` if it should run on every profile).

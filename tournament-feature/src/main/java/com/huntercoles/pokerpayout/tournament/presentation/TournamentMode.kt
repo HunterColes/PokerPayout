@@ -22,7 +22,8 @@ enum class TournamentMode { Setup, Folding, Running, PanelOpen }
  *
  * @property startPressed Start was pressed in setup: when the clock starts, fold into it.
  * @property panelUnlocked the setup panel's money and blind fields are open ("Unlock to edit…").
- * @property rotationPaused ✕ in a table view the phone was turned into: stay portrait on this visit.
+ * @property rotationPaused ✕ in a table view the phone was turned into: stay portrait until the phone
+ *   is held upright again (PP-094 #2), then turn with it again.
  */
 @Immutable
 @Parcelize

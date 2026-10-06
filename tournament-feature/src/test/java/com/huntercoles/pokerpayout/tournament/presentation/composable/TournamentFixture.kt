@@ -9,9 +9,14 @@ import com.huntercoles.pokerpayout.core.audio.SoundManager
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
+import com.huntercoles.pokerpayout.core.preferences.ChipCalculatorPreferences
+import com.huntercoles.pokerpayout.core.preferences.SavedChipSetProvider
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.time.TimeSource
+import com.huntercoles.pokerpayout.core.utils.ChipColour
+import com.huntercoles.pokerpayout.core.utils.ChipInventory
+import com.huntercoles.pokerpayout.core.utils.InventoryChip
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
@@ -28,7 +33,9 @@ import io.mockk.mockk
  * in the Bank.
  *
  * Clock states are the ViewModel's own state moved to a moment of the night ([at]): level 6 with
- * 12:41 left is the one every mockup shows. Nothing reads the real clock.
+ * 12:41 left is the one every mockup shows. Nothing reads the real clock. The chip set is the real
+ * one over the same preferences: not set up, so the color-ups use a common home set's chips, until
+ * [withChipSet] sets one up.
  */
 internal class TournamentFixture(private val store: ViewModelStore) {
     private val context: Context = ApplicationProvider.getApplicationContext()
@@ -36,15 +43,17 @@ internal class TournamentFixture(private val store: ViewModelStore) {
     val timerPreferences: TimerPreferences
     val bankPreferences: BankPreferences
     val audioPreferences: AudioPreferences
+    private val chipPreferences: ChipCalculatorPreferences
 
     init {
-        listOf("tournament_prefs", "timer_prefs", "bank_prefs", "audio_prefs").forEach {
+        listOf("tournament_prefs", "timer_prefs", "bank_prefs", "audio_prefs", "chip_calculator_prefs").forEach {
             context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
         }
         tournamentPreferences = TournamentPreferences(context)
         timerPreferences = TimerPreferences(context)
         bankPreferences = BankPreferences(context)
         audioPreferences = AudioPreferences(context)
+        chipPreferences = ChipCalculatorPreferences(context, tournamentPreferences)
         tournamentPreferences.setPlayerCount(PLAYERS)
         tournamentPreferences.setBuyIn(40.0)
         tournamentPreferences.setFoodPerPlayer(5.0)
@@ -70,7 +79,24 @@ internal class TournamentFixture(private val store: ViewModelStore) {
 
     private fun newTimer(): TimerViewModel {
         val sound = mockk<SoundManager>(relaxed = true)
-        return TimerViewModel(timerPreferences, tournamentPreferences, bankPreferences, sound, StillClock, audioPreferences)
+        return TimerViewModel(
+            timerPreferences,
+            tournamentPreferences,
+            bankPreferences,
+            sound,
+            StillClock,
+            audioPreferences,
+            SavedChipSetProvider(chipPreferences),
+        )
+    }
+
+    /**
+     * The ready ticket with [inventory] set up in Tools → Chip set (PP-091 #9): its color-ups use those
+     * chips. The chip set stays set up for the rest of this fixture.
+     */
+    fun withChipSet(inventory: ChipInventory = OWN_SET): TimerUiState {
+        chipPreferences.setInventory(inventory)
+        return viewModel(key = "chip set") { newTimer() }.uiState.value
     }
 
     /** Before the start: the ready ticket's game. */
@@ -85,10 +111,10 @@ internal class TournamentFixture(private val store: ViewModelStore) {
         return state
     }
 
-    /** The clock at [elapsedSeconds] of play, started, [running] or paused. */
-    fun at(elapsedSeconds: Int, running: Boolean = true): TimerUiState {
-        val endsAt = (ready.timeline.regularEndSeconds - elapsedSeconds).takeIf { it > 0 }?.let { WALL_NOW + it * MILLIS }
-        return ready.copy(elapsedSeconds = elapsedSeconds, hasTimerStarted = true, isRunning = running, endsAtWallClock = endsAt)
+    /** The clock at [elapsedSeconds] of play, started, [running] or paused; from [base], the ready ticket. */
+    fun at(elapsedSeconds: Int, running: Boolean = true, base: TimerUiState = ready): TimerUiState {
+        val endsAt = (base.timeline.regularEndSeconds - elapsedSeconds).takeIf { it > 0 }?.let { WALL_NOW + it * MILLIS }
+        return base.copy(elapsedSeconds = elapsedSeconds, hasTimerStarted = true, isRunning = running, endsAtWallClock = endsAt)
     }
 
     /** Level [number] (1-based) with [secondsLeft] to go. */
@@ -102,8 +128,9 @@ internal class TournamentFixture(private val store: ViewModelStore) {
 
     val breaks: List<BreakSegment> get() = ready.timeline.segments.filterIsInstance<BreakSegment>()
 
-    /** On [segment] with [secondsLeft] to go. */
-    fun onBreak(segment: BreakSegment, secondsLeft: Int = BREAK_LEFT): TimerUiState = at(segment.endSeconds - secondsLeft)
+    /** On [segment] with [secondsLeft] to go, from [base]. */
+    fun onBreak(segment: BreakSegment, secondsLeft: Int = BREAK_LEFT, base: TimerUiState = ready): TimerUiState =
+        at(segment.endSeconds - secondsLeft, base = base)
 
     val overtime: TimerUiState get() = at(ready.timeline.regularEndSeconds + OVERTIME_INTO)
 
@@ -141,5 +168,18 @@ internal class TournamentFixture(private val store: ViewModelStore) {
 
         /** 21:47 UTC, 5 October 2026: the night of the mockups. */
         const val WALL_NOW = 1_791_236_820_000L
+
+        /**
+         * A set whose colours aren't the standard ones (PP-091 #9): white 25s, red 100s, green 500s and
+         * black 1,000s, so a break drawn from it can't be mistaken for a common home set's.
+         */
+        val OWN_SET: ChipInventory = ChipInventory.of(
+            listOf(
+                InventoryChip(ChipColour.White, 25, 200),
+                InventoryChip(ChipColour.Red, 100, 200),
+                InventoryChip(ChipColour.Green, 500, 100),
+                InventoryChip(ChipColour.Black, 1_000, 100),
+            )
+        )
     }
 }

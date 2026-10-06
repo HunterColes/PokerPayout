@@ -43,6 +43,7 @@ import com.huntercoles.pokerpayout.core.design.components.RequestShellChrome
 import com.huntercoles.pokerpayout.core.design.components.WidthClass
 import com.huntercoles.pokerpayout.core.design.components.fillShellWidth
 import com.huntercoles.pokerpayout.core.presentation.HideSystemBars
+import com.huntercoles.pokerpayout.core.presentation.OnPhoneUpright
 import com.huntercoles.pokerpayout.core.presentation.RequestOrientation
 import com.huntercoles.pokerpayout.core.presentation.findActivity
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
@@ -101,7 +102,9 @@ fun TournamentScreen(
 
 /**
  * The tab, stateless: setup before the start, the fold on Start, then the clock with its strip and
- * panel; or the full-screen table view when a phone is turned sideways (or ⤢ is on).
+ * panel; or the full-screen table view when a phone is turned sideways (or ⤢ is on). ✕ in a table
+ * view the phone was turned into holds the clock upright until the phone is held upright again
+ * (PP-094 #2): turned sideways after that, it shows the table view again.
  */
 @Composable
 fun TournamentContent(
@@ -119,6 +122,7 @@ fun TournamentContent(
     val smallestWidth = configuration.smallestScreenWidthDp
     val clockExists = timer.hasTimerStarted
     RequestOrientation(TournamentOrientation.requested(smallestWidth, clockExists, timer.isTableView, settled.rotationPaused))
+    OnPhoneUpright(enabled = settled.rotationPaused) { actions.updateUi { it.pauseRotation(false) } }
     val tableView = TournamentOrientation.showsTableView(
         smallestScreenWidthDp = smallestWidth,
         landscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,

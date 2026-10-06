@@ -12,7 +12,11 @@ import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.utils.BlindSetupProblemKind
+import com.huntercoles.pokerpayout.core.utils.ChipColour
+import com.huntercoles.pokerpayout.core.utils.ChipRef
+import com.huntercoles.pokerpayout.core.utils.ChipSetChips
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
+import com.huntercoles.pokerpayout.tournament.domain.clock.ColorUpSwap
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModelTest.FakeTimeSource
 import io.mockk.mockk
 import io.mockk.verify
@@ -50,6 +54,7 @@ class TimerViewModelControlsTest {
     private lateinit var bankPreferences: BankPreferences
     private lateinit var audioPreferences: AudioPreferences
     private val soundManager: SoundManager = mockk(relaxed = true)
+    private val chipSets = FakeChipSets()
     private var store = ViewModelStore()
 
     // Defaults: 3 h of 20-minute rounds, 50 to 5,000: nine levels
@@ -89,7 +94,8 @@ class TimerViewModelControlsTest {
                 bankPreferences,
                 soundManager,
                 clock,
-                audioPreferences
+                audioPreferences,
+                chipSets
             ) as T
         }
         return ViewModelProvider(store, factory)[TimerViewModel::class.java]
@@ -258,6 +264,67 @@ class TimerViewModelControlsTest {
         val second = viewModel.state.timeline.segments.filterIsInstance<BreakSegment>()[1]
         assertEquals(second.startSeconds - viewModel.state.elapsedSeconds, viewModel.state.nextBreakInSeconds)
     }
+
+    /**
+     * PP-091 #9: once a chip set is set up, the color-ups use its chips, planned as the chip set
+     * plans them. Changing it re-plans them and leaves the running clock where it is; a relaunch
+     * starts from it.
+     */
+    @Test
+    fun `color-ups follow your chip set, and a change to it leaves the clock where it is`() {
+        val viewModel = newViewModel()
+        viewModel.send(TimerIntent.UpdateBreakEvery(4))
+        val standard = viewModel.state.timeline.segments.filterIsInstance<BreakSegment>()
+        assertNull(viewModel.state.chipSet)
+        assertEquals(listOf(listOf(50), listOf(100, 500, 1_000)), standard.map { it.colorUp })
+        assertEquals(listOf(ColorUpSwap(50, 100)), standard[0].colorUpSwaps)
+        assertEquals(
+            listOf(ColorUpSwap(100, 500), ColorUpSwap(500, 1_000), ColorUpSwap(1_000, 5_000)),
+            standard[1].colorUpSwaps
+        )
+
+        viewModel.send(TimerIntent.ToggleTimer)
+        advanceSeconds(7 * 60)
+        val elapsed = viewModel.state.elapsedSeconds
+
+        // Orange 50s, pink 250s, yellow 1,000s and brown 5,000s: no 100s or 500s in this set. The 50s
+        // can't go until every blind is a multiple of 250 (level 7), so break 1 has nothing to do and
+        // break 2 takes the 50s, 250s and 1,000s together, into the 5,000s that stay.
+        val own = ChipSetChips(
+            listOf(
+                ChipRef(ChipColour.Orange, 50),
+                ChipRef(ChipColour.Pink, 250),
+                ChipRef(ChipColour.Yellow, 1_000),
+                ChipRef(ChipColour.Brown, 5_000),
+            )
+        )
+        chipSets.chips.value = own
+        testDispatcher.scheduler.runCurrent()
+
+        assertEquals(own, viewModel.state.chipSet)
+        val breaks = viewModel.state.timeline.segments.filterIsInstance<BreakSegment>()
+        assertEquals(listOf(emptyList<Int>(), listOf(50, 250, 1_000)), breaks.map { it.colorUp })
+        assertEquals(
+            listOf(ColorUpSwap(50, 5_000), ColorUpSwap(250, 5_000), ColorUpSwap(1_000, 5_000)),
+            breaks[1].colorUpSwaps
+        )
+        assertEquals(standard.map { it.startSeconds }, breaks.map { it.startSeconds })
+        assertEquals(elapsed, viewModel.state.elapsedSeconds)
+        assertTrue(viewModel.state.isRunning)
+
+        val restored = processDeathAndRelaunch(afterMillis = 0)
+        assertEquals(own, restored.state.chipSet)
+        assertEquals(breaks.map { it.colorUpSwaps }, restored.breakSwaps)
+
+        // A set none of whose chips pays the first small blind keeps the common home set's chips
+        chipSets.chips.value = ChipSetChips(listOf(ChipRef(ChipColour.Black, 100), ChipRef(ChipColour.Purple, 500)))
+        testDispatcher.scheduler.runCurrent()
+        assertNull(restored.state.chipSet)
+        assertEquals(standard.map { it.colorUpSwaps }, restored.breakSwaps)
+    }
+
+    private val TimerViewModel.breakSwaps: List<List<ColorUpSwap>>
+        get() = state.timeline.segments.filterIsInstance<BreakSegment>().map { it.colorUpSwaps }
 
     @Test
     fun `the projected end holds while running and slides with the wall clock while paused`() {

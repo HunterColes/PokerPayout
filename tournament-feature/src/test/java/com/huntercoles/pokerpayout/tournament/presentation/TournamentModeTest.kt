@@ -76,7 +76,7 @@ class TournamentModeTest {
         val phone = 360
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, TournamentOrientation.requested(phone, false, false, false))
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_USER, TournamentOrientation.requested(phone, true, false, false))
-        // ⤢ forces landscape, clock or not; ✕ after turning the phone keeps this visit upright.
+        // ⤢ forces landscape, clock or not; ✕ after turning the phone keeps it upright for that turn.
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE, TournamentOrientation.requested(phone, true, true, false))
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, TournamentOrientation.requested(phone, true, false, true))
     }

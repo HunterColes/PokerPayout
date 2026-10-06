@@ -8,6 +8,7 @@ import androidx.compose.ui.res.stringResource
 import com.huntercoles.pokerpayout.core.design.ChipDenominations
 import com.huntercoles.pokerpayout.core.utils.ChipColour
 import com.huntercoles.pokerpayout.core.utils.ChipShortfall
+import com.huntercoles.pokerpayout.core.utils.KeptBackEstimate
 import com.huntercoles.pokerpayout.core.utils.StackPlan
 import com.huntercoles.pokerpayout.tools.R
 import com.huntercoles.pokerpayout.tools.presentation.ChipSetText
@@ -54,6 +55,28 @@ internal fun shortfallText(fix: ChipShortfall, players: Int): String = pluralStr
     chipNumber(fix.value),
     fix.stacks,
 )
+
+/**
+ * Where the stacks kept back come from while they follow the Tournament (PP-091 #3): "From
+ * Tournament setup: 5 for rebuys (about half the players) and 9 for add-ons (one each)."
+ */
+@Composable
+internal fun reserveEstimateText(estimate: KeptBackEstimate): String {
+    val rebuys = if (estimate.rebuyCutoff) {
+        R.string.chip_set_estimate_rebuys_cutoff
+    } else {
+        R.string.chip_set_estimate_rebuys_all_game
+    }
+    val parts = listOfNotNull(
+        estimate.rebuyStacks.takeIf { it > 0 }?.let { stringResource(rebuys, it) },
+        estimate.addOnStacks.takeIf { it > 0 }?.let { stringResource(R.string.chip_set_estimate_add_ons, it) },
+    )
+    return when {
+        parts.isEmpty() -> stringResource(R.string.chip_set_estimate_none)
+        estimate.capped -> stringResource(R.string.chip_set_estimate_capped, joinWithAnd(parts), estimate.stacks)
+        else -> stringResource(R.string.chip_set_estimate, joinWithAnd(parts))
+    }
+}
 
 /** Why no stack can be planned, and what to do about it. */
 @Composable

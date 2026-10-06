@@ -2,6 +2,9 @@ package com.huntercoles.pokerpayout.tournament.domain.clock
 
 import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
 import com.huntercoles.pokerpayout.core.utils.BlindStructureInput
+import com.huntercoles.pokerpayout.core.utils.ChipColour
+import com.huntercoles.pokerpayout.core.utils.ChipRef
+import com.huntercoles.pokerpayout.core.utils.ChipSetChips
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -82,6 +85,67 @@ class ClockTimelineTest {
         val breaks = withBreaks.segments.filterIsInstance<BreakSegment>()
         assertEquals(listOf(listOf(50), listOf(100, 500, 1_000)), breaks.map { it.colorUp })
         assertTrue(withBreaks.levels.all { it.colorUp.isEmpty() })
+    }
+
+    @Test
+    fun `without a chip set each chip goes into the next chip up of a common home set`() {
+        val withBreaks = timeline(BreakSettings(everyLevels = 4))
+        val breaks = withBreaks.segments.filterIsInstance<BreakSegment>()
+        assertEquals(
+            listOf(
+                listOf(ColorUpSwap(50, 100)),
+                listOf(ColorUpSwap(100, 500), ColorUpSwap(500, 1_000), ColorUpSwap(1_000, 5_000)),
+            ),
+            breaks.map { it.colorUpSwaps }
+        )
+    }
+
+    /** PP-091 #9: orange 50s, pink 250s, yellow 1,000s and brown 5,000s, with no 100s or 500s. */
+    private val ownSet = ChipSetChips(
+        listOf(
+            ChipRef(ChipColour.Orange, 50),
+            ChipRef(ChipColour.Pink, 250),
+            ChipRef(ChipColour.Yellow, 1_000),
+            ChipRef(ChipColour.Brown, 5_000),
+        )
+    )
+
+    private fun ownTimeline(breaks: BreakSettings = BreakSettings(), chipSet: ChipSetChips? = ownSet) =
+        ClockTimeline.build(levels, roundLengthMinutes = 20, breaks = breaks, smallestChip = 50, chipSet = chipSet)
+
+    @Test
+    fun `with your chip set its chips color up, each into the next of yours still in play`() {
+        // 50s go once every blind is a multiple of 250 (1,500/3,000, level 7), 250s at 3,000/6,000
+        // (level 8), 1,000s at 5,000/10,000 (level 9); the 5,000s stay
+        val noBreaks = ownTimeline()
+        assertEquals(
+            mapOf(
+                7 to listOf(ColorUpSwap(50, 250)),
+                8 to listOf(ColorUpSwap(250, 1_000)),
+                9 to listOf(ColorUpSwap(1_000, 5_000)),
+            ),
+            noBreaks.levels.filter { it.colorUp.isNotEmpty() }.associate { it.level.level to it.colorUpSwaps }
+        )
+
+        // With breaks after levels 4 and 8, all three go at the second break, together into 5,000s
+        val everyFour = BreakSettings(everyLevels = 4)
+        val breaks = ownTimeline(everyFour).segments.filterIsInstance<BreakSegment>()
+        assertEquals(listOf(emptyList<Int>(), listOf(50, 250, 1_000)), breaks.map { it.colorUp })
+        assertEquals(
+            listOf(ColorUpSwap(50, 5_000), ColorUpSwap(250, 5_000), ColorUpSwap(1_000, 5_000)),
+            breaks[1].colorUpSwaps
+        )
+        // Only the color-ups move: every segment starts when it did without the chip set
+        val starts = timeline(everyFour).segments.map { it.startSeconds }
+        assertEquals(starts, ownTimeline(everyFour).segments.map { it.startSeconds })
+    }
+
+    @Test
+    fun `a chip set that can't pay the first small blind keeps the common home set's color-ups`() {
+        val noFifty = ChipSetChips(listOf(ChipRef(ChipColour.Black, 100), ChipRef(ChipColour.Purple, 500)))
+        val breaks = BreakSettings(everyLevels = 4)
+        assertEquals(timeline(breaks).segments, ownTimeline(breaks, chipSet = noFifty).segments)
+        assertEquals(timeline(breaks).segments, ownTimeline(breaks, chipSet = null).segments)
     }
 
     @Test

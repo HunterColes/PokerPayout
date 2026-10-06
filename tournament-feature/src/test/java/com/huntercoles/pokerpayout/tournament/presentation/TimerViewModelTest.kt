@@ -126,7 +126,8 @@ class TimerViewModelTest {
                     bankPreferences,
                     soundManager,
                     clock,
-                    audioPreferences
+                    audioPreferences,
+                    FakeChipSets()
                 ) as T
         }
         // runCurrent, not advanceUntilIdle: a restored running clock ticks forever

@@ -44,6 +44,11 @@ class TournamentPreferences @Inject constructor(
     private val _isConfigExpanded = MutableStateFlow(getIsConfigExpanded())
     val isConfigExpanded: Flow<Boolean> = _isConfigExpanded.asStateFlow()
 
+    private val _rebuyUntilLevel = MutableStateFlow(getRebuyUntilLevel())
+
+    /** The last blind level at which rebuys are allowed; 0 means no cutoff. */
+    val rebuyUntilLevel: StateFlow<Int> = _rebuyUntilLevel.asStateFlow()
+
     private val _config = MutableStateFlow(getCurrentTournamentConfig())
 
     /** Everything the pool and payout math reads; emits after any change to it. */
@@ -167,6 +172,14 @@ class TournamentPreferences @Inject constructor(
     fun getPayoutRounding(): PayoutRounding =
         PayoutRounding.fromUnitCents(prefs.getLong(PAYOUT_ROUNDING_CENTS_KEY, PayoutRounding.DEFAULT.unitCents))
 
+    fun setRebuyUntilLevel(level: Int) {
+        val value = level.coerceAtLeast(0)
+        prefs.edit().putInt(REBUY_UNTIL_LEVEL_KEY, value).apply()
+        _rebuyUntilLevel.value = value
+    }
+
+    fun getRebuyUntilLevel(): Int = prefs.getInt(REBUY_UNTIL_LEVEL_KEY, 0).coerceAtLeast(0)
+
     fun setIsConfigExpanded(expanded: Boolean) {
         prefs.edit().putBoolean(IS_CONFIG_EXPANDED_KEY, expanded).apply()
         _isConfigExpanded.value = expanded
@@ -277,6 +290,7 @@ class TournamentPreferences @Inject constructor(
             .putInt(STARTING_CHIPS_KEY, TournamentDefaults.STARTING_CHIPS)
             .putString(SELECTED_PANEL_KEY, "player")
             .putBoolean(IS_CONFIG_EXPANDED_KEY, true)
+            .remove(REBUY_UNTIL_LEVEL_KEY)
             .apply()
 
         // Reset all state flows to default values (keep current player count)
@@ -284,6 +298,7 @@ class TournamentPreferences @Inject constructor(
         _playerCount.value = DEFAULT_PLAYER_COUNT
         _payoutWeights.value = defaultPayoutWeightsFor(DEFAULT_PLAYER_COUNT)
         _isConfigExpanded.value = true
+        _rebuyUntilLevel.value = 0
         publish()
     }
 
@@ -331,6 +346,7 @@ class TournamentPreferences @Inject constructor(
         private const val SMALLEST_CHIP_KEY = "smallest_chip"
         private const val STARTING_CHIPS_KEY = "starting_chips"
         private const val SELECTED_PANEL_KEY = "selected_panel"
+        private const val REBUY_UNTIL_LEVEL_KEY = "rebuy_until_level"
         private const val DEFAULT_PLAYER_COUNT = TournamentDefaults.PLAYER_COUNT
 
         /** v1.1.x Float keys and the cents keys that replace them. */

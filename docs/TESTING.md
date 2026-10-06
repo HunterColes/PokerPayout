@@ -31,6 +31,7 @@ The scripts set `ANDROID_HOME`/`ANDROID_SERIAL` themselves. Nothing has to be on
 ```bash
 scripts/device/tour.sh              # boot if needed, build, install, tour, write the report
 scripts/device/tour.sh --no-build   # reuse the last debug APK (fast iteration on the tour)
+scripts/device/tour.sh --release    # tour the minified (R8) release APK instead of debug
 scripts/device/tour.sh --stop       # also shut the emulator down at the end
 scripts/device/stop.sh              # shut the emulator down
 ```
@@ -77,7 +78,7 @@ files and stdout stays short.
 | `install.sh [--release] [--no-build] [--clear]` | `./gradlew :app:assembleDebug` (or `assembleRelease`), then `adb install -r`. If the signatures don't match, it uninstalls and installs again. |
 | `shot.sh <name> [outdir] [--ui]` | `adb exec-out screencap -p` to `<outdir>/<name>.png` (default `build/device/shots`), checks the PNG signature, and also writes the UI dump when given `--ui`. |
 | `ui.py` | Stdlib-only UI driver over `uiautomator dump` + `adb shell input` (see below). |
-| `tour.sh` | The one-command smoke tour (section 5). |
+| `tour.sh [--release] [--no-build] [--keep-going] [--stop]` | The one-command smoke tour (section 5). `--release` passes `--release` to `install.sh`. |
 
 Deterministic device settings applied by `boot.sh`:
 
@@ -190,6 +191,23 @@ logcat's crash buffer has a `FATAL EXCEPTION` for the app or if an `ANR in
 com.huntercoles.pokerpayout` appears. Another app's "isn't responding" dialog (on a loaded host,
 usually Pixel Launcher right after a quick boot) is not the app's fault: `ui.py` taps Wait on it
 and carries on. Use `--keep-going` to run all steps even after a failure.
+
+### Touring the release build
+
+The release build is shrunk and obfuscated by R8, so a missing keep rule only shows up
+there. After changing `app/proguard-rules.pro`, a dependency, or anything loaded by
+reflection (Hilt, navigation routes, Room, `@Parcelize`), tour the release APK:
+
+```bash
+flock /tmp/pokerpayout-emulator.lock scripts/device/tour.sh --release --stop
+grep -cE "FATAL EXCEPTION|ClassNotFoundException|NoSuchMethodException|NoSuchFieldException" \
+  build/device-reports/latest/logcat.txt                       # expect 0
+```
+
+Without `keystore.properties` (any worktree or clone) the release APK is signed with the
+debug key, which is fine for testing. The release and debug builds have the same
+application id and both use the debug key there, so they replace each other on the emulator.
+If the signatures differ, `install.sh` uninstalls first, which clears the app's data.
 
 To add a step, write `s_my_step() { ui tap ...; ui assert-text ...; }` and register it with
 `step my-step "description" s_my_step`. End steps with an assertion: the tour then reuses

@@ -2,7 +2,8 @@
 # One-command headless smoke tour of the whole app.
 #
 #   scripts/device/tour.sh                 # boot (if needed) + build + install + tour
-#   scripts/device/tour.sh --no-build      # reuse the last built debug APK
+#   scripts/device/tour.sh --no-build      # reuse the last built APK
+#   scripts/device/tour.sh --release       # tour the minified (R8) release build instead of debug
 #   scripts/device/tour.sh --keep-going    # don't stop at the first failing step
 #   scripts/device/tour.sh --stop          # shut the emulator down afterwards
 #
@@ -14,13 +15,14 @@
 #         (also symlinked as build/device-reports/latest). Exit code 0 == all steps passed.
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-BUILD=1; KEEP_GOING=0; STOP_AFTER=0
+BUILD=1; KEEP_GOING=0; STOP_AFTER=0; VARIANT=debug
 for arg in "$@"; do
   case "$arg" in
     --no-build) BUILD=0 ;;
+    --release) VARIANT=release ;;
     --keep-going) KEEP_GOING=1 ;;
     --stop) STOP_AFTER=1 ;;
-    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
     *) die "unknown option: $arg" ;;
   esac
 done
@@ -46,8 +48,8 @@ t=$(date +%s)
 BOOT_SECS=$(since "$t")
 
 t=$(date +%s)
-if (( BUILD )); then "$DEVICE_SCRIPTS/install.sh" | tee -a "$LOG"
-else "$DEVICE_SCRIPTS/install.sh" --no-build | tee -a "$LOG"; fi
+if (( BUILD )); then "$DEVICE_SCRIPTS/install.sh" "--$VARIANT" | tee -a "$LOG"
+else "$DEVICE_SCRIPTS/install.sh" "--$VARIANT" --no-build | tee -a "$LOG"; fi
 INSTALL_SECS=$(since "$t")
 
 adb_ logcat -b all -c >/dev/null 2>&1 || true
@@ -115,7 +117,7 @@ finish() {
     echo "# Device tour report: $verdict"
     echo
     echo "- When: $(date -Is)"
-    echo "- App: $APP_ID $APP_VERSION (debug)"
+    echo "- App: $APP_ID $APP_VERSION ($VARIANT)"
     echo "- Device: $ANDROID_SERIAL, AVD \`$PP_AVD\`, Android $(adb_ shell getprop ro.build.version.release | tr -d '\r') (API $(adb_ shell getprop ro.build.version.sdk | tr -d '\r')), $(adb_ shell wm size | awk '{print $NF}' | tr -d '\r') @ $(adb_ shell wm density | awk '{print $NF}' | tr -d '\r')dpi"
     echo "- Steps: $PASSED passed, $FAILED failed, of $STEP_NO run"
     echo "- Logcat: $fatal FATAL EXCEPTION, $anr ANR (full log: [logcat.txt](logcat.txt))"

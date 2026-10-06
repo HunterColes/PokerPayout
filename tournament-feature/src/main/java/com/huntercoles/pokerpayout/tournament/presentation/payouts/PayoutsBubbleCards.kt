@@ -31,6 +31,7 @@ import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
 import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 import com.huntercoles.pokerpayout.tournament.R
@@ -120,6 +121,7 @@ private fun Seat(seat: SeatModel, modifier: Modifier = Modifier) {
 /**
  * Bounties claimed so far ("Dana · Ben" $5), what is still out there, and once there is a champion
  * their own bounty plus the unclaimed ones (PP-055). Food is noted as kept out of the prize pool.
+ * Progressive and mystery bounties (PP-035) say so in the title, and each claim is what it paid.
  */
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
@@ -128,10 +130,7 @@ internal fun BountiesCard(bounties: BountiesModel) {
     PayoutsCard {
         if (bounties.perHeadCents > 0L) {
             CardHeading {
-                PokerEyebrow(
-                    stringResource(R.string.payouts_bounties_title, formatMoney(bounties.perHeadCents)),
-                    Modifier.align(Alignment.CenterVertically),
-                )
+                PokerEyebrow(bountiesTitle(bounties), Modifier.align(Alignment.CenterVertically))
                 if (bounties.stillOutCents > 0L) {
                     Text(
                         text = stringResource(R.string.payouts_bounties_still_out, formatMoney(bounties.stillOutCents)),
@@ -149,7 +148,12 @@ internal fun BountiesCard(bounties: BountiesModel) {
             }
             bounties.claims.forEach { claim -> BountyLine(claim.name, claim.victims.joinToString(", "), claim.cents) }
             bounties.championName?.takeIf { bounties.championCents > 0L }?.let { name ->
-                BountyLine(name, stringResource(R.string.payouts_bounty_champion), bounties.championCents)
+                val detail = if (bounties.mode == BountyMode.MYSTERY) {
+                    R.string.payouts_bounty_champion_mystery
+                } else {
+                    R.string.payouts_bounty_champion
+                }
+                BountyLine(name, stringResource(detail), bounties.championCents)
             }
         }
         if (bounties.foodCents > 0L) {
@@ -160,6 +164,15 @@ internal fun BountiesCard(bounties: BountiesModel) {
             )
         }
     }
+}
+
+/** "Bounties · $5 a head", "Progressive bounties · $5 to start", "Mystery bounties · 9 envelopes". */
+@Composable
+private fun bountiesTitle(bounties: BountiesModel): String = when (bounties.mode) {
+    BountyMode.STANDARD -> stringResource(R.string.payouts_bounties_title, formatMoney(bounties.perHeadCents))
+    BountyMode.PROGRESSIVE -> stringResource(R.string.payouts_bounties_title_pko, formatMoney(bounties.perHeadCents))
+    BountyMode.MYSTERY ->
+        pluralStringResource(R.plurals.payouts_bounties_title_mystery, bounties.envelopes, bounties.envelopes)
 }
 
 @Composable

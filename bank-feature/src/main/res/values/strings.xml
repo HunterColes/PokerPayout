@@ -1,14 +1,213 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Bank Screen (Player Payment Tracking) -->
-    <string name="bank_total_pool">Total Pool</string>
-    <string name="bank_pool_change">Pool Change</string>
-    <string name="bank_players">players</string>
-    <string name="bank_empty_message">No players added yet.\nStart tracking buy-ins!</string>
-    <string name="bank_error_loading">Error loading bank data.\nPull to refresh to try again.</string>
+    <!-- Bank tab (S5 v2). The title is core's navigation_bank. -->
 
-    <!-- Bank tab header (the title is core's navigation_bank) -->
+    <!-- Top bar -->
+    <plurals name="bank_subtitle_before">
+        <item quantity="one">%1$d player · %2$s to collect</item>
+        <item quantity="other">%1$d players · %2$s to collect</item>
+    </plurals>
+    <plurals name="bank_subtitle_playing">
+        <item quantity="one">%1$d of %2$d left · %3$s collected</item>
+        <item quantity="other">%1$d of %2$d left · %3$s collected</item>
+    </plurals>
+    <string name="bank_subtitle_finished">Finished · %1$s wins · %2$s still to pay</string>
+    <string name="bank_subtitle_finished_paid">Finished · %1$s wins · all paid</string>
+    <string name="bank_undo">Undo</string>
+    <string name="bank_undo_last">Undo: %1$s</string>
+    <string name="bank_undo_nothing">Nothing to undo</string>
+    <string name="bank_mute">Mute the clock\'s chime</string>
+    <string name="bank_unmute">Turn the clock\'s chime back on</string>
+    <string name="bank_more">More options</string>
+    <string name="bank_reset_menu">Reset bank…</string>
+
+    <!-- After an action, on the snackbar with Undo -->
+    <string name="bank_done_buy_in">%1$s paid the buy-in · %2$s</string>
+    <string name="bank_done_buy_in_cleared">%1$s\'s buy-in cleared</string>
+    <string name="bank_done_rebuy">Rebuy for %1$s · %2$s</string>
+    <string name="bank_done_add_on">Add-on for %1$s · %2$s</string>
+    <plurals name="bank_done_rebuys_set">
+        <item quantity="one">%1$s: %2$d rebuy</item>
+        <item quantity="other">%1$s: %2$d rebuys</item>
+    </plurals>
+    <plurals name="bank_done_add_ons_set">
+        <item quantity="one">%1$s: %2$d add-on</item>
+        <item quantity="other">%1$s: %2$d add-ons</item>
+    </plurals>
+    <string name="bank_done_knockout">%1$s is out in %2$s</string>
+    <string name="bank_done_knockout_bounty">%1$s is out in %2$s · bounty to %3$s</string>
+    <string name="bank_done_knockout_unclaimed">%1$s is out in %2$s · bounty to the champion</string>
+    <string name="bank_done_back_in">%1$s is back in the game</string>
+    <string name="bank_done_paid">Paid %1$s %2$s</string>
+    <string name="bank_done_unpaid">%1$s marked not paid</string>
+
+    <!-- Money summary -->
+    <string name="bank_collected">Collected</string>
+    <string name="bank_paid_out">Paid out</string>
+    <string name="bank_breakdown">Breakdown</string>
+    <string name="bank_payout_structure">Payout structure</string>
+
+    <!-- Column header and sections -->
+    <string name="bank_column_player">Player</string>
+    <string name="bank_column_buy_in">Buy-in</string>
+    <string name="bank_column_rebuy">Rebuy</string>
+    <string name="bank_column_add_on">Add-on</string>
+    <string name="bank_column_out">Out</string>
+    <string name="bank_column_paid">Paid</string>
+    <string name="bank_column_in">In</string>
+    <string name="bank_column_owed">Owed</string>
+    <string name="bank_column_closed">%1$s, closed</string>
+    <string name="bank_section_playing">Playing · %1$d</string>
+    <string name="bank_section_out">Out · %1$d</string>
+    <string name="bank_section_champion">Champion</string>
+    <string name="bank_hint_rename">tap a name to rename</string>
+    <string name="bank_hint_rename_hold">tap a name to rename · hold Rebuy or Add-on to set a count</string>
+
+    <!-- The cutoffs, under the list -->
+    <string name="bank_note_rebuys_open">Rebuys until the end of level %1$d</string>
+    <string name="bank_note_rebuys_closed">Rebuys closed after level %1$d</string>
+    <string name="bank_note_add_ons_open_level">add-ons until the end of level %1$d</string>
+    <string name="bank_note_add_ons_open_break">add-ons until the end of break %1$d</string>
+    <string name="bank_note_add_ons_closed_level">add-ons closed after level %1$d</string>
+    <string name="bank_note_add_ons_closed_break">add-ons closed after break %1$d</string>
+    <string name="bank_note_join">%1$s · %2$s.</string>
+    <string name="bank_note_taken">Taken ones stay filled; hold one to correct it.</string>
+
+    <!-- The line under a name -->
+    <string name="bank_micro_knockouts">%1$d KO</string>
+    <plurals name="bank_micro_knockouts_long">
+        <item quantity="one">%d knockout</item>
+        <item quantity="other">%d knockouts</item>
+    </plurals>
+    <string name="bank_micro_by">by %1$s</string>
+    <string name="bank_micro_out">out</string>
+    <string name="bank_micro_level">L%1$d</string>
+    <string name="bank_micro_level_long">Level %1$d</string>
+    <string name="bank_micro_champion">1st · champion</string>
+    <plurals name="bank_micro_rebuys">
+        <item quantity="one">%1$d rebuy</item>
+        <item quantity="other">%1$d rebuys</item>
+    </plurals>
+    <plurals name="bank_micro_add_ons">
+        <item quantity="one">%1$d add-on</item>
+        <item quantity="other">%1$d add-ons</item>
+    </plurals>
+
+    <!-- What TalkBack reads for a cell -->
+    <string name="bank_cell_buy_in_paid">%1$s, buy-in, paid</string>
+    <string name="bank_cell_buy_in_not_paid">%1$s, buy-in, not paid</string>
+    <string name="bank_cell_purchase_none">%1$s, %2$s, none yet</string>
+    <plurals name="bank_cell_purchase_taken">
+        <item quantity="one">%1$s, %2$s, %3$d taken</item>
+        <item quantity="other">%1$s, %2$s, %3$d taken</item>
+    </plurals>
+    <plurals name="bank_cell_purchase_closed">
+        <item quantity="one">%1$s, %2$s, %3$s, %4$d taken</item>
+        <item quantity="other">%1$s, %2$s, %3$s, %4$d taken</item>
+    </plurals>
+    <string name="bank_closed_after_level">closed after level %1$d</string>
+    <string name="bank_closed_after_break">closed after break %1$d</string>
+    <string name="bank_cell_knock_out">Knock out %1$s</string>
+    <string name="bank_cell_out">%1$s, out, %2$s, knocked out by %3$s. Bring back</string>
+    <string name="bank_cell_out_unclaimed">%1$s, out, %2$s. Bring back</string>
+    <string name="bank_cell_champion">%1$s, champion</string>
+    <string name="bank_cell_paid">%1$s, paid out</string>
+    <string name="bank_cell_owed">%1$s, paid out, %2$s owed</string>
+    <string name="bank_cell_nothing_owed">%1$s, paid out, nothing owed yet</string>
+    <string name="bank_set_count">Set the count</string>
+    <string name="bank_rebuy_lower">rebuy</string>
+    <string name="bank_add_on_lower">add-on</string>
+
+    <!-- Knockout sheet (S5b) -->
+    <string name="bank_ko_title">%1$s is out</string>
+    <string name="bank_ko_place">%1$s place</string>
+    <string name="bank_ko_bounty">%1$s\'s %2$s bounty goes to whoever knocked %1$s out.</string>
+    <string name="bank_ko_no_bounty">Who knocked %1$s out?</string>
+    <string name="bank_ko_by">Knocked out by</string>
+    <string name="bank_ko_already_out">Already out</string>
+    <string name="bank_ko_nobody">Nobody</string>
+    <string name="bank_ko_nobody_bounty">Nobody · bounty to the champion</string>
+    <string name="bank_ko_confirm">Knock out %1$s</string>
+    <string name="bank_cancel">Cancel</string>
+    <string name="bank_close">Close</string>
+
+    <!-- Count sheet (hold Rebuy or Add-on) -->
+    <string name="bank_count_title_rebuys">%1$s · rebuys</string>
+    <string name="bank_count_title_add_ons">%1$s · add-ons</string>
+    <string name="bank_count_rebuys">Rebuys</string>
+    <string name="bank_count_add_ons">Add-ons</string>
+    <string name="bank_count_price">%1$s each from now. Ones already recorded keep their price.</string>
+    <string name="bank_count_recorded">Recorded: %1$s</string>
+    <string name="bank_count_group">%1$d × %2$s</string>
+    <string name="bank_count_closed_rebuys">Rebuys are closed (%1$s). You can still remove one recorded by mistake.</string>
+    <string name="bank_count_closed_add_ons">Add-ons are closed (%1$s). You can still remove one recorded by mistake.</string>
+    <plurals name="bank_count_save_rebuys">
+        <item quantity="one">Set %d rebuy</item>
+        <item quantity="other">Set %d rebuys</item>
+    </plurals>
+    <plurals name="bank_count_save_add_ons">
+        <item quantity="one">Set %d add-on</item>
+        <item quantity="other">Set %d add-ons</item>
+    </plurals>
+
+    <!-- Pay-out sheet (S5c) -->
+    <string name="bank_pay_title">Pay %1$s</string>
+    <string name="bank_pay_champion">Champion</string>
+    <string name="bank_pay_place">%1$s place</string>
+    <string name="bank_pay_still_playing">Still playing</string>
+    <string name="bank_pay_knockouts">Knockouts · %1$d × %2$s</string>
+    <string name="bank_pay_kings_bounty">King\'s Bounty · own %1$s back</string>
+    <plurals name="bank_pay_unclaimed">
+        <item quantity="one">Unclaimed · %d knockout nobody took</item>
+        <item quantity="other">Unclaimed · %d knockouts nobody took</item>
+    </plurals>
+    <string name="bank_pay_hand_over">Hand over</string>
+    <string name="bank_pay_nothing">Nothing to hand over yet.</string>
+    <string name="bank_pay_paid_in">%1$s paid in %2$s (%3$s).</string>
+    <string name="bank_part_buy_in">buy-in %1$s</string>
+    <string name="bank_part_bounty">bounty %1$s</string>
+    <string name="bank_part_food">food %1$s</string>
+    <string name="bank_part_rebuy">rebuy %1$s</string>
+    <string name="bank_part_add_on">add-on %1$s</string>
+    <plurals name="bank_part_rebuys">
+        <item quantity="one">%1$d rebuy %2$s</item>
+        <item quantity="other">%1$d rebuys %2$s</item>
+    </plurals>
+    <plurals name="bank_part_add_ons">
+        <item quantity="one">%1$d add-on %2$s</item>
+        <item quantity="other">%1$d add-ons %2$s</item>
+    </plurals>
+    <string name="bank_part_join">", "</string>
+    <string name="bank_pay_net_up">Up %1$s for the night.</string>
+    <string name="bank_pay_net_down">Down %1$s for the night.</string>
+    <string name="bank_pay_net_even">Even for the night.</string>
+    <string name="bank_pay_mark_paid">Mark paid · %1$s</string>
+    <string name="bank_pay_mark_unpaid">Mark not paid</string>
+    <string name="bank_pay_already_paid">Paid</string>
+
+    <!-- Pool breakdown sheet and the tablet pane -->
+    <string name="bank_pool_title">Pool breakdown</string>
+    <string name="bank_pool_prize">Prize pool</string>
+    <string name="bank_pool_of_rebuys">· of which rebuys</string>
+    <string name="bank_pool_of_add_ons">· of which add-ons</string>
+    <string name="bank_pool_bounty">Bounty pool</string>
+    <string name="bank_pool_food">Food</string>
+    <string name="bank_pool_total">Total pool</string>
+    <string name="bank_payouts">Payouts</string>
+    <string name="bank_payout_row">%1$s · %2$s</string>
+    <string name="bank_still_playing">still playing</string>
+    <string name="bank_structure">Structure</string>
+
+    <!-- Reset (⋮) -->
     <string name="bank_reset">Reset bank</string>
-    <string name="bank_reset_title">Reset bank data?</string>
-    <string name="bank_reset_description">This will reset all player names and payment statuses to defaults.</string>
+    <string name="bank_reset_title">Reset the bank?</string>
+    <plurals name="bank_reset_body">
+        <item quantity="one">Clears the name, buy-in, rebuys, add-ons, knockouts and payout for %d player. The clock and the tournament setup stay as they are.</item>
+        <item quantity="other">Clears names, buy-ins, rebuys, add-ons, knockouts and payouts for %d players. The clock and the tournament setup stay as they are.</item>
+    </plurals>
+    <string name="bank_reset_keep">Keep</string>
+    <plurals name="bank_reset_confirm">
+        <item quantity="one">Clear %d player</item>
+        <item quantity="other">Clear %d players</item>
+    </plurals>
 </resources>

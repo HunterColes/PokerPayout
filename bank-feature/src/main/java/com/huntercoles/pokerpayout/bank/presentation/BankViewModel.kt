@@ -2,34 +2,51 @@ package com.huntercoles.pokerpayout.bank.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.huntercoles.pokerpayout.bank.presentation.BankIntent.CancelPlayerAction
-import com.huntercoles.pokerpayout.bank.presentation.BankIntent.ConfirmPlayerAction
-import com.huntercoles.pokerpayout.bank.presentation.BankIntent.PlayerAddonChanged
-import com.huntercoles.pokerpayout.bank.presentation.BankIntent.PlayerCountChanged
-import com.huntercoles.pokerpayout.bank.presentation.BankIntent.PlayerNameChanged
-import com.huntercoles.pokerpayout.bank.presentation.BankIntent.PlayerRebuyChanged
-import com.huntercoles.pokerpayout.bank.presentation.BankIntent.ShowPlayerActionDialog
 import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
+import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
+import com.huntercoles.pokerpayout.core.domain.model.ClockStatusProvider
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.domain.model.PurchaseWindow
 import com.huntercoles.pokerpayout.core.domain.model.Settlement
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
+import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * The Bank (S5 v2, PP-030): who paid what, who is out and who is owed.
+ *
+ * - **Undo.** Every routine action applies at once and can be taken back: from the snackbar while it
+ *   shows, or from the top bar's Undo, newest first, up to [MAX_UNDO] actions. Undo restores what
+ *   the Bank had recorded before the action (a snapshot, not an inverse), so a knockout's place,
+ *   bounty credit and payouts all come back exactly. Names aren't part of it, and anything that
+ *   changes the Bank from outside (the Tournament tab, a reset) clears the history.
+ * - **Cutoffs.** Rebuys close at the end of the level set in "rebuys until", add-ons at the end of
+ *   the first break after it ([PurchaseWindow]), following the clock ([ClockStatusProvider]).
+ * - **Prices.** Each rebuy and add-on is recorded at today's price and keeps it (PP-085).
+ */
 @HiltViewModel
+// One small function per action, and one injected source per thing the Bank reads (settings, records,
+// the clock, the chime, the snackbar).
+@Suppress("TooManyFunctions", "LongParameterList")
 class BankViewModel @Inject constructor(
     private val tournamentPreferences: TournamentPreferences,
     private val bankPreferences: BankPreferences,
     private val timerPreferences: TimerPreferences,
-    private val settleTournament: SettleTournamentUseCase
+    private val settleTournament: SettleTournamentUseCase,
+    private val clockStatus: ClockStatusProvider,
+    private val audioPreferences: AudioPreferences,
+    private val feedback: BankFeedback
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BankUiState())
@@ -41,12 +58,14 @@ class BankViewModel @Inject constructor(
     /** Non-zero while this ViewModel writes Bank data, so it doesn't "reload" its own writes. */
     private var ownWrites = 0
 
+    private val undoStack = ArrayDeque<UndoEntry>()
+    private var snackbar: Job? = null
+
     init {
         // Initialize with saved player count, dropping data of players removed while we were away
         updatePlayerCount(tournamentPreferences.getPlayerCount())
 
-        // Follow the Tournament tab live: player count, amounts, payout structure. The Bank used to
-        // show the totals from when it was opened until its next action.
+        // Follow the Tournament tab live: player count, amounts, payout structure.
         viewModelScope.launch {
             tournamentPreferences.config.collect { config ->
                 if (config.numPlayers != _uiState.value.players.size) {
@@ -62,11 +81,21 @@ class BankViewModel @Inject constructor(
             bankPreferences.revision.collect { reloadIfChangedElsewhere() }
         }
 
-        // Listen for timer running state changes
+        // The payout structure is read-only while the clock runs.
         viewModelScope.launch {
             timerPreferences.timerRunning.collect { isRunning ->
                 _uiState.update { it.copy(isTimerRunning = isRunning) }
             }
+        }
+
+        // The rebuy and add-on cutoffs follow the clock and the "rebuys until" setting.
+        viewModelScope.launch {
+            clockStatus.status.combine(tournamentPreferences.rebuyUntilLevel) { clock, cutoff -> clock to cutoff }
+                .collect { (clock, cutoff) -> updateWindows(clock, cutoff) }
+        }
+
+        viewModelScope.launch {
+            audioPreferences.isMuted.collect { muted -> _uiState.update { it.copy(isMuted = muted) } }
         }
     }
 
@@ -82,46 +111,41 @@ class BankViewModel @Inject constructor(
     @Suppress("CyclomaticComplexMethod") // One branch per intent; each delegates.
     private fun handle(intent: BankIntent) {
         when (intent) {
-            is PlayerNameChanged -> updatePlayerName(intent.playerId, intent.name)
+            is BankIntent.PlayerNameChanged -> updatePlayerName(intent.playerId, intent.name)
             is BankIntent.BuyInToggled -> toggleBuyIn(intent.playerId)
-            is BankIntent.OutToggled -> toggleOut(intent.playerId)
-            is BankIntent.PayedOutToggled -> togglePayedOut(intent.playerId)
-            is PlayerCountChanged -> updatePlayerCount(intent.count)
-            is PlayerRebuyChanged -> updatePlayerRebuys(intent.playerId, intent.rebuys)
-            is PlayerAddonChanged -> updatePlayerAddons(intent.playerId, intent.addons)
-            is ShowPlayerActionDialog -> showPlayerActionDialog(intent.playerId, intent.action)
-            is ConfirmPlayerAction -> confirmPendingAction()
-            is BankIntent.ConfirmPlayerActionWithCount -> confirmPendingAction(intent.count, intent.selectedPlayerId)
-            is CancelPlayerAction -> clearPendingAction()
-            is BankIntent.ShowResetDialog -> {
-                // Only show dialog if not in default state
-                if (!isInDefaultState()) {
-                    showResetDialog()
-                }
-            }
-            is BankIntent.HideResetDialog -> hideResetDialog()
-            is BankIntent.ConfirmReset -> {
-                resetBankData()
-                hideResetDialog()
-            }
-            is BankIntent.ShowWeightsDialog -> showWeightsDialog()
-            is BankIntent.HideWeightsDialog -> hideWeightsDialog()
-            is BankIntent.UpdateWeights -> updateWeights(intent.weights)
+            is BankIntent.AddPurchase -> addPurchase(intent.playerId, intent.kind)
+            is BankIntent.OpenCount -> openCount(intent.playerId, intent.kind)
+            is BankIntent.SetCount -> setCount(intent.playerId, intent.kind, intent.count)
+            is BankIntent.OpenKnockout -> openKnockout(intent.playerId)
+            is BankIntent.KnockOut -> knockOut(intent.playerId, intent.eliminatorId)
+            is BankIntent.BringBack -> bringBack(intent.playerId)
+            is BankIntent.OpenPayOut -> openPayOut(intent.playerId)
+            is BankIntent.SetPaid -> setPaid(intent.playerId, intent.paid)
+            BankIntent.ShowPoolBreakdown -> showSheet(BankSheet.PoolBreakdown)
+            BankIntent.ShowPayoutStructure -> showSheet(BankSheet.PayoutStructure)
             is BankIntent.UpdatePayoutSettings -> updatePayoutSettings(intent.settings)
-            is BankIntent.ShowPoolSummaryDialog -> showPoolSummaryDialog()
-            is BankIntent.HidePoolSummaryDialog -> hidePoolSummaryDialog()
+            BankIntent.ShowResetConfirm -> if (_uiState.value.canReset) {
+                showSheet(BankSheet.ResetConfirm(_uiState.value.players.size))
+            }
+            BankIntent.ConfirmReset -> resetBankData()
+            BankIntent.DismissSheet -> showSheet(null)
+            BankIntent.Undo -> undo(expected = null)
+            BankIntent.ToggleMute -> audioPreferences.toggleMute()
         }
     }
+
+    // Reading --------------------------------------------------------------------------------------
 
     private fun readPlayer(playerId: Int) = PlayerData(
         id = playerId,
         name = bankPreferences.getPlayerName(playerId),
         buyIn = bankPreferences.getPlayerBuyInStatus(playerId),
         out = bankPreferences.getPlayerOutStatus(playerId),
-        payedOut = bankPreferences.getPlayerPayedOutStatus(playerId),
-        rebuys = bankPreferences.getPlayerRebuys(playerId),
-        addons = bankPreferences.getPlayerAddons(playerId),
-        eliminatedBy = bankPreferences.getPlayerEliminatedBy(playerId)
+        paidOut = bankPreferences.getPlayerPayedOutStatus(playerId),
+        rebuyPrices = bankPreferences.getPlayerRebuyPrices(playerId),
+        addOnPrices = bankPreferences.getPlayerAddonPrices(playerId),
+        eliminatedBy = bankPreferences.getPlayerEliminatedBy(playerId),
+        outLevel = bankPreferences.getPlayerOutLevel(playerId)
     )
 
     /** The stored elimination order, limited to [players] and including every player marked out. */
@@ -138,7 +162,6 @@ class BankViewModel @Inject constructor(
         if (normalizedOrder != bankPreferences.getEliminationOrder()) {
             bankPreferences.saveEliminationOrder(normalizedOrder)
         }
-
         _uiState.update { it.copy(players = players, eliminationOrder = normalizedOrder) }
         updateCalculations()
     }
@@ -149,7 +172,9 @@ class BankViewModel @Inject constructor(
         val stored = state.players.map { readPlayer(it.id) }
         val storedOrder = normalizedEliminationOrder(stored)
         if (stored != state.players || storedOrder != state.eliminationOrder) {
-            _uiState.update { it.copy(players = stored, eliminationOrder = storedOrder) }
+            // What Undo would restore no longer matches what is recorded.
+            forgetHistory()
+            _uiState.update { it.copy(players = stored, eliminationOrder = storedOrder, sheet = null) }
             updateCalculations()
         }
     }
@@ -159,259 +184,276 @@ class BankViewModel @Inject constructor(
         try {
             // Players above the new count are removed for good, so they can't come back after a restart.
             bankPreferences.removePlayersAbove(count)
+            if (count != _uiState.value.players.size) forgetHistory()
             initializePlayers(count)
         } finally {
             ownWrites--
         }
     }
 
+    private fun player(playerId: Int): PlayerData? = _uiState.value.players.firstOrNull { it.id == playerId }
+
+    // Actions ------------------------------------------------------------------------------------
+
     private fun updatePlayerName(playerId: Int, name: String) {
         val normalized = name.ifBlank { "Player $playerId" }
         bankPreferences.savePlayerName(playerId, normalized)
-
         _uiState.update { state ->
-            val updatedPlayers = state.players.map { player ->
-                if (player.id == playerId) player.copy(name = normalized) else player
-            }
-            state.copy(players = updatedPlayers)
+            state.copy(players = state.players.map { if (it.id == playerId) it.copy(name = normalized) else it })
         }
         updateCalculations()
     }
 
     private fun toggleBuyIn(playerId: Int) {
-        updatePlayerPayment(
-            playerId = playerId,
-            updateFunction = { it.copy(buyIn = !it.buyIn) }
-        )
+        val player = player(playerId) ?: return
+        val message = if (player.buyIn) {
+            feedback.buyInCleared(player.name)
+        } else {
+            feedback.buyIn(player.name, _uiState.value.money.entryCents)
+        }
+        record(message) { players, order -> players.replace(player.copy(buyIn = !player.buyIn)) to order }
     }
 
-    private fun toggleOut(playerId: Int) {
-        val player = _uiState.value.players.firstOrNull { it.id == playerId } ?: return
-        val apply = !player.out
-        setPlayerOut(playerId, apply, if (apply) player.eliminatedBy else null)
+    private fun purchasePrice(kind: Purchase): Long = with(_uiState.value.money) {
+        if (kind == Purchase.REBUY) rebuyCents else addOnCents
     }
 
-    private fun togglePayedOut(playerId: Int) {
-        updatePlayerPayment(
-            playerId = playerId,
-            updateFunction = { it.copy(payedOut = !it.payedOut) }
-        )
+    private fun window(kind: Purchase): PurchaseWindow = with(_uiState.value) {
+        if (kind == Purchase.REBUY) rebuyWindow else addOnWindow
     }
 
-    private fun showPlayerActionDialog(playerId: Int, actionType: PlayerActionType) {
-        val player = _uiState.value.players.firstOrNull { it.id == playerId } ?: return
-        val pending = when (actionType) {
-            PlayerActionType.OUT -> knockoutAction(player)
-            PlayerActionType.BUY_IN -> PendingPlayerAction(
+    /** One more rebuy or add-on at today's price, while the column is open. */
+    private fun addPurchase(playerId: Int, kind: Purchase) {
+        val player = player(playerId) ?: return
+        val price = purchasePrice(kind)
+        val prices = player.prices(kind)
+        if (price <= 0L || !window(kind).isOpen || prices.size >= MAX_PURCHASE_COUNT) return
+        record(feedback.purchase(kind, player.name, price)) { players, order ->
+            players.replace(player.withPrices(kind, prices + price)) to order
+        }
+    }
+
+    private fun openCount(playerId: Int, kind: Purchase) {
+        val player = player(playerId) ?: return
+        val price = purchasePrice(kind)
+        if (price <= 0L && player.prices(kind).isEmpty()) return
+        showSheet(BankSheet.Count(playerId, player.name, kind, player.prices(kind), price, window(kind)))
+    }
+
+    /**
+     * The count sheet's answer. Lowering removes the newest first; raising adds at today's price,
+     * and only while the column is open. Out of range is clamped.
+     */
+    private fun setCount(playerId: Int, kind: Purchase, count: Int) {
+        val player = player(playerId) ?: return
+        val prices = player.prices(kind)
+        val price = purchasePrice(kind)
+        val canAdd = window(kind).isOpen && price > 0L
+        val target = count.coerceIn(0, if (canAdd) MAX_PURCHASE_COUNT else prices.size)
+        val next = if (target <= prices.size) prices.take(target) else prices + List(target - prices.size) { price }
+        showSheet(null)
+        record(feedback.count(kind, player.name, target)) { players, order ->
+            players.replace(player.withPrices(kind, next)) to order
+        }
+    }
+
+    private fun openKnockout(playerId: Int) {
+        val state = _uiState.value
+        val player = player(playerId) ?: return
+        if (player.out || state.activePlayers <= 1) return
+        val knockouts = state.knockoutCounts
+        val stillIn = state.players.filter { !it.out && it.id != playerId }
+        val out = state.eliminationOrder.reversed().mapNotNull { id -> state.players.firstOrNull { it.id == id } }
+        val candidates = (stillIn + out).map { KnockoutCandidate(it.id, it.name, knockouts[it.id] ?: 0, it.out) }
+        showSheet(
+            BankSheet.Knockout(
                 playerId = playerId,
-                actionType = actionType,
-                apply = !player.buyIn,
-                buyInCostCents = if (!player.buyIn) settlement?.forPlayer(playerId)?.costCents ?: 0L else 0L
+                name = player.name,
+                place = state.activePlayers,
+                bountyCents = state.money.bountyCents,
+                candidates = candidates,
+                preselectedId = player.eliminatedBy?.takeIf { previous -> candidates.any { it.playerId == previous } }
             )
-            PlayerActionType.PAYED_OUT -> payOutAction(player)
-            PlayerActionType.REBUY -> purchaseAction(player, actionType, _uiState.value.isRebuyEnabled, player.rebuys)
-            PlayerActionType.ADDON -> purchaseAction(player, actionType, _uiState.value.isAddOnEnabled, player.addons)
-        }
-
-        _uiState.update { state -> state.copy(pendingAction = pending) }
-    }
-
-    private fun knockoutAction(player: PlayerData): PendingPlayerAction? {
-        val apply = !player.out
-        val isLastActive = _uiState.value.players.count { !it.out } <= 1
-        if (apply && isLastActive) return null
-
-        val selectableIds = if (apply) {
-            buildPlayerDisplayModels(_uiState.value.players, _uiState.value.eliminationOrder)
-                .map { it.player.id }
-                .filter { it != player.id }
-        } else {
-            emptyList()
-        }
-        val initialSelection = player.eliminatedBy?.takeIf { it in selectableIds } ?: selectableIds.firstOrNull()
-
-        return PendingPlayerAction(
-            playerId = player.id,
-            actionType = PlayerActionType.OUT,
-            apply = apply,
-            selectablePlayerIds = selectableIds,
-            selectedPlayerId = if (apply) initialSelection else null,
-            allowUnassignedSelection = apply
         )
     }
 
-    /** The Pay-Out dialog's breakdown for [player], straight from the settlement. */
-    private fun payOutAction(player: PlayerData): PendingPlayerAction {
-        val apply = !player.payedOut
-        val owed = settlement?.forPlayer(player.id)?.takeIf { apply }
-        return PendingPlayerAction(
-            playerId = player.id,
-            actionType = PlayerActionType.PAYED_OUT,
-            apply = apply,
-            payoutAmountCents = owed?.netCents ?: 0L,
-            buyInPayoutCents = owed?.prizeCents ?: 0L,
-            buyInCostCents = owed?.costCents ?: 0L,
-            knockoutBonusCents = owed?.knockoutBountyCents ?: 0L,
-            kingsBountyCents = owed?.kingsBountyCents ?: 0L,
-            unclaimedBountyCents = owed?.unclaimedBountyCents ?: 0L,
-            knockoutCount = owed?.knockouts ?: 0
+    /** Knocks [playerId] out at once, crediting [eliminatorId] (null: nobody). No second question. */
+    private fun knockOut(playerId: Int, eliminatorId: Int?) {
+        val state = _uiState.value
+        val player = player(playerId) ?: return
+        showSheet(null)
+        if (player.out || state.activePlayers <= 1) return
+        val credit = eliminatorId?.takeIf { id -> id != playerId && state.players.any { it.id == id } }
+        val place = state.activePlayers
+        val level = state.clock.level.takeIf { state.clock.started }
+        val message = feedback.knockout(
+            name = player.name,
+            place = place,
+            eliminator = credit?.let { id -> player(id)?.name },
+            hasBounty = state.money.bountyCents > 0L
+        )
+        record(message) { players, order ->
+            players.replace(player.copy(out = true, eliminatedBy = credit, outLevel = level)) to (order - playerId + playerId)
+        }
+    }
+
+    private fun bringBack(playerId: Int) {
+        val player = player(playerId)?.takeIf { it.out } ?: return
+        record(feedback.backIn(player.name)) { players, order ->
+            players.replace(player.copy(out = false, eliminatedBy = null, outLevel = null)) to (order - playerId)
+        }
+    }
+
+    private fun openPayOut(playerId: Int) {
+        val state = _uiState.value
+        val player = player(playerId) ?: return
+        val owed = settlement?.forPlayer(playerId) ?: return
+        val knockedOut = state.eliminationOrder.toSet() - setOfNotNull(state.championId)
+        val unclaimed = state.players.count { it.id in knockedOut && state.knockoutCredit(it) == null }
+        showSheet(
+            BankSheet.PayOut(
+                playerId = playerId,
+                name = player.name,
+                owed = owed,
+                isChampion = playerId == state.championId,
+                money = state.money,
+                rebuys = player.rebuys,
+                addOns = player.addons,
+                unclaimedKnockouts = if (playerId == state.championId) unclaimed else 0
+            )
         )
     }
 
-    private fun purchaseAction(
-        player: PlayerData,
-        actionType: PlayerActionType,
-        enabled: Boolean,
-        currentCount: Int
-    ): PendingPlayerAction? {
-        if (!enabled) return null
-        val baseCount = currentCount.coerceAtLeast(0)
-        return PendingPlayerAction(
-            playerId = player.id,
-            actionType = actionType,
-            apply = true,
-            baseCount = baseCount,
-            targetCount = (baseCount + 1).coerceAtMost(MAX_PURCHASE_COUNT)
-        )
+    private fun setPaid(playerId: Int, paid: Boolean) {
+        val player = player(playerId) ?: return
+        showSheet(null)
+        if (player.paidOut == paid) return
+        val winnings = settlement?.forPlayer(playerId)?.winningsCents ?: 0L
+        val message = if (paid) feedback.paid(player.name, winnings) else feedback.unpaid(player.name)
+        record(message) { players, order -> players.replace(player.copy(paidOut = paid)) to order }
     }
 
-    private fun clearPendingAction() {
-        _uiState.update { it.copy(pendingAction = null) }
-    }
-
-    private fun confirmPendingAction(targetCountOverride: Int? = null, selectedPlayerId: Int? = null) {
-        val pendingAction = _uiState.value.pendingAction ?: return
-        val player = _uiState.value.players.firstOrNull { it.id == pendingAction.playerId }
-        if (player == null) {
-            clearPendingAction()
-            return
-        }
-
-        val sanitizedOverride = targetCountOverride?.coerceIn(0, MAX_PURCHASE_COUNT)
-        val sanitizedSelection = selectedPlayerId?.takeIf { pendingAction.selectablePlayerIds.contains(it) }
-
-        val selectionToApply = if (pendingAction.allowUnassignedSelection) {
-            sanitizedSelection
-        } else {
-            sanitizedSelection ?: pendingAction.selectedPlayerId
-        }
-
-        when (pendingAction.actionType) {
-            PlayerActionType.OUT -> {
-                val eliminatedBy = if (pendingAction.apply) selectionToApply else null
-                setPlayerOut(player.id, pendingAction.apply, eliminatedBy)
-            }
-            PlayerActionType.BUY_IN -> setPlayerBuyIn(player.id, pendingAction.apply)
-            PlayerActionType.PAYED_OUT -> setPlayerPayedOut(player.id, pendingAction.apply)
-            PlayerActionType.REBUY -> {
-                val fallback = if (pendingAction.targetCount >= 0) pendingAction.targetCount else player.rebuys
-                val newCount = sanitizedOverride ?: fallback
-                updatePlayerRebuys(player.id, newCount)
-            }
-            PlayerActionType.ADDON -> {
-                val fallback = if (pendingAction.targetCount >= 0) pendingAction.targetCount else player.addons
-                val newCount = sanitizedOverride ?: fallback
-                updatePlayerAddons(player.id, newCount)
-            }
-        }
-
-        clearPendingAction()
-    }
-
-    private fun setPlayerBuyIn(playerId: Int, value: Boolean) {
-        updatePlayerPayment(
-            playerId = playerId,
-            updateFunction = { player ->
-                if (player.buyIn == value) player else player.copy(buyIn = value)
-            }
-        )
-    }
-
-    private fun setPlayerOut(playerId: Int, value: Boolean, eliminatedBy: Int?) {
-        updatePlayerPayment(
-            playerId = playerId,
-            updateFunction = { player ->
-                val normalizedEliminator = if (value) eliminatedBy else null
-                if (player.out == value && player.eliminatedBy == normalizedEliminator) {
-                    player
-                } else {
-                    player.copy(out = value, eliminatedBy = normalizedEliminator)
-                }
-            }
-        ) { updatedPlayer ->
-            updateEliminationOrder(updatedPlayer.id, updatedPlayer.out)
-        }
-    }
-
-    private fun setPlayerPayedOut(playerId: Int, value: Boolean) {
-        updatePlayerPayment(
-            playerId = playerId,
-            updateFunction = { player ->
-                if (player.payedOut == value) player else player.copy(payedOut = value)
-            }
-        )
-    }
-
-    private fun updatePlayerRebuys(playerId: Int, rebuys: Int) {
-        val sanitized = rebuys.coerceIn(0, MAX_PURCHASE_COUNT)
-        _uiState.update { state ->
-            state.copy(players = state.players.map { if (it.id == playerId) it.copy(rebuys = sanitized) else it })
-        }
-        bankPreferences.savePlayerRebuys(playerId, sanitized)
+    private fun updatePayoutSettings(settings: PayoutSettings) {
+        showSheet(null)
+        if (_uiState.value.isTimerRunning) return
+        tournamentPreferences.setPayoutSettings(settings)
         updateCalculations()
     }
 
-    private fun updatePlayerAddons(playerId: Int, addons: Int) {
-        val sanitized = addons.coerceIn(0, MAX_PURCHASE_COUNT)
-        _uiState.update { state ->
-            state.copy(players = state.players.map { if (it.id == playerId) it.copy(addons = sanitized) else it })
+    private fun resetBankData() {
+        showSheet(null)
+        forgetHistory()
+        // Reset bank preferences (player names and payment states only)
+        bankPreferences.resetAllBankData()
+        initializePlayers(tournamentPreferences.getPlayerCount())
+    }
+
+    private fun showSheet(sheet: BankSheet?) {
+        _uiState.update { it.copy(sheet = sheet) }
+    }
+
+    // Recording, with Undo -----------------------------------------------------------------------
+
+    private class UndoEntry(val before: BankSnapshot, val message: String)
+
+    /** What an action can change: everything recorded except names. */
+    private data class BankSnapshot(val players: List<PlayerData>, val eliminationOrder: List<Int>)
+
+    /**
+     * Applies [change] to the players and the elimination order, saves the result, and offers Undo
+     * with [message]. Undo restores the state from before the change.
+     */
+    private fun record(message: String, change: (List<PlayerData>, List<Int>) -> Pair<List<PlayerData>, List<Int>>) {
+        val state = _uiState.value
+        val (players, order) = change(state.players, state.eliminationOrder)
+        if (players == state.players && order == state.eliminationOrder) return
+        val entry = UndoEntry(BankSnapshot(state.players, state.eliminationOrder), message)
+        undoStack.addLast(entry)
+        while (undoStack.size > MAX_UNDO) undoStack.removeFirst()
+        save(players, order)
+        offerUndo(entry)
+    }
+
+    /** State first, then preferences: a write bumps the Bank revision, and its reload must find nothing new. */
+    private fun save(players: List<PlayerData>, order: List<Int>) {
+        val before = _uiState.value.players.associateBy { it.id }
+        ownWrites++
+        try {
+            _uiState.update { it.copy(players = players, eliminationOrder = order) }
+            players.forEach { player -> persist(before[player.id], player) }
+            if (order != bankPreferences.getEliminationOrder()) bankPreferences.saveEliminationOrder(order)
+        } finally {
+            ownWrites--
         }
-        bankPreferences.savePlayerAddons(playerId, sanitized)
         updateCalculations()
     }
 
-    private fun updatePlayerPayment(
-        playerId: Int,
-        updateFunction: (PlayerData) -> PlayerData,
-        afterUpdate: ((PlayerData) -> Unit)? = null
-    ) {
-        val current = _uiState.value.players.firstOrNull { it.id == playerId } ?: return
-        val updated = updateFunction(current)
-        _uiState.update { state ->
-            state.copy(players = state.players.map { if (it.id == playerId) updated else it })
-        }
-        // State first, then preferences: a write bumps the Bank revision, and the reload it
-        // triggers must find nothing to change.
-        bankPreferences.savePlayerBuyInStatus(playerId, updated.buyIn)
-        bankPreferences.savePlayerOutStatus(playerId, updated.out)
-        bankPreferences.savePlayerPayedOutStatus(playerId, updated.payedOut)
-        bankPreferences.savePlayerEliminatedBy(playerId, updated.eliminatedBy)
-        afterUpdate?.invoke(updated)
-        updateCalculations()
+    private fun persist(before: PlayerData?, after: PlayerData) {
+        val id = after.id
+        if (before?.buyIn != after.buyIn) bankPreferences.savePlayerBuyInStatus(id, after.buyIn)
+        if (before?.out != after.out) bankPreferences.savePlayerOutStatus(id, after.out)
+        if (before?.paidOut != after.paidOut) bankPreferences.savePlayerPayedOutStatus(id, after.paidOut)
+        if (before?.eliminatedBy != after.eliminatedBy) bankPreferences.savePlayerEliminatedBy(id, after.eliminatedBy)
+        if (before?.outLevel != after.outLevel) bankPreferences.savePlayerOutLevel(id, after.outLevel)
+        if (before?.rebuyPrices != after.rebuyPrices) bankPreferences.savePlayerRebuyPrices(id, after.rebuyPrices)
+        if (before?.addOnPrices != after.addOnPrices) bankPreferences.savePlayerAddonPrices(id, after.addOnPrices)
     }
 
-    private fun updateEliminationOrder(playerId: Int, isOut: Boolean) {
-        val totalPlayers = _uiState.value.players.size
-        val currentOrder = bankPreferences.getEliminationOrder()
-            .filter { it in 1..totalPlayers }
-            .distinct()
-        val filteredOrder = currentOrder.filterNot { it == playerId }
-        val nextOrder = if (isOut) filteredOrder + playerId else filteredOrder
+    /** One snackbar at a time: a new action replaces the last one's snackbar (it stays in the history). */
+    private fun offerUndo(entry: UndoEntry) {
+        snackbar?.cancel()
+        snackbar = viewModelScope.launch {
+            if (feedback.showUndo(entry.message)) undo(expected = entry)
+        }
+    }
 
-        _uiState.update { it.copy(eliminationOrder = nextOrder) }
-        bankPreferences.saveEliminationOrder(nextOrder)
+    /**
+     * Takes back the newest action. From the snackbar ([expected] set), only if that action is still
+     * the newest: the top bar's Undo may have taken it back already.
+     */
+    private fun undo(expected: UndoEntry?) {
+        val entry = undoStack.lastOrNull()?.takeIf { expected == null || it === expected } ?: return
+        undoStack.removeLast()
+        if (expected == null) {
+            snackbar?.cancel()
+            snackbar = null
+        }
+        // Names may have changed since; keep today's.
+        val names = _uiState.value.players.associate { it.id to it.name }
+        val restored = entry.before.players.map { it.copy(name = names[it.id] ?: it.name) }
+        save(restored, entry.before.eliminationOrder)
+    }
+
+    private fun forgetHistory() {
+        undoStack.clear()
+        snackbar?.cancel()
+        snackbar = null
+        _uiState.update { it.copy(undoLabel = null) }
+    }
+
+    // Calculations --------------------------------------------------------------------------------
+
+    private fun updateWindows(clock: ClockStatus, cutoffLevel: Int) {
+        _uiState.update {
+            it.copy(
+                clock = clock,
+                rebuyWindow = PurchaseWindow.rebuys(cutoffLevel, clock),
+                addOnWindow = PurchaseWindow.addOns(cutoffLevel, clock)
+            )
+        }
+        updateCalculations()
     }
 
     private fun PlayerData.toBankPlayer() = BankPlayer(
         id = id,
         boughtIn = buyIn,
-        paidOut = payedOut,
-        rebuys = rebuys,
-        addOns = addons,
-        eliminatedBy = eliminatedBy
+        paidOut = paidOut,
+        eliminatedBy = eliminatedBy,
+        rebuyPricesCents = rebuyPrices,
+        addOnPricesCents = addOnPrices
     )
 
-    /** Recomputes every amount from one settlement of the current state. */
+    /** Recomputes every amount and every row from one settlement of the current state. */
     private fun updateCalculations() {
         val state = _uiState.value
         val config = tournamentPreferences.getCurrentTournamentConfig()
@@ -423,16 +465,15 @@ class BankViewModel @Inject constructor(
             rounding = config.payoutRounding
         )
         settlement = result
-
+        val rows = buildBankRows(
+            BankRowInput(state.players, state.eliminationOrder, result, config.money, state.rebuyWindow, state.addOnWindow)
+        )
+        val canReset = !bankPreferences.isInDefaultState(state.players.size)
         _uiState.update {
             it.copy(
                 pool = result.pool,
                 totalPaidInCents = result.paidInCents,
                 totalPaidOutCents = result.paidOutCents,
-                totalRebuyCount = state.players.sumOf { player -> player.rebuys },
-                totalAddonCount = state.players.sumOf { player -> player.addons },
-                activePlayers = state.players.count { player -> !player.out },
-                payedOutCount = state.players.count { player -> player.payedOut },
                 money = config.money,
                 knockoutCounts = result.players.filter { owed -> owed.knockouts > 0 }
                     .associate { owed -> owed.playerId to owed.knockouts },
@@ -441,58 +482,26 @@ class BankViewModel @Inject constructor(
                     .toSet(),
                 payoutTable = result.payoutTable,
                 payoutSettings = tournamentPreferences.getPayoutSettings(),
-                placeByPlayer = result.standings.placeByPlayer
+                placeByPlayer = result.standings.placeByPlayer,
+                championId = result.championId,
+                rows = rows,
+                canReset = canReset,
+                undoLabel = undoStack.lastOrNull()?.message
             )
         }
     }
 
-    private fun showResetDialog() {
-        _uiState.update { it.copy(showResetDialog = true) }
-    }
-
-    private fun hideResetDialog() {
-        _uiState.update { it.copy(showResetDialog = false) }
-    }
-
-    private fun resetBankData() {
-        // Reset bank preferences (player names and payment states only)
-        bankPreferences.resetAllBankData()
-
-        // Reinitialize players with fresh data
-        val savedPlayerCount = tournamentPreferences.getPlayerCount()
-        initializePlayers(savedPlayerCount)
-    }
-
-    private fun updateWeights(weights: List<Int>) {
-        tournamentPreferences.setPayoutWeights(weights)
-        updateCalculations()
-        hideWeightsDialog()
-    }
-
-    private fun updatePayoutSettings(settings: PayoutSettings) {
-        tournamentPreferences.setPayoutSettings(settings)
-        updateCalculations()
-        hideWeightsDialog()
-    }
-
-    private fun showWeightsDialog() {
-        _uiState.update { it.copy(showWeightsDialog = true) }
-    }
-
-    private fun hideWeightsDialog() {
-        _uiState.update { it.copy(showWeightsDialog = false) }
-    }
-
-    private fun showPoolSummaryDialog() {
-        _uiState.update { it.copy(showPoolSummaryDialog = true) }
-    }
-
-    private fun hidePoolSummaryDialog() {
-        _uiState.update { it.copy(showPoolSummaryDialog = false) }
-    }
-
-    private fun isInDefaultState(): Boolean {
-        val currentPlayerCount = _uiState.value.players.size
-        return bankPreferences.isInDefaultState(currentPlayerCount)
+    private companion object {
+        /** How many actions Undo can take back. */
+        const val MAX_UNDO = 20
     }
 }
+
+private fun List<PlayerData>.replace(player: PlayerData): List<PlayerData> = map { if (it.id == player.id) player else it }
+
+private fun PlayerData.withPrices(kind: Purchase, prices: List<Long>): PlayerData =
+    if (kind == Purchase.REBUY) copy(rebuyPrices = prices) else copy(addOnPrices = prices)
+
+/** Who [player]'s knockout is credited to, if anyone still at the table counts. */
+private fun BankUiState.knockoutCredit(player: PlayerData): Int? =
+    player.eliminatedBy?.takeIf { id -> id != player.id && players.any { it.id == id } }

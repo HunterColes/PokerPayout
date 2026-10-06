@@ -26,11 +26,22 @@ object PayoutPlaces {
 
     private const val PLAYERS_PER_PAID_PLACE = 3
 
+    /** From this many players, at least two places are paid (PP-086). */
+    private const val TWO_PLACES_FROM = 5
+
     /**
      * About a third of the field: the usual home-game guideline ("pay roughly 1/3 at home"; hosts
-     * pay 20-33% of the field, see reports/research.md section 1). 5 players -> 1, 9 -> 3, 30 -> 9.
+     * pay 20-33% of the field, see reports/research.md section 1). 4 players -> 1, 9 -> 3, 30 -> 9.
+     *
+     * From 5 players at least two places are paid (PP-086). A third of 5 is 1.67, nearer two than
+     * one, and winner-takes-all sent four of five players home with nothing. Only 5 changes: 6 to 8
+     * already paid two, and every other count is the plain third it always was.
      */
-    fun recommended(playerCount: Int): Int = (playerCount / PLAYERS_PER_PAID_PLACE).coerceIn(1, MAX)
+    fun recommended(playerCount: Int): Int {
+        val third = playerCount / PLAYERS_PER_PAID_PLACE
+        val atLeast = if (playerCount >= TWO_PLACES_FROM) 2 else 1
+        return maxOf(third, atLeast).coerceIn(1, MAX)
+    }
 
     /** Never more places than players, so no money goes to a place nobody can finish in. */
     fun maxFor(playerCount: Int): Int = playerCount.coerceIn(1, MAX)
@@ -96,7 +107,39 @@ data class PayoutSettings(
     val weights: List<Int>,
     val preset: PayoutPreset?,
     val rounding: PayoutRounding
-)
+) {
+    /**
+     * The same structure paying [places] places (clamped to 1..[PayoutPlaces.MAX]): a preset's own
+     * table for that many places, or hand-edited weights cut short or extended. Extended weights keep
+     * falling (each new place weighs less than the one above, using the default weights where they
+     * fit), so the result is always a valid structure.
+     */
+    fun withPlaces(places: Int): PayoutSettings {
+        val target = places.coerceIn(1, PayoutPlaces.MAX)
+        val resized = when {
+            preset != null -> preset.weightsFor(target)
+            target <= weights.size -> weights.take(target)
+            else -> extended(weights.ifEmpty { PayoutPreset.DEFAULT.weightsFor(1) }, target)
+        }
+        return copy(weights = resized)
+    }
+
+    private fun extended(start: List<Int>, target: Int): List<Int> {
+        // Room below the last weight for every new place: scale up (shares unchanged) if needed.
+        val room = target - start.size
+        val scale = if (start.last() > room) 1 else (room / start.last() + 1) * WEIGHT_SCALE_STEP
+        val result = start.map { it * scale }.toMutableList()
+        while (result.size < target) {
+            val suggested = TournamentConstants.DEFAULT_PAYOUT_WEIGHTS.getOrElse(result.size) { 1 } * scale
+            result += minOf(suggested, result.last() - 1).coerceAtLeast(1)
+        }
+        return result
+    }
+
+    private companion object {
+        const val WEIGHT_SCALE_STEP = 10
+    }
+}
 
 /** One row of the payout table. */
 data class PayoutPlace(

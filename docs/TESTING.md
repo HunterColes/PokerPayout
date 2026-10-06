@@ -9,7 +9,7 @@ sound. It is written so that a person *or* an AI agent can run it unattended.
 | Device smoke tour (screenshots + UI dumps + logcat) | `scripts/device/tour.sh` | emulator (auto-booted) | ~6 min incl. build |
 | Instrumented tests | `./gradlew connectedDebugAndroidTest` | running emulator | compiles; there are 0 instrumented tests (see below) |
 | JVM screenshot goldens + layout checks (Roborazzi, section 9) | part of `./gradlew testDebugUnitTest`; re-record with `./gradlew recordRoborazziDebug` | JDK 21 | ~20 s for core's 140 goldens and 48 matrix checks |
-| Device matrix: the real app on 10 screen sizes, fonts and rotations (section 10) | `scripts/device/matrix.sh` | emulator (auto-booted) | ~41 min (8 profiles) |
+| Device matrix: the real app on 10 screen sizes, fonts and rotations (section 10) | `scripts/device/matrix.sh` | emulator (auto-booted) | focused set (4 profiles) not yet timed on 1.3.4; 41 min for 8 profiles on 1.3.0 |
 
 ## 1. Prerequisites
 
@@ -572,9 +572,10 @@ catches what Robolectric can't: system bars and insets, the soft keyboard, real 
 activity being recreated, gestures and scrolling, and the process staying alive through it all.
 
 ```bash
-flock /tmp/pokerpayout-emulator.lock scripts/device/matrix.sh --stop   # build, install, the 8 default profiles
+flock /tmp/pokerpayout-emulator.lock scripts/device/matrix.sh --stop   # build, install, the focused 4 profiles
+scripts/device/matrix.sh --profiles daily              # the once-a-day set (7 profiles); all = every one
 scripts/device/matrix.sh --no-build                    # reuse the last APK
-scripts/device/matrix.sh --profiles small,tablet       # some profiles (--list shows them; all = every one)
+scripts/device/matrix.sh --profiles small,tablet       # some profiles (--list shows them)
 scripts/device/matrix.sh --steps bank,ime,ime-done     # your own steps (launch and profile come first)
 scripts/device/matrix.sh --full                        # every tour step on every profile
 scripts/device/matrix.sh --release                     # the R8 build
@@ -611,6 +612,12 @@ step checks that the app's window is exactly the overridden screen.
 * **Foldables and tablets** (600 dp and up): every tab turns with the display; turned, the clock
   stays the clock (two panes from 840 dp).
 * On every size the table-view button (⤢) shows the table view in landscape until ✕.
+
+**Sets** (PP-093): `focused` is the routine run and the default (`small`, `small-f2.0`,
+`default-f2.0`, `tablet`); `daily` runs once a day (`small`, `small-f1.3`, `small-f2.0`, `compact`,
+`default-f2.0`, `foldable`, `tablet`; not `default`, which the plain tour covers on every pull
+request); `all` runs every profile. On GitHub, the `Device matrix` job in `device.yml` runs a set
+by hand: `gh workflow run device.yml --ref <branch> -f job=matrix -f profiles=focused`.
 
 The emulator scales any override onto its panel, so sizes bigger than 1080 x 2400 work too.
 Screenshots come out at the profile's own size. SystemUI forgets its demo mode when the size
@@ -717,7 +724,11 @@ screen (then fix the step, minimally).
 
 ### Time
 
-Measured on this machine (2026-10-06, host load 1 to 6), the default run took **41 minutes**:
+These times are from 1.3.0 (before M3), when the default run was 8 profiles with shorter step
+sets; it took **41 minutes** on this machine (2026-10-06, host load 1 to 6). The focused set on
+1.3.4 hasn't been timed in full. In a part-run on 1.3.4, 30 of its steps took 10 minutes on
+`small` and 5 on `default`; expect about 40 to 50 minutes for the focused set, and about 80 for
+the daily one.
 
 | Profile | Set | Time |
 |---|---|---|

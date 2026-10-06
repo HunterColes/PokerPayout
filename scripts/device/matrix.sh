@@ -4,10 +4,11 @@
 # overrides on the AVD (no extra AVDs); the emulator is put back to its own 1080x2400 @ 420 dpi,
 # font scale 1.0, rotation 0 however the run ends.
 #
-#   scripts/device/matrix.sh                    # build, install, each default profile's steps
+#   scripts/device/matrix.sh                    # build, install, the focused profiles' steps
 #                                               # (the smoke set or the shorter screens set)
+#   scripts/device/matrix.sh --profiles daily   # the once-a-day set (7 profiles); all = every one
 #   scripts/device/matrix.sh --full             # every tour step on every profile (slow)
-#   scripts/device/matrix.sh --profiles small,tablet   # just these profiles (--list shows them; all)
+#   scripts/device/matrix.sh --profiles small,tablet   # just these profiles (--list shows them)
 #   scripts/device/matrix.sh --steps bank,ime,ime-done # these steps (after launch and profile)
 #   scripts/device/matrix.sh --no-build | --release | --stop
 #   scripts/device/matrix.sh --list             # the profiles and the step sets, then exit
@@ -42,11 +43,17 @@ PROFILES=(
   "tablet        1600x2560  320  1.0  0  yes  smoke    800 x 1280 dp: a 10-inch tablet held upright; the rail"
   "tablet-land   1600x2560  320  1.0  1  yes  smoke    the tablet turned 90: 1280 x 800 dp, every tab landscape (PP-088)"
 )
-# The default run keeps to about 40 minutes. Not in it: large (the same dp as default, only denser:
-# it found nothing default didn't), default-f1.3 (between default and default-f2.0: the same) and
-# tablet-land (the tablet turned; rotate and rotate-clock turn every profile anyway).
-# --profiles all runs every profile.
-DEFAULT_PROFILES="small small-f1.3 small-f2.0 compact default default-f2.0 foldable tablet"
+# Named sets for --profiles (PP-093):
+#   focused  the routine run (the default): the smallest phone with its full smoke set, the worst
+#            text cases on the smallest and a common phone, and the tablet with its smoke set
+#   daily    once a day: also 130 % text, the 360 dp phone and the foldable. Not `default`: the
+#            plain tour covers that screen step by step on every pull request
+#   all      every profile. Never in a named set: large (the same dp as default, only denser: it
+#            found nothing default didn't), default-f1.3 (between default and default-f2.0) and
+#            tablet-land (the tablet turned; rotate and rotate-clock turn every profile anyway)
+FOCUSED_PROFILES="small small-f2.0 default-f2.0 tablet"
+DAILY_PROFILES="small small-f1.3 small-f2.0 compact default-f2.0 foldable tablet"
+DEFAULT_PROFILES="$FOCUSED_PROFILES"
 
 # ------------------------------------------------------------------ steps
 # The smoke set: every tab and tool, the Tournament tab from setup through the clock, a break, the
@@ -107,13 +114,19 @@ if (( LIST )); then
   for p in "${PROFILES[@]}"; do
     read -r n s d f r t stepset desc <<<"$p"
     printf '%-13s %-10s %-4s %-4s %-3s %-5s %-8s %s%s\n' "$n" "$s" "$d" "$f" "$r" "$t" "$stepset" "$desc" \
-      "$([[ " $DEFAULT_PROFILES " == *" $n "* ]] && echo "" || echo " (not in the default run)")"
+      "$([[ " $FOCUSED_PROFILES " == *" $n "* ]] && echo " [focused]" || { [[ " $DAILY_PROFILES " == *" $n "* ]] && echo " [daily]"; } || true)"
   done
+  echo; echo "focused (the default): $FOCUSED_PROFILES"
+  echo "daily: $DAILY_PROFILES"
   echo; echo "smoke steps: $(xargs <<<"$SMOKE_STEPS")"
   echo; echo "screens steps: $(xargs <<<"$SCREENS_STEPS")"
   exit 0
 fi
-[[ "$ONLY_PROFILES" == all ]] && ONLY_PROFILES="$(for p in "${PROFILES[@]}"; do echo "${p%% *}"; done | xargs)"
+case "$ONLY_PROFILES" in
+  all) ONLY_PROFILES="$(for p in "${PROFILES[@]}"; do echo "${p%% *}"; done | xargs)" ;;
+  focused) ONLY_PROFILES="$FOCUSED_PROFILES" ;;
+  daily) ONLY_PROFILES="$DAILY_PROFILES" ;;
+esac
 read -r -a RUN_PROFILES <<<"$(tr ',' ' ' <<<"${ONLY_PROFILES:-$DEFAULT_PROFILES}")"
 for n in "${RUN_PROFILES[@]}"; do profile_line "$n" >/dev/null || die "unknown profile: $n (see --list)"; done
 

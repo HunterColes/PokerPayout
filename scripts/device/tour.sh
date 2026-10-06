@@ -476,6 +476,7 @@ s_invalid_setup() {
   # PP-020: an invalid setup says why and offers the nearest valid round length
   ui set-text has=Levels class=EditText --value 25
   ui enter
+  ui scroll-to "Use 20-min rounds (9 levels)" --max 4   # under the verdict, can be below the fold
   ui assert-text "text~=Can't build blinds" "text~=doesn't divide into 25-minute rounds" "Use 20-min rounds (9 levels)"
 }
 s_invalid_setup_fixed() {
@@ -930,6 +931,173 @@ s_hand_ranks() {
   ui scroll-to "re=High card" --max 6
   ui assert-text "re=High card" "re=17\.4%" "re=kicker"
 }
+# Seat draw (S14, PP-036) ----------------------------------------------------
+s_seat_draw() {
+  # Seat draw opens from the Tools list with the Bank's players (Player 1 is Alice since the Bank
+  # steps), nothing drawn yet, and Tools still selected.
+  ui back                                      # Hand ranks -> the Tools list
+  ui scroll-to "text=Seat draw" --max 4
+  ui tap "text=Seat draw"
+  ui assert-text "text=Seat draw" desc=Back "text=From the Bank" "re=^Alice, Player 2" "text=Draw seats" \
+    "re=^[0-9]+ tables?( of [0-9]+|: .+)$" || return 1
+  require_tab_selected Tools || return 1
+  seat_names "$PP_UI_LAST_XML" > "$OUT/.seat-names.txt"
+  echo "players: $(cat "$OUT/.seat-names.txt")"
+}
+# The players line on the seat draw screen ("Alice, Player 2, ..."), from a UI dump.
+seat_names() { # $1 = ui dump
+  python3 - "$1" <<'PY'
+import sys, xml.etree.ElementTree as ET
+line = next((n.get("text") for n in ET.parse(sys.argv[1]).iter("node") if (n.get("text") or "").startswith("Alice, ")), None)
+if line is None:
+    sys.exit("[ui] FAIL no players line on screen")
+print(line)
+PY
+}
+# Every seat on the seat draw screen into $1, sorted: TalkBack's one stop per seat ("Seat 2, Alice,
+# table 1, King of spades, Button") and the "Button: Alice, seat 2" lines. A dump only holds what is
+# on screen, so it reads a page at a time down the screen, then scrolls back to the top.
+seat_lines() { # $1 = output file
+  local page
+  : > "$1"
+  for page in 1 2 3 4; do
+    ui dump --out "$OUT/.seats.xml" >/dev/null
+    python3 - "$OUT/.seats.xml" >> "$1" <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+for n in ET.parse(sys.argv[1]).iter("node"):
+    for key in ("content-desc", "text"):
+        value = n.get(key) or ""
+        if re.match(r"^(Seat \d+, .+, table \d+|Button: .+, seat \d+$)", value):
+            print(value)
+PY
+    ui scroll down >/dev/null
+  done
+  ui scroll up --times 4 >/dev/null
+  sort -u -o "$1" "$1"
+}
+# Checks a draw read by seat_lines ($1) against the players ($2, "Alice, Player 2, ..."): everyone
+# seated once, seats from 1 at every table, tables within one of each other. With $3 = 1 (dealt):
+# every seat has a card, the high card has the button (a tie on rank goes by suit, spades first),
+# "Button: NAME, seat N" names it, and the next seats post the blinds (heads-up: the button posts
+# the small blind). Before the deal no seat has a card or a pill.
+check_seat_draw() { # $1 = seat lines, $2 = players file, $3 = dealt (0/1)
+  python3 - "$1" "$2" "$3" <<'PY'
+import collections, re, sys
+lines = open(sys.argv[1], encoding="utf-8").read().splitlines()
+players = open(sys.argv[2], encoding="utf-8").read().strip().split(", ")
+dealt = sys.argv[3] == "1"
+RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King", "Ace"]
+SUITS = ["clubs", "diamonds", "hearts", "spades"]          # the house order, lowest first
+card_re = re.compile(r"^(Ace|King|Queen|Jack|\d+) of (spades|hearts|diamonds|clubs)$")
+tables, buttons = collections.defaultdict(dict), {}
+for line in lines:
+    seat = re.match(r"^Seat (\d+), (.+?), table (\d+)(?:, (.*))?$", line)
+    if seat:
+        rest = (seat.group(4) or "").split(", ") if seat.group(4) else []
+        tables[int(seat.group(3))][int(seat.group(1))] = (seat.group(2), rest)
+    button = re.match(r"^Button: (.+), seat (\d+)$", line)
+    if button:
+        buttons[button.group(1)] = int(button.group(2))
+def fail(message):
+    sys.exit("[ui] FAIL " + message)
+seated = sorted(name for table in tables.values() for name, _ in table.values())
+if seated != sorted(players):
+    fail("seated %s, the players are %s" % (seated, players))
+if sorted(tables) != list(range(1, len(tables) + 1)):
+    fail("tables %s" % sorted(tables))
+sizes = [len(t) for _, t in sorted(tables.items())]
+if max(sizes) - min(sizes) > 1:
+    fail("tables not balanced: %s" % sizes)
+for number, table in sorted(tables.items()):
+    k = len(table)
+    if sorted(table) != list(range(1, k + 1)):
+        fail("table %d seats %s" % (number, sorted(table)))
+    if not dealt:
+        if any(rest for _, rest in table.values()):
+            fail("table %d shows cards or pills before the deal: %s" % (number, table))
+        print("table %d: %s" % (number, ", ".join("%d %s" % (s, table[s][0]) for s in sorted(table))))
+        continue
+    cards = {}
+    for s, (name, rest) in table.items():
+        card = card_re.match(rest[0]) if rest else None
+        if card is None:
+            fail("table %d seat %d has no card: %s" % (number, s, rest))
+        cards[s] = (RANKS.index(card.group(1)), SUITS.index(card.group(2)))
+    high = max(cards, key=cards.get)
+    small = high if k == 2 else high % k + 1
+    big = small % k + 1
+    want = {s: [] for s in table}
+    want[high].append("Button")
+    want[small].append("Small blind")
+    want[big].append("Big blind")
+    for s, (name, rest) in table.items():
+        if rest[1:] != want[s]:
+            fail("table %d seat %d (%s) shows %s, expected %s" % (number, s, name, rest[1:], want[s]))
+    if buttons.get(table[high][0]) != high:
+        fail("table %d: no 'Button: %s, seat %d' line (have %s)" % (number, table[high][0], high, buttons))
+    print("table %d: %s; button seat %d (%s), small blind %d, big blind %d" % (
+        number, ", ".join("%d %s %s" % (s, table[s][0], table[s][1][0]) for s in sorted(table)), high,
+        table[high][1][0], small, big))
+if dealt and len(buttons) != len(tables):
+    fail("%d button lines for %d tables" % (len(buttons), len(tables)))
+if not dealt and buttons:
+    fail("a button line before the deal: %s" % buttons)
+PY
+}
+s_seat_draw_seats() {
+  # Two tables: seats per table down to half the players (three at least), then draw.
+  local players per seats
+  players=$(( $(tr -cd ',' < "$OUT/.seat-names.txt" | wc -c) + 1 ))
+  per=$(( (players + 1) / 2 ))
+  if (( per < 3 )); then per=3; fi
+  for (( seats = 9; seats > per; seats-- )); do ui tap "desc=Decrease Seats per table"; done
+  ui assert-text "re=^[0-9]+ tables?( of [0-9]+|: .+)$" || return 1
+  ui tap "text=Draw seats"
+  ui assert-text "text=Deal for the button" "text=Redraw seats" "text=TABLE 1" "desc=Share the seats" \
+    "re=^Seat 1, .+, table 1$" || return 1
+  seat_lines "$OUT/.seats-drawn.txt"
+  check_seat_draw "$OUT/.seats-drawn.txt" "$OUT/.seat-names.txt" 0
+}
+s_seat_draw_button() {
+  # The classic draw for the button: a card face up to each seat, the high card takes it, the rule
+  # is on screen, and the button seat is named per table with its blinds.
+  ui tap "text=Deal for the button"
+  ui assert-text "re=^Button: .+, seat [0-9]+$" "text=Deal again" "text~=High card gets the button" || return 1
+  seat_lines "$OUT/.seats-dealt.txt"
+  check_seat_draw "$OUT/.seats-dealt.txt" "$OUT/.seat-names.txt" 1
+}
+s_seat_draw_undo() {
+  # Redraw applies at once with Undo on the snackbar; Undo brings the dealt draw back exactly.
+  ui tap "text=Redraw seats"
+  ui assert-text "text=Seats redrawn" text=UNDO "text=Deal for the button" || return 1
+  ui tap text=UNDO
+  ui wait "text=Deal again" || return 1
+  ui wait-gone text=UNDO --timeout 15 || return 1
+  seat_lines "$OUT/.seats-undone.txt"
+  diff "$OUT/.seats-dealt.txt" "$OUT/.seats-undone.txt" || { echo "[ui] FAIL Undo didn't bring the draw back"; return 1; }
+  ui assert-text "re=^Button: .+, seat [0-9]+$"
+}
+s_seat_draw_share() {
+  # Share hands the draw to the system share sheet as plain text (ACTION_SEND); Back closes the
+  # sheet and leaves the draw on screen.
+  local focus="" try
+  ui tap "desc=Share the seats"
+  for try in $(seq 20); do
+    focus="$(adb_ shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
+    [[ "$focus" =~ intentresolver|[Cc]hooser|[Rr]esolver ]] && break
+    sleep 0.5
+  done
+  echo "focus: $focus"
+  [[ "$focus" =~ intentresolver|[Cc]hooser|[Rr]esolver ]] || { echo "[ui] FAIL the share sheet didn't open"; return 1; }
+  ui back
+  ui assert-text "text=Seat draw" "text=TABLE 1" "re=^Button: .+, seat [0-9]+$" "desc=Share the seats"
+}
+s_seat_draw_back() {
+  # Back returns to the Tools list, Tools still selected
+  ui back
+  ui assert-text text=Odds "text=Hand ranks" "text=Seat draw" || return 1
+  require_tab_selected Tools
+}
 s_odds_empty() {
   # The Settings volume dialog may still be open: the dump only sees a dialog's window, so if the
   # Odds tile isn't there, close the dialog first.
@@ -1250,6 +1418,12 @@ step tools                "Tools tab: tool list and Sound (S7)"                 
 step sound-off            "Sound off: switch off, volume and chime rest"        s_sound_off
 step sound-on             "Sound back on; test chime"                           s_sound_on
 step hand-ranks           "Hand ranks (S12): how often by the river, kickers"   s_hand_ranks
+step seat-draw            "Seat draw (S14): the Bank's players, Tools selected" s_seat_draw
+step seat-draw-seats      "Draw seats: everyone once, balanced tables"          s_seat_draw_seats
+step seat-draw-button     "Deal for the button: high card, blinds by seat"      s_seat_draw_button
+step seat-draw-undo       "Redraw seats, then Undo brings the draw back"        s_seat_draw_undo
+step seat-draw-share      "Share as text: the share sheet opens and closes"     s_seat_draw_share
+step seat-draw-back       "Back to the Tools list"                              s_seat_draw_back
 step odds-empty           "Odds: empty table, first slot waiting"              s_odds_empty
 step odds-card-picker     "Docked keypad: ranks, then suits that wait"          s_card_picker
 step odds-hole-cards      "Keypad: AsKs vs QhQd, auto-advance to the flop"      s_hole_cards

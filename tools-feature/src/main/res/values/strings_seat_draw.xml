@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Seat draw (S14, PP-036). Suit symbols carry U+FE0E so phones draw them as text, not emoji. -->
+    <string name="seat_draw_title">Seat draw</string>
+    <plurals name="seat_draw_players_count">
+        <item quantity="one">%1$d player</item>
+        <item quantity="other">%1$d players</item>
+    </plurals>
+    <plurals name="seat_draw_tables_count">
+        <item quantity="one">%1$d table</item>
+        <item quantity="other">%1$d tables</item>
+    </plurals>
+    <!-- "10 players · 2 tables" -->
+    <string name="seat_draw_subtitle">%1$s · %2$s</string>
+    <string name="seat_draw_share">Share the seats</string>
+
+    <!-- Players -->
+    <string name="seat_draw_whos_playing">Who\'s playing</string>
+    <string name="seat_draw_players">Players</string>
+    <string name="seat_draw_from_bank">From the Bank</string>
+    <string name="seat_draw_changed">Changed for this draw</string>
+    <string name="seat_draw_seats_per_table">Seats per table</string>
+    <!-- The folded card once there is a draw: "10 players · 9 per table · from the Bank" -->
+    <string name="seat_draw_players_summary">%1$s\u00A0· %2$d per table\u00A0· %3$s</string>
+    <string name="seat_draw_summary_from_bank">from the Bank</string>
+    <string name="seat_draw_summary_changed">changed for this draw</string>
+    <string name="seat_draw_players_show">Show players</string>
+    <string name="seat_draw_players_hide">Hide players</string>
+    <!-- "1 table of 9", "2 tables of 5" -->
+    <plurals name="seat_draw_plan_even">
+        <item quantity="one">%1$d table of %2$d</item>
+        <item quantity="other">%1$d tables of %2$d</item>
+    </plurals>
+    <!-- "3 tables: 7, 6 and 6" -->
+    <string name="seat_draw_plan_uneven">%1$d tables: %2$s</string>
+    <string name="seat_draw_list_and">%1$s and %2$s</string>
+    <string name="seat_draw_edit_names">Edit names</string>
+    <string name="seat_draw_names_done">Done</string>
+    <string name="seat_draw_use_bank">Use the Bank\'s names</string>
+    <!-- A new player before anyone names them, and the TalkBack name of each name field -->
+    <string name="seat_draw_default_player">Player %1$d</string>
+    <string name="seat_draw_name_label">Player %1$d name</string>
+
+    <!-- The draw -->
+    <string name="seat_draw_draw_seats">Draw seats</string>
+    <string name="seat_draw_redraw_seats">Redraw seats</string>
+    <string name="seat_draw_deal_button">Deal for the button</string>
+    <string name="seat_draw_deal_again">Deal again</string>
+    <string name="seat_draw_how">Seats are drawn at random, and the tables balanced: their sizes differ by at most one.</string>
+    <string name="seat_draw_rule">High card gets the button. If ranks tie, the suit decides: ♠︎ beats\u00A0♥︎ beats\u00A0♦︎ beats\u00A0♣︎.</string>
+    <string name="seat_draw_rule_spoken">High card gets the button. If ranks tie, the suit decides: spades, then hearts, then diamonds, then clubs.</string>
+    <string name="seat_draw_stale">The players changed since this draw. Redraw seats to seat everyone.</string>
+
+    <!-- A table -->
+    <string name="seat_draw_table">Table %1$d</string>
+    <!-- "Button: Bob, seat 5" -->
+    <string name="seat_draw_button_line">Button: %1$s, seat %2$d</string>
+    <!-- "Tie on kings: K♠ wins on suit." -->
+    <string name="seat_draw_tie">Tie on %1$s: %2$s wins on suit.</string>
+    <string name="seat_draw_role_button">Button</string>
+    <string name="seat_draw_role_small_blind">Small blind</string>
+    <string name="seat_draw_role_big_blind">Big blind</string>
+    <!-- TalkBack, one stop per seat: "Seat 3, Alice, table 1" -->
+    <string name="seat_draw_seat_description">Seat %1$d, %2$s, table %3$d</string>
+    <!-- Appended for TalkBack: ", King of spades", ", button" -->
+    <string name="seat_draw_description_more">%1$s, %2$s</string>
+
+    <!-- What the ViewModel shows itself -->
+    <string name="seat_draw_snackbar_redrawn">Seats redrawn</string>
+    <string name="seat_draw_snackbar_redealt">Button dealt again</string>
+    <string name="seat_draw_undo">Undo</string>
+
+    <!-- Share as text -->
+    <string name="seat_draw_share_heading">Seat draw: %1$s at %2$s</string>
+    <string name="seat_draw_share_seat">%1$d. %2$s</string>
+    <!-- "2. Marcus · button" -->
+    <string name="seat_draw_share_seat_role">%1$d. %2$s · %3$s</string>
+    <string name="seat_draw_share_button">button</string>
+    <string name="seat_draw_share_small_blind">small blind</string>
+    <string name="seat_draw_share_big_blind">big blind</string>
+    <string name="seat_draw_share_button_small_blind">button and small blind</string>
+    <!-- "Button: Marcus, seat 2, with K♠" -->
+    <string name="seat_draw_share_button_line">Button: %1$s, seat %2$d, with %3$s</string>
+</resources>

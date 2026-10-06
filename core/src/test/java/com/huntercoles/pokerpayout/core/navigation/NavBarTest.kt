@@ -51,6 +51,7 @@ class NavBarTest {
             NavigationDestination.OddsCalculator,
             NavigationDestination.HandRanks,
             NavigationDestination.ChipCalculator,
+            NavigationDestination.SeatDraw,
         ).forEach { assertEquals("$it", NavTab.Tools, it.tab) }
         assertNull(NavigationDestination.Back.tab)
     }
@@ -99,6 +100,7 @@ class NavBarTest {
             NavigationDestination.OddsCalculator,
             NavigationDestination.HandRanks,
             NavigationDestination.ChipCalculator,
+            NavigationDestination.SeatDraw,
         ).forEach { destination ->
             navigate(destination)
             compose.onNodeWithText(SCREEN + destination).assertExists()
@@ -189,6 +191,7 @@ class NavBarTest {
                 builder.composable<NavigationDestination.OddsCalculator> { Text(SCREEN + NavigationDestination.OddsCalculator) }
                 builder.composable<NavigationDestination.HandRanks> { Text(SCREEN + NavigationDestination.HandRanks) }
                 builder.composable<NavigationDestination.ChipCalculator> { Text(SCREEN + NavigationDestination.ChipCalculator) }
+                builder.composable<NavigationDestination.SeatDraw> { Text(SCREEN + NavigationDestination.SeatDraw) }
             }
         }
     }

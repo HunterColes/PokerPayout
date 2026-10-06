@@ -500,6 +500,40 @@ s_ready_ticket() {
   ui assert-text "text~=Level 1 · ready" text=20:00 "text=25 / 50" "text~=next 50 / 100" "text~=9 levels · 2 breaks" \
     "text~=3:20 in all"
 }
+# Presets (PP-032): save the night's setup under a name, change a value, load the preset back, and
+# the value returns. The row sits under the ticket; the sheet is modal, so the steps tap through it.
+s_preset_save() {
+  ui scroll-to "text=Presets" --dir up --max 4
+  ui tap "text=Presets"
+  ui wait "text=Save as preset…"
+  ui tap "text=Save as preset…"
+  ui wait "desc=Preset name"
+  ui set-text "desc=Preset name" --value Friday
+  ui tap "text=Save preset"
+  ui wait-gone "text=Save preset"
+  ui assert-text "text=Friday saved" UNDO || return 1
+  ui wait-gone text=UNDO --timeout 12            # the snackbar gone, so the next one shows at once
+  # Change a value the preset holds: the buy-in, 12.50 -> 30
+  ui scroll-to has=Buy-in class=EditText --dir up --max 4
+  ui set-text has=Buy-in class=EditText --value 30
+  ui enter
+  ui assert-text "has=Buy-in|30"
+}
+s_preset_load() {
+  # The setup now differs from the preset: loading asks once, then the buy-in is 12.50 again
+  ui scroll-to "text=Presets" --dir up --max 4
+  ui tap "text=Presets"
+  ui wait "text=Friday"
+  ui assert-text "text~=Last used" "text=Share setup as text" || return 1
+  ui tap "text=Friday"
+  ui assert-text "text=Load Friday?" "text=Keep mine" "text=Load preset" || return 1
+  ui tap "text=Load preset"
+  ui wait-gone "text=Load Friday?"
+  ui assert-text "text=Friday loaded" "has=Buy-in|12.50" || return 1
+  ui wait-gone text=UNDO --timeout 12            # so the snackbar can't cover Start
+  ui scroll up --times 4
+  ui assert-text "has=Buy-in|12.50" "text~=Level 1 · ready" "text=20:00"
+}
 s_start_fold() {
   # Start folds the setup into the clock (S1 v2 -> S2): the setup becomes a one-line strip, the
   # ticket the running clock with its controls
@@ -1487,6 +1521,8 @@ step invalid-setup        "25-minute rounds: reason and nearest fix shown"      
 step invalid-setup-fixed  "Apply the fix: 20-minute rounds"                     s_invalid_setup_fixed
 step breaks               "Breaks every 4 levels, note 'Last rebuy'"            s_breaks
 step ready-ticket         "The ticket: level 1 ready, 20:00, 25 / 50, 3:20"     s_ready_ticket
+step preset-save          "Save as preset 'Friday', then change the buy-in"     s_preset_save
+step preset-load          "Load Friday back: asks once, the buy-in returns"     s_preset_load
 step start-fold           "Start: setup folds into the running clock (S2)"      s_start_fold
 step nudge                "-1 and +1: a minute off the level, and back"         s_nudge
 step timer-next-level     "Skip to level 2"                                     s_timer_next_level

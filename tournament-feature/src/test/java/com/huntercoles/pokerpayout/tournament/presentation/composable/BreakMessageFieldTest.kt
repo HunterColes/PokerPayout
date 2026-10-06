@@ -11,8 +11,10 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.requestFocus
@@ -65,4 +67,31 @@ class BreakMessageFieldTest {
         assertEquals(0, resetClicks)
     }
 
+    @Test
+    fun `a late saved value doesn't undo typing, and an outside change shows once the field is left`() {
+        var saved by mutableStateOf("")
+        var typed = ""
+        compose.setContent {
+            Column {
+                Button(onClick = {}) { Text("Elsewhere") }
+                BreakMessageField(message = saved, onChange = { typed = it }, isLocked = false)
+            }
+        }
+        val field = compose.onNode(hasSetTextAction())
+        field.requestFocus()
+        field.performTextInput("Last rebuy")
+        assertEquals("Last rebuy", typed)
+
+        // The ViewModel's copy arrives a step behind the keyboard: it must not overwrite the field.
+        saved = "Last r"
+        compose.waitForIdle()
+        field.assertTextEquals("Break note", "Last rebuy", includeEditableText = true)
+
+        // Not typing any more: an outside change replaces the text.
+        compose.onNodeWithText("Elsewhere").requestFocus()
+        field.assertIsNotFocused()
+        saved = "Coffee"
+        compose.waitForIdle()
+        field.assertTextEquals("Break note", "Coffee", includeEditableText = true)
+    }
 }

@@ -36,6 +36,18 @@ class OddsCalculatorPreferences @Inject constructor(
         prefs.edit().putString(COMMUNITY_CARDS_KEY, cards).apply()
     }
 
+    /** Whether seat [playerId] (1-based) folded; its cards are dead. */
+    fun getPlayerFolded(playerId: Int): Boolean = prefs.getBoolean("$PLAYER_FOLDED_PREFIX$playerId", false)
+
+    fun setPlayerFolded(playerId: Int, folded: Boolean) {
+        prefs.edit().putBoolean("$PLAYER_FOLDED_PREFIX$playerId", folded).apply()
+    }
+
+    /** Cards drawn with blue diamonds and green clubs (a display preference). */
+    var fourColourDeck: Boolean
+        get() = prefs.getBoolean(FOUR_COLOUR_DECK_KEY, false)
+        set(enabled) = prefs.edit().putBoolean(FOUR_COLOUR_DECK_KEY, enabled).apply()
+
     fun resetAllData() {
         prefs.edit().clear().apply()
     }
@@ -59,6 +71,8 @@ class OddsCalculatorPreferences @Inject constructor(
         private const val PLAYER_COUNT_KEY = "player_count"
         private const val PLAYER_CARDS_PREFIX = "player_cards_"
         private const val COMMUNITY_CARDS_KEY = "community_cards"
+        private const val PLAYER_FOLDED_PREFIX = "player_folded_"
+        private const val FOUR_COLOUR_DECK_KEY = "four_colour_deck"
         private const val DEFAULT_PLAYER_COUNT = 2
     }
 }

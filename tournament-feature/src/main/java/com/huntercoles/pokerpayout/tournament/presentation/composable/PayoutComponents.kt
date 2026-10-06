@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -99,6 +99,7 @@ private fun PayoutRow(row: PayoutPlace, playerName: String?) {
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 26.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -106,7 +107,9 @@ private fun PayoutRow(row: PayoutPlace, playerName: String?) {
             color = PokerColors.PokerGold,
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp,
-            modifier = Modifier.width(44.dp)
+            softWrap = false,
+            // The columns grow with large text rather than break "2nd" or an amount across lines
+            modifier = Modifier.widthIn(min = 44.dp)
         )
         Text(
             text = playerName.orEmpty(),
@@ -121,7 +124,8 @@ private fun PayoutRow(row: PayoutPlace, playerName: String?) {
             color = PokerColors.CardWhite.copy(alpha = 0.7f),
             fontSize = 13.sp,
             textAlign = TextAlign.End,
-            modifier = Modifier.width(64.dp)
+            softWrap = false,
+            modifier = Modifier.widthIn(min = 64.dp)
         )
         Text(
             text = FormatUtils.formatCents(row.amountCents),
@@ -129,7 +133,8 @@ private fun PayoutRow(row: PayoutPlace, playerName: String?) {
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp,
             textAlign = TextAlign.End,
-            modifier = Modifier.width(104.dp)
+            softWrap = false,
+            modifier = Modifier.widthIn(min = 104.dp)
         )
     }
 }

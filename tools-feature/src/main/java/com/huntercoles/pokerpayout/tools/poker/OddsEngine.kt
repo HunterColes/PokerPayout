@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.job
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 
 /**
@@ -51,6 +52,54 @@ class OddsEngine(
     /** Runs [calculate] to completion and returns the final result. */
     suspend fun finalResult(request: OddsRequest, settings: OddsSettings = OddsSettings()): OddsResult =
         calculate(request, settings).last()
+
+    /**
+     * For every card that can come next (the turn on a flop, the river on a turn): each seat's
+     * exact equity once that card is out, and who leads then. Also says who is ahead right now
+     * ([NextCardBreakdown.currentLeader]). A heads-up flop takes 45 x 44 showdowns.
+     *
+     * @param budget the most hand evaluations to spend in all; random hands multiply the work.
+     * @throws OddsInputException if the board isn't a flop or a turn, the request is invalid, or
+     *   the work would exceed [budget].
+     */
+    suspend fun nextCardBreakdown(
+        request: OddsRequest,
+        budget: Long = OddsSettings.DEFAULT_EXACT_BUDGET,
+    ): NextCardBreakdown = withContext(dispatcher) {
+        val plan = Plan.of(request)
+        requireInput(request.board.size == FLOP_CARDS || request.board.size == FLOP_CARDS + 1) {
+            "Next-card odds need a flop or a turn."
+        }
+        val perCard = Plan.of(request.copy(board = request.board + plan.deck[0])).exactEvaluations()
+        requireInput(saturatingMultiply(perCard, plan.deck.size.toLong()) <= budget) {
+            "Too many unknown cards to work out every next card."
+        }
+        val job = coroutineContext.job
+        val cards = plan.deck.map { card ->
+            async { nextCard(Plan.of(request.copy(board = request.board + card)), card, job) }
+        }.awaitAll()
+        NextCardBreakdown(cards, OddsInsights.madeLeader(request))
+    }
+
+    /** The cards that would put [seat] in the lead next (see [nextCardBreakdown]). */
+    suspend fun outs(request: OddsRequest, seat: Int): List<Int> = nextCardBreakdown(request).outs(seat)
+
+    private fun nextCard(plan: Plan, card: Int, job: Job): NextCard {
+        val groups = plan.groups()
+        val tally = Tally(plan.contestants.size, plan.seatCount, squares = false)
+        if (groups.isEmpty()) {
+            Enumerator(plan, groups, job, tally).leaf()
+        } else {
+            for (first in 0..plan.deck.size - groups[0].size) Enumerator(plan, groups, job, tally).runFrom(first)
+        }
+        val best = tally.shares.max()
+        val leaders = tally.shares.indices.filter { tally.shares[it] == best }
+        val equity = DoubleArray(plan.seatCount)
+        plan.contestants.forEachIndexed { p, seat ->
+            equity[seat] = PERCENT * tally.shares[p] / (tally.deals.toDouble() * OddsResult.SHARE_UNIT)
+        }
+        return NextCard(card, equity.toList(), leaders.singleOrNull()?.let { plan.contestants[it] })
+    }
 
     // ---------------------------------------------------------------- exact enumeration
 
@@ -350,6 +399,7 @@ class OddsEngine(
 
         private const val BOARD = -1
         private const val BOARD_CARDS = 5
+        private const val FLOP_CARDS = 3
         private const val PERCENT = 100.0
         private val CATEGORIES = HandCategory.entries.size
 
@@ -380,7 +430,7 @@ class OddsEngine(
 
         /** SplitMix64 finalizer: well-spread, independent per-batch seeds. */
         @Suppress("MagicNumber") // SplitMix64's published shifts and multipliers
-        private fun mix(seed: Long, batch: Int): Long {
+        internal fun mix(seed: Long, batch: Int): Long {
             var z = seed + (batch + 1).toLong() * -0x61c8864680b583ebL
             z = (z xor (z ushr 30)) * -0x40a7b892e31b1a47L
             z = (z xor (z ushr 27)) * -0x6b2fb644ecceee15L

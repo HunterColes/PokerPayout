@@ -1,6 +1,8 @@
 package com.huntercoles.pokerpayout.core.design.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.FilterChip
@@ -26,7 +28,12 @@ private fun pokerChipColors() = FilterChipDefaults.filterChipColors(
     disabledSelectedContainerColor = PokerColors.PokerGold.copy(alpha = 0.5f)
 )
 
-/** One-tap payout presets. Shared by the Tournament tab's Payouts panel and this editor. */
+/**
+ * One-tap payout presets. Shared by the Payouts panel (Tournament and Payouts tabs) and this editor.
+ * The chips wrap onto a second line when they don't fit (a narrow phone, large text) instead of
+ * being cut off ("Flat" showed as "F" on a 360 dp phone).
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PresetChips(
     selected: PayoutPreset?,
@@ -34,7 +41,7 @@ fun PresetChips(
     onSelect: (PayoutPreset) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         PayoutPreset.entries.forEach { preset ->
             FilterChip(
                 selected = preset == selected,

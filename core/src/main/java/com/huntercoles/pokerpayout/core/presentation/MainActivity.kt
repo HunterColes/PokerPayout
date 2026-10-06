@@ -1,43 +1,26 @@
 package com.huntercoles.pokerpayout.core.presentation
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import dagger.hilt.android.AndroidEntryPoint
-import com.huntercoles.pokerpayout.core.R
-import com.huntercoles.pokerpayout.core.design.PokerPayoutTheme
-import com.huntercoles.pokerpayout.core.design.PokerColors
-import com.huntercoles.pokerpayout.core.navigation.BottomNavigationItem
+import com.huntercoles.pokerpayout.core.design.PokerTheme
+import com.huntercoles.pokerpayout.core.design.components.SnackbarController
 import com.huntercoles.pokerpayout.core.navigation.NavigationDestination
 import com.huntercoles.pokerpayout.core.navigation.NavigationFactory
-import com.huntercoles.pokerpayout.core.navigation.NavigationHost
 import com.huntercoles.pokerpayout.core.navigation.NavigationManager
-import com.huntercoles.pokerpayout.core.navigation.bottomNavigationItems
-import com.huntercoles.pokerpayout.core.preferences.ThemePreferences
+import com.huntercoles.pokerpayout.core.navigation.PokerNavigationShell
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
-import com.huntercoles.pokerpayout.core.preferences.isDarkTheme
 import com.huntercoles.pokerpayout.core.utils.collectWithLifecycle
+import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -50,38 +33,31 @@ class MainActivity : ComponentActivity() {
     lateinit var navigationManager: NavigationManager
 
     @Inject
-    lateinit var themePreferences: ThemePreferences
+    lateinit var timerPreferences: TimerPreferences
 
     @Inject
-    lateinit var timerPreferences: TimerPreferences
+    lateinit var snackbarController: SnackbarController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Draw behind transparent system bars with light icons: the app is dark only. (The old
+        // theme painted the status bar green with dark icons on it, B13.) The shell and each
+        // screen's top bar pad for the bars.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+        )
         setContent {
-            val isDarkTheme by themePreferences.darkModeEnabled.collectAsState(initial = themePreferences.getDarkModePreference())
             KeepScreenOnWhileClockRuns(timerPreferences)
-            
-            PokerPayoutTheme(
-                darkTheme = isDarkTheme
-            ) {
+
+            PokerTheme {
                 val navController = rememberNavController()
 
-                Scaffold(
-                    topBar = { MainTopAppBar() },
-                    bottomBar = { 
-                        MainBottomNavigationBar(
-                            navController = navController,
-                            navigationManager = navigationManager
-                        )
-                    },
-                ) {
-                    NavigationHost(
-                        modifier = Modifier
-                            .padding(it),
-                        navController = navController,
-                        factories = navigationFactories,
-                    )
-                }
+                PokerNavigationShell(
+                    navController = navController,
+                    factories = navigationFactories,
+                    snackbarHostState = snackbarController.hostState,
+                )
 
                 navigationManager
                     .navigationEvent
@@ -106,71 +82,5 @@ private fun KeepScreenOnWhileClockRuns(timerPreferences: TimerPreferences) {
     DisposableEffect(running) {
         view.keepScreenOn = running
         onDispose { view.keepScreenOn = false }
-    }
-}
-
-@Composable
-private fun MainTopAppBar() {
-    CenterAlignedTopAppBar(
-        title = {
-            Text(
-                text = "Poker Payout",
-                fontWeight = FontWeight.Medium,
-                color = PokerColors.PokerGold
-            )
-        },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = PokerColors.FeltGreen,
-            titleContentColor = PokerColors.PokerGold,
-        ),
-    )
-}
-
-@Composable
-private fun MainBottomNavigationBar(
-    navController: androidx.navigation.NavHostController,
-    navigationManager: NavigationManager,
-) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-    val focusManager = LocalFocusManager.current
-
-    NavigationBar(
-        containerColor = PokerColors.DarkGreen,
-        contentColor = PokerColors.CardWhite
-    ) {
-        bottomNavigationItems.forEach { item ->
-            NavigationBarItem(
-                icon = {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = stringResource(item.label),
-                        tint = if (currentDestination?.hasRoute(item.destination::class) == true) 
-                            PokerColors.PokerGold else PokerColors.CardWhite
-                    )
-                },
-                label = { 
-                    Text(
-                        text = stringResource(item.label),
-                        color = if (currentDestination?.hasRoute(item.destination::class) == true) 
-                            PokerColors.PokerGold else PokerColors.CardWhite
-                    )
-                },
-                selected = currentDestination?.hasRoute(item.destination::class) == true,
-                onClick = {
-                    focusManager.clearFocus()
-                    navigationManager.navigate(object : com.huntercoles.pokerpayout.core.navigation.NavigationCommand {
-                        override val destination = item.destination
-                    })
-                },
-                colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                    selectedIconColor = PokerColors.PokerGold,
-                    selectedTextColor = PokerColors.PokerGold,
-                    indicatorColor = PokerColors.AccentGreen,
-                    unselectedIconColor = PokerColors.CardWhite,
-                    unselectedTextColor = PokerColors.CardWhite
-                )
-            )
-        }
     }
 }

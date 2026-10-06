@@ -94,3 +94,9 @@ object Cards {
 
     fun format(cards: Iterable<Int>): String = cards.joinToString(" ") { format(it) }
 }
+
+/** The rank of [card] (see [Cards]), `0` (deuce) to `12` (ace). */
+fun rankOf(card: Int): Int = card / Cards.SUITS
+
+/** The suit of [card] (see [Cards]), `0..3`: clubs, diamonds, hearts, spades. */
+fun suitOf(card: Int): Int = card % Cards.SUITS

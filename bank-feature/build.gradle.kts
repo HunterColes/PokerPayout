@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -24,6 +25,11 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    testOptions {
+        // Robolectric needs the merged resources (fonts, strings) to render composables.
+        unitTests.isIncludeAndroidResources = true
     }
 
     buildTypes {
@@ -63,6 +69,8 @@ dependencies {
     implementation(libs.navigation.hilt)
     implementation(libs.timber)
     testImplementation(libs.bundles.common.test)
+    testImplementation(libs.bundles.screenshot.test)
+    testImplementation(testFixtures(project(":core"))) // device matrix, layout checks, goldens
     testImplementation(libs.test.robolectric)
     testImplementation(libs.test.androidx.core)
     androidTestImplementation(libs.bundles.common.android.test)
@@ -70,4 +78,10 @@ dependencies {
 
     ksp(libs.hilt.compiler)
     kspAndroidTest(libs.hilt.compiler)
+}
+
+// Screenshot goldens under src/test/screenshots, verified by testDebugUnitTest and re-recorded with
+// recordRoborazziDebug, as in core. See docs/TESTING.md, section 9.
+roborazzi {
+    outputDir.set(file("src/test/screenshots"))
 }

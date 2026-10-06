@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
@@ -60,6 +61,9 @@ fun pokerNavItems(firstTabLabel: String = stringResource(R.string.navigation_tou
     PokerNavItem(stringResource(R.string.navigation_tools), PokerIcons.Wrench),
 )
 
+/** Test tag of the bottom bar, so a test can tell it from the rail. */
+const val POKER_NAV_BAR_TAG = "PokerNavBar"
+
 /**
  * The bottom navigation bar: FeltDeep with a thin DarkGold rail on top. The selected tab gets a
  * gold icon and label on a FeltHigh pill (5.1:1). Sub-screens keep their tab selected (Tools
@@ -87,7 +91,8 @@ fun PokerNavBar(
                     strokeWidth = 1.dp.toPx(),
                 )
             }
-            .windowInsetsPadding(WindowInsets.navigationBars),
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .testTag(POKER_NAV_BAR_TAG),
     ) {
         val tabWidth = maxWidth / items.size.coerceAtLeast(1) - TabPadding * 2
         val labelStyle = rememberFittedStyle(NavLabel, items.map { it.label }, tabWidth, floor = NavLabelMin)
@@ -155,12 +160,13 @@ private fun NavTab(
     }
 }
 
-private const val RAIL_ALPHA = 0.55f
+/** The thin DarkGold line between the nav bar (or rail) and the screen. */
+internal const val RAIL_ALPHA = 0.55f
 private val TabPadding = 2.dp
 
 /** Labels shrink to fit their tab at large font sizes, but never below their unscaled 12 sp. */
-private val NavLabelMin = 12.dp
-private val NavLabel = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.2.sp)
+internal val NavLabelMin = 12.dp
+internal val NavLabel = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.2.sp)
 
 @Preview(name = "PokerNavBar", widthDp = 360, showBackground = true, backgroundColor = 0xFF0B0B0B)
 @Composable

@@ -13,7 +13,8 @@ SELECTORS (several tokens are AND-ed):
     class=EditText class name suffix     re=^\\d+%$  regex on text or content-desc
     has=A|B        smallest node whose subtree contains texts/descs A and B (exact)
     clickable | scrollable | focused | checked | enabled   boolean flags
-    in-scroll      inside a scrolling container (a screen's own "Payouts", not the tab's)
+    in-scroll      inside a scroller (a ScrollView or list, even one whose content fits): a
+                   screen's own "Payouts", not the tab's
 
 COMMANDS
     dump [--out F]                print a compact node list (and save raw XML to F)
@@ -231,6 +232,11 @@ def snapshot():
 
 
 # ----------------------------------------------------------------------------- selectors
+def _scroller(n):
+    # Compose marks a scroller scrollable only while its content overflows; its class stays.
+    return n.flag("scrollable") or n.cls.endswith(("ScrollView", "ListView", "RecyclerView", "GridView"))
+
+
 def _ancestors(n):
     p = n.parent
     while p is not None:
@@ -246,7 +252,7 @@ def compile_selector(tokens):
             preds.append(lambda n, f=tok: n.flag(f))
             continue
         if tok == "in-scroll":   # inside a scrolling container: a screen's own text, not a tab's
-            preds.append(lambda n: any(p.flag("scrollable") for p in _ancestors(n)))
+            preds.append(lambda n: any(_scroller(p) for p in _ancestors(n)))
             continue
         m = re.match(r"^(text|desc|id|class|re|has)(~?=)(.*)$", tok, re.S)
         if not m:

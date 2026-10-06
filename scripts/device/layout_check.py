@@ -276,8 +276,15 @@ def ink_length(img, b, glyph_pitch=False):
         return 0.0
     total = sum(bd[3] - bd[2] + 1 for bd in bands)
     if glyph_pitch:   # a text field: its value is the lowest line (a big floating label can reach
-        bd = bands[-1]  # into the box above it), measured against the glyphs' own height
-        return (bd[3] - bd[2] + 1) / float(bd[1] - bd[0] + 1)
+        bd = bands[-1]  # into the box above it), measured against the glyphs' own height, up to
+        pitch = bd[1] - bd[0] + 1   # the first gap wider than a letter (a dropdown's arrow)
+        cols = sorted({x for y in range(bd[0], bd[1] + 1) for x in rows[y]})
+        end = cols[0]
+        for x in cols[1:]:
+            if x - end > pitch:
+                break
+            end = x
+        return (end - cols[0] + 1) / float(pitch)
     return total / (float(h) / len(bands))
 
 
@@ -327,8 +334,8 @@ def cut_text(runs, rules):
             seen = {}
             for n in nodes:
                 t = n.text.strip()
-                if len(t) < 3 or n.clipped or n.h <= 0:
-                    continue
+                if len(t) < 3 or n.clipped or n.h <= 0 or too_narrow(n, dpx, disp["font_scale"]):
+                    continue   # (a box text-fit already flags is no yardstick for the others)
                 k = (t, n.cls)
                 seen[k] = seen.get(k, 0) + 1
                 groups.setdefault((step,) + k + (seen[k],), []).append((rdir, step_id, n, dpx))

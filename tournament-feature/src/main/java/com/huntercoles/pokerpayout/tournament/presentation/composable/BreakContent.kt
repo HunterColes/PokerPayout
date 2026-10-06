@@ -34,6 +34,7 @@ import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerPill
 import com.huntercoles.pokerpayout.core.design.components.PokerPillTone
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
+import com.huntercoles.pokerpayout.core.utils.ChipSetChips
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
@@ -50,7 +51,7 @@ internal fun BreakContent(uiState: TimerUiState, actions: TournamentActions, wid
     val segment = uiState.currentBreak ?: return
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         BreakHero(uiState, segment, width, heroCap)
-        if (segment.colorUp.isNotEmpty()) ColorUpCard(segment, uiState.colorUpDone, actions.onTimerIntent)
+        if (segment.colorUp.isNotEmpty()) ColorUpCard(segment, uiState.colorUpDone, uiState.chipSet, actions.onTimerIntent)
         if (uiState.purchases.addOnCents > 0) AddOnCard(uiState, actions.openBank)
         ThenCard(uiState)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -115,10 +116,13 @@ private fun closesAddOns(uiState: TimerUiState, segment: BreakSegment): Boolean 
     return first?.number == segment.number
 }
 
-/** The color-up, with real chips: four 25s for one 100, the chip race, then a "done" tick. */
+/**
+ * The color-up, with real chips: four 25s for one 100, the chip race, then a "done" tick. With your
+ * chip set ([chipSet], PP-091 #9) they are your chips, in your colours.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ColorUpCard(segment: BreakSegment, done: Boolean, onIntent: (TimerIntent) -> Unit) {
+private fun ColorUpCard(segment: BreakSegment, done: Boolean, chipSet: ChipSetChips?, onIntent: (TimerIntent) -> Unit) {
     val formatter = rememberChipFormatter()
     val chips = chipList(segment.colorUp, formatter)
     val nextLevel = segment.afterLevel + 1
@@ -142,8 +146,8 @@ private fun ColorUpCard(segment: BreakSegment, done: Boolean, onIntent: (TimerIn
                     color = PokerColors.Chalk,
                 )
             }
-            segment.colorUp.forEach { chip -> ColorUpExchange(chip) }
-            ColorUpSteps(segment.colorUp)
+            segment.colorUpSwaps.forEach { swap -> ColorUpExchange(swap, chipSet) }
+            ColorUpSteps(segment.colorUpSwaps, chipSet)
             PokerButton(
                 text = stringResource(R.string.break_color_up_done),
                 onClick = { onIntent(TimerIntent.MarkColorUpDone()) },

@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.tournament.presentation
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
 import com.huntercoles.pokerpayout.core.utils.BlindSetupProblem
 import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
+import com.huntercoles.pokerpayout.core.utils.ChipSetChips
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockTimeline
@@ -55,6 +56,11 @@ data class TimerUiState(
     val purchases: Purchases = Purchases(),
     /** Breaks whose color-up is ticked off, by the level each follows. */
     val colorUpDoneAfterLevels: Set<Int> = emptySet(),
+    /**
+     * Your chip set (Tools → Chip set) once it is set up: the [timeline]'s color-ups use its chips,
+     * and the break screen draws them in its colours (PP-091 #9). Null: a common home set's chips.
+     */
+    val chipSet: ChipSetChips? = null,
     /**
      * When the scheduled levels and breaks end, as wall-clock millis, if play goes on from now
      * without pausing. Null in overtime and once finished.

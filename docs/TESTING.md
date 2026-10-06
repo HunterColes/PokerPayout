@@ -154,7 +154,7 @@ their labels line up (a row: the bottom bar; a column: the rail), so a screen ti
 word ("Tournament") is never tapped by mistake, and they check which tab is selected. The steps
 are:
 
-1. **Tournament** (29 steps, five of them on the Payouts tab). The tab is one setup page (S1 v2) that folds into the clock on Start.
+1. **Tournament** (30 steps, five of them on the Payouts tab). The tab is one setup page (S1 v2) that folds into the clock on Start.
    * Launch: the ready ticket (LEVEL 1 · READY, 20:00) and Start. Type the buy-in 12.50 one key
      at a time (v1.1.12 turned it into 120.5), bounty 5, and five taps on the players stepper
      (10 players).
@@ -182,6 +182,10 @@ are:
      emulator on its side: the clock must become the table view, landscape, still on level 5;
      `user_rotation 0` brings the clock back upright. The step puts the settings back however it
      ends.
+   * One turn only (PP-094 #2): on its side, ✕ must show the clock upright while the user rotation
+     stays 1; `user_rotation 0` (upright) and then 1 again (on its side) must bring the table view
+     back. The step takes no UI dump between the ✕ and the second turn, since every uiautomator dump
+     sets the user rotation back to the display's, which to the app is the phone turned upright.
    * The strip opens setup over the running clock, money and blinds locked; "Unlock to edit…"
      asks in a sheet first, then opens them; closing locks them again.
    * New tournament… (the menu) asks first; the reset unfolds setup at LEVEL 1 · READY, 20:00,
@@ -229,8 +233,9 @@ are:
 6. **Chip set** (S11, 6 steps; Tools still selected). The piles must add up to the Tournament's
    5,000 and agree with the "N chips a stack · K colours" line (v1.1.12 showed "Total Chips 0");
    the color-up plan from the clock's schedule; 10 greens in the colour sheet must give "Short
-   10 green 25s for 5 players"; reset applies at once with Undo; the stack settings keep 2
-   stacks back and the color-up plan counts 7 stacks in play.
+   10 green 25s for 5 players"; reset applies at once with Undo; the stack settings keep back
+   the Tournament's estimate until the stepper is touched (PP-091 #3; here "no rebuys or
+   add-ons"), then keep 2 stacks back as "your own", and the color-up plan counts 7 stacks in play.
 7. Back to Tournament.
 8. **Rail** (4 steps). `wm density 240` makes the phone's window 720 dp wide: the tabs must
    move to a rail down the left edge (PP-087), with the screen recreated where it was; Tools and
@@ -241,8 +246,10 @@ are:
 9. Check that the app process is still alive.
 
 Phones stay portrait (`AppOrientation` in `core`) except on the Tournament tab while a clock
-exists, where the phone's own rotation turns the clock into the table view; from 600 dp the app
-turns freely (PP-088). The tour checks both the table-view button and a turned emulator. The device matrix (section 10) turns the display on every profile.
+exists, where the phone's own rotation turns the clock into the table view; ✕ there holds the clock
+upright only until the phone is held upright again (PP-094 #2: `OnPhoneUpright` in `core` reads the
+accelerometer with auto-rotate on, the user rotation with it off), so the next turn shows the table
+view again; from 600 dp the app turns freely (PP-088). The tour checks both the table-view button and a turned emulator. The device matrix (section 10) turns the display on every profile.
 
 Every command in a step counts: the step runs with `set -e`, so an assertion that fails in the
 middle of a step fails it, not just the last one. After every step, the tour also fails it if
@@ -554,11 +561,11 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 |---|---|---|---|
 | `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted` | S7: all three, at every scroll position |
 | `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
-| `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end` | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
+| `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end`, `S11_chipset_settings` (the stack settings unfolded, keeping back the Tournament's estimate) | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
 | `tools-feature` | `SeatDrawScreenTest` (+ `SeatDrawExtraGoldenTest`) | `S14_seats_empty`, `S14_seats_one_table`, `S14_seats_two_tables`, `S14_button_draw`; `S14_seats_font2x` at tall@2.0 | All three, at every scroll position of each pane; also the name fields and an out-of-date draw with the players unfolded |
 | `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament: touch targets |
-| `tournament-feature` | `TournamentScreenGoldenTest` | `S1_setup_{before,invalid}`, `S1_fold_300ms`, `S1_running_strip`, `S1_panel_{open,unlocked}`, `S2_clock_{ready,running,paused,final_minutes,overtime,finished}`, `S2_clock_running_font2x`, `S3_table_{running,paused,break}` (landscape cells), `S4_break_{colorup,done,plain}`, `Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet` | All three checks on all 24 cells (the fold frame: none, it is mid-animation) |
-| `tournament-feature` | `TournamentInteractionTest`, `TournamentRotationTest`, `SetupFoldTest` | none | What each control sends; rotation per device class (Robolectric `+land` shows the table view, `+port` the clock, other tabs portrait on phones, tablets free, state kept through recreation); the fold plays once and is cut under Reduce motion |
+| `tournament-feature` | `TournamentScreenGoldenTest` | `S1_setup_{before,invalid}`, `S1_fold_300ms`, `S1_running_strip`, `S1_panel_{open,unlocked}`, `S2_clock_{ready,running,paused,final_minutes,overtime,finished}`, `S2_clock_running_font2x`, `S3_table_{running,paused,break}` (landscape cells), `S4_break_{colorup,done,plain}`, `S4_break_chipset` (the color-up with a chip set set up in Tools, PP-091 #9), `Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet` | All three checks on all 24 cells (the fold frame: none, it is mid-animation) |
+| `tournament-feature` | `TournamentInteractionTest`, `TournamentRotationTest`, `SetupFoldTest` | none | What each control sends; rotation per device class (Robolectric `+land` shows the table view, `+port` the clock, other tabs portrait on phones, tablets free, state kept through recreation; ✕ in a turned table view holds for that turn only, with the phone's hold faked through `LocalPhoneHold`); the fold plays once and is cut under Reduce motion |
 | `tournament-feature` | `PayoutsTabScreenTest` | `S6_payouts_{standard,topheavy,custom,finished}`, `S6_payouts_font2x` | All three, at every scroll position, and locked while the clock runs |
 | `bank-feature` | `BankScreensTest` | `S5_bank_{before_buyins,midgame,rebuys_open,no_rebuys,champion,30players}`, `S5_bank_font2x`, `S5b_knockout_sheet`, `S5b_count_sheet`, `S5c_payout_{champion,second}`, `S5c_pool_breakdown`, `Z2_bank_small`, `Z5_bank_tablet` | All three, at every scroll position. A sheet is rendered as its content over the screen behind, since a modal window doesn't capture under Robolectric |
 | `bank-feature` | `CashScreensTest` | `S13_cash_{balanced,off,settle,player}`, `S13_cash_font2x` | The cash game (M7): all three, at every scroll position, also counting, the split difference, nobody yet and the add-player sheet. The Bank's goldens above show the Tournament / Cash game switch, as the app does |

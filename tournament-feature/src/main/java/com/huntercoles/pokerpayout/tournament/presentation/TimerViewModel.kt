@@ -18,6 +18,8 @@ import com.huntercoles.pokerpayout.core.utils.BlindSetupFix
 import com.huntercoles.pokerpayout.core.utils.BlindSetupProblem
 import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
 import com.huntercoles.pokerpayout.core.utils.BlindStructureInput
+import com.huntercoles.pokerpayout.core.utils.ChipSetChips
+import com.huntercoles.pokerpayout.core.utils.ChipSetProvider
 import com.huntercoles.pokerpayout.core.utils.SmallestChipChoices
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSettings
@@ -44,15 +46,20 @@ import javax.inject.Inject
  * The tick loop only decides when to look; a late, skipped or sleep-delayed tick can't make the clock
  * drift. The anchor is saved when the clock starts, pauses, jumps, is nudged, finishes or resets, so a
  * killed process resumes exactly where the clock would be, overtime included.
+ *
+ * Color-ups use your chip set once it is set up ([ChipSetProvider], PP-091 #9); a change to it
+ * re-plans them and leaves the clock where it is.
  */
 @HiltViewModel
+@Suppress("LongParameterList") // one injected source per thing the clock reads
 class TimerViewModel @Inject constructor(
     private val timerPreferences: TimerPreferences,
     private val tournamentPreferences: TournamentPreferences,
     private val bankPreferences: BankPreferences,
     private val soundManager: SoundManager,
     private val timeSource: TimeSource,
-    private val audioPreferences: AudioPreferences
+    private val audioPreferences: AudioPreferences,
+    private val chipSets: ChipSetProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimerUiState())
@@ -70,12 +77,16 @@ class TimerViewModel @Inject constructor(
     private var tableConfig = tournamentPreferences.getCurrentTournamentConfig()
     private var bank = BankCounts()
 
+    /** The chip set the color-ups follow; null for a common home set's chips. */
+    private var chipSet: ChipSetChips? = chipSets.current()
+
     init {
         soundManager.preloadSound(R.raw.blind_level_up)
         normalizeStoredSmallestChip()
         restore()
         observeTable()
         observeSettings()
+        observeChipSet()
     }
 
     fun acceptIntent(intent: TimerIntent) {
@@ -619,9 +630,27 @@ class TimerViewModel @Inject constructor(
             roundLengthMinutes = config.roundLengthMinutes,
             breaks = config.breaks,
             smallestChip = config.smallestChip,
-            bigBlindAnteFromLevel = config.bigBlindAnteFromLevel
+            bigBlindAnteFromLevel = config.bigBlindAnteFromLevel,
+            chipSet = chipSet
         )
-        _uiState.update { it.copy(baseBlindLevels = levels, timeline = timeline, setupProblem = problem) }
+        // The break screen draws your chips only when the color-ups use them: some chip must pay the first blind
+        val used = chipSet?.takeIf { it.chainFor(config.smallestChip).isNotEmpty() }
+        _uiState.update { it.copy(baseBlindLevels = levels, timeline = timeline, setupProblem = problem, chipSet = used) }
+    }
+
+    /**
+     * PP-091 #9: a chip set set up (or changed) in Tools re-plans the color-ups. Only the color-ups
+     * change; levels and breaks keep their times, so the clock stays where it is.
+     */
+    private fun observeChipSet() {
+        viewModelScope.launch {
+            chipSets.chipSet.collect { chips ->
+                if (chips != chipSet) {
+                    chipSet = chips
+                    rebuildSchedule()
+                }
+            }
+        }
     }
 
     /** Defensive check of the schedule itself; [BlindSetupAdvisor] explains failures to the user. */

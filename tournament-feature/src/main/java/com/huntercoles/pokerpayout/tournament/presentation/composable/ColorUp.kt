@@ -12,38 +12,38 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.ChipDenominations
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.PokerChip
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
-import com.huntercoles.pokerpayout.core.utils.ColorUpPlanner
+import com.huntercoles.pokerpayout.core.utils.ChipSetChips
 import com.huntercoles.pokerpayout.tournament.R
+import com.huntercoles.pokerpayout.tournament.domain.clock.ColorUpSwap
 import java.util.Locale
-
-/** The chip a color-up turns [chip] into: the next one up that it divides (25 → 100), or null. */
-internal fun colorUpTarget(chip: Int): Int? = ColorUpPlanner.nextChipUp(chip)
 
 /**
  * The swap as chips: four green 25s, an arrow, one black 100. Ratios above [MAX_DRAWN] chips draw
- * one chip with its count instead. TalkBack reads "4 green 25s for 1 black 100".
+ * one chip with its count instead. TalkBack reads "4 green 25s for 1 black 100". With your chip set
+ * ([chipSet], PP-091 #9) the chips are drawn and named in its colours: "4 white 25s for 1 red 100".
  */
 @Composable
-internal fun ColorUpExchange(chip: Int) {
-    val target = colorUpTarget(chip) ?: return
-    val ratio = target / chip
+internal fun ColorUpExchange(swap: ColorUpSwap, chipSet: ChipSetChips?) {
+    val ratio = swap.into / swap.chip
     val description = stringResource(
         R.string.break_color_up_chips,
         ratio,
-        chipPhrase(chip, plural = true),
-        chipPhrase(target, plural = false),
+        chipPhrase(swap.chip, plural = true, chipSet),
+        chipPhrase(swap.into, plural = false, chipSet),
     )
     Row(
         modifier = Modifier
@@ -54,40 +54,40 @@ internal fun ColorUpExchange(chip: Int) {
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (ratio <= MAX_DRAWN) {
-                repeat(ratio) { PokerChip(chip, size = SmallChip) }
+                repeat(ratio) { SetChip(swap.chip, chipSet, SmallChip) }
             } else {
                 Text("$ratio ×", style = PokerType.NumberM, color = PokerColors.CardWhite)
-                PokerChip(chip, size = SmallChip)
+                SetChip(swap.chip, chipSet, SmallChip)
             }
         }
         Icon(PokerIcons.ChevronRight, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(28.dp))
-        PokerChip(target, size = BigChip)
+        SetChip(swap.into, chipSet, BigChip)
     }
 }
 
 /** 1. Each player swaps every four green 25s for one black 100. 2. Odd 25s go to a chip race. */
 @Composable
-internal fun ColorUpSteps(chips: List<Int>) {
-    val steps = chips.mapNotNull { chip ->
-        val target = colorUpTarget(chip) ?: return@mapNotNull null
-        ColorUpStep(chip, target)
-    }
-    if (steps.isEmpty()) return
+internal fun ColorUpSteps(swaps: List<ColorUpSwap>, chipSet: ChipSetChips?) {
+    if (swaps.isEmpty()) return
     val formatter = rememberChipFormatter()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        steps.forEachIndexed { index, step ->
-            val many = chipPhrase(step.chip, plural = true)
-            val one = chipPhrase(step.target, plural = false)
-            val swap = stringResource(R.string.break_color_up_swap, step.target / step.chip, many, one)
-            StepLine(index + 1, swap, listOf(many, one))
+        swaps.forEachIndexed { index, swap ->
+            val many = chipPhrase(swap.chip, plural = true, chipSet)
+            val one = chipPhrase(swap.into, plural = false, chipSet)
+            val text = stringResource(R.string.break_color_up_swap, swap.into / swap.chip, many, one)
+            StepLine(index + 1, text, listOf(many, one))
         }
-        val odd = chipList(steps.map { it.chip }, formatter)
-        val won = chipList(steps.map { it.target }.distinct(), formatter)
-        StepLine(steps.size + 1, stringResource(R.string.break_color_up_race, odd, won), emptyList())
+        val odd = chipList(swaps.map { it.chip }, formatter)
+        val won = chipList(swaps.map { it.into }.distinct(), formatter)
+        StepLine(swaps.size + 1, stringResource(R.string.break_color_up_race, odd, won), emptyList())
     }
 }
 
-private class ColorUpStep(val chip: Int, val target: Int)
+/** A chip drawn in your set's colour for its value, or in the standard colour without a chip set. */
+@Composable
+private fun SetChip(value: Int, chipSet: ChipSetChips?, size: Dp) {
+    PokerChip(value, size = size, color = chipSet?.let { chipPaint(value, it) })
+}
 
 @Composable
 private fun StepLine(number: Int, text: String, bold: List<String>) {
@@ -112,11 +112,19 @@ private fun StepLine(number: Int, text: String, bold: List<String>) {
     }
 }
 
-/** "green 25s" or "black 100": the chip by the colour players know it by. */
+/** Your set's colour for [value] as a standard chip of that colour; null when your set has none. */
+private fun chipPaint(value: Int, chipSet: ChipSetChips): Color? =
+    chipSet.colourOf(value)?.let { ChipDenominations.getChipByValue(it.standardValue)?.color }
+
+/**
+ * "green 25s" or "black 100": the chip by the colour players know it by, in your set when you have
+ * one ("white 25s" where your 25s are white), else the standard chip's.
+ */
 @Composable
-private fun chipPhrase(value: Int, plural: Boolean): String {
+private fun chipPhrase(value: Int, plural: Boolean, chipSet: ChipSetChips?): String {
     val formatter = rememberChipFormatter()
-    val colour = ChipDenominations.getChipByValue(value)?.name?.lowercase(Locale.ROOT).orEmpty()
+    val standardValue = chipSet?.colourOf(value)?.standardValue ?: value
+    val colour = ChipDenominations.getChipByValue(standardValue)?.name?.lowercase(Locale.ROOT).orEmpty()
     val amount = formatter.format(value)
     return when {
         colour.isEmpty() && plural -> "${amount}s"

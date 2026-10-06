@@ -3,6 +3,20 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.3.7 (on master, not published)
+
+Small changes the owner chose:
+
+- **Chip set:** the stacks kept back for rebuys and add-ons start from an estimate made from the
+  Tournament's settings (about half the players rebuy when there's a cutoff, one each without
+  one, one add-on each), with a line saying where it came from. Change it and your number stays;
+  one tap goes back to the estimate.
+- **Break screen:** once you've set up your chip set, the color-up uses your own chips and
+  colours ("4 white 25s for 1 red 100").
+- **Table view:** after ✕ in the turned table view, the clock stays upright for that turn only;
+  turn the phone again and the table view comes back.
+- **Tools:** the Chip set row now reads "Stacks from the chips you own, plus a color-up plan".
+
 ## 1.3.6 (on master, not published)
 
 - **Cash game** (Bank): a Tournament / Cash game switch at the top of the Bank. Log buy-ins and

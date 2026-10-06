@@ -6,7 +6,7 @@
     <string name="tools_odds_title">Odds</string>
     <string name="tools_odds_description">Who\'s ahead, and by how much</string>
     <string name="tools_chips_title">Chip set</string>
-    <string name="tools_chips_description">How many of each chip go in a starting stack</string>
+    <string name="tools_chips_description">Stacks from the chips you own, plus a color-up plan</string>
     <string name="tools_ranks_title">Hand ranks</string>
     <string name="tools_ranks_description">What beats what, best to worst</string>
     <string name="tools_seats_title">Seat draw</string>

@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout.tournament.domain.clock
 
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
 import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
+import com.huntercoles.pokerpayout.core.utils.ChipSetChips
 import com.huntercoles.pokerpayout.core.utils.ColorUpPlanner
 
 /** Breaks every [everyLevels] levels (0 = none), each [lengthMinutes] long, showing [message]. */
@@ -26,7 +27,13 @@ sealed interface ClockSegment {
 
     /** Chip values no longer needed from here on, to color up during this segment. */
     val colorUp: List<Int>
+
+    /** What each chip of [colorUp] is exchanged for, in the same order. */
+    val colorUpSwaps: List<ColorUpSwap>
 }
+
+/** At a color-up, [chip]s are exchanged for [into]s (25s for 100s: four for one). */
+data class ColorUpSwap(val chip: Int, val into: Int)
 
 data class LevelSegment(
     /** Index into [ClockTimeline.levels]. */
@@ -35,7 +42,8 @@ data class LevelSegment(
     val isOvertime: Boolean,
     override val startSeconds: Int,
     override val durationSeconds: Int,
-    override val colorUp: List<Int> = emptyList()
+    override val colorUp: List<Int> = emptyList(),
+    override val colorUpSwaps: List<ColorUpSwap> = emptyList()
 ) : ClockSegment
 
 data class BreakSegment(
@@ -46,7 +54,8 @@ data class BreakSegment(
     val message: String,
     override val startSeconds: Int,
     override val durationSeconds: Int,
-    override val colorUp: List<Int> = emptyList()
+    override val colorUp: List<Int> = emptyList(),
+    override val colorUpSwaps: List<ColorUpSwap> = emptyList()
 ) : ClockSegment
 
 /**
@@ -90,12 +99,19 @@ class ClockTimeline private constructor(
     companion object {
         val EMPTY = ClockTimeline(emptyList(), 0)
 
+        /**
+         * The timeline for [regularLevels]. Color-ups follow [chipSet], your chip set, when it has a
+         * chip that pays [smallestChip] (PP-091 #9): the chips you own, planned as the chip set's
+         * color-up plan plans them. Otherwise they follow a common home set's chips.
+         */
+        @Suppress("LongParameterList") // the clock's setup, each part with a default
         fun build(
             regularLevels: List<BlindLevel>,
             roundLengthMinutes: Int,
             breaks: BreakSettings = BreakSettings(),
             smallestChip: Int = regularLevels.firstOrNull()?.smallBlind ?: 1,
-            bigBlindAnteFromLevel: Int = 0
+            bigBlindAnteFromLevel: Int = 0,
+            chipSet: ChipSetChips? = null
         ): ClockTimeline {
             if (regularLevels.isEmpty() || roundLengthMinutes <= 0) return EMPTY
 
@@ -109,7 +125,10 @@ class ClockTimeline private constructor(
             } else {
                 emptyList()
             }
-            val colorUps = placeColorUps(ColorUpPlanner.plan(allLevels, smallestChip), breakAfter)
+            val chain = chipSet?.chainFor(smallestChip)?.takeIf { it.isNotEmpty() }
+            val plan = chain?.let { ColorUpPlanner.planFor(allLevels, it) } ?: ColorUpPlanner.plan(allLevels, smallestChip)
+            val colorUps = placeColorUps(plan, breakAfter)
+            val swaps = SwapTracker(chain)
 
             val roundSeconds = roundLengthMinutes * SECONDS_PER_MINUTE
             val breakSeconds = breaks.lengthMinutes * SECONDS_PER_MINUTE
@@ -118,19 +137,21 @@ class ClockTimeline private constructor(
             var regularEnd = 0
             allLevels.forEachIndexed { index, level ->
                 val isOvertime = index >= regularLevels.size
-                val colorUp = colorUps.levels[index].orEmpty()
-                segments += LevelSegment(index, level, isOvertime, clock, roundSeconds, colorUp)
+                val chips = colorUps.levels[index].orEmpty()
+                segments += LevelSegment(index, level, isOvertime, clock, roundSeconds, chips, swaps.after(chips))
                 clock += roundSeconds
                 if (index == regularLevels.lastIndex) regularEnd = clock
                 if (index in breakAfter) {
                     val number = breakAfter.indexOf(index) + 1
+                    val onBreak = colorUps.breaks[number].orEmpty()
                     segments += BreakSegment(
                         number = number,
                         afterLevel = level.level,
                         message = breaks.message.trim(),
                         startSeconds = clock,
                         durationSeconds = breakSeconds,
-                        colorUp = colorUps.breaks[number].orEmpty()
+                        colorUp = onBreak,
+                        colorUpSwaps = swaps.after(onBreak)
                     )
                     clock += breakSeconds
                 }
@@ -139,6 +160,28 @@ class ClockTimeline private constructor(
         }
 
         private class ColorUpPlacement(val levels: Map<Int, List<Int>>, val breaks: Map<Int, List<Int>>)
+
+        /**
+         * What colored-up chips are exchanged for, color-up by color-up in the clock's order. With
+         * your chip set ([chain]), the next chip of it that stays in play and is a multiple, as the
+         * chip set's plan does it (25s and 50s colored up together both go into 100s); otherwise the
+         * next chip up of a common home set (25s into 100s, then 100s into 500s), as before.
+         */
+        private class SwapTracker(private val chain: List<Int>?) {
+            private val dropped = mutableSetOf<Int>()
+
+            fun after(chips: List<Int>): List<ColorUpSwap> {
+                dropped += chips
+                return chips.mapNotNull { chip -> into(chip)?.let { ColorUpSwap(chip, it) } }
+            }
+
+            private fun into(chip: Int): Int? =
+                if (chain == null) {
+                    ColorUpPlanner.nextChipUp(chip)
+                } else {
+                    chain.firstOrNull { it > chip && it % chip == 0 && it !in dropped }
+                }
+        }
 
         /**
          * A chip that drops out from level i is colored up at the first break whose next level is i or

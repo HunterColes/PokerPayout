@@ -558,11 +558,13 @@ s_sound_on() {
   ui assert-text "Test chime" "desc=Chime volume"
 }
 s_hand_ranks() {
-  # A tool's screen keeps Tools selected (B16) and has a back arrow. It also holds everything the
-  # removed (unreachable) "Rules" popup showed.
+  # S12: a tool's screen keeps Tools selected (B16) and has a back arrow. Each hand shows how often
+  # it comes up by the river: the royal flush is 1 in 30,940 of the 133,784,560 seven-card hands.
   ui tap "text=Hand ranks"
-  ui assert-text "Best to worst" desc=Back "text~=Royal Flush" "text~=High Card" || return 1
-  require_tab_selected Tools
+  ui assert-text "Best to worst" desc=Back "re=Royal flush" "re=1 in 30,940" || return 1
+  require_tab_selected Tools || return 1
+  ui scroll-to "re=High card" --max 6
+  ui assert-text "re=High card" "re=17\.4%" "re=kicker"
 }
 s_odds_empty() {
   # The Settings volume dialog may still be open: the dump only sees a dialog's window, so if the
@@ -669,49 +671,100 @@ s_odds_reset_table() {
   ui assert-text "desc=Player 1, card 1, empty" "desc=Player 2, options"
 }
 s_chip_calc() {
+  # S11: the chip calculator is the chip set now, planned from the chips you own (no Generate)
   ui back
   ui tap "text=Chip set"
-  ui assert-text "text=Chip set" desc=Back "desc=Reset chip set" Generate || return 1
+  ui assert-text "text=Chip set" desc=Back "desc=Reset chip set" "text~=Chips you own" "Green 25" \
+    "desc=Increase Green 25 chips, by 5" "text~=Add a colour" || return 1
   require_tab_selected Tools
 }
-s_chip_calc_generated() {
-  ui tap Generate
-  ui assert-text "text~=Chip Breakdown" "Total Chips" "Total Value" 're=^× [0-9]+$' || return 1
-  check_chip_totals "$PP_UI_LAST_XML"
+s_chip_calc_stack() {
+  # Each player's stack: the piles add up to the Tournament's 5,000, and the reserve check says
+  # how many more stacks the box holds for rebuys and add-ons
+  ui scroll-to "re=enough left for|no full stack is left" --max 4
+  ui assert-text "text~=Each player gets" "text~=5,000 from Tournament setup" "re=chips? a stack ·" || return 1
+  check_chip_totals "$PP_UI_LAST_XML" 5000
 }
-# The stats row against the breakdown rows in a UI dump: Total Chips must be non-zero and
-# equal the sum of the "× N" counts (v1.1.12 showed 0), and Denominations must equal the
-# number of rows, so a row below the fold can't drop out of the sum unnoticed.
+# The stack picture against its totals in a UI dump: every pile's "N × V" times its value must add up
+# to the stack ($2), the chips to the "N chips a stack" line, and the colours to its count.
 check_chip_totals() {
-  python3 - "$1" <<'PY'
+  python3 - "$1" "$2" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
-nodes = set()
+stack = int(sys.argv[2])
+labels = []
 for n in ET.parse(sys.argv[1]).iter("node"):
-    b = [int(v) for v in re.findall(r"-?\d+", n.get("bounds", ""))]
-    label = n.get("text") or n.get("content-desc") or ""
-    if label and len(b) == 4:
-        nodes.add((label, (b[0] + b[2]) // 2, b[1], b[3]))
-def stat(name):  # the number shown directly above a stat's label
-    label = next((n for n in nodes if n[0] == name), None)
-    above = [n for n in nodes if label and re.fullmatch(r"\d+", n[0]) and 0 <= label[2] - n[3] < 200]
-    if not above:
-        sys.exit("[ui] FAIL no value shown for %r" % name)
-    return int(min(above, key=lambda n: abs(n[1] - label[1]))[0])
-total, denoms = stat("Total Chips"), stat("Denominations")
-counts = [int(n[0][2:]) for n in sorted(nodes, key=lambda n: n[2]) if re.fullmatch(r"× \d+", n[0])]
-print("chip stats: Total Chips %d, Denominations %d, row counts %s (sum %d)" % (total, denoms, counts, sum(counts)))
-if len(counts) != denoms:
-    sys.exit("[ui] FAIL %d breakdown rows on screen but Denominations is %d" % (len(counts), denoms))
-if total <= 0 or total != sum(counts):
-    sys.exit("[ui] FAIL Total Chips is %d but the breakdown adds up to %d" % (total, sum(counts)))
+    for key in ("text", "content-desc"):
+        if n.get(key):
+            labels.append(n.get(key))
+def value(text):
+    text = text.replace(",", "")
+    if text.endswith("K"):
+        return int(float(text[:-1]) * 1000)
+    if text.endswith("M"):
+        return int(float(text[:-1]) * 1000000)
+    return int(text)
+piles = {}
+for label in labels:
+    for count, chip in re.findall(r"(\d+) × ([\d.,]+[KM]?)", label):
+        piles[value(chip)] = int(count)
+totals = next((re.search(r"(\d+) chips? a stack · (\d+) colours? · ([\d,]+)", l) for l in labels
+               if re.search(r"chips? a stack ·", l)), None)
+if not piles or totals is None:
+    sys.exit("[ui] FAIL no stack picture or totals on screen: %s" % labels)
+worth = sum(v * c for v, c in piles.items())
+chips, colours, shown = int(totals.group(1)), int(totals.group(2)), value(totals.group(3))
+print("stack: %s = %d in %d chips; totals say %d chips, %d colours, %d" % (
+    " + ".join("%d × %d" % (c, v) for v, c in sorted(piles.items())), worth, sum(piles.values()), chips, colours, shown))
+if worth != stack or shown != stack:
+    sys.exit("[ui] FAIL the piles add up to %d and the totals say %d, not %d" % (worth, shown, stack))
+if chips != sum(piles.values()) or colours != len(piles):
+    sys.exit("[ui] FAIL the totals (%d chips, %d colours) don't match the piles" % (chips, colours))
 PY
 }
-s_chip_calc_advanced() {
-  ui tap "desc=Expand advanced settings"
-  ui assert-text "Smallest Chip" "Starting Chips" Denoms "Distribution Curve"
+s_chip_calc_colorup() {
+  # The color-up plan reads the clock's schedule (5,000 from 50s; the tour's reset cleared the
+  # breaks, so color-ups fall at the start of a level): the 25s go into 100s from level 4
+  ui scroll-to "re=Counted for \d+ stacks in play" --max 4
+  ui assert-text "text~=Color-up plan" "re=Start of Level 4: green 25s into black 100s" "re=blacks needed"
 }
-s_chip_calc_scrolled() {
-  ui scroll down --times 2
+s_chip_calc_short() {
+  # Only 10 greens for 5 players: no stack adds up, so the screen says what is short and by how much.
+  # Edit the colour in its sheet (the stepper moves in fives; the sheet takes exact counts).
+  ui scroll up --times 4
+  ui tap "text=Green 25"
+  ui assert-text "text=Edit Green 25" "text~=Each chip is worth" "text~=How many you own" "text=Remove Green 25" || return 1
+  ui set-text class=EditText text=150 --value 10
+  ui enter                                    # Done puts the keyboard away
+  ui tap text=Save
+  ui wait-gone "text=Edit Green 25" --timeout 10 || return 1
+  ui scroll-to "re=\+10 more" --max 4
+  ui assert-text "re=Short 10 green 25s for 5 players\." "re=full stacks? of 5,000" "re=With 10 more"
+}
+s_chip_calc_reset() {
+  # Reset applies at once (back to the 500-chip starting set) and offers Undo on the snackbar
+  ui scroll up --times 4
+  ui tap "desc=Reset chip set"
+  ui assert-text "text~=500-chip starting set" "text=UNDO" "desc=Increase Green 25 chips, by 5" || return 1
+  ui wait-gone text=UNDO --timeout 15 || return 1
+  ui scroll-to "re=enough left for|no full stack is left" --max 4
+  ui assert-text "re=chips? a stack ·" || return 1
+  check_chip_totals "$PP_UI_LAST_XML" 5000
+}
+s_chip_calc_settings() {
+  # The old advanced settings live on as stack settings: keep 2 stacks back for rebuys, and the
+  # color-up plan counts them as in play
+  ui scroll-to "re=(?i)stack settings" --max 6
+  ui tap "re=(?i)^stack settings"
+  ui scroll-to "text=Stack shape" --max 4
+  ui assert-text "text=Starting stack" "text=Keep back for rebuys and add-ons" "text=Colours per stack, at most" \
+    "re=More small chips" "re=Lots of small chips" || return 1
+  ui tap "desc=Increase Keep back for rebuys and add-ons"
+  ui tap "desc=Increase Keep back for rebuys and add-ons"
+  ui scroll up --times 6
+  ui scroll-to "re=You keep 2 back" --max 6
+  ui assert-text "re=You keep 2 back" || return 1
+  ui scroll-to "re=Counted for 7 stacks in play" --max 6
+  ui assert-text "re=Counted for 7 stacks in play \(5 players and 2 kept back\)"
 }
 s_back_to_tournament() {
   tab Tournament
@@ -815,7 +868,7 @@ step payouts-nav-back     "Back from a tab returns to Tournament (B16)"         
 step tools                "Tools tab: tool list and Sound (S7)"                 s_tools
 step sound-off            "Sound off: switch off, volume and chime rest"        s_sound_off
 step sound-on             "Sound back on; test chime"                           s_sound_on
-step hand-ranks           "Hand ranks: back arrow, Tools stays selected"        s_hand_ranks
+step hand-ranks           "Hand ranks (S12): how often by the river, kickers"   s_hand_ranks
 step odds-empty           "Odds: empty table, first slot waiting"              s_odds_empty
 step odds-card-picker     "Docked keypad: ranks, then suits that wait"          s_card_picker
 step odds-hole-cards      "Keypad: AsKs vs QhQd, auto-advance to the flop"      s_hole_cards
@@ -826,10 +879,12 @@ step odds-card-clears     "Add the turn 7h: stale odds go, 36.36% comes"        
 step odds-4-players       "Add two players, fold Player 3"                      s_odds_more_players
 step odds-reset-new-hand  "New hand: cards cleared, seats kept"                 s_odds_reset_new_hand
 step odds-reset-table     "Clear table: back to two empty seats"               s_odds_reset_table
-step chip-calc            "Chip set (the chip calculator), Tools selected"      s_chip_calc
-step chip-calc-generated  "Generate chip breakdown"                             s_chip_calc_generated
-step chip-calc-advanced   "Advanced settings expanded"                          s_chip_calc_advanced
-step chip-calc-scrolled   "Chip calculator scrolled"                            s_chip_calc_scrolled
+step chip-calc            "Chip set (S11): chips you own, Tools selected"       s_chip_calc
+step chip-calc-stack      "Each player's stack adds up to 5,000; reserve check" s_chip_calc_stack
+step chip-calc-colorup    "Color-up plan from the blind schedule"               s_chip_calc_colorup
+step chip-calc-short      "Only 10 greens: short, by how many, and the fix"     s_chip_calc_short
+step chip-calc-reset      "Reset to the starting set at once, with Undo"        s_chip_calc_reset
+step chip-calc-settings   "Stack settings: keep 2 stacks back for rebuys"       s_chip_calc_settings
 step back-to-tournament   "Back to Tournament tab, state intact"                s_back_to_tournament
 step rail                 "720 dp wide: tabs move to a rail (PP-087)"           s_rail
 step rail-tools           "Rail: Tools tab"                                     s_rail_tools

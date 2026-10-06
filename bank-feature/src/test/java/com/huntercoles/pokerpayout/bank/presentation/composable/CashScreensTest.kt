@@ -46,8 +46,9 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The cash game (S13) inside the app's shell on every cell of the device matrix: text fits and
  * isn't clipped at any scroll position, and every target is 48 dp without overlapping. Goldens on
- * [DeviceMatrix.goldens], named after the mockup; the states come from the real ViewModel
- * ([CashScenes]). A sheet is drawn as it looks open, over the screen and its scrim.
+ * [DeviceMatrix.goldens], named after the mockup (`S13_cash_font2x` on its [DeviceMatrix.pinned]
+ * cells); the states come from the real ViewModel ([CashScenes]). A sheet is drawn as it looks
+ * open, over the screen and its scrim.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -109,8 +110,13 @@ class CashScreensTest(private val config: ScreenConfig) {
         screen.compose.forEachScrollPosition { LayoutAssertions.assertVisibleTextUnclipped(screen.compose, "$where, $it") }
     }
 
-    private fun golden(name: String, only: (ScreenConfig) -> Boolean = { true }) {
-        if (config in DeviceMatrix.goldens && only(config)) screen.compose.onRoot().captureGolden("screens", name, config)
+    private fun golden(name: String) {
+        if (config in DeviceMatrix.goldens) screen.compose.onRoot().captureGolden("screens", name, config)
+    }
+
+    /** A golden drawn for particular cells, recorded on its [DeviceMatrix.pinned] cells only. */
+    private fun pinnedGolden(name: String) {
+        if (DeviceMatrix.isPinned(name, config)) screen.compose.onRoot().captureGolden("screens", name, config)
     }
 
     /**
@@ -139,7 +145,7 @@ class CashScreensTest(private val config: ScreenConfig) {
         if (config.fontScale == 2.0f) {
             // The ledger, two lines a player at this size
             scrollToTop("PLAYER".takeIf { onScreen(it) } ?: "Dana")
-            golden("S13_cash_font2x")
+            pinnedGolden("S13_cash_font2x")
         }
         check("Cash game, balanced")
     }

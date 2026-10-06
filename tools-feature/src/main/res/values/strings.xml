@@ -14,6 +14,15 @@
     <string name="tools_volume">Chime volume</string>
     <string name="tools_volume_percent">%1$d%%</string>
     <string name="tools_test_chime">Test chime</string>
+    <!-- PP-083: the quiet cues, for a muted phone or a quiet room -->
+    <string name="tools_vibrate_title">Vibrate</string>
+    <string name="tools_vibrate_description">At each level change and with 1 minute left</string>
+    <string name="tools_flash_title">Flash the clock</string>
+    <string name="tools_flash_description">A gold flash at each level change and with 1 minute left</string>
+    <!-- PP-081: shown only while the app's notifications are off -->
+    <string name="tools_lock_screen_title">Clock on the lock screen</string>
+    <string name="tools_lock_screen_off">Notifications are off, so the running clock can\'t show in the notifications or on the lock screen.</string>
+    <string name="tools_lock_screen_allow">Turn on notifications</string>
     <!-- What the old Settings screen's "About" card said, now under the Tools list -->
     <string name="tools_footer">Free and open source (MIT License).\nNo ads, no accounts, no tracking.\nNo internet permission · v%1$s</string>
 </resources>

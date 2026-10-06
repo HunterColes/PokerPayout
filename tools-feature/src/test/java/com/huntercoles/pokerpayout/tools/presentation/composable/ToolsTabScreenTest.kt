@@ -36,10 +36,24 @@ class ToolsTabScreenTest(private val config: ScreenConfig) {
     @Test
     fun toolsMuted() = check("S7_tools_muted", ToolsHomeUiState(soundOn = false, volume = 0.7f))
 
+    /** PP-083: the quiet cues switched off, the chime on. */
+    @Test
+    fun toolsCuesOff() = check(
+        "S7_tools_cues_off",
+        ToolsHomeUiState(soundOn = true, volume = 0.7f, vibrate = false, flash = false),
+    )
+
+    /** PP-081: the app's notifications are off, so the section offers to turn them on (a tablet: no vibrator). */
+    @Test
+    fun toolsNotificationsOff() = check(
+        "S7_tools_notifications_off",
+        ToolsHomeUiState(soundOn = false, volume = 0.7f, canVibrate = false, notificationsOff = true),
+    )
+
     private fun check(name: String, state: ToolsHomeUiState) {
         screen.compose.setContent {
             InAppShell(NavTab.Tools) {
-                ToolsHomeContent(state = state, onIntent = {}, onOpenTool = {}, versionName = "1.3.0")
+                ToolsHomeContent(state = state, onIntent = {}, onOpenTool = {}, versionName = "1.3.0", onAllowNotifications = {})
             }
         }
         val where = "$name on ${config.id}"

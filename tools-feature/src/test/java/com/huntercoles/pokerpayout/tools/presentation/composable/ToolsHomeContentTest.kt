@@ -12,6 +12,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.huntercoles.pokerpayout.core.design.PokerTheme
 import com.huntercoles.pokerpayout.core.navigation.NavigationDestination
 import com.huntercoles.pokerpayout.tools.presentation.ToolsHomeIntent
@@ -90,6 +91,56 @@ class ToolsHomeContentTest {
         compose.onNodeWithText("Free and open source", substring = true).assertExists()
         compose.onNodeWithText("No ads, no accounts, no tracking", substring = true).assertExists()
         compose.onNodeWithText("v1.3.0", substring = true).assertExists()
+    }
+
+    @Test
+    fun theVibrateAndFlashRowsAreEachOneSwitch() {
+        show(ToolsHomeUiState(vibrate = true, flash = true))
+        compose.onNode(hasText("Vibrate") and isSwitch).performScrollTo().assertIsOn().performClick()
+        compose.onNode(hasText("Flash the clock") and isSwitch).performScrollTo().assertIsOn().performClick()
+        assertEquals(listOf(ToolsHomeIntent.SetVibrate(false), ToolsHomeIntent.SetFlash(false)), intents)
+    }
+
+    @Test
+    fun theQuietCuesStayLiveWithTheSoundOff() {
+        // For a muted phone or a quiet room: they don't rest with the chime
+        show(ToolsHomeUiState(soundOn = false, vibrate = true, flash = false))
+        compose.onNode(hasText("Vibrate") and isSwitch).performScrollTo().assertIsOn().assertIsEnabled()
+        compose.onNode(hasText("Flash the clock") and isSwitch).performScrollTo().assertIsOff().assertIsEnabled()
+    }
+
+    @Test
+    fun aDeviceThatCannotVibrateHasNoVibrateRow() {
+        show(ToolsHomeUiState(canVibrate = false))
+        compose.onNode(hasText("Vibrate") and isSwitch).assertDoesNotExist()
+        compose.onNode(hasText("Flash the clock") and isSwitch).assertExists()
+    }
+
+    @Test
+    fun withNotificationsOffTheSectionOffersToTurnThemOn() {
+        var allowed = 0
+        compose.setContent {
+            PokerTheme(reducedMotion = true) {
+                ToolsHomeContent(
+                    state = ToolsHomeUiState(notificationsOff = true),
+                    onIntent = { intents += it },
+                    onOpenTool = { opened += it },
+                    versionName = "1.3.0",
+                    onAllowNotifications = { allowed++ },
+                )
+            }
+        }
+        compose.onNodeWithText("Clock on the lock screen").performScrollTo().assertExists()
+        compose.onNodeWithText("Turn on notifications").performScrollTo().performClick()
+        assertEquals(1, allowed)
+        assertEquals(emptyList<ToolsHomeIntent>(), intents)
+    }
+
+    @Test
+    fun withNotificationsOnThereIsNothingToTurnOn() {
+        show(ToolsHomeUiState(notificationsOff = false))
+        compose.onNodeWithText("Turn on notifications").assertDoesNotExist()
+        compose.onNodeWithText("Clock on the lock screen").assertDoesNotExist()
     }
 
     private val isSwitch = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)

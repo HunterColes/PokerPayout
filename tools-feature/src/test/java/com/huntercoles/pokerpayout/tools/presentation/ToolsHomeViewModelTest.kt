@@ -99,6 +99,42 @@ class ToolsHomeViewModelTest {
     }
 
     @Test
+    fun aFreshInstallVibratesAndFlashesTheClock() {
+        val state = newViewModel().uiState.value
+        assertTrue(state.vibrate)
+        assertTrue(state.flash)
+    }
+
+    @Test
+    fun theQuietCuesAreSwitchedOneByOneAndSaved() {
+        val viewModel = newViewModel()
+        viewModel.acceptIntent(ToolsHomeIntent.SetVibrate(false))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.vibrate)
+        assertTrue(viewModel.uiState.value.flash)
+
+        viewModel.acceptIntent(ToolsHomeIntent.SetFlash(false))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.flash)
+        val saved = AudioPreferences(context)
+        assertFalse(saved.getVibrateCues())
+        assertFalse(saved.getFlashCues())
+        // New keys of their own: the volume and mute the old dialog saved are untouched
+        assertEquals(1f, saved.getVolume(), 0f)
+        assertFalse(saved.getIsMuted())
+    }
+
+    @Test
+    fun turningTheSoundOffLeavesTheQuietCuesOn() {
+        val viewModel = newViewModel()
+        viewModel.acceptIntent(ToolsHomeIntent.SetSoundOn(false))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.soundOn)
+        assertTrue(viewModel.uiState.value.vibrate)
+        assertTrue(viewModel.uiState.value.flash)
+    }
+
+    @Test
     fun testChimePlaysTheLevelChime() {
         newViewModel().acceptIntent(ToolsHomeIntent.TestChime)
         verify(exactly = 1) { soundManager.playSound(CoreR.raw.blind_level_up) }

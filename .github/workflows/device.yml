@@ -74,6 +74,26 @@ jobs:
           if [[ -n "$ONLY" ]]; then args+=(--only "$ONLY"); fi
           scripts/device/tour.sh "${args[@]}"
 
+      # The failing step's screen as text, so a failure can be read from the log alone.
+      - name: Show the failing screen
+        if: failure()
+        run: |
+          dir="$(ls -d build/device-reports/2* 2>/dev/null | tail -1)"
+          [[ -n "$dir" ]] || exit 0
+          xml="$(ls -t "$dir"/[0-9]*.xml 2>/dev/null | head -1)"
+          if [[ -n "$xml" ]]; then
+            echo "== Text on screen at the failure ($(basename "$xml")): text | description | bounds"
+            python3 - "$xml" <<'EOF'
+          import sys, xml.etree.ElementTree as ET
+          for n in ET.parse(sys.argv[1]).iter('node'):
+              t, d = n.get('text') or '', n.get('content-desc') or ''
+              if t or d:
+                  print(f"{t!r} | {d!r} | {n.get('bounds')}")
+          EOF
+          fi
+          echo "== End of tour.log"
+          tail -60 "$dir/tour.log"
+
       - name: Upload the tour report
         if: success() || failure()
         uses: actions/upload-artifact@v4

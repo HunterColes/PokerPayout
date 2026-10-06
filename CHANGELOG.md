@@ -3,6 +3,15 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.3.6 (on master, not published)
+
+- **Cash game** (Bank): a Tournament / Cash game switch at the top of the Bank. Log buy-ins and
+  top-ups, count everyone's chips at the end, and the app checks the chips against the cash before
+  anyone settles: if they don't match, recount, or choose to split the difference across the
+  stacks. Then it lists who pays whom, in at most one payment fewer than there are players, each
+  with a "paid" tick, and shares it as text. Undo works throughout. The cash game is kept apart
+  from the tournament: resetting one never touches the other.
+
 ## 1.3.5 (on master, not published)
 
 - **Seat draw** (Tools): seats the Bank's players at random across one or two tables, kept within

@@ -220,7 +220,7 @@ finish() {
 # back to, and the tour puts it back however it ends (a matrix profile's own size, density and
 # rotation stay as the profile set them).
 DENSITY_MARK="$OUT/.density-changed"    # holds the override density before the step ("" = none)
-ROTATION_MARK="$OUT/.rotation-changed"  # holds user_rotation before the step
+ROTATION_MARK="$OUT/.rotation"          # "accelerometer_rotation user_rotation" before the step
 IME_MARK="$OUT/.ime-shown"              # the step turned show_ime_with_hard_keyboard on
 density_override() { adb_ shell wm density | tr -d '\r' | sed -n 's/^Override density: //p'; }
 screen_width_px() { adb_ shell wm size | tr -d '\r' | sed -n 's/.*size: \([0-9]*\)x.*/\1/p' | tail -1; }
@@ -232,7 +232,9 @@ restore_density() {
 restore_display() {
   if [[ -f "$DENSITY_MARK" ]]; then restore_density >/dev/null 2>&1 || true; fi
   if [[ -f "$ROTATION_MARK" ]]; then
-    adb_ shell settings put system user_rotation "$(cat "$ROTATION_MARK")" >/dev/null 2>&1 || true
+    local acc usr; read -r acc usr < "$ROTATION_MARK" || true
+    adb_ shell settings put system user_rotation "${usr:-0}" >/dev/null 2>&1 || true
+    adb_ shell settings put system accelerometer_rotation "${acc:-0}" >/dev/null 2>&1 || true
     rm -f "$ROTATION_MARK"
   fi
   if [[ -f "$IME_MARK" ]]; then
@@ -507,7 +509,7 @@ s_start_fold() {
   ui wait "desc=Pause timer" || return 1
   ui assert-text "text~=Level 1 of 9 · running" "text~=Level 1 · time left" "desc~=Opens setup" "desc=Remove one minute" \
     "desc=Add one minute" "desc=Next blind level" "text~=played" || return 1
-  ui find 're=^1[0-9]:[0-9]{2}$'            # the level countdown, under 20:00
+  ui assert 're=^1[0-9]:[0-9]{2}$'          # the level countdown, under 20:00
 }
 # The clock's digits in seconds: the tallest m:ss on screen in the last dump.
 hero_seconds() {
@@ -550,7 +552,7 @@ s_timer_break() {
   ui tap "desc=Next blind level"
   # S4: the break's own screen, with its note and End break now
   ui assert-text "text~=Break · back at Level 5" "text~=Break 1 ·" "text=Last rebuy" || return 1
-  ui find 're=^(10:00|9:[0-9]{2})$'
+  ui assert 're=^(10:00|9:[0-9]{2})$'
 }
 s_timer_paused() {
   # PP-046: the play button has its own place (on a break, beside End break now), never the digits
@@ -801,13 +803,31 @@ s_bank_cutoff() {
   ui tap "desc=Next blind level"
   ui assert-text "text~=Level 2 · time left" || return 1
   tab Bank
-  ui assert-text "desc=Rebuy, closed" "desc=Alice, rebuy, closed after level 1, 1 taken"
+  if rebuy_column_folds; then
+    ui assert-text "1 rebuy" || return 1
+    if ui find "desc~=, rebuy, " --timeout 1 >/dev/null 2>&1; then echo "[ui] FAIL the closed Rebuy column still shows"; return 1; fi
+  else
+    ui assert-text "desc=Rebuy, closed" "desc=Alice, rebuy, closed after level 1, 1 taken"
+  fi
+}
+# Under 360 dp (the matrix's small profiles) a closed Rebuy column folds into the line under each
+# name, "↻ 1" (M4's Z2), so there is no Rebuy cell to see or tap.
+rebuy_column_folds() {
+  local size density; size="$(adb_ shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)"
+  density="$(adb_ shell wm density | tr -d '\r' | awk '{print $NF}' | tail -1)"
+  local w=${size%x*} h=${size#*x}
+  [[ "$(adb_ shell dumpsys window displays | tr -d '\r' | grep -o 'mCurrentRotation=ROTATION_[0-9]*' | head -1)" =~ ROTATION_(90|270) ]] && w=$h
+  (( w * 160 / density < 360 ))
 }
 s_bank_rebuy_blocked() {
   # A tap does nothing after the cutoff; the note under the list says why
-  ui tap "desc=Alice, rebuy, closed after level 1, 1 taken"
-  sleep 1
-  ui assert-text "desc=Alice, rebuy, closed after level 1, 1 taken" || return 1
+  if rebuy_column_folds; then
+    ui assert-text "1 rebuy" || return 1        # folded under the name: nothing to tap
+  else
+    ui tap "desc=Alice, rebuy, closed after level 1, 1 taken"
+    sleep 1
+    ui assert-text "desc=Alice, rebuy, closed after level 1, 1 taken" || return 1
+  fi
   ui find "text~=Rebuy for Alice" && { echo "[ui] FAIL a rebuy was recorded after the cutoff"; return 1; }
   ui scroll-to "text~=Rebuys closed after level 1" --max 3
   ui assert-text "text~=Rebuys closed after level 1. Taken ones stay filled"

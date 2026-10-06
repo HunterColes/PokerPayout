@@ -5,6 +5,10 @@
 # Runs on every pull request (debug and release side by side), and by hand:
 #   gh workflow run device.yml --ref <branch> [-f variant=debug|release|both] [-f only=step,step]
 #
+# The device matrix (scripts/device/matrix.sh: the tour's steps on several screen sizes, font
+# scales and rotations, docs/TESTING.md section 10) runs by hand only, as its own job:
+#   gh workflow run device.yml --ref <branch> -f job=matrix [-f profiles=focused|daily|all|a,b]
+#
 # Not a required check yet. The report (screenshots, ui dumps, logcat, tour.log) is uploaded as an
 # artifact either way. The release build is debug-signed here, since CI has no keystore.
 name: Device tour
@@ -22,6 +26,15 @@ on:
         description: "Optional: only these steps, comma-separated (tour.sh --list names them)"
         type: string
         default: ""
+      job:
+        description: "The tour, the device matrix, or both"
+        type: choice
+        options: [tour, matrix, both]
+        default: tour
+      profiles:
+        description: "Matrix only: a set (focused, daily, all) or profiles, comma-separated (matrix.sh --list)"
+        type: string
+        default: focused
 
 permissions:
   contents: read
@@ -33,6 +46,7 @@ concurrency:
 jobs:
   tour:
     name: Device tour (${{ matrix.variant }})
+    if: github.event_name == 'pull_request' || inputs.job != 'matrix'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     strategy:
@@ -99,6 +113,84 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: device-tour-${{ matrix.variant }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/device-reports/
+            build/device/*.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  matrix:
+    # By hand only. The focused set is untimed on 1.3.4: an estimated 40 to 50 minutes on a quiet
+    # local machine, longer here.
+    # The debug build, or the release build with variant=release.
+    name: Device matrix (${{ inputs.profiles }})
+    if: github.event_name == 'workflow_dispatch' && inputs.job != 'tour'
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules > /dev/null
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Emulator and system image
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" --install emulator platform-tools \
+            "system-images;android-34;google_apis_playstore;x86_64" > /dev/null
+
+      - name: Pillow (the layout checks' pictures and the contact sheet)
+        run: |
+          { sudo apt-get update -qq && sudo apt-get install -y -qq python3-pil; } > /dev/null \
+            || echo "no Pillow: the pixel checks are skipped"
+
+      - name: Matrix (${{ inputs.profiles }})
+        env:
+          VARIANT: ${{ inputs.variant }}
+          PROFILES: ${{ inputs.profiles }}
+          PP_BOOT_TIMEOUT: "600"
+        run: |
+          args=(--stop --profiles "${PROFILES:-focused}")
+          if [[ "$VARIANT" == release ]]; then args+=(--release); fi
+          scripts/device/matrix.sh "${args[@]}"
+
+      # The failing step's screen as text (the newest dump), so a failure can be read from the log alone.
+      - name: Show the failing screen
+        if: failure()
+        run: |
+          dir="$(ls -d build/device-reports/2* 2>/dev/null | tail -1)"
+          [[ -n "$dir" ]] || exit 0
+          xml="$(ls -t "$dir"/[0-9]*.xml 2>/dev/null | head -1)"
+          if [[ -n "$xml" ]]; then
+            echo "== Text on screen at the failure ($(basename "$xml")): text | description | bounds"
+            python3 - "$xml" <<'EOF'
+          import sys, xml.etree.ElementTree as ET
+          for n in ET.parse(sys.argv[1]).iter('node'):
+              t, d = n.get('text') or '', n.get('content-desc') or ''
+              if t or d:
+                  print(f"{t!r} | {d!r} | {n.get('bounds')}")
+          EOF
+          fi
+          echo "== End of tour.log"
+          tail -60 "$dir/tour.log"
+
+      - name: Upload the matrix report
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-matrix-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             build/device-reports/
             build/device/*.log

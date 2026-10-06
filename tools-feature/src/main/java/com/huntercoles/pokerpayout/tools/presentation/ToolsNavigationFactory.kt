@@ -26,12 +26,12 @@ class ToolsNavigationFactory @Inject constructor(
             ToolsHomeScreen(navigationManager = navigationManager)
         }
 
-        // Odds. Until it has its own top bar (M5), keep it clear of the status bar now that the app
-        // draws edge to edge. A PokerTopBar inside pads for the bar itself; this padding consumes
-        // the inset, so the two never add up.
+        // Odds. Keep the whole screen (keypad and run-it-out included) clear of the status bar now
+        // that the app draws edge to edge. Its PokerTopBar pads for the bar itself; this padding
+        // consumes the inset, so the two never add up.
         builder.composable<NavigationDestination.OddsCalculator> {
             Box(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
-                OddsCalculatorScreen()
+                OddsCalculatorScreen(onBack = navigationManager::navigateBack)
             }
         }
 

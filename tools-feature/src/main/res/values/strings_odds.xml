@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The odds screen (S8, S9) and run it out (S10). In their own file so other batches editing
+     strings.xml don't collide with these. -->
+<resources>
+    <!-- ViewModel -->
+    <string name="odds_snackbar_new_hand">New hand</string>
+    <string name="odds_snackbar_table_cleared">Table cleared to two players</string>
+    <string name="odds_undo">Undo</string>
+    <string name="odds_error_cant_calculate">These cards can\'t be worked out.</string>
+    <string name="odds_error_failed">Couldn\'t work out the odds: %1$s</string>
+
+    <!-- Header -->
+    <string name="odds_title">Odds</string>
+    <string name="odds_swap">Swap Player 1 and Player 2</string>
+    <string name="odds_new_hand">New hand</string>
+    <string name="odds_four_colour_deck">Four-colour deck</string>
+    <string name="odds_clear_table">Clear table</string>
+    <string name="odds_status_empty">Pick cards to see the odds</string>
+    <string name="odds_status_working">%1$s · working it out</string>
+    <string name="odds_status_exact">%1$s · exact · %2$s runouts</string>
+    <string name="odds_status_exact_plain">%1$s · exact</string>
+    <string name="odds_status_showdown">%1$s · showdown</string>
+    <string name="odds_status_typing">%1$s · estimating</string>
+    <string name="odds_status_estimate">%1$s · estimate ±%2$s</string>
+    <string name="odds_status_error">%1$s · check the cards</string>
+
+    <!-- Streets -->
+    <string name="odds_preflop">Preflop</string>
+    <string name="odds_flop">Flop</string>
+    <string name="odds_turn">Turn</string>
+    <string name="odds_river">River</string>
+
+    <!-- Board and seats -->
+    <string name="odds_board">Board</string>
+    <string name="odds_player">Player %1$d</string>
+    <string name="odds_favourite">Favourite</string>
+    <string name="odds_ahead_now">Ahead right now</string>
+    <string name="odds_folded">Folded</string>
+    <string name="odds_folded_detail">Folded · these cards are dead</string>
+    <string name="odds_random_hand">Random hand</string>
+    <string name="odds_one_random">%1$s + a random card</string>
+    <string name="odds_no_cards">No cards yet</string>
+    <string name="odds_seat_options">%1$s, options</string>
+    <string name="odds_win_tie">win %1$s · tie %2$s</string>
+    <string name="odds_detail">%1$s · %2$s</string>
+    <string name="odds_about">≈%1$s</string>
+    <string name="odds_add_player">Add player</string>
+    <string name="odds_run_it_out">Run it out</string>
+
+    <!-- Seat menu -->
+    <string name="odds_menu_fold">Fold</string>
+    <string name="odds_menu_unfold">Back in the hand</string>
+    <string name="odds_menu_swap">Swap with %1$s</string>
+    <string name="odds_menu_random">Random hand</string>
+    <string name="odds_menu_clear">Clear cards</string>
+    <string name="odds_menu_remove">Remove %1$s</string>
+
+    <!-- Card slots, read by TalkBack -->
+    <string name="odds_slot_hole">%1$s, card %2$d</string>
+    <string name="odds_slot_board">%1$s, %2$s</string>
+    <string name="odds_slot_board_card">%1$s card %2$d</string>
+    <string name="odds_slot_empty">empty</string>
+    <string name="odds_slot_next">empty. Next</string>
+    <string name="odds_slot_random">random</string>
+    <string name="odds_slot_picking">%1$s. Picking</string>
+
+    <!-- Keypad -->
+    <string name="odds_keypad_card">card %1$d</string>
+    <string name="odds_separator">" · "</string>
+    <string name="odds_keypad_random">Random</string>
+    <string name="odds_keypad_done">Done</string>
+    <string name="odds_keypad_backspace">Delete card</string>
+    <string name="odds_keypad_rank_used">%1$s, all four are out</string>
+    <string name="odds_keypad_suit_used">%1$s, already out</string>
+    <string name="odds_keypad_suit_wait">%1$s, pick a rank first</string>
+
+    <!-- Insight panel -->
+    <string name="odds_next_card">Next card</string>
+    <plurals name="odds_next_card_summary">
+        <item quantity="one">%1$d of %2$d puts %3$s ahead</item>
+        <item quantity="other">%1$d of %2$d put %3$s ahead</item>
+    </plurals>
+    <string name="odds_next_card_none">No single card puts %1$s ahead</string>
+    <string name="odds_legend_takes_lead">%1$s takes the lead</string>
+    <string name="odds_legend_stays_ahead">%1$s stays ahead</string>
+    <string name="odds_legend_stays_behind">%1$s stays behind</string>
+    <string name="odds_legend_on_table">On the table</string>
+    <string name="odds_cell_takes_lead">%1$s: %2$s takes the lead</string>
+    <string name="odds_cell_stays">%1$s: %2$s stays behind</string>
+    <string name="odds_cell_on_table">%1$s: on the table</string>
+    <string name="odds_why">Why</string>
+    <string name="odds_why_favourite">%1$s is %2$s (%3$s against %4$s) but has %5$s: %6$s. That makes %1$s the favourite by the river.</string>
+    <string name="odds_why_holds">%1$s is %2$s (%3$s against %4$s). %5$s has %6$s: %7$s, which leaves %5$s %8$s%% to win.</string>
+    <string name="odds_why_no_outs">%1$s is %2$s (%3$s against %4$s), and no single card puts %5$s in front.</string>
+    <string name="odds_why_level">Nobody is ahead right now: the best hands are level.</string>
+    <string name="odds_why_behind_now">behind now</string>
+    <string name="odds_why_ahead_now">ahead now</string>
+    <plurals name="odds_outs">
+        <item quantity="one">%d out</item>
+        <item quantity="other">%d outs</item>
+    </plurals>
+    <plurals name="odds_outs_twice">
+        <item quantity="one">%d out twice</item>
+        <item quantity="other">%d outs twice</item>
+    </plurals>
+    <string name="odds_group_suit">%1$d %2$s</string>
+    <string name="odds_group_rank">%1$d %2$s</string>
+    <string name="odds_group_card">the %1$s</string>
+    <string name="odds_list_pair">%1$s and %2$s</string>
+    <string name="odds_list_more">%1$s, %2$s</string>
+    <string name="odds_by_the_river">By the river</string>
+    <string name="odds_how_often">how often each makes</string>
+    <string name="odds_river_seat">%1$s · %2$s</string>
+    <string name="odds_category_plus">%1$s+</string>
+    <string name="odds_percent_int">%1$d%%</string>
+
+    <!-- Hand labels. Lower case: the first letter of a whole label is capitalised in code. -->
+    <string-array name="odds_rank_names">
+        <item>deuce</item><item>three</item><item>four</item><item>five</item><item>six</item>
+        <item>seven</item><item>eight</item><item>nine</item><item>ten</item><item>jack</item>
+        <item>queen</item><item>king</item><item>ace</item>
+    </string-array>
+    <string-array name="odds_rank_plurals">
+        <item>deuces</item><item>threes</item><item>fours</item><item>fives</item><item>sixes</item>
+        <item>sevens</item><item>eights</item><item>nines</item><item>tens</item><item>jacks</item>
+        <item>queens</item><item>kings</item><item>aces</item>
+    </string-array>
+    <string-array name="odds_suit_plurals">
+        <item>clubs</item><item>diamonds</item><item>hearts</item><item>spades</item>
+    </string-array>
+    <string-array name="odds_category_names">
+        <item>High card</item><item>Pair</item><item>Two pair</item><item>Trips</item><item>Straight</item>
+        <item>Flush</item><item>Full house</item><item>Quads</item><item>Straight flush</item>
+    </string-array>
+    <string name="odds_hand_pocket_pair">pocket %1$s</string>
+    <string name="odds_hand_suited">%1$s-%2$s suited</string>
+    <string name="odds_hand_offsuit">%1$s-%2$s offsuit</string>
+    <string name="odds_hand_high_card">%1$s high</string>
+    <string name="odds_hand_board_pair">board pair, %1$s</string>
+    <string name="odds_hand_overpair">overpair, %1$s</string>
+    <string name="odds_hand_top_pair">top pair, %1$s</string>
+    <string name="odds_hand_second_pair">second pair, %1$s</string>
+    <string name="odds_hand_middle_pair">middle pair, %1$s</string>
+    <string name="odds_hand_bottom_pair">bottom pair, %1$s</string>
+    <string name="odds_hand_two_pair">two pair, %1$s and %2$s</string>
+    <string name="odds_hand_set">set of %1$s</string>
+    <string name="odds_hand_trips">trips, %1$s</string>
+    <string name="odds_hand_board_trips">three %1$s on the board</string>
+    <string name="odds_hand_straight">straight, %1$s high</string>
+    <string name="odds_hand_flush">flush, %1$s high</string>
+    <string name="odds_hand_full_house">full house, %1$s full of %2$s</string>
+    <string name="odds_hand_quads">four %1$s</string>
+    <string name="odds_hand_straight_flush">straight flush, %1$s high</string>
+    <string name="odds_hand_royal_flush">royal flush</string>
+    <string name="odds_draw_nut_flush">nut flush draw</string>
+    <string name="odds_draw_flush">flush draw</string>
+    <string name="odds_draw_open_ended">open-ended straight draw</string>
+    <string name="odds_draw_double_gutshot">double gutshot</string>
+    <string name="odds_draw_gutshot">gutshot</string>
+    <string name="odds_hand_join">%1$s + %2$s</string>
+    <!-- The same hands as a phrase inside a sentence: "ace-high against a pair of queens". -->
+    <string name="odds_phrase_high_card">%1$s-high</string>
+    <string name="odds_phrase_pair">a pair of %1$s</string>
+    <string name="odds_phrase_two_pair">two pair, %1$s and %2$s</string>
+    <string name="odds_phrase_set">a set of %1$s</string>
+    <string name="odds_phrase_trips">trip %1$s</string>
+    <string name="odds_phrase_straight">a straight</string>
+    <string name="odds_phrase_flush">a flush</string>
+    <string name="odds_phrase_full_house">a full house</string>
+    <string name="odds_phrase_quads">four %1$s</string>
+    <string name="odds_phrase_straight_flush">a straight flush</string>
+
+    <!-- Run it out (S10) -->
+    <string name="odds_runout_title">Run it out</string>
+    <string name="odds_runout_landscape">Landscape view</string>
+    <string name="odds_runout_portrait">Back to portrait</string>
+    <string name="odds_runout_status_preflop">Preflop · the flop comes next</string>
+    <string name="odds_runout_status_flop">Flop dealt · two cards to come</string>
+    <string name="odds_runout_status_turn">Turn dealt · one card to come</string>
+    <string name="odds_runout_status_river">River dealt · %1$s</string>
+    <string name="odds_runout_status_twice">Run twice · %1$s</string>
+    <string name="odds_runout_status_dealing">Dealing…</string>
+    <string name="odds_runout_deal_flop">Deal the flop</string>
+    <string name="odds_runout_deal_turn">Deal the turn</string>
+    <string name="odds_runout_deal_river">Deal the river</string>
+    <string name="odds_runout_again_preflop">Run again from preflop</string>
+    <string name="odds_runout_again_flop">Run again from the flop</string>
+    <string name="odds_runout_again_turn">Run again from the turn</string>
+    <string name="odds_runout_twice">Run it twice</string>
+    <string name="odds_runout_just_dealt">just dealt</string>
+    <string name="odds_runout_sweat">The sweat</string>
+    <string-array name="odds_chart_streets">
+        <item>Pre</item><item>Flop</item><item>Turn</item><item>River</item>
+    </string-array>
+    <string name="odds_runout_sweat_desc">%1$s: %2$s</string>
+    <string name="odds_runout_sweat_point">%2$s%% %1$s</string>
+    <plurals name="odds_runout_needs_river">
+        <item quantity="one">%1$s needs the one river that helps (%2$d of %3$d):</item>
+        <item quantity="other">%1$s needs one of %2$d rivers (%2$d of %3$d):</item>
+    </plurals>
+    <plurals name="odds_runout_needs_turn">
+        <item quantity="one">%1$s takes the lead on %2$d turn (%2$d of %3$d):</item>
+        <item quantity="other">%1$s takes the lead on %2$d turns (%2$d of %3$d):</item>
+    </plurals>
+    <string name="odds_runout_drawing_dead">%1$s is drawing dead: no card puts them ahead.</string>
+    <string name="odds_runout_wins">%1$s wins</string>
+    <string name="odds_runout_holds">%1$s holds</string>
+    <string name="odds_runout_split">Split pot</string>
+    <string name="odds_runout_with">%1$s with %2$s</string>
+    <string name="odds_runout_run">Run %1$d</string>
+    <string name="odds_runout_pot_split">Each run is half the pot</string>
+    <string name="odds_runout_up">up %1$s</string>
+    <string name="odds_runout_down">down %1$s</string>
+    <string name="odds_runout_winner_pill">Wins</string>
+    <string name="odds_runout_holds_pill">Holds</string>
+    <string name="odds_runout_split_pill">Splits</string>
+</resources>

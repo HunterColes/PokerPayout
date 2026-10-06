@@ -565,66 +565,105 @@ s_hand_ranks() {
   require_tab_selected Tools
 }
 s_odds_empty() {
-  ui back
-  ui wait-gone "desc~=ute" --timeout 5
+  # The Settings volume dialog may still be open: the dump only sees a dialog's window, so if the
+  # Odds tile isn't there, close the dialog first.
+  ui find text=Odds >/dev/null 2>&1 || ui back
   ui tap text=Odds
-  ui assert-text "text~=Poker Odds Calculator" "text~=Number of Players" "Calculate Odds" "text~=Community Cards (0/5)" "Player 1" "Player 2"
+  ui assert-text text=Odds "Player 1" "Player 2" "desc=Player 1, card 1, empty. Next" "text~=Pick cards" "Add player"
 }
 s_card_picker() {
-  ui tap "desc=Add Card"
-  ui assert-text "Select a Card" Cancel
+  # The rank-then-suit keypad is docked (no dialog): 13 ranks and delete, then suits that wait for a rank.
+  ui assert-text desc=Ace desc=10 desc=2 "desc=Delete card" "desc=Spades, pick a rank first" Random Done
 }
-pick() { # rank suit-symbol; scrolls the picker grid when the card is below the fold.
-  # No wait-gone needed: the next dump only sees the main window once the dialog closes.
-  # `clickable` pins the match to one card; without it a half-scrolled grid can match the
-  # grid itself (rank of one card + suit of another).
-  ui tap "has=$1|$2" clickable --scroll-in scrollable
+key_card() { # rank suit, as TalkBack names the keys: "Ace Spades", "10 Hearts"
+  ui tap "desc=$1"
+  ui tap "desc=$2"
 }
 s_hole_cards() {
-  pick A "♠"                                  # picker already open for Player 1
-  ui tap "desc=Add Card"; pick K "♠"
-  ui tap "desc=Add Card"; pick Q "♥"
-  ui tap "desc=Add Card"; pick Q "♦"
-  ui assert-text "text~=Community Cards (0/5)"
+  key_card Ace Spades; key_card King Spades; key_card Queen Hearts; key_card Queen Diamonds
+  # The keypad moved on by itself to the flop after the last hole card.
+  ui assert-text "desc=Player 1, card 1, Ace of spades" "desc=Player 2, card 2, Queen of diamonds" "text~=Flop · card 1"
 }
 s_flop() {
-  ui tap "desc=Add Card"; pick J "♠"
-  ui tap "desc=Add Card"; pick T "♠"
-  ui tap "desc=Add Card"; pick 2 "♣"
-  ui assert-text "text~=Community Cards (3/5)" Flop Turn River
+  key_card Jack Spades; key_card 10 Spades; key_card 2 Clubs
+  ui tap text=Done                            # put the keypad away to see the results
+  ui assert-text "desc=Flop card 1, Jack of spades" "desc=Flop card 3, 2 of clubs" "desc=Turn, empty"
 }
-# Centre x of the node whose text is exactly $2, from `ui find` output in $1.
-x_of() { sed -n "s/^text='$2' .* @\([0-9]*\),[0-9]*\$/\1/p" <<<"$1" | head -1; }
+# Centre y of the first node whose text or description matches the regex $2, from `ui find` output in $1.
+y_of() { grep -E "$2" <<<"$1" | head -1 | sed -n 's/.* @[0-9]*,\([0-9]*\)$/\1/p'; }
 s_odds_results() {
-  ui tap "Calculate Odds"
-  # AsKs vs QhQd on JsTs2c is enumerated exactly: Player 1 wins 555 and Player 2 435 of the
-  # 990 turn-and-river runouts, with no ties. Before v1.2.0 the kicker-order bug (PP-011)
-  # showed about 49.25 / 50.75 here, so anything else is a regression.
-  ui wait "text=56.06%" --timeout 30 || return 1
+  # A♠K♠ v Q♥Q♦ on J♠10♠2♣ is enumerated exactly, live: Player 1 wins 555 and Player 2 435 of the
+  # 990 turn-and-river runouts, no ties. Before v1.2.0 the kicker-order bug (PP-011) showed about
+  # 49.25 / 50.75 here, so anything else is a regression.
+  ui wait "text~=win 56.06 · tie 0.00" --timeout 30 || return 1
   local found p1 p2 w1 w2
-  found="$(ui find 're=^(Player 1|Player 2|56\.06%|43\.94%)$')"
-  p1="$(x_of "$found" "Player 1")"; p2="$(x_of "$found" "Player 2")"
-  w1="$(x_of "$found" "56.06%")";   w2="$(x_of "$found" "43.94%")"
-  echo "odds columns: Player 1 x=$p1 shows 56.06% at x=$w1; Player 2 x=$p2 shows 43.94% at x=$w2"
-  [[ -n "$p1" && -n "$p2" && -n "$w1" && -n "$w2" ]] || { echo "[ui] FAIL expected 56.06% / 43.94% under Player 1 / Player 2"; return 1; }
-  (( p1 < p2 && w1 < w2 )) || { echo "[ui] FAIL 56.06% / 43.94% are not under Player 1 / Player 2"; return 1; }
+  found="$(ui find 're=(Player 1, options|Player 2, options|win 56\.06 · tie 0\.00|win 43\.94 · tie 0\.00)')"
+  p1="$(y_of "$found" "Player 1, options")"; p2="$(y_of "$found" "Player 2, options")"
+  w1="$(y_of "$found" "win 56\.06")";        w2="$(y_of "$found" "win 43\.94")"
+  echo "odds rows: Player 1 y=$p1, 56.06 at y=$w1; Player 2 y=$p2, 43.94 at y=$w2"
+  [[ -n "$p1" && -n "$p2" && -n "$w1" && -n "$w2" ]] || { echo "[ui] FAIL expected 56.06 / 43.94 for Player 1 / Player 2"; return 1; }
+  (( p1 < w1 && w1 < p2 && p2 < w2 )) || { echo "[ui] FAIL 56.06 / 43.94 are not in Player 1's / Player 2's rows"; return 1; }
+  ui assert-text "text~=exact · 990 runouts" "text~=Nut flush draw + gutshot" "text~=Overpair, queens"
+}
+s_odds_runout() {
+  # Run it out (S10) on the same hand: deal the turn and the river from a fresh random seed, run it
+  # twice, then back leaves run it out with the hand and its odds untouched.
+  ui tap "text=Run it out" --scroll-in scrollable
+  ui assert-text "text=Run it out" "text~=Flop dealt" || return 1
+  ui tap "text=Deal the turn" --scroll-in scrollable
+  ui wait "text=Deal the river" --timeout 20 || return 1
+  ui assert-text "text~=Turn dealt" || return 1
+  ui tap "text=Deal the river"
+  ui wait "text~=River dealt" --timeout 20 || return 1
+  ui assert-text "re=River dealt · (Player [12] (wins|holds)|Split pot)" || return 1
+  ui tap "text=Run it twice" --scroll-in scrollable
+  ui assert-text "text~=Run twice · Each run is half the pot" || return 1
+  ui back                                     # back leaves run it out, not the odds screen
+  ui assert-text text=Odds "text~=win 56.06 · tie 0.00" "desc=Turn, empty"
 }
 s_odds_card_clears() {
-  ui tap "desc=Add Card"; pick 9 "♥"         # the turn: any input change drops the old odds
-  ui assert-text "text~=Community Cards (4/5)" "Calculate Odds" || return 1
-  ui wait-gone 're=^[0-9]+\.[0-9]{2}%$' --timeout 5
+  # Typing the turn drops the flop's numbers at once and works out the turn: the 7♥ leaves Player 1
+  # exactly 16 rivers of 44 (36.36%).
+  ui tap "desc=Turn, empty"
+  key_card 7 Hearts
+  ui tap text=Done
+  ui wait-gone "text~=win 56.06" --timeout 10 || return 1
+  ui wait "text~=win 36.36 · tie 0.00" --timeout 30 || return 1
+  ui assert-text "desc=Turn, 7 of hearts" "text~=Turn · exact · 44 runouts"
 }
 s_odds_more_players() {
-  ui slide class=SeekBar --frac 0.3            # 2..10 -> 4 players
-  ui assert-text "text~=Number of Players: 4"
+  # Two more seats with unknown hands (the slider is gone: "Add player"), then fold Player 3.
+  ui tap "text=Add player" --scroll-in scrollable
+  ui tap text=Done
+  ui tap "text=Add player" --scroll-in scrollable
+  ui tap text=Done
+  ui scroll up --times 3
+  ui tap "desc=Player 3, options" --scroll-in scrollable
+  ui tap text=Fold
+  ui assert-text "text~=Player 4" "text~=Folded" "re=^≈?[0-9]+\.[0-9]%$"
 }
-s_odds_reset_dialog() {
-  ui tap desc=Reset
-  ui assert-text "Reset odds calculator?" Cancel Reset
+s_odds_reset_new_hand() {
+  # New hand (the header's ↺) clears every card and fold at once and keeps the four seats; the
+  # keypad stays closed under the Undo snackbar. Undo is on the app's snackbar once MainActivity
+  # hosts it (M2); tap it if it's there.
+  ui tap "desc=New hand"
+  ui assert-text "desc=Player 1, card 1, empty" "text~=Pick cards" || return 1
+  if ui find text=UNDO >/dev/null 2>&1; then
+    ui tap text=UNDO
+    ui wait "desc=Turn, 7 of hearts" --timeout 10 || return 1
+    ui tap "desc=New hand"
+    ui wait "text~=Pick cards" --timeout 10 || return 1
+  else
+    echo "no Undo snackbar on screen (MainActivity doesn't host the app's snackbar yet)"
+  fi
+  ui scroll-to "desc=Player 4, options"
 }
-s_odds_reset_done() {
-  ui tap text=Reset
-  ui assert-text "text~=Community Cards (0/5)"
+s_odds_reset_table() {
+  # "Clear table" at the end of the page goes back to two empty seats.
+  ui tap "text=Clear table" --scroll-in scrollable
+  ui wait-gone "desc=Player 3, options" --timeout 10 || return 1
+  ui scroll up --times 3
+  ui assert-text "desc=Player 1, card 1, empty" "desc=Player 2, options"
 }
 s_chip_calc() {
   ui back
@@ -774,15 +813,16 @@ step tools                "Tools tab: tool list and Sound (S7)"                 
 step sound-off            "Sound off: switch off, volume and chime rest"        s_sound_off
 step sound-on             "Sound back on; test chime"                           s_sound_on
 step hand-ranks           "Hand ranks: back arrow, Tools stays selected"        s_hand_ranks
-step odds-empty           "Odds calculator, empty state"                        s_odds_empty
-step odds-card-picker     "Card picker dialog"                                  s_card_picker
-step odds-hole-cards      "Hole cards: AsKs vs QhQd"                            s_hole_cards
-step odds-flop            "Flop: Js Ts 2c"                                      s_flop
-step odds-results         "Exact odds: 56.06% / 43.94%"                          s_odds_results
-step odds-card-clears     "Add the turn; stale odds disappear"                  s_odds_card_clears
-step odds-4-players       "Raise player count to 4 (empty seats)"               s_odds_more_players
-step odds-reset-dialog    "Odds reset dialog"                                   s_odds_reset_dialog
-step odds-reset-done      "Odds reset confirmed"                                s_odds_reset_done
+step odds-empty           "Odds: empty table, first slot waiting"              s_odds_empty
+step odds-card-picker     "Docked keypad: ranks, then suits that wait"          s_card_picker
+step odds-hole-cards      "Keypad: AsKs vs QhQd, auto-advance to the flop"      s_hole_cards
+step odds-flop            "Keypad: flop Js 10s 2c, keypad put away"             s_flop
+step odds-results         "Exact odds: 56.06% / 43.94%, live"                   s_odds_results
+step odds-run-it-out      "Run it out: deal turn and river, run twice, back"    s_odds_runout
+step odds-card-clears     "Add the turn 7h: stale odds go, 36.36% comes"        s_odds_card_clears
+step odds-4-players       "Add two players, fold Player 3"                      s_odds_more_players
+step odds-reset-new-hand  "New hand: cards cleared, seats kept"                 s_odds_reset_new_hand
+step odds-reset-table     "Clear table: back to two empty seats"               s_odds_reset_table
 step chip-calc            "Chip set (the chip calculator), Tools selected"      s_chip_calc
 step chip-calc-generated  "Generate chip breakdown"                             s_chip_calc_generated
 step chip-calc-advanced   "Advanced settings expanded"                          s_chip_calc_advanced

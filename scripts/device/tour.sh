@@ -7,33 +7,50 @@
 #   scripts/device/tour.sh --keep-going    # don't stop at the first failing step
 #   scripts/device/tour.sh --stop          # shut the emulator down afterwards
 #
+#   scripts/device/tour.sh --only launch,bank,tools   # just these steps, in this order
+#   scripts/device/tour.sh --steps-file FILE          # the same, names one per line (# comments)
+#   scripts/device/tour.sh --list                     # print every step (name, opt-in, what), exit
+#   scripts/device/tour.sh --out DIR                  # report to DIR (no build/device-reports/latest)
+#   scripts/device/tour.sh --no-boot --no-install     # use the running emulator and installed app
+#                                                     # as they are (the device matrix does this)
+#
 # Every step: run actions/assertions with ui.py, then save <NN-name>.png (screenshot)
 # and <NN-name>.xml (uiautomator tree). The tour FAILS if an expected text is missing,
 # if logcat shows a FATAL EXCEPTION / ANR for the app, or if the app process dies.
+# Steps registered with `extra_step` (steps-matrix.sh) run only when --only/--steps-file names them.
 #
 # Output: build/device-reports/<timestamp>/{index.md, *.png, *.xml, logcat.txt, tour.log}
 #         (also symlinked as build/device-reports/latest). Exit code 0 == all steps passed.
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 BUILD=1; KEEP_GOING=0; STOP_AFTER=0; VARIANT=debug
-for arg in "$@"; do
-  case "$arg" in
+BOOT=1; INSTALL=1; LIST=0; ONLY=""; OUT=""
+while (( $# )); do
+  case "$1" in
     --no-build) BUILD=0 ;;
     --release) VARIANT=release ;;
     --keep-going) KEEP_GOING=1 ;;
     --stop) STOP_AFTER=1 ;;
-    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
-    *) die "unknown option: $arg" ;;
+    --no-boot) BOOT=0 ;;
+    --no-install) INSTALL=0; BUILD=0 ;;
+    --list) LIST=1 ;;
+    --only) shift; ONLY="$ONLY ${1:?--only needs step names}" ;;
+    --only=*) ONLY="$ONLY ${1#--only=}" ;;
+    --steps-file) shift; [[ -f "${1:-}" ]] || die "no steps file: ${1:-}"
+                  ONLY="$ONLY $(sed 's/#.*//' "$1")" ;;
+    --out) shift; OUT="${1:?--out needs a directory}" ;;
+    -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
+    *) die "unknown option: $1" ;;
   esac
+  shift
 done
+ONLY="$(tr ',' ' ' <<<"$ONLY" | xargs)"
 
 T0=$(date +%s)
 REPORT_ROOT="${PP_REPORT_ROOT:-$REPO_ROOT/build/device-reports}"
-OUT="$REPORT_ROOT/$(date +%Y%m%d-%H%M%S)"
-mkdir -p "$OUT"
-ln -sfn "$OUT" "$REPORT_ROOT/latest"
+LINK_LATEST=0
+[[ -n "$OUT" ]] || { OUT="$REPORT_ROOT/$(date +%Y%m%d-%H%M%S)"; LINK_LATEST=1; }
 LOG="$OUT/tour.log"
-: > "$LOG"
 
 # ui.py saves every dump to $PP_UI_LAST_XML; if a step ends with an assertion, that
 # dump already shows the final state and capture() reuses it (saves ~2s per step).
@@ -43,20 +60,59 @@ LAST_UI=""
 ui() { LAST_UI="$1"; python3 "$DEVICE_SCRIPTS/ui.py" "$@"; }
 
 # ------------------------------------------------------------------ setup
-t=$(date +%s)
-"$DEVICE_SCRIPTS/boot.sh" | tee -a "$LOG"
-BOOT_SECS=$(since "$t")
+setup() {
+  mkdir -p "$OUT"
+  (( LINK_LATEST )) && ln -sfn "$OUT" "$REPORT_ROOT/latest"
+  : > "$LOG"
+  printf 'id\tname\tstatus\tseconds\tdetail\n' > "$OUT/steps.tsv"
+  local t
+  t=$(date +%s)
+  if (( BOOT )); then "$DEVICE_SCRIPTS/boot.sh" | tee -a "$LOG"; else require_device; fi
+  BOOT_SECS=$(since "$t")
 
-t=$(date +%s)
-if (( BUILD )); then "$DEVICE_SCRIPTS/install.sh" "--$VARIANT" | tee -a "$LOG"
-else "$DEVICE_SCRIPTS/install.sh" "--$VARIANT" --no-build | tee -a "$LOG"; fi
-INSTALL_SECS=$(since "$t")
+  t=$(date +%s)
+  if (( !INSTALL )); then :
+  elif (( BUILD )); then "$DEVICE_SCRIPTS/install.sh" "--$VARIANT" | tee -a "$LOG"
+  else "$DEVICE_SCRIPTS/install.sh" "--$VARIANT" --no-build | tee -a "$LOG"; fi
+  INSTALL_SECS=$(since "$t")
 
-adb_ logcat -b all -c >/dev/null 2>&1 || true
-APP_VERSION="$(adb_ shell dumpsys package "$APP_ID" | sed -n 's/.*versionName=//p' | head -1 | tr -d '\r')"
+  adb_ logcat -b all -c >/dev/null 2>&1 || true
+  APP_VERSION="$(adb_ shell dumpsys package "$APP_ID" | sed -n 's/.*versionName=//p' | head -1 | tr -d '\r')"
+  # Put back what a step changed on the display however the tour ends, a signal included.
+  trap 'echo "[tour] interrupted"; ABORTED=1; finish' INT TERM HUP
+}
+
+# ------------------------------------------------------------------ step registry
+# `step NAME DESCRIPTION FUNCTION` registers a step of the tour; they run in the order registered.
+# `extra_step` registers one that runs only when --only or --steps-file names it (steps-matrix.sh).
+STEP_NAMES=(); declare -A STEP_DESC=() STEP_FN=() STEP_OPT_IN=()
+step() {
+  [[ -z "${STEP_FN[$1]:-}" ]] || die "step $1 registered twice"
+  STEP_NAMES+=("$1"); STEP_DESC[$1]="$2"; STEP_FN[$1]="$3"
+}
+extra_step() { step "$@"; STEP_OPT_IN[$1]=1; }
+
+run_tour() {
+  local names=() n
+  if (( LIST )); then
+    for n in "${STEP_NAMES[@]}"; do
+      printf '%s\t%s\t%s\n' "$n" "$([[ -n "${STEP_OPT_IN[$n]:-}" ]] && echo opt-in || echo tour)" "${STEP_DESC[$n]}"
+    done
+    exit 0
+  fi
+  if [[ -n "$ONLY" ]]; then
+    read -r -a names <<<"$ONLY"
+    for n in "${names[@]}"; do [[ -n "${STEP_FN[$n]:-}" ]] || die "unknown step: $n (see --list)"; done
+  else
+    for n in "${STEP_NAMES[@]}"; do [[ -n "${STEP_OPT_IN[$n]:-}" ]] || names+=("$n"); done
+  fi
+  setup
+  for n in "${names[@]}"; do run_step "$n" "${STEP_DESC[$n]}" "${STEP_FN[$n]}"; done
+  finish
+}
 
 # ------------------------------------------------------------------ step runner
-STEP_NO=0; PASSED=0; FAILED=0; ROWS=()
+STEP_NO=0; PASSED=0; FAILED=0; ROWS=(); ABORTED=0; BOOT_SECS=0; INSTALL_SECS=0; APP_VERSION=""
 crash_check() {
   local crash
   crash="$(adb_ logcat -d -b crash 2>/dev/null | grep -E "FATAL EXCEPTION|Process: $APP_ID" || true)"
@@ -68,14 +124,16 @@ crash_check() {
 }
 capture() { # $1 = id
   adb_ exec-out screencap -p > "$OUT/$1.png" 2>>"$LOG" || true
+  # A step that changed the density (the rail) says so, for the layout checks of its dump
+  [[ -f "$DENSITY_MARK" && -f "$OUT/.step-density" ]] && cp "$OUT/.step-density" "$OUT/$1.density"
   case "$LAST_UI" in
     assert|assert-text|wait|wait-gone|find)
       [[ -f "$PP_UI_LAST_XML" ]] && mv "$PP_UI_LAST_XML" "$OUT/$1.xml" && return 0 ;;
   esac
   ui dump --out "$OUT/$1.xml" >/dev/null 2>>"$LOG" || true
 }
-# step <name> <description> <function>
-step() {
+# run_step <name> <description> <function>
+run_step() {
   local name="$1" desc="$2" fn="$3" status detail t1 secs
   STEP_NO=$((STEP_NO + 1))
   local id; id="$(printf '%02d-%s' "$STEP_NO" "$name")"
@@ -95,16 +153,34 @@ step() {
     status=PASS; PASSED=$((PASSED + 1)); detail=""
   else
     status=FAIL; FAILED=$((FAILED + 1))
-    detail="$(tail -n +"$((log_mark + 1))" "$LOG" | grep -E "\[ui\] (FAIL|ERROR)|crash|ANR|not running" | head -2 | tr '\n' ' ' | cut -c1-300)"
+    # (|| true: a step that fails without a "[ui] FAIL" line must not end the whole tour here)
+    detail="$(tail -n +"$((log_mark + 1))" "$LOG" | grep -E "\[ui\] (FAIL|ERROR)|crash|ANR|not running" | head -2 | tr '\n' ' ' | cut -c1-300 || true)"
+    [[ -n "$detail" ]] || detail="exit $rc after: $(tail -n 1 "$LOG" | cut -c1-200)"
   fi
   capture "$id"
+  [[ "$status" == FAIL && "${PP_TOUR_RECOVER:-}" == 1 ]] && recover_screen
   secs=$(( ($(date +%s%N) - t1) / 100000000 )); secs="$((secs / 10)).$((secs % 10))"
   ROWS+=("| $STEP_NO | \`$name\` | $desc | **$status** | ${secs}s | ![]($id.png) | ${detail//|/\\|} |")
+  printf '%s\t%s\t%s\t%s\t%s\n' "$id" "$name" "$status" "$secs" "${detail//$'\t'/ }" >> "$OUT/steps.tsv"
   printf '[tour] %-4s %s (%ss)%s\n' "$status" "$id" "$secs" "${detail:+ -- $detail}"
   if [[ "$status" == FAIL && "$KEEP_GOING" != 1 ]]; then finish; fi
 }
 
+# The device matrix (PP_TOUR_RECOVER=1) keeps going after a failed step. A step that failed with a
+# dialog (or the table view) still over the tabs would fail every step after it, so close that
+# with Back first; the failed step's screenshot is already taken.
+recover_screen() {
+  ui dump --out "$OUT/.recover.xml" >/dev/null 2>>"$LOG" || return 0
+  if [[ -z "$(tab_positions "$OUT/.recover.xml")" ]]; then
+    echo "[tour] no tabs on screen after the failed step: Back, to close what it left open" >>"$LOG"
+    ui back >>"$LOG" 2>&1 || true
+    sleep 1
+  fi
+  return 0
+}
+
 finish() {
+  trap - INT TERM HUP
   restore_display
   adb_ logcat -d -v threadtime > "$OUT/logcat.txt" 2>/dev/null || true
   adb_ logcat -d -b crash > "$OUT/logcat-crash.txt" 2>/dev/null || true
@@ -113,14 +189,16 @@ finish() {
   anr=$(grep -c "ANR in $APP_ID" "$OUT/logcat.txt" || true)
   local total_secs; total_secs=$(since "$T0")
   local verdict=PASS
-  (( FAILED > 0 || fatal > 0 || anr > 0 )) && verdict=FAIL
+  (( FAILED > 0 || fatal > 0 || anr > 0 || ABORTED )) && verdict=FAIL
+  printf 'verdict=%s\npassed=%s\nfailed=%s\nrun=%s\nfatal=%s\nanr=%s\naborted=%s\nseconds=%s\n' \
+    "$verdict" "$PASSED" "$FAILED" "$STEP_NO" "$fatal" "$anr" "$ABORTED" "$total_secs" > "$OUT/summary.env"
   {
     echo "# Device tour report: $verdict"
     echo
     echo "- When: $(date -Is)"
     echo "- App: $APP_ID $APP_VERSION ($VARIANT)"
     echo "- Device: $ANDROID_SERIAL, AVD \`$PP_AVD\`, Android $(adb_ shell getprop ro.build.version.release | tr -d '\r') (API $(adb_ shell getprop ro.build.version.sdk | tr -d '\r')), $(adb_ shell wm size | awk '{print $NF}' | tr -d '\r') @ $(adb_ shell wm density | awk '{print $NF}' | tr -d '\r')dpi"
-    echo "- Steps: $PASSED passed, $FAILED failed, of $STEP_NO run"
+    echo "- Steps: $PASSED passed, $FAILED failed, of $STEP_NO run$( (( ABORTED )) && echo ' (interrupted)')"
     echo "- Logcat: $fatal FATAL EXCEPTION, $anr ANR (full log: [logcat.txt](logcat.txt))"
     echo "- Timing: boot ${BOOT_SECS}s, build+install ${INSTALL_SECS}s, total ${total_secs}s"
     echo
@@ -136,13 +214,42 @@ finish() {
   [[ "$verdict" == PASS ]] && exit 0 || exit 1
 }
 
-# The rail step (s_rail) lowers the display density so the phone reports a tablet-wide window. The
-# emulator is shared and keeps the setting across reboots, so put it back however a step ends.
-DENSITY_MARK="$OUT/.density-changed"
+# The rail step (s_rail) lowers the display density so the phone reports a tablet-wide window; the
+# matrix steps (steps-matrix.sh) turn the display and show the soft keyboard. The emulator is shared
+# and keeps these settings across reboots, so each such step leaves a mark with the value to go
+# back to, and the tour puts it back however it ends (a matrix profile's own size, density and
+# rotation stay as the profile set them).
+DENSITY_MARK="$OUT/.density-changed"    # holds the override density before the step ("" = none)
+ROTATION_MARK="$OUT/.rotation-changed"  # holds user_rotation before the step
+IME_MARK="$OUT/.ime-shown"              # the step turned show_ime_with_hard_keyboard on
+density_override() { adb_ shell wm density | tr -d '\r' | sed -n 's/^Override density: //p'; }
+screen_width_px() { adb_ shell wm size | tr -d '\r' | sed -n 's/.*size: \([0-9]*\)x.*/\1/p' | tail -1; }
+restore_density() {
+  local d; d="$(cat "$DENSITY_MARK" 2>/dev/null || true)"
+  if [[ -n "$d" ]]; then adb_ shell wm density "$d"; else adb_ shell wm density reset; fi
+  rm -f "$DENSITY_MARK" "$OUT/.step-density"
+}
 restore_display() {
-  if [[ -f "$DENSITY_MARK" ]]; then
-    adb_ shell wm density reset >/dev/null 2>&1 || true
-    rm -f "$DENSITY_MARK"
+  if [[ -f "$DENSITY_MARK" ]]; then restore_density >/dev/null 2>&1 || true; fi
+  if [[ -f "$ROTATION_MARK" ]]; then
+    adb_ shell settings put system user_rotation "$(cat "$ROTATION_MARK")" >/dev/null 2>&1 || true
+    rm -f "$ROTATION_MARK"
+  fi
+  if [[ -f "$IME_MARK" ]]; then
+    adb_ shell settings put secure show_ime_with_hard_keyboard 0 >/dev/null 2>&1 || true
+    rm -f "$IME_MARK"
+  fi
+  return 0
+}
+
+# The dump for a check that reads a whole list (payout rows, chip rows). In the device matrix
+# (PP_UI_SCROLL=1, see ui.py) a list can run below the fold on a small screen: there it is the
+# whole page, merged from a drag to its end and back (ui.py page); otherwise the dump given.
+page_dump() { # $1 = the dump to use outside the matrix
+  if [[ "${PP_UI_SCROLL:-}" == 1 ]]; then
+    python3 "$DEVICE_SCRIPTS/ui.py" page --out "$OUT/.page.xml" >&2 && echo "$OUT/.page.xml"
+  else
+    echo "$1"
   fi
 }
 
@@ -192,7 +299,7 @@ require_tab_selected() { # $1 = label; checks the last dump
 # Taps a tab in the bar or rail (the screen may have a title of the same name above it).
 tab() { # $1 = label
   ui dump --out "$OUT/.tabs.xml" >/dev/null
-  local x y; read -r _ x y < <(tab_positions "$OUT/.tabs.xml" | grep "^$1 ")
+  local x y; read -r _ x y < <(tab_positions "$OUT/.tabs.xml" | grep "^$1 ") || true
   [[ -n "$x" ]] || { echo "[ui] FAIL no $1 tab on screen"; return 1; }
   ui tap-xy "$x" "$y"
 }
@@ -225,7 +332,7 @@ s_tournament_config() {
 # A row is one node for TalkBack ("1st, Still playing, $63, 50%") or, failing that, the texts on
 # one line.
 check_payout_table() { # $1 = ui dump, $2 = rounding unit in cents (default 100)
-  python3 - "$1" "${2:-100}" <<'PY'
+  python3 - "$(page_dump "$1")" "${2:-100}" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 unit = int(sys.argv[2])
 AMOUNT = r"\$[\d,]+(?:\.\d\d)?"
@@ -751,7 +858,8 @@ s_odds_results() {
   # 49.25 / 50.75 here, so anything else is a regression.
   ui wait "text~=win 56.06 · tie 0.00" --timeout 30 || return 1
   local found p1 p2 w1 w2
-  found="$(ui find 're=(Player 1, options|Player 2, options|win 56\.06 · tie 0\.00|win 43\.94 · tie 0\.00)')"
+  # (page_dump: on a matrix profile Player 2's row can be below the fold; here it is the screen)
+  found="$(ui find --from "$(page_dump "")" 're=(Player 1, options|Player 2, options|win 56\.06 · tie 0\.00|win 43\.94 · tie 0\.00)')"
   p1="$(y_of "$found" "Player 1, options")"; p2="$(y_of "$found" "Player 2, options")"
   w1="$(y_of "$found" "win 56\.06")";        w2="$(y_of "$found" "win 43\.94")"
   echo "odds rows: Player 1 y=$p1, 56.06 at y=$w1; Player 2 y=$p2, 43.94 at y=$w2"
@@ -835,7 +943,7 @@ s_chip_calc_stack() {
   # how many more stacks the box holds for rebuys and add-ons
   ui scroll-to "re=enough left for|no full stack is left" --max 4
   ui assert-text "text~=Each player gets" "text~=5,000 from Tournament setup" "re=chips? a stack ·" || return 1
-  check_chip_totals "$PP_UI_LAST_XML" 5000
+  check_chip_totals "$(page_dump "$PP_UI_LAST_XML")" 5000
 }
 # The stack picture against its totals in a UI dump: every pile's "N × V" times its value must add up
 # to the stack ($2), the chips to the "N chips a stack" line, and the colours to its count.
@@ -900,7 +1008,7 @@ s_chip_calc_reset() {
   ui wait-gone text=UNDO --timeout 15 || return 1
   ui scroll-to "re=enough left for|no full stack is left" --max 4
   ui assert-text "re=chips? a stack ·" || return 1
-  check_chip_totals "$PP_UI_LAST_XML" 5000
+  check_chip_totals "$(page_dump "$PP_UI_LAST_XML")" 5000
 }
 s_chip_calc_settings() {
   # The old advanced settings live on as stack settings: keep 2 stacks back for rebuys, and the
@@ -924,12 +1032,15 @@ s_back_to_tournament() {
 }
 
 # Rail (PP-087) --------------------------------------------------------------
-# A tablet-wide window on the phone emulator: at density 240 the 1080 px screen is 720 dp wide,
-# so the four tabs move from the bottom bar to a rail down the left edge. The activity is
-# recreated on the change; the screen must come back where it was.
+# A tablet-wide window on the phone emulator: at density 240 the 1080 px screen is 720 dp wide
+# (on a matrix profile, whatever density makes its width 720 dp), so the four tabs move from the
+# bottom bar to a rail down the left edge. The activity is recreated on the change; the screen
+# must come back where it was.
 s_rail() {
-  touch "$DENSITY_MARK"
-  adb_ shell wm density 240
+  density_override > "$DENSITY_MARK"
+  local density=$(( $(screen_width_px) * 160 / 720 ))
+  echo "density=$density" > "$OUT/.step-density"
+  adb_ shell wm density "$density"
   sleep 3
   ui assert-text "text~=Tournament Configuration" "LEVEL 1" || return 1
   local tabs; tabs="$(tab_positions "$PP_UI_LAST_XML")"; echo "$tabs"
@@ -957,8 +1068,7 @@ s_rail_payouts() {
   check_payout_table "$PP_UI_LAST_XML"
 }
 s_rail_restored() {
-  adb_ shell wm density reset
-  rm -f "$DENSITY_MARK"
+  restore_density
   sleep 3
   ui assert-text "PRIZE POOL" || return 1
   local tabs; tabs="$(tab_positions "$PP_UI_LAST_XML")"; echo "$tabs"
@@ -1050,4 +1160,6 @@ step rail-tools           "Rail: Tools tab"                                     
 step rail-payouts         "Rail: Payouts tab, table adds up"                    s_rail_payouts
 step rail-restored        "Phone width again: bottom bar back, tab kept"        s_rail_restored
 step app-alive            "App process still alive"                             s_app_alive
-finish
+
+source "$DEVICE_SCRIPTS/steps-matrix.sh"   # opt-in steps for the device matrix (extra_step)
+run_tour

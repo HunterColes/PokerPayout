@@ -1,0 +1,5 @@
+# Layout-check findings that are intended (scripts/device/layout_check.py). One rule per line:
+#   check | step glob | regex on the node's label | why
+# check: offscreen, under-bars, small-target, overlap, ellipsis, cut-text, or * for any.
+# The label is the node's text, or "desc=<content-desc>" when it has no text.
+# Keep each rule as narrow as you can, and say why it is fine.

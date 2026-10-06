@@ -11,7 +11,7 @@
 # demand. Any other AVD named via PP_AVD is launched -read-only so it is never
 # mutated. After boot it applies deterministic settings (animations off, en-US,
 # 24h clock, UTC, touches hidden, screen always on, demo-mode status bar 12:00,
-# Wi-Fi/data off).
+# Wi-Fi/data off, no display size/density override left by a killed device matrix).
 #
 # stdout: a few summary lines. Emulator output: build/device/emulator.log
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -82,6 +82,16 @@ EOF
 }
 
 apply_settings() {
+  # A display size or density left over by a device-matrix run that was killed outright (the
+  # matrix resets them itself on any normal end or signal; the emulator keeps them across reboots).
+  if adb_ shell wm size 2>/dev/null | grep -q Override; then
+    adb_ shell wm size reset >>"$STATE_DIR/settings.log" 2>&1 || true
+    warn "reset a leftover display size override"
+  fi
+  if adb_ shell wm density 2>/dev/null | grep -q Override; then
+    adb_ shell wm density reset >>"$STATE_DIR/settings.log" 2>&1 || true
+    warn "reset a leftover display density override"
+  fi
   # All best-effort: a failed tweak must not fail the boot.
   local s=(
     "settings put global window_animation_scale 0"

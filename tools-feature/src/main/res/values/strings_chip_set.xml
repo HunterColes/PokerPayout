@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Chip set (S11, PP-033): what the ViewModel shows itself -->
+    <string name="chip_set_snackbar_reset">Chip set back to the 500-chip starting set</string>
+    <string name="chip_set_snackbar_removed">%1$s %2$s removed</string>
+    <string name="chip_set_undo">Undo</string>
+
+    <!-- In ChipColour order -->
+    <string-array name="chip_set_colour_names">
+        <item>White</item>
+        <item>Red</item>
+        <item>Blue</item>
+        <item>Grey</item>
+        <item>Green</item>
+        <item>Orange</item>
+        <item>Black</item>
+        <item>Pink</item>
+        <item>Purple</item>
+        <item>Yellow</item>
+        <item>Light blue</item>
+        <item>Brown</item>
+    </string-array>
+</resources>

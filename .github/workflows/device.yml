@@ -1,0 +1,158 @@
+# The device tour (scripts/device/tour.sh) on a headless emulator in GitHub Actions, so the tour
+# needs no local machine. Same AVD as local runs: boot.sh creates it (API 34
+# google_apis_playstore x86_64, 1080x2400 @ 420dpi) and applies the same settings.
+#
+# Runs on every pull request (debug and release side by side), and by hand:
+#   gh workflow run device.yml --ref <branch> [-f variant=debug|release|both] [-f only=step,step]
+#
+# The device matrix (scripts/device/matrix.sh: the tour's steps on several screen sizes, font
+# scales and rotations, docs/TESTING.md section 10) runs by hand only, as its own job:
+#   gh workflow run device.yml --ref <branch> -f job=matrix [-f profiles=focused|daily|all|a,b]
+#
+# Not a required check yet. The report (screenshots, ui dumps, logcat, tour.log) is uploaded as an
+# artifact either way. The release build is debug-signed here, since CI has no keystore.
+name: Device tour
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "Which build to tour"
+        type: choice
+        options: [both, debug, release]
+        default: both
+      only:
+        description: "Optional: only these steps, comma-separated (tour.sh --list names them)"
+        type: string
+        default: ""
+      job:
+        description: "The tour, the device matrix, or both"
+        type: choice
+        options: [tour, matrix, both]
+        default: tour
+      profiles:
+        description: "Matrix only: a set (focused, daily, all) or profiles, comma-separated (matrix.sh --list)"
+        type: string
+        default: focused
+
+permissions:
+  contents: read
+
+concurrency:
+  group: device-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tour:
+    name: Device tour (${{ matrix.variant }})
+    if: github.event_name == 'pull_request' || inputs.job != 'matrix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.variant != 'both') && format('["{0}"]', inputs.variant) || '["debug","release"]') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules > /dev/null
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Emulator and system image
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" --install emulator platform-tools \
+            "system-images;android-34;google_apis_playstore;x86_64" > /dev/null
+
+      - name: Tour (${{ matrix.variant }})
+        env:
+          VARIANT: ${{ matrix.variant }}
+          ONLY: ${{ inputs.only }}
+          PP_BOOT_TIMEOUT: "600"
+        run: |
+          args=(--stop)
+          if [[ "$VARIANT" == release ]]; then args+=(--release); fi
+          if [[ -n "$ONLY" ]]; then args+=(--only "$ONLY"); fi
+          scripts/device/tour.sh "${args[@]}"
+
+      - name: Upload the tour report
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-tour-${{ matrix.variant }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/device-reports/
+            build/device/*.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  matrix:
+    # By hand only. The focused set is untimed on 1.3.4: an estimated 40 to 50 minutes on a quiet
+    # local machine, longer here.
+    # The debug build, or the release build with variant=release.
+    name: Device matrix (${{ inputs.profiles }})
+    if: github.event_name == 'workflow_dispatch' && inputs.job != 'tour'
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules > /dev/null
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Emulator and system image
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" --install emulator platform-tools \
+            "system-images;android-34;google_apis_playstore;x86_64" > /dev/null
+
+      - name: Pillow (the layout checks' pictures and the contact sheet)
+        run: |
+          { sudo apt-get update -qq && sudo apt-get install -y -qq python3-pil; } > /dev/null \
+            || echo "no Pillow: the pixel checks are skipped"
+
+      - name: Matrix (${{ inputs.profiles }})
+        env:
+          VARIANT: ${{ inputs.variant }}
+          PROFILES: ${{ inputs.profiles }}
+          PP_BOOT_TIMEOUT: "600"
+        run: |
+          args=(--stop --profiles "${PROFILES:-focused}")
+          if [[ "$VARIANT" == release ]]; then args+=(--release); fi
+          scripts/device/matrix.sh "${args[@]}"
+
+      - name: Upload the matrix report
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-matrix-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/device-reports/
+            build/device/*.log
+          if-no-files-found: ignore
+          retention-days: 14

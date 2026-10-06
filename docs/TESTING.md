@@ -154,7 +154,7 @@ their labels line up (a row: the bottom bar; a column: the rail), so a screen ti
 word ("Tournament") is never tapped by mistake, and they check which tab is selected. The steps
 are:
 
-1. **Tournament** (33 steps, five of them on the Payouts tab and three on the live clock notification). The tab is one setup page (S1 v2) that folds into the clock on Start.
+1. **Tournament** (32 steps, five of them on the Payouts tab and two on the live clock notification). The tab is one setup page (S1 v2) that folds into the clock on Start.
    * Launch: the ready ticket (LEVEL 1 · READY, 20:00) and Start. Type the buy-in 12.50 one key
      at a time (v1.1.12 turned it into 120.5), bounty 5, and five taps on the players stepper
      (10 players).
@@ -270,8 +270,15 @@ and carries on. Use `--keep-going` to run all steps even after a failure.
 
 The live clock steps read the notification from `dumpsys notification --noredact` (the record the app
 posted: its extras, actions and visibility), which needs no screenshot of the shade and works with
-SystemUI's demo mode on. Only Pause and Open are tapped in the real shade
-(`cmd statusbar expand-notifications`, then uiautomator; button labels are matched in any case).
+SystemUI's demo mode on. The tour then returns to the app from the launcher (`live-clock-back`):
+the clock must still be running and the notification gone.
+
+Pause and Open are tapped in the real shade (`cmd statusbar expand-notifications`, then
+uiautomator) only in the opt-in steps `live-clock-pause` and `live-clock-open`: on the API 34
+emulator the countdown in the open shade changes every second, so uiautomator never sees an idle
+screen ("could not get idle state") and can't read the shade. Run them on an image where the shade
+can be dumped: `--only live-clock-shade,live-clock-pause,live-clock-open` with the clock running.
+The notification's Pause and Resume go through the same receiver the JVM tests drive.
 `live_clock_record` and `wait_live_clock` in `tour.sh` poll for up to 15 s, so a slow host only makes
 them wait. The first Start's permission question is answered by `answer_notifications_ask` in the
 `start-fold` step; `live-clock-shade` also grants the permission with `pm grant`, in case the

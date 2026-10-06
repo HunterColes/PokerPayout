@@ -646,6 +646,16 @@ s_live_clock_open() {
   ui tap "desc=Resume timer"
   ui assert-text "desc=Pause timer" "text~=Level 1 of 9 · running"
 }
+s_live_clock_back() {
+  # Back from Home: the clock is still running on screen, and the live clock notification goes
+  # while the app is in front. (Pause and Open from the shade are opt-in steps: on the API 34
+  # emulator the countdown in the open shade never lets uiautomator see an idle screen, so the
+  # shade can't be read there.)
+  adb_ shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || return 1
+  ui wait "desc=Pause timer" --timeout 15 || return 1
+  ui assert-text "text~=Level 1 of 9 · running" "text~=Level 1 · time left" || return 1
+  wait_live_clock
+}
 s_live_clock_locked() {
   # Opt-in: the screen locks with the clock running; the live clock shows (on the lock screen,
   # public), and goes again once the app is back in front
@@ -1611,8 +1621,7 @@ step ready-ticket         "The ticket: level 1 ready, 20:00, 25 / 50, 3:20"     
 step start-fold           "Start: setup folds into the running clock (S2)"      s_start_fold
 step nudge                "-1 and +1: a minute off the level, and back"         s_nudge
 step live-clock-shade     "Home: the live clock notification (PP-081)"          s_live_clock_shade
-step live-clock-pause     "Pause from the shade: paused, Resume offered"        s_live_clock_pause
-step live-clock-open      "Open: paused on screen too; notification gone"       s_live_clock_open
+step live-clock-back      "Back to the app: still running; notification gone"   s_live_clock_back
 step timer-next-level     "Skip to level 2"                                     s_timer_next_level
 step timer-break          "Skip to the first break (S4)"                        s_timer_break
 step timer-paused         "Pause on the break"                                  s_timer_paused
@@ -1693,6 +1702,8 @@ step rail-payouts         "Rail: Payouts tab, table adds up"                    
 step rail-restored        "Phone width again: bottom bar back, tab kept"        s_rail_restored
 step app-alive            "App process still alive"                             s_app_alive
 
+extra_step live-clock-pause "Pause from the shade: paused, Resume offered"      s_live_clock_pause
+extra_step live-clock-open  "Open: paused on screen too; notification gone"     s_live_clock_open
 extra_step live-clock-locked "Screen locked, clock running: the live clock shows" s_live_clock_locked
 
 source "$DEVICE_SCRIPTS/steps-matrix.sh"   # opt-in steps for the device matrix (extra_step)

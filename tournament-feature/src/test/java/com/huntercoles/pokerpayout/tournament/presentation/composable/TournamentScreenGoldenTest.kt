@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.navigation.NavTab
-import com.huntercoles.pokerpayout.core.testing.Device
 import com.huntercoles.pokerpayout.core.testing.DeviceMatrix
 import com.huntercoles.pokerpayout.core.testing.InAppShell
 import com.huntercoles.pokerpayout.core.testing.LayoutAssertions
@@ -44,8 +43,8 @@ import java.util.TimeZone
  * The Tournament tab (S1 v2, S2, S3, S4, Z1, Z3, Z4) inside the app's shell, on every cell of the
  * device matrix: text fits, nothing visible is clipped, touch targets are 48 dp and don't overlap.
  * Goldens on the [DeviceMatrix.goldens] cells, named after the mockups (`S2_clock_running`), plus
- * the single-size ones (`Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet`,
- * `S2_clock_running_font2x`). The states are the mockups' game night ([TournamentFixture]).
+ * the single-size ones on their [DeviceMatrix.pinned] cells (`Z1_clock_small`, `Z3_table_small_land`,
+ * `Z4_clock_tablet`, `S2_clock_running_font2x`). The states are the mockups' game night ([TournamentFixture]).
  *
  * A phone held sideways shows the table view once a clock exists, as the app does, so the S1 and S2
  * goldens on the landscape phone cells are table views; the tablet-land cell is the two-pane Z4.
@@ -191,18 +190,14 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         }
     }
 
-    /** The every-size frames: small phone (Z1), small phone sideways (Z3), tablet (Z4), and 200% text. */
+    /**
+     * The every-size frames, each on the cell it was drawn for ([DeviceMatrix.pinned]): small phone
+     * (Z1), small phone sideways (Z3), tablet (Z4), and 200% text on a tall phone.
+     */
     @Test
     fun adaptiveSizes() {
         val running = TournamentUi(mode = TournamentMode.Running)
-        val name = when {
-            config.fontScale != 1f ->
-                if (config.device == Device.TallPhone && config.fontScale == 2f) "S2_clock_running_font2x" else null
-            config.device == Device.SmallPhone -> "Z1_clock_small"
-            config.device == Device.SmallPhoneLandscape -> "Z3_table_small_land"
-            config.device == Device.TabletLandscape -> "Z4_clock_tablet"
-            else -> null
-        } ?: return
+        val name = ADAPTIVE_GOLDENS.firstOrNull { DeviceMatrix.isPinned(it, config) } ?: return
         show(name, fixture.running, running)
         LayoutAssertions.assertTextFits(screen.compose, "$name on ${config.id}")
         screen.compose.onRoot().captureGolden("screens", name, config)
@@ -278,6 +273,8 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         private const val FOLD_FRAME_MILLIS = 300f
         private val MIN_TOUCH = 48.dp
         private val TOP_BAR_BUTTONS = listOf("Reset tournament", "Mute chimes", "Unmute chimes", "Table view", "More options")
+        private val ADAPTIVE_GOLDENS =
+            listOf("Z1_clock_small", "Z3_table_small_land", "Z4_clock_tablet", "S2_clock_running_font2x")
 
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")

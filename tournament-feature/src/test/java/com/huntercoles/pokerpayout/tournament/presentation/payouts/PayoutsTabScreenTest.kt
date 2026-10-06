@@ -30,7 +30,7 @@ import org.robolectric.annotation.GraphicsMode
  * The Payouts tab (S6) inside the app's shell on every cell of the device matrix, on the mockups'
  * game ([PayoutsGame]): text fits and isn't clipped at any scroll position, targets are 48 dp
  * without overlap. Goldens on [DeviceMatrix.goldens]: Standard / $5 / 3 places, Top-heavy, custom
- * weights, and the finished night with names.
+ * weights, and the finished night with names; `S6_payouts_font2x` on its [DeviceMatrix.pinned] cells.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -71,8 +71,13 @@ class PayoutsTabScreenTest(private val config: ScreenConfig) {
         screen.compose.forEachScrollPosition { LayoutAssertions.assertVisibleTextUnclipped(screen.compose, "$where, $it") }
     }
 
-    private fun golden(name: String, only: (ScreenConfig) -> Boolean = { true }) {
-        if (config in DeviceMatrix.goldens && only(config)) screen.compose.onRoot().captureGolden("screens", name, config)
+    private fun golden(name: String) {
+        if (config in DeviceMatrix.goldens) screen.compose.onRoot().captureGolden("screens", name, config)
+    }
+
+    /** A golden drawn for particular cells, recorded on its [DeviceMatrix.pinned] cells only. */
+    private fun pinnedGolden(name: String) {
+        if (DeviceMatrix.isPinned(name, config)) screen.compose.onRoot().captureGolden("screens", name, config)
     }
 
     @Test
@@ -80,7 +85,7 @@ class PayoutsTabScreenTest(private val config: ScreenConfig) {
         game.midGame()
         show()
         golden("S6_payouts_standard")
-        golden("S6_payouts_font2x") { it.fontScale == 2.0f }
+        pinnedGolden("S6_payouts_font2x")
         check("Payouts, Standard")
     }
 

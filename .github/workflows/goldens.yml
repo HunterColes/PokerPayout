@@ -7,12 +7,29 @@
 # starts CI on its new commit itself. Review the new goldens by eye in the commit's diff (small
 # phone at 2x font, phone, tablet, landscape), as for a local re-record.
 #
-# Retired goldens (a test renamed or removed) are not deleted here: the job summary lists every
-# checked-in golden that this run didn't write, for a person to remove.
+# Every golden the run changed or added is recompressed losslessly with oxipng before the commit
+# (PP-090: F-Droid clones the whole history, so every committed picture costs every build).
+# scripts/dev/recompress-goldens.sh checks each one pixel for pixel, as Roborazzi reads a golden,
+# and puts back as committed any golden whose pixels didn't change, so a screen that didn't
+# change adds nothing to the history.
+#
+# Retired goldens (a test renamed or removed, or a cell that left DeviceMatrix.goldens) are not
+# deleted here: the job summary lists every checked-in golden that this run didn't write, next to
+# the list scripts/dev/retired-goldens.sh computes from the code, for a person to remove.
+#
+# The one-time shrink: recompress every checked-in golden a test still records, record nothing:
+#
+#   gh workflow run goldens.yml --ref <branch> -f recompress_all=true
 name: Record goldens
+run-name: ${{ inputs.recompress_all && 'Recompress goldens' || 'Record goldens' }} on ${{ github.ref_name }}
 
 on:
   workflow_dispatch:
+    inputs:
+      recompress_all:
+        description: Only recompress every checked-in golden (losslessly) and commit it; record nothing
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -20,6 +37,12 @@ permissions:
 
 concurrency:
   group: goldens-${{ github.ref }}
+
+env:
+  # oxipng, pinned: the x86_64 Linux (musl, static) build of this release and its SHA-256 (the
+  # release asset's digest on GitHub). To update, change both.
+  OXIPNG_VERSION: 10.2.1
+  OXIPNG_SHA256: 1813750ef592c5350ca79c88f98b2c0876d05c826dc7156245256d4255c1ad17
 
 jobs:
   record:
@@ -30,34 +53,74 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Also for the recompression's pixel check, which reads PNGs with Java's ImageIO as Roborazzi does.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
       - uses: gradle/actions/setup-gradle@v4
+        if: ${{ !inputs.recompress_all }}
+
+      - name: Install oxipng ${{ env.OXIPNG_VERSION }}
+        run: |
+          archive="$RUNNER_TEMP/oxipng.tar.gz"
+          curl -fsSL --retry 3 -o "$archive" \
+            "https://github.com/oxipng/oxipng/releases/download/v${OXIPNG_VERSION}/oxipng-${OXIPNG_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          echo "${OXIPNG_SHA256}  ${archive}" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/oxipng" "$RUNNER_TEMP/bin"
+          tar -xzf "$archive" -C "$RUNNER_TEMP/oxipng"
+          binary="$(find "$RUNNER_TEMP/oxipng" -type f -name oxipng | head -n 1)"
+          install -m 755 "$binary" "$RUNNER_TEMP/bin/oxipng"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/bin/oxipng" --version
 
       - name: Record
+        if: ${{ !inputs.recompress_all }}
         run: |
           touch "$RUNNER_TEMP/before-record"
           ./gradlew recordRoborazziDebug
 
       - name: List goldens this run didn't write
+        if: ${{ !inputs.recompress_all }}
         run: |
-          stale="$(find . -path '*/src/test/screenshots/*.png' ! -newer "$RUNNER_TEMP/before-record" | sort)"
+          stale="$(find . -path '*/src/test/screenshots/*.png' ! -newer "$RUNNER_TEMP/before-record" | sed 's|^\./||' | sort)"
+          retired="$(scripts/dev/retired-goldens.sh --paths | sort)"
           {
             echo "### Goldens not written by this run"
             if [[ -n "$stale" ]]; then
-              echo "Probably retired (their test was renamed or removed); delete them if so:"
+              echo "Probably retired (their test was renamed or removed, or their cell left DeviceMatrix.goldens); delete them if so:"
               echo '```'; echo "$stale"; echo '```'
             else
               echo "None."
             fi
+            echo "### Retired by the code (scripts/dev/retired-goldens.sh)"
+            if [[ "$stale" == "$retired" ]]; then
+              echo "The same list (or none), so \`scripts/dev/retired-goldens.sh --delete\` removes exactly these."
+            elif [[ -n "$retired" ]]; then
+              echo "Not the same list. The goldens whose cell no test records any more:"
+              echo '```'; echo "$retired"; echo '```'
+            else
+              echo "None: the goldens above belong to tests that were renamed or removed."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Recompress the goldens this run changed or added
+        if: ${{ !inputs.recompress_all }}
+        run: |
+          echo "### Recompression" >> "$GITHUB_STEP_SUMMARY"
+          scripts/dev/recompress-goldens.sh --changed | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Recompress every checked-in golden
+        if: ${{ inputs.recompress_all }}
+        run: |
+          echo "### Recompression" >> "$GITHUB_STEP_SUMMARY"
+          scripts/dev/recompress-goldens.sh --all | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Commit and start CI
         env:
           GH_TOKEN: ${{ github.token }}
+          MESSAGE: ${{ inputs.recompress_all && 'Recompress screenshot goldens losslessly' || 'Re-record screenshot goldens' }}
         run: |
           git add -A -- ':(glob)**/src/test/screenshots/**'
           if git diff --cached --quiet; then
@@ -67,7 +130,7 @@ jobs:
           git diff --cached --stat | tail -1 | tee -a "$GITHUB_STEP_SUMMARY"
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-              commit -q -m "Re-record screenshot goldens (CI, run ${{ github.run_id }})"
+              commit -q -m "${MESSAGE} (CI, run ${{ github.run_id }})"
           # The branch may have moved while this ran; the commit holds only goldens, so it rebases.
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \

@@ -8,7 +8,7 @@ sound. It is written so that a person *or* an AI agent can run it unattended.
 | JVM unit tests | `./gradlew testDebugUnitTest` | JDK 21 | ~15 s warm (394 tests) |
 | Device smoke tour (screenshots + UI dumps + logcat) | `scripts/device/tour.sh` | emulator (auto-booted) | ~6 min incl. build |
 | Instrumented tests | `./gradlew connectedDebugAndroidTest` | running emulator | compiles; there are 0 instrumented tests (see below) |
-| JVM screenshot goldens + layout checks (Roborazzi, section 9) | part of `./gradlew testDebugUnitTest`; re-record with `./gradlew recordRoborazziDebug` | JDK 21 | ~20 s for core's 140 goldens and 48 matrix checks |
+| JVM screenshot goldens + layout checks (Roborazzi, section 9) | part of `./gradlew testDebugUnitTest`; re-record with `./gradlew recordRoborazziDebug` | JDK 21 | ~20 s for core's 120 goldens and 48 matrix checks |
 | Device matrix: the real app on 10 screen sizes, fonts and rotations (section 10) | `scripts/device/matrix.sh` | emulator (auto-booted) | focused set (4 profiles) not yet timed on 1.3.4; 41 min for 8 profiles on 1.3.0 |
 
 ## 1. Prerequisites
@@ -498,9 +498,38 @@ non-linearly, exactly as Android 14 does. Robolectric draws status and navigatio
 app window is a little shorter than the screen (the `phone` window is 360 x 724 dp).
 
 * **Layout assertions run on all 24 cells** (`DeviceMatrix.all`).
-* **Goldens are stored for 10 of them** (`DeviceMatrix.goldens`): every device at 1.0, `phone`
-  at 1.3, and `small` and `phone` at 2.0. The assertions cover the rest without storing
+* **Goldens are stored for 6 of them** (`DeviceMatrix.goldens`, PP-090), plus a few named goldens
+  on cells of their own (`DeviceMatrix.pinned`). The assertions cover the rest without storing
   pictures.
+
+Every committed picture stays in the git history, and F-Droid clones the whole history to build,
+so a cell gets goldens only if it shows a layout no other cell shows. The screens switch layout at
+360 dp (small phones: 12 dp gutters, the Bank's folded columns, the bell in the menu), 600 dp (the
+rail; two columns or panes once the column beside it is 600 dp wide), 840 dp (the two-pane clock and
+Bank), in landscape (the table view, the odds keypad beside the cards, run it out's two panes) and
+at font scales 1.15, 1.3 and 1.5 (stacked sums, wrapped lines, the Bank header's icons only):
+
+| Cell | What only it shows |
+|---|---|
+| `small` at 2.0 | The small-phone layouts at the largest font: the tightest cell |
+| `phone` at 1.0 | The layouts as drawn, 1:1 with `mockups.html` |
+| `phone` at 1.3 | Between the font thresholds: one knockout choice a row and stacked sums (above 1.15), side-by-side cash fields and the Bank header's words (up to 1.3) |
+| `tablet` at 1.0 | The rail beside a 704 dp column: Hand ranks in two columns, Chip set in two panes |
+| `phone-land` at 1.0 | A phone on its side, the shortest common height: the table view, the keypad beside the cards, run it out's two panes |
+| `tablet-land` at 1.0 | The only cell from 840 dp: the two-pane clock and Bank (Z4, Z5), the centred 720 dp column |
+
+Left out (until PP-090 they had goldens too): `tall` at 1.0 (the `phone` layouts with more room),
+`foldable` at 1.0 (the rail beside a 504 dp phone column), `small` at 1.0 and `phone` at 2.0
+(`small` at 2.0 is tighter than both).
+
+The pinned goldens keep the cells they were drawn for: `Z1_clock_small` (`small` at 1.0),
+`Z2_bank_small` (`small` at 1.0 and 2.0), `Z3_table_small_land` and `S10_runout_land`
+(`small-land`), `Z4_clock_tablet` and `Z5_bank_tablet` (`tablet-land`), `S2_clock_running_font2x`,
+`S8_odds_font2x` and `S14_seats_font2x` (`tall` at 2.0), and `S5_bank_font2x`, `S6_payouts_font2x`
+and `S13_cash_font2x` (`small` and `phone` at 2.0). A test records a pinned golden with
+`DeviceMatrix.isPinned(name, config)`, never with a cell written into the test, so
+`scripts/dev/retired-goldens.sh` can work out from the code which committed goldens no test
+records any more.
 
 ### Where the goldens live
 
@@ -518,6 +547,9 @@ window size: the place to see stretch and rotate.
 ./gradlew :core:compareRoborazziDebug  # writes diffs without failing (for a PR's before/after)
 ./gradlew :core:verifyRoborazziDebug   # verify explicitly
 ./gradlew :core:testDebugUnitTest --tests '*ComponentLayoutTest*'   # just the matrix assertions
+gh workflow run goldens.yml --ref <branch>   # re-records on GitHub instead, recompresses, commits
+scripts/dev/recompress-goldens.sh --changed  # after a local record: shrink what changed, put back the rest
+scripts/dev/retired-goldens.sh               # committed goldens no test records any more (--delete: git rm)
 ```
 
 Plain `testDebugUnitTest` verifies because `gradle.properties` sets
@@ -540,6 +572,38 @@ failure uploads the diffs with the reports.
 
 Never commit re-recorded goldens to hide a change you didn't mean, just as you wouldn't
 regenerate a lint baseline to hide a finding.
+
+### Keeping the repository small (PP-090)
+
+Goldens are the bulk of the repository: on 1.3.11 the 912 checked-in goldens were 81 MB, and every
+golden ever committed to master took 92 MB of the 97 MB its file history packs into. F-Droid clones
+all of it for every build. Two rules keep that down:
+
+1. **Fewer cells** (above): 6 golden cells instead of 10, so a screen that changes adds 6 pictures,
+   not 10.
+2. **Lossless recompression.** Roborazzi writes each PNG as RGBA with fast compression. `goldens.yml`
+   runs `scripts/dev/recompress-goldens.sh --changed` after recording: every golden the run changed
+   or added goes through oxipng (a pinned release, `-o 4 --strip safe --ng`; the colour type may drop
+   the unused alpha channel or become a palette, never greyscale, which Java reads through a linear
+   colour space). The script then checks every file pixel for pixel against the one it replaced,
+   reading both exactly as Roborazzi reads a golden (`scripts/dev/SamePixels.java`: ImageIO, drawn
+   onto an ARGB canvas), and puts everything back if one pixel differs, so verification still
+   passes. A golden whose pixels match the committed one is put back as committed: a re-record
+   rewrites every file, and only real changes should reach the history.
+
+`gh workflow run goldens.yml --ref <branch> -f recompress_all=true` records nothing: it recompresses
+every committed golden a test still records (`--all`; retired ones are left for deletion) and
+commits that, the one-time shrink of the checkout. That commit adds the whole recompressed set to the
+history once; it pays off only as later re-records add smaller pictures.
+
+After recording locally with `recordRoborazziDebug`, every golden is rewritten in Roborazzi's
+encoding, and git shows them all as changed. Run `scripts/dev/recompress-goldens.sh --changed` (it
+needs `oxipng` on the path, or `OXIPNG=/path/to/oxipng`) before committing, or record on GitHub.
+
+`scripts/dev/retired-goldens.sh` lists the committed goldens whose cell no test records any more,
+from `DeviceMatrix.goldens` and `DeviceMatrix.pinned` (`--check` exits 1 if there are any, `--delete`
+runs `git rm` on them). A `goldens.yml` run lists every golden it didn't write next to that list in
+its summary; the two match unless a test was renamed or removed.
 
 ### Determinism
 
@@ -602,7 +666,8 @@ add a check.
 A screen is tested inside the real shell with `InAppShell(NavTab.X) { ... }` (test fixtures), so
 its golden shows the bottom bar on phones held upright and the rail from 600 dp. One
 parameterized class per tab runs on all 24 cells: the layout checks everywhere, and
-`captureGolden` only where `config in DeviceMatrix.goldens`. `forEachScrollPosition { }` scrolls
+`captureGolden` only where `config in DeviceMatrix.goldens` (a pinned golden: where
+`DeviceMatrix.isPinned(name, config)`). `forEachScrollPosition { }` scrolls
 every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 
 | Module | Class | Goldens (`src/test/screenshots/screens/`) | Layout checks |
@@ -627,7 +692,7 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 
 | Class | Runs | What |
 |---|---|---|
-| `ComponentGoldenTest` | 17 galleries x 10 goldens = 170 | Each component's `@Preview` gallery (including `PokerNavRail`), plus `Shell`, the real `PokerAppShell` around a sample screen |
+| `ComponentGoldenTest` | 17 galleries x 6 goldens = 102 | Each component's `@Preview` gallery (including `PokerNavRail`), plus `Shell`, the real `PokerAppShell` around a sample screen |
 | `ComponentLayoutTest` | 2 x 24 cells = 48 | Every gallery in one scrolling column, and the shell, through all three layout checks |
 | `AppShellTest` | 4 x 24 cells = 96 | The bar below 600 dp and the rail from 600 dp, by window width; tab geometry; the screen capped at 720 dp and centred; the shell through all three layout checks |
 | `NavBarTest` | 10 | Every screen's tab (tools keep Tools selected, B16); tab taps don't pile up on the back stack and Back returns to Tournament; tapping a tab inside a tool returns to its list |
@@ -635,7 +700,7 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 | `DesignTokensTest` | 5 | Every contrast pairing in the design spec, computed; the six original colours unchanged (the sunset colours were retired once no screen used them) |
 | `TypographyTest` | 5 | Barlow loads; `tnum` makes every digit the same width (and without it they differ); the licence ships |
 | `UndoSnackbarTest` | 4 | Undo inside the 8 s window counts, after it doesn't (virtual time) |
-| `MoneyComponentsTest` | 3 x 24 cells = 72 | `MoneyMeter`, `PlaceBadge` and `PayoutStructureSheet`: goldens on the 10, all three layout checks on all 24 |
+| `MoneyComponentsTest` | 3 x 24 cells = 72 | `MoneyMeter`, `PlaceBadge` and `PayoutStructureSheet`: goldens on the 6, all three layout checks on all 24 |
 | `MoneyFieldTest` | 4 | `MoneyField`: typed text kept key by key, cents out, one commit on Done, focus loss or the field going away; 0 is an amount, empty is none |
 | `LayoutAssertionsTest` | 11 | The checks themselves catch what they claim |
 | `ScreenOrientationTest` | 3 | Phones portrait unless the screen on show asks for more, and portrait again when it goes; free from 600 dp; a screen can take the full width beside the rail, or the whole window |

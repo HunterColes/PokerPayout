@@ -3,6 +3,15 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.3.11 (on master, not published)
+
+- **Bounty types:** next to the bounty, choose Standard, Progressive or Mystery.
+  - *Progressive:* a knockout pays half the victim's bounty at once and adds the other half to the
+    winner's own bounty, shown under each name in the Bank.
+  - *Mystery:* each knockout draws an envelope from a pool worth players × bounty (a few big, many
+    small, listed before the start), opened on screen; the champion takes the envelopes left.
+  - Undo puts everything back, envelopes included. Saved games stay Standard.
+
 ## 1.3.10 (on master, not published)
 
 - **Presets:** save the night's setup (money, blinds, payouts and, if you like, your chip set)

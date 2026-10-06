@@ -89,7 +89,7 @@ internal fun SetupContent(
                 expanded = moneyOpen,
                 onToggle = { moneyOpen = !moneyOpen },
             ) {
-                MoneyGrid(setup.money, timer, actions)
+                MoneyGrid(setup, timer, actions)
                 PrizePoolNote(setup)
             }
             var blindsOpen by rememberSaveable { mutableStateOf(true) }

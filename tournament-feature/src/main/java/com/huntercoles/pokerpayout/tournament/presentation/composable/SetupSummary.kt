@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.tournament.presentation.composable
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
@@ -89,7 +90,7 @@ internal object SetupSummary {
         val amounts = setup.money
         return listOfNotNull(
             stringResource(R.string.strip_buy_in, money(amounts.buyInCents)),
-            amounts.bountyCents.takeIf { it > 0 }?.let { stringResource(R.string.strip_bounty, money(it)) },
+            amounts.bountyCents.takeIf { it > 0 }?.let { bounty(amounts.bountyMode, it) },
             amounts.rebuyCents.takeIf { it > 0 }?.let {
                 if (timer.rebuyUntilLevel > 0) {
                     stringResource(R.string.strip_rebuy_to, timer.rebuyUntilLevel)
@@ -100,6 +101,17 @@ internal object SetupSummary {
             amounts.addOnCents.takeIf { it > 0 }?.let { stringResource(R.string.strip_add_on, money(it)) },
         )
     }
+
+    /** "$5 bounty", "$5 progressive bounty", "$5 mystery bounty" (PP-035). */
+    @Composable
+    private fun bounty(mode: BountyMode, cents: Long): String = stringResource(
+        when (mode) {
+            BountyMode.STANDARD -> R.string.strip_bounty
+            BountyMode.PROGRESSIVE -> R.string.strip_bounty_pko
+            BountyMode.MYSTERY -> R.string.strip_bounty_mystery
+        },
+        money(cents),
+    )
 
     @Composable
     private fun breakAndAnteParts(timer: TimerUiState): List<String> = listOfNotNull(

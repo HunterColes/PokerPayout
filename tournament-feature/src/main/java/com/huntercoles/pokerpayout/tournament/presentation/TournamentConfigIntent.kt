@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tournament.presentation
 
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
@@ -16,6 +17,9 @@ sealed class TournamentConfigIntent {
     data class UpdateBuyIn(val cents: Long) : TournamentConfigIntent()
     data class UpdateFoodPerPlayer(val cents: Long) : TournamentConfigIntent()
     data class UpdateBountyPerPlayer(val cents: Long) : TournamentConfigIntent()
+
+    /** Standard, progressive or mystery bounties (PP-035); only before the first knockout. */
+    data class UpdateBountyMode(val mode: BountyMode) : TournamentConfigIntent()
     data class UpdateRebuyAmount(val cents: Long) : TournamentConfigIntent()
     data class UpdateAddOnAmount(val cents: Long) : TournamentConfigIntent()
     data class CommitRebuyAmount(val cents: Long, val centsBeforeEdit: Long) : TournamentConfigIntent()

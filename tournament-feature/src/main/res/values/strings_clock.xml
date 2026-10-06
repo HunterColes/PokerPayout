@@ -48,6 +48,17 @@
     <string name="setup_money_to_sit_down">%1$s to sit down</string>
     <string name="setup_buy_in">Buy-in</string>
     <string name="setup_bounty">Bounty</string>
+    <!-- How knockouts pay (PP-035) -->
+    <string name="setup_bounty_type">Bounty type</string>
+    <string name="setup_bounty_standard">Standard</string>
+    <string name="setup_bounty_progressive">Progressive</string>
+    <string name="setup_bounty_mystery">Mystery</string>
+    <string name="setup_bounty_note_standard">A knockout wins the whole %1$s bounty. The champion keeps their own.</string>
+    <string name="setup_bounty_note_progressive">A knockout pays half the bounty at once and adds the other half to the winner\'s own bounty. The champion keeps theirs.</string>
+    <!-- %1$s: the envelopes, "1 × $15 · 2 × $6 · 6 × $3" -->
+    <string name="setup_bounty_note_mystery">Each knockout draws an envelope: %1$s. The champion gets the envelopes left.</string>
+    <string name="setup_bounty_envelopes">%1$d × %2$s</string>
+    <string name="setup_bounty_locked">Fixed now that someone is out.</string>
     <string name="setup_rebuy">Rebuy</string>
     <string name="setup_rebuys_until">Rebuys until</string>
     <string name="setup_rebuys_until_none">No cutoff</string>
@@ -106,6 +117,8 @@
     </plurals>
     <string name="strip_buy_in">%1$s buy-in</string>
     <string name="strip_bounty">%1$s bounty</string>
+    <string name="strip_bounty_pko">%1$s progressive bounty</string>
+    <string name="strip_bounty_mystery">%1$s mystery bounty</string>
     <string name="strip_rebuy_to">rebuy to L%1$d</string>
     <string name="strip_rebuy">%1$s rebuy</string>
     <string name="strip_add_on">%1$s add-on</string>

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.navigation.NavTab
 import com.huntercoles.pokerpayout.core.testing.Device
 import com.huntercoles.pokerpayout.core.testing.DeviceMatrix
@@ -87,6 +88,21 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
     fun setup() {
         check("S1_setup_before", fixture.ready, TournamentUi(), scroll = true)
         check("S1_setup_invalid", fixture.invalid(), TournamentUi())
+    }
+
+    /**
+     * PP-035: mystery bounties picked before anyone is out, so the bounty type is open and the
+     * envelopes are listed under it (1 × $15 · 2 × $6 · 6 × $3).
+     */
+    @Test
+    fun setupMystery() {
+        val mystery = setup.copy(
+            config = setup.config.copy(money = setup.money.copy(bountyMode = BountyMode.MYSTERY)),
+            knockoutsRecorded = false,
+        )
+        showAndCheck("S1_setup_mystery", scroll = true) {
+            TournamentContent(mystery, fixture.ready, TournamentUi(), TournamentActions())
+        }
     }
 
     @Test

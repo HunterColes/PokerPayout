@@ -509,6 +509,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament (M3 restyles the body): touch targets |
 | `tournament-feature` | `PayoutsTabScreenTest` | `S6_payouts_{standard,topheavy,custom,finished}`, `S6_payouts_font2x` | All three, at every scroll position, and locked while the clock runs |
 | `bank-feature` | `BankScreensTest` | `S5_bank_{before_buyins,midgame,rebuys_open,no_rebuys,champion,30players}`, `S5_bank_font2x`, `S5b_knockout_sheet`, `S5b_count_sheet`, `S5c_payout_{champion,second}`, `S5c_pool_breakdown`, `Z2_bank_small`, `Z5_bank_tablet` | All three, at every scroll position. A sheet is rendered as its content over the screen behind, since a modal window doesn't capture under Robolectric |
+| `bank-feature` | `CashScreensTest` | `S13_cash_{balanced,off,settle,player}`, `S13_cash_font2x` | The cash game (M7): all three, at every scroll position, also counting, the split difference, nobody yet and the add-player sheet. The Bank's goldens above show the Tournament / Cash game switch, as the app does |
 
 The screens' ViewModels are the real ones over Robolectric's in-memory preferences, set up as the
 mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app shows.
@@ -526,4 +527,5 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 | `TypographyTest` | 5 | Barlow loads; `tnum` makes every digit the same width (and without it they differ); the licence ships |
 | `UndoSnackbarTest` | 4 | Undo inside the 8 s window counts, after it doesn't (virtual time) |
 | `MoneyComponentsTest` | 3 x 24 cells = 72 | `MoneyMeter`, `PlaceBadge` and `PayoutStructureSheet`: goldens on the 10, all three layout checks on all 24 |
+| `MoneyFieldTest` | 4 | `MoneyField`: typed text kept key by key, cents out, one commit on Done, focus loss or the field going away; 0 is an amount, empty is none |
 | `LayoutAssertionsTest` | 11 | The checks themselves catch what they claim |

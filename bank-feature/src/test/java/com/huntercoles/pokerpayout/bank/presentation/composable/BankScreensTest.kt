@@ -19,6 +19,7 @@ import com.huntercoles.pokerpayout.bank.presentation.BankUiState
 import com.huntercoles.pokerpayout.bank.presentation.BankViewModel
 import com.huntercoles.pokerpayout.bank.presentation.Purchase
 import com.huntercoles.pokerpayout.core.design.components.PokerSheetContent
+import com.huntercoles.pokerpayout.core.domain.cash.BankMode
 import com.huntercoles.pokerpayout.core.navigation.NavTab
 import com.huntercoles.pokerpayout.core.testing.Device
 import com.huntercoles.pokerpayout.core.testing.DeviceMatrix
@@ -79,7 +80,14 @@ class BankScreensTest(private val config: ScreenConfig) {
         screen.compose.setContent {
             InAppShell(NavTab.Bank) {
                 Box(Modifier.fillMaxSize()) {
-                    if (screenBehind.value) BankContent(state = state.copy(sheet = null), onIntent = {})
+                    if (screenBehind.value) {
+                        // As the app shows it: the Tournament / Cash game switch on top (M7)
+                        BankContent(
+                            state = state.copy(sheet = null),
+                            onIntent = {},
+                            modeSwitch = { BankModeSwitch(BankMode.TOURNAMENT, onSwitch = {}) },
+                        )
+                    }
                     if (sheet != null) {
                         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = SCRIM)))
                         Box(Modifier.align(Alignment.BottomCenter)) { PokerSheetContent { sheet() } }
@@ -125,12 +133,12 @@ class BankScreensTest(private val config: ScreenConfig) {
         golden("Z5_bank_tablet") { it.device == Device.TabletLandscape }
         if (config.device == Device.SmallPhone) {
             // Z2: the rows, with the closed Rebuy and Add-on columns folded under the names
-            screen.compose.onNode(hasScrollToIndexAction()).performScrollToIndex(2)
+            screen.compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
             screen.compose.waitForIdle()
             golden("Z2_bank_small")
         }
         if (config.fontScale == 2.0f) {
-            screen.compose.onNode(hasScrollToIndexAction()).performScrollToIndex(8)
+            screen.compose.onNode(hasScrollToIndexAction()).performScrollToIndex(9)
             screen.compose.waitForIdle()
             golden("S5_bank_font2x")
         }
@@ -162,7 +170,7 @@ class BankScreensTest(private val config: ScreenConfig) {
     fun thirtyPlayers() {
         show(BankScenes.thirtyPlayers(kit).state())
         // Scrolled into the list: the header stays on top
-        screen.compose.onNode(hasScrollToIndexAction()).performScrollToIndex(12)
+        screen.compose.onNode(hasScrollToIndexAction()).performScrollToIndex(13)
         screen.compose.waitForIdle()
         golden("S5_bank_30players")
         check("Bank with 30 players")

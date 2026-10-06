@@ -8,6 +8,24 @@ import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
+/** What a knockout pays the player credited with it, as the snackbar says it (PP-035). */
+sealed interface KnockoutPay {
+    /** The game has no bounty. */
+    data object NoBounty : KnockoutPay
+
+    /** The knocked-out player's whole bounty (standard), or nothing yet (a mystery pool with no envelopes). */
+    data object Bounty : KnockoutPay
+
+    /**
+     * Progressive: [cashCents] now, and the eliminator's bounty grows to [newBountyCents]; null when
+     * the eliminator is already out, and so takes the whole bounty in cash.
+     */
+    data class Progressive(val cashCents: Long, val newBountyCents: Long?) : KnockoutPay
+
+    /** Mystery: the envelope drawn, worth [cents]. */
+    data class Mystery(val cents: Long) : KnockoutPay
+}
+
 /**
  * What the Bank says after an action ("Rita is out in 8th · bounty to Marcus"), on the app's one
  * snackbar, with Undo.
@@ -38,11 +56,34 @@ class BankFeedback @Inject constructor(
         count
     )
 
-    /** [eliminator] null: nobody was credited. [hasBounty] false: there is no bounty to mention. */
-    fun knockout(name: String, place: Int, eliminator: String?, hasBounty: Boolean): String = when {
-        !hasBounty -> context.getString(R.string.bank_done_knockout, name, ordinalOf(place))
+    /**
+     * "Rita is out in 8th · bounty to Marcus". [eliminator] null: nobody was credited. [pay]: what
+     * the knockout pays (PP-035), or [KnockoutPay.NoBounty] when there is no bounty to mention.
+     */
+    fun knockout(name: String, place: Int, eliminator: String?, pay: KnockoutPay): String = when {
+        pay == KnockoutPay.NoBounty -> context.getString(R.string.bank_done_knockout, name, ordinalOf(place))
         eliminator == null -> context.getString(R.string.bank_done_knockout_unclaimed, name, ordinalOf(place))
-        else -> context.getString(R.string.bank_done_knockout_bounty, name, ordinalOf(place), eliminator)
+        else -> credited(name, ordinalOf(place), eliminator, pay)
+    }
+
+    /** "… · Marcus takes $2.50, bounty now $7.50" (progressive), "… · Marcus draws $20" (mystery). */
+    private fun credited(name: String, place: String, eliminator: String, pay: KnockoutPay): String = when (pay) {
+        is KnockoutPay.Progressive -> if (pay.newBountyCents != null) {
+            context.getString(
+                R.string.bank_done_knockout_pko,
+                name,
+                place,
+                eliminator,
+                FormatUtils.formatMoney(pay.cashCents),
+                FormatUtils.formatMoney(pay.newBountyCents)
+            )
+        } else {
+            val cash = FormatUtils.formatMoney(pay.cashCents)
+            context.getString(R.string.bank_done_knockout_pko_all, name, place, eliminator, cash)
+        }
+        is KnockoutPay.Mystery ->
+            context.getString(R.string.bank_done_knockout_mystery, name, place, eliminator, FormatUtils.formatMoney(pay.cents))
+        else -> context.getString(R.string.bank_done_knockout_bounty, name, place, eliminator)
     }
 
     fun backIn(name: String): String = context.getString(R.string.bank_done_back_in, name)

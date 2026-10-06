@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -50,7 +51,10 @@ import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerDialog
 import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
-import com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction
+import com.huntercoles.pokerpayout.core.design.components.PokerIconButton
+import com.huntercoles.pokerpayout.core.design.components.PokerTopBar
+import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
+import com.huntercoles.pokerpayout.tools.R
 import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 import com.huntercoles.pokerpayout.core.design.components.PokerTextFieldDefaults
 import com.huntercoles.pokerpayout.core.design.components.PokerNumberField
@@ -90,6 +94,32 @@ private fun ChipCalculatorMessage(message: String?) {
 }
 
 /**
+ * The chip calculator ("Chip set" in the Tools list) under its top bar: back to Tools, and reset.
+ * M6 rebuilds the body as the S11 chip set.
+ */
+@Composable
+fun ChipCalculatorRoute(
+    onBack: () -> Unit,
+    viewModel: ChipCalculatorViewModel = hiltViewModel()
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PokerColors.PokerBlack)
+    ) {
+        PokerTopBar(title = stringResource(R.string.chip_set_title), onBack = onBack) {
+            PokerIconButton(
+                icon = PokerIcons.Restart,
+                contentDescription = stringResource(R.string.chip_set_reset),
+                onClick = { viewModel.showResetDialog() },
+                tint = PokerColors.PokerGold
+            )
+        }
+        ChipCalculatorScreen(viewModel = viewModel)
+    }
+}
+
+/**
  * Chip Calculator Screen
  * Calculates optimal chip distribution for poker tournaments
  * Automatically syncs with tournament starting chips configuration via TournamentPreferences
@@ -107,20 +137,13 @@ fun ChipCalculatorScreen(
             .fillMaxSize()
             .background(PokerColors.PokerBlack)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header with Reset Button
-        PokerHeaderWithAction(
-            title = "🎰 Chip Calculator",
-            onActionClick = { viewModel.showResetDialog() },
-            actionContentDescription = "Reset"
-        )
-
         // Reset Confirmation Dialog
         PokerConfirmationDialog(
-            title = "Reset chip calculator?",
-            description = "This will reset the total chips value to tournament starting chips.",
+            title = stringResource(R.string.chip_set_reset_title),
+            description = stringResource(R.string.chip_set_reset_description),
             onDismiss = { viewModel.hideResetDialog() },
             onConfirm = { viewModel.confirmReset() },
             isVisible = uiState.showResetDialog

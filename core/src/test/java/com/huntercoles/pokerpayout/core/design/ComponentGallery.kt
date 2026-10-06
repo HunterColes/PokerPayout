@@ -25,14 +25,15 @@ import com.huntercoles.pokerpayout.core.design.components.CardFaceSize
 import com.huntercoles.pokerpayout.core.design.components.EquityBar
 import com.huntercoles.pokerpayout.core.design.components.EquityBarPreview
 import com.huntercoles.pokerpayout.core.design.components.PlayingCard
+import com.huntercoles.pokerpayout.core.design.components.PokerAppShell
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonPreview
 import com.huntercoles.pokerpayout.core.design.components.PokerChipPreview
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerFieldPreview
 import com.huntercoles.pokerpayout.core.design.components.PokerIconButton
-import com.huntercoles.pokerpayout.core.design.components.PokerNavBar
 import com.huntercoles.pokerpayout.core.design.components.PokerNavBarPreview
+import com.huntercoles.pokerpayout.core.design.components.PokerNavRailPreview
 import com.huntercoles.pokerpayout.core.design.components.PokerPill
 import com.huntercoles.pokerpayout.core.design.components.PokerPillPreview
 import com.huntercoles.pokerpayout.core.design.components.PokerPillTone
@@ -63,41 +64,49 @@ internal val ComponentGallery: List<Pair<String, @Composable () -> Unit>> = list
     "PokerSheet" to { PokerSheetPreview() },
     "UndoSnackbar" to { UndoSnackbarPreview() },
     "PokerNavBar" to { PokerNavBarPreview() },
+    "PokerNavRail" to { PokerNavRailPreview() },
 )
 
 /**
- * A whole screen built only from the new components: the top bar, a scrolling body, the Undo
- * snackbar and the nav bar. It shows how the parts sit together when the screen stretches and
- * rotates (it is not a real screen; those arrive in M2+).
+ * A whole screen built only from the new components, inside the app's shell: the top bar, a
+ * scrolling body and the Undo snackbar, with the nav bar below (or the rail beside, from 600 dp).
+ * It shows how the parts sit together when the screen stretches and rotates (it is not a real
+ * screen; the real ones have their own goldens in their modules).
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ShellSample() {
     PokerTheme(reducedMotion = true) {
-        Column(Modifier.fillMaxSize().background(PokerColors.PokerBlack)) {
-            PokerTopBar(title = "Odds", subtitle = "Flop · exact · 990 runouts", onBack = {}) {
-                PokerIconButton(PokerIcons.Restart, "New hand", onClick = {})
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = PokerDimens.Gutter),
-                verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
-            ) {
-                ShellSeat("Player 1", listOf(PlayingCard("A", "s"), PlayingCard("K", "s")), 0.561f, lead = true)
-                ShellSeat("Player 2", listOf(PlayingCard("Q", "h"), PlayingCard("Q", "d")), 0.439f, lead = false)
-                PokerEyebrow("Board")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("J" to "s", "T" to "s", "2" to "c").forEach { (rank, suit) ->
-                        CardFace(PlayingCard(rank, suit))
-                    }
-                }
-                PokerButton("Deal the turn", onClick = {}, icon = PokerIcons.Cards, modifier = Modifier.fillMaxWidth())
-            }
-            UndoSnackbar(message = "New hand dealt", onUndo = {}, modifier = Modifier.padding(12.dp))
-            PokerNavBar(items = pokerNavItems(), selectedIndex = 3, onSelect = {})
+        PokerAppShell(items = pokerNavItems(), selectedIndex = 3, onSelect = {}) {
+            ShellSampleScreen()
         }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ShellSampleScreen() {
+    Column(Modifier.fillMaxSize()) {
+        PokerTopBar(title = "Odds", subtitle = "Flop · exact · 990 runouts", onBack = {}) {
+            PokerIconButton(PokerIcons.Restart, "New hand", onClick = {})
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = PokerDimens.Gutter),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+        ) {
+            ShellSeat("Player 1", listOf(PlayingCard("A", "s"), PlayingCard("K", "s")), 0.561f, lead = true)
+            ShellSeat("Player 2", listOf(PlayingCard("Q", "h"), PlayingCard("Q", "d")), 0.439f, lead = false)
+            PokerEyebrow("Board")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("J" to "s", "T" to "s", "2" to "c").forEach { (rank, suit) ->
+                    CardFace(PlayingCard(rank, suit))
+                }
+            }
+            PokerButton("Deal the turn", onClick = {}, icon = PokerIcons.Cards, modifier = Modifier.fillMaxWidth())
+        }
+        UndoSnackbar(message = "New hand dealt", onUndo = {}, modifier = Modifier.padding(12.dp))
     }
 }
 

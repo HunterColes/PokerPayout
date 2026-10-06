@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -90,7 +92,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.PokerDialog
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
-import com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction
+import com.huntercoles.pokerpayout.core.design.components.PokerIconButton
+import com.huntercoles.pokerpayout.core.design.components.PokerTopBar
+import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
+import com.huntercoles.pokerpayout.core.R as CoreR
 import com.huntercoles.pokerpayout.core.design.components.PayoutPreview
 import com.huntercoles.pokerpayout.core.design.components.WeightsEditorDialog
 import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
@@ -127,26 +132,24 @@ internal fun BankScreen(
     var knockingOutPlayerId by remember { mutableStateOf<Int?>(null) }
     
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize(),
     ) {
-        // Header with Reset Button
-        PokerHeaderWithAction(
-            title = "🏦 Bank Tracker",
-            onActionClick = { 
-                focusManager.clearFocus()
-                onIntent(BankIntent.ShowResetDialog) 
-            },
-            actionContentDescription = "Reset Bank Data"
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
+        PokerTopBar(title = stringResource(CoreR.string.navigation_bank)) {
+            PokerIconButton(
+                icon = PokerIcons.Restart,
+                contentDescription = stringResource(R.string.bank_reset),
+                onClick = {
+                    focusManager.clearFocus()
+                    onIntent(BankIntent.ShowResetDialog)
+                },
+                tint = PokerColors.PokerGold,
+            )
+        }
 
         // Reset Confirmation Dialog
         PokerConfirmationDialog(
-            title = "Reset bank data?",
-            description = "This will reset all player names and payment statuses to defaults.",
+            title = stringResource(R.string.bank_reset_title),
+            description = stringResource(R.string.bank_reset_description),
             onDismiss = {
                 focusManager.clearFocus()
                 onIntent(BankIntent.HideResetDialog)
@@ -223,6 +226,8 @@ internal fun BankScreen(
         val championPlayerId = activePlayerIds.singleOrNull()
 
         LazyColumn(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Pool Summary

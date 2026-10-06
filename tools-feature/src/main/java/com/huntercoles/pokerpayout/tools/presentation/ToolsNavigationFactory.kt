@@ -23,7 +23,7 @@ class ToolsNavigationFactory @Inject constructor(
         
         // Odds Calculator tool
         builder.composable<NavigationDestination.OddsCalculator> {
-            OddsCalculatorScreen()
+            OddsCalculatorScreen(onBack = navigationManager::navigateBack)
         }
         
         // Hand Rankings tool

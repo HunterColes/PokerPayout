@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -24,6 +25,13 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    testOptions {
+        unitTests {
+            // Robolectric needs the merged resources (fonts, strings) to render the odds screens.
+            isIncludeAndroidResources = true
+        }
     }
 
     buildTypes {
@@ -63,9 +71,19 @@ dependencies {
     implementation(libs.navigation.hilt)
     implementation(libs.timber)
     testImplementation(libs.bundles.common.test)
+    testImplementation(libs.bundles.screenshot.test)
+    testImplementation(libs.test.androidx.core)
+    testImplementation(testFixtures(project(":core")))
     androidTestImplementation(libs.bundles.common.android.test)
     debugImplementation(libs.debug.compose.manifest)
 
     ksp(libs.hilt.compiler)
     kspAndroidTest(libs.hilt.compiler)
+}
+
+// Odds screen goldens (S8, S9, S10) are committed under src/test/screenshots. ./gradlew testDebugUnitTest
+// verifies them; ./gradlew :tools-feature:recordRoborazziDebug re-records them deliberately. See
+// docs/TESTING.md, section 9.
+roborazzi {
+    outputDir.set(file("src/test/screenshots"))
 }

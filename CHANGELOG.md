@@ -3,6 +3,26 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.3.3 (on master, not published)
+
+The Bank and the Payouts tab are rebuilt.
+
+- **Bank:** one compact row per player under a labelled header (Buy-in, Rebuy, Out, Paid), no more
+  unlabelled emoji. A buy-in or rebuy is one tap, with Undo on the snackbar (the last 20 actions can
+  be taken back). Knock a player out from a sheet that asks who did it, and their place shows in
+  the Out column. The champion and every paid place get a pay-out sheet at the end of the night.
+  Money meters show what's in and what's been paid; the pool breakdown shows rebuys and add-ons
+  inside the prize pool.
+- **Rebuy cutoff:** "rebuys until level N" closes the Rebuy column when the clock passes that level;
+  add-ons stay open until the end of the first break after it.
+- **Fair rebuy prices:** each rebuy and add-on keeps the price it was bought at, so changing the
+  price mid-game no longer re-values earlier purchases.
+- **Payouts tab:** the prize pool and where it came from, presets that show what 1st would get,
+  rounding, a places stepper, share bars, the bubble, bounties, and Share as text.
+- **5 players now pay 2 places** by default (was winner-takes-all).
+- **Small phones and tablets:** on narrow screens closed columns fold into each row; on tablets the
+  Bank shows In and Owed columns and keeps the breakdown open beside the list.
+
 ## 1.3.2 (on master, not published)
 
 Chip set and Hand ranks join the makeover.

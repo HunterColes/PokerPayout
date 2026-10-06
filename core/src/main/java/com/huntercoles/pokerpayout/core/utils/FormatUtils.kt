@@ -47,6 +47,15 @@ object FormatUtils {
     }
 
     /**
+     * A whole number of cents the makeover way (copy rules, design spec section 8): cents only when
+     * there are some. Example: 45000 -> "$450", 9550 -> "$95.50", -1000 -> "-$10".
+     */
+    fun formatMoney(cents: Long): String {
+        val full = formatCents(cents)
+        return if (cents % Money.CENTS_PER_DOLLAR == 0L) full.removeSuffix(".00") else full
+    }
+
+    /**
      * Format a Double as currency without cents (whole dollars)
      * Example: 1234.56 -> "$1,235"
      */

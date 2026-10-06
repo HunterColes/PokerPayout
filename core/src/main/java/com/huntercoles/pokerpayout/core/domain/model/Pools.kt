@@ -47,6 +47,22 @@ data class PoolBreakdown(
     companion object {
         val EMPTY = PoolBreakdown(0L, 0L, 0L, 0L, 0L)
 
+        /**
+         * The pool with the rebuys and add-ons the Bank recorded, at the prices they were bought at
+         * (PP-085): [rebuyCents] and [addOnCents] are their totals.
+         */
+        fun withRecordedPurchases(money: MoneySettings, playerCount: Int, rebuyCents: Long, addOnCents: Long): PoolBreakdown {
+            val players = playerCount.coerceAtLeast(0).toLong()
+            return PoolBreakdown(
+                buyInCents = players * money.buyInCents,
+                foodCents = players * money.foodCents,
+                bountyCents = players * money.bountyCents,
+                rebuyCents = rebuyCents.coerceAtLeast(0L),
+                addOnCents = addOnCents.coerceAtLeast(0L)
+            )
+        }
+
+        /** The pool with [rebuyCount] rebuys and [addOnCount] add-ons, all at today's prices. */
         fun of(money: MoneySettings, playerCount: Int, rebuyCount: Int, addOnCount: Int): PoolBreakdown {
             val players = playerCount.coerceAtLeast(0).toLong()
             return PoolBreakdown(

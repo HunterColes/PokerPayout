@@ -1,6 +1,16 @@
 package com.huntercoles.pokerpayout.core.design.components
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -46,3 +56,46 @@ private val ExpandedMinWidth = 840.dp
  * rail, so it keeps the full width.
  */
 val ContentMaxWidth: Dp = 720.dp
+
+/**
+ * The width the shell has for the screen before the [ContentMaxWidth] cap. [PokerAppShell] records
+ * it while measuring and offers it as [LocalShellWidth]; [fillShellWidth] reads it while measuring,
+ * so a rotation only relays out.
+ */
+class ShellWidth {
+    private var widthPx by mutableIntStateOf(UNKNOWN)
+
+    /** The shell's own measure: records the width, then lays the screen out as before. */
+    fun MeasureScope.measure(measurable: Measurable, constraints: Constraints): MeasureResult {
+        if (constraints.hasBoundedWidth) widthPx = constraints.maxWidth
+        val placeable = measurable.measure(constraints)
+        return layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    }
+
+    /** The width in pixels, or null before the shell has measured (or outside it). */
+    val px: Int? get() = widthPx.takeIf { it != UNKNOWN }
+
+    private companion object {
+        const val UNKNOWN = -1
+    }
+}
+
+/** The shell's width for two-pane screens; null outside [PokerAppShell]. */
+val LocalShellWidth = staticCompositionLocalOf<ShellWidth?> { null }
+
+/**
+ * For the two-pane layouts from 840 dp (the Bank's Z5): lays the content out across the whole width
+ * the shell has, instead of the centred [ContentMaxWidth] column every other screen keeps. The
+ * content is centred on the column, so it spans the shell's width exactly. Taps reach it there too:
+ * nothing between the shell and the screen clips.
+ */
+fun Modifier.fillShellWidth(): Modifier = composed {
+    val shell = LocalShellWidth.current
+    layout { measurable, constraints ->
+        val width = maxOf(shell?.px ?: constraints.maxWidth, constraints.minWidth)
+        val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+        layout(constraints.maxWidth, placeable.height) {
+            placeable.place((constraints.maxWidth - width) / 2, 0)
+        }
+    }
+}

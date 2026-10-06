@@ -29,7 +29,7 @@ class PayoutWeightsResetTest {
 
         tournamentPreferences.resetAllTournamentData()
 
-        assertEquals(listOf(35), tournamentPreferences.getPayoutWeights())
+        assertEquals(listOf(35, 20), tournamentPreferences.getPayoutWeights())
     }
 
     @Test
@@ -40,7 +40,7 @@ class PayoutWeightsResetTest {
         tournamentPreferences.resetAllTournamentData()
 
         assertEquals(5, tournamentPreferences.getPlayerCount())
-        assertEquals(listOf(35), tournamentPreferences.getPayoutWeights())
+        assertEquals(listOf(35, 20), tournamentPreferences.getPayoutWeights())
     }
 
     @Test
@@ -60,6 +60,6 @@ class PayoutWeightsResetTest {
     fun `stored weights that fail to parse fall back to the defaults`() {
         tournamentPreferences.setPayoutWeights(emptyList())
 
-        assertEquals(listOf(35), tournamentPreferences.getPayoutWeights())
+        assertEquals(listOf(35, 20), tournamentPreferences.getPayoutWeights())
     }
 }

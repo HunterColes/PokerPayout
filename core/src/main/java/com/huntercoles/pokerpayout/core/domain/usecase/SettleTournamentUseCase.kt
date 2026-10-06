@@ -17,6 +17,8 @@ import javax.inject.Inject
  * - Each knocked-out player's bounty goes to whoever was credited with the knockout.
  * - The champion keeps their own bounty (the "King's Bounty") and also collects the bounty of every
  *   player knocked out with nobody credited, so no bounty is left in the box.
+ * - Rebuys and add-ons count at the price each was bought at (PP-085), in the pool and in what each
+ *   player paid, so changing the rebuy amount mid-game doesn't re-value earlier rebuys.
  */
 class SettleTournamentUseCase @Inject constructor(
     private val calculatePayouts: CalculatePayoutsUseCase
@@ -31,11 +33,11 @@ class SettleTournamentUseCase @Inject constructor(
     ): Settlement {
         val ids = players.map { it.id }
         val standings = Standings(ids, eliminationOrder)
-        val pool = PoolBreakdown.of(
+        val pool = PoolBreakdown.withRecordedPurchases(
             money = money,
             playerCount = players.size,
-            rebuyCount = players.sumOf { it.rebuys },
-            addOnCount = players.sumOf { it.addOns }
+            rebuyCents = players.sumOf { it.rebuyCostCents(money) },
+            addOnCents = players.sumOf { it.addOnCostCents(money) }
         )
         val table = calculatePayouts(pool.prizePoolCents, weights, players.size, rounding)
         val champion = standings.championId
@@ -53,6 +55,8 @@ class SettleTournamentUseCase @Inject constructor(
             val place = standings.placeOf(player.id)
             val knockouts = credits[player.id] ?: 0
             val isChampion = player.id == champion
+            val rebuyCost = player.rebuyCostCents(money)
+            val addOnCost = player.addOnCostCents(money)
             PlayerSettlement(
                 playerId = player.id,
                 place = place,
@@ -61,8 +65,10 @@ class SettleTournamentUseCase @Inject constructor(
                 knockoutBountyCents = knockouts * money.bountyCents,
                 kingsBountyCents = if (isChampion) money.bountyCents else 0L,
                 unclaimedBountyCents = if (isChampion) unclaimed * money.bountyCents else 0L,
-                costCents = money.entryCents + player.rebuys * money.rebuyCents + player.addOns * money.addOnCents,
-                paidOut = player.paidOut
+                costCents = money.entryCents + rebuyCost + addOnCost,
+                paidOut = player.paidOut,
+                rebuyCostCents = rebuyCost,
+                addOnCostCents = addOnCost
             )
         }
 

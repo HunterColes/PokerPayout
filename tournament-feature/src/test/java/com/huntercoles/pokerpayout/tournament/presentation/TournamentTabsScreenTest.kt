@@ -22,6 +22,8 @@ import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.time.TimeSource
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCues
+import com.huntercoles.pokerpayout.tournament.domain.clock.CueVibrator
 import com.huntercoles.pokerpayout.tournament.presentation.composable.TournamentActions
 import com.huntercoles.pokerpayout.tournament.presentation.composable.TournamentContent
 import io.mockk.mockk
@@ -81,13 +83,14 @@ class TournamentTabsScreenTest(private val config: ScreenConfig) {
         val setup = configViewModel()
         val timer = viewModel {
             val sound = mockk<SoundManager>(relaxed = true)
+            val audio = AudioPreferences(ApplicationProvider.getApplicationContext())
             TimerViewModel(
                 timerPreferences,
                 tournamentPreferences,
                 bankPreferences,
-                sound,
+                ClockCues(sound, audio, CueVibrator { }, StillClock),
                 StillClock,
-                AudioPreferences(ApplicationProvider.getApplicationContext()),
+                audio,
                 FakeChipSets(),
             )
         }

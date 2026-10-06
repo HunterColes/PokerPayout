@@ -503,8 +503,9 @@ s_ready_ticket() {
 }
 s_start_fold() {
   # Start folds the setup into the clock (S1 v2 -> S2): the setup becomes a one-line strip, the
-  # ticket the running clock with its controls
+  # ticket the running clock with its controls. The first Start asks for notifications (PP-081)
   ui tap "Start clock"
+  answer_notifications_ask
   ui wait "desc=Pause timer" || return 1
   ui assert-text "text~=Level 1 of 9 · running" "text~=Level 1 · time left" "desc~=Opens setup" "desc=Remove one minute" \
     "desc=Add one minute" "desc=Next blind level" "text~=played" || return 1
@@ -535,6 +536,130 @@ s_nudge() {
   (( before - after >= 50 && before - after <= 80 )) || { echo "[ui] FAIL -1 took $((before - after))s off"; return 1; }
   (( back - after >= 40 && back - after <= 65 )) || { echo "[ui] FAIL +1 gave $((back - after))s back"; return 1; }
 }
+# The live clock notification (PP-081) ---------------------------------------------------------
+# PP-081: on Android 13+ the first Start asks, once, for permission to post notifications (the data
+# was cleared, so the permission is back to "ask"). Allow it, so the live clock can show. On an
+# older Android, or with it already granted, there is no question.
+answer_notifications_ask() {
+  # (find is a probe: it never drags the page, even in the device matrix's scroll mode)
+  if ui find "id=permission_allow_button" --timeout 8 >/dev/null 2>&1; then
+    ui tap "id=permission_allow_button"
+    ui wait-gone "id=permission_allow_button" >/dev/null
+    echo "notifications: asked at the first Start, allowed"
+  else
+    echo "notifications: not asked (Android 12 or older, or already granted)"
+  fi
+}
+# The app's notifications in `dumpsys notification --noredact`: the lines of each NotificationRecord
+# posted by the app (the one the live clock shows), or nothing.
+live_clock_record() {
+  adb_ shell dumpsys notification --noredact 2>/dev/null | tr -d '\r' | python3 -c '
+import sys
+app = sys.argv[1]
+inside = False
+for line in sys.stdin:
+    if "NotificationRecord(" in line:
+        inside = ("pkg=" + app + " ") in line
+    if inside:
+        sys.stdout.write(line)
+' "$APP_ID"
+}
+# Waits (up to ~15 s) for the live clock to show every pattern given (grep -E, one each), or to be
+# gone with no pattern. Prints the record either way.
+wait_live_clock() {
+  local record="" tries
+  for tries in $(seq 1 15); do
+    record="$(live_clock_record)"
+    if (( $# == 0 )); then
+      [[ -z "$record" ]] && { echo "live clock: gone"; return 0; }
+    else
+      local all=1 p
+      for p in "$@"; do grep -qE -- "$p" <<<"$record" || { all=0; break; }; done
+      if (( all )); then
+        echo "live clock record:"
+        grep -E 'android\.(title|text)=|"(Pause|Resume|Open)"|showChronometer|chronometerCountDown|vis=' <<<"$record" \
+          | sed 's/^ */  /' || true
+        return 0
+      fi
+    fi
+    sleep 1
+  done
+  echo "live clock record after 15 s:"
+  sed 's/^/  /' <<<"${record:-(none)}" | head -60 || true
+  if (( $# == 0 )); then echo "[ui] FAIL the live clock notification didn't go"; else echo "[ui] FAIL the live clock notification doesn't show: $*"; fi
+  return 1
+}
+s_live_clock_shade() {
+  # Home with the clock running: an ongoing notification with the level, the time left counting
+  # down by itself (a chronometer, so nothing is posted per second), the blinds and the next ones,
+  # Pause and Open; public on the lock screen. (The permission is granted again here in case the
+  # first Start didn't ask: a grant doesn't restart the app.)
+  adb_ shell pm grant "$APP_ID" android.permission.POST_NOTIFICATIONS >/dev/null 2>&1 || true
+  ui home
+  wait_live_clock 'android\.title=.*\(Level 1\)' 'android\.text=.*Blinds 25 / 50 · Next 50 / 100' \
+    '"Pause"' '"Open"' 'showChronometer=Boolean \(true\)' 'chronometerCountDown=Boolean \(true\)' 'vis=PUBLIC'
+}
+# SystemUI's demo mode (boot.sh) pins the status bar for screenshots. The shade is opened without
+# it, in case it hides more than the status bar's icons, and it comes back after.
+demo_mode() { # on|off
+  local c cmds=("command exit")
+  if [[ "$1" == on ]]; then
+    cmds=("command enter" "command clock -e hhmm 1200" "command battery -e level 100 -e plugged false"
+      "command network -e wifi show -e level 4 -e mobile hide" "command notifications -e visible false")
+  fi
+  for c in "${cmds[@]}"; do adb_ shell "am broadcast -a com.android.systemui.demo -e $c" >/dev/null 2>&1 || true; done
+}
+open_shade() {
+  demo_mode off
+  adb_ shell cmd statusbar expand-notifications
+  sleep 2
+}
+close_shade() {
+  adb_ shell cmd statusbar collapse >/dev/null 2>&1 || true
+  demo_mode on
+}
+# Taps a button of the live clock notification in the open shade. The top notification shows its
+# buttons; if it came collapsed, it is expanded first. Labels match in any case (some Android
+# versions draw them in capitals).
+tap_shade_button() { # label
+  local sel="re=(?i)^$1\$"
+  ui find "$sel" --timeout 4 >/dev/null 2>&1 || ui tap "desc=Expand" --timeout 4 || true
+  ui tap "$sel"
+}
+s_live_clock_pause() {
+  # Pause from the shade: the notification says paused, with the time left, and offers Resume
+  open_shade
+  tap_shade_button Pause || { close_shade; return 1; }
+  wait_live_clock 'android\.title=.*\(Level 1 · paused\)' 'android\.text=.*[0-9]+:[0-9]{2} left · Blinds 25 / 50' \
+    '"Resume"' '"Open"' || { close_shade; return 1; }
+  close_shade
+}
+s_live_clock_open() {
+  # Open from the shade: the clock is paused on screen too (one clock), the notification goes
+  # while the app is in front, and the clock's own button resumes it
+  open_shade
+  tap_shade_button Open || { close_shade; return 1; }
+  demo_mode on
+  ui wait "desc=Resume timer" --timeout 15 || return 1
+  ui assert-text "text~=Level 1 of 9 · paused" "text~=Level 1 · time left" || return 1
+  wait_live_clock || return 1
+  ui tap "desc=Resume timer"
+  ui assert-text "desc=Pause timer" "text~=Level 1 of 9 · running"
+}
+s_live_clock_locked() {
+  # Opt-in: the screen locks with the clock running; the live clock shows (on the lock screen,
+  # public), and goes again once the app is back in front
+  adb_ shell input keyevent KEYCODE_SLEEP
+  local rc=0
+  wait_live_clock 'android\.title=.*\(Level [0-9]+\)' 'vis=PUBLIC' || rc=1
+  adb_ shell input keyevent KEYCODE_WAKEUP
+  adb_ shell wm dismiss-keyguard >/dev/null 2>&1 || true
+  sleep 2
+  (( rc == 0 )) || return 1
+  ui wait "desc=Pause timer" --timeout 15 || return 1
+  wait_live_clock
+}
+
 s_timer_next_level() {
   ui tap "desc=Next blind level"
   ui assert-text "text~=Level 2 · time left" "text~=Level 2 of 9" "text=50 / 100" "desc=Previous blind level"
@@ -1485,6 +1610,9 @@ step breaks               "Breaks every 4 levels, note 'Last rebuy'"            
 step ready-ticket         "The ticket: level 1 ready, 20:00, 25 / 50, 3:20"     s_ready_ticket
 step start-fold           "Start: setup folds into the running clock (S2)"      s_start_fold
 step nudge                "-1 and +1: a minute off the level, and back"         s_nudge
+step live-clock-shade     "Home: the live clock notification (PP-081)"          s_live_clock_shade
+step live-clock-pause     "Pause from the shade: paused, Resume offered"        s_live_clock_pause
+step live-clock-open      "Open: paused on screen too; notification gone"       s_live_clock_open
 step timer-next-level     "Skip to level 2"                                     s_timer_next_level
 step timer-break          "Skip to the first break (S4)"                        s_timer_break
 step timer-paused         "Pause on the break"                                  s_timer_paused
@@ -1564,6 +1692,8 @@ step rail-tools           "Rail: Tools tab"                                     
 step rail-payouts         "Rail: Payouts tab, table adds up"                    s_rail_payouts
 step rail-restored        "Phone width again: bottom bar back, tab kept"        s_rail_restored
 step app-alive            "App process still alive"                             s_app_alive
+
+extra_step live-clock-locked "Screen locked, clock running: the live clock shows" s_live_clock_locked
 
 source "$DEVICE_SCRIPTS/steps-matrix.sh"   # opt-in steps for the device matrix (extra_step)
 run_tour

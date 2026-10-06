@@ -18,6 +18,8 @@ import com.huntercoles.pokerpayout.core.utils.ChipColour
 import com.huntercoles.pokerpayout.core.utils.ChipInventory
 import com.huntercoles.pokerpayout.core.utils.InventoryChip
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCues
+import com.huntercoles.pokerpayout.tournament.domain.clock.CueVibrator
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
@@ -78,12 +80,12 @@ internal class TournamentFixture(private val store: ViewModelStore) {
     fun timerViewModel(): TimerViewModel = viewModel { newTimer() }
 
     private fun newTimer(): TimerViewModel {
-        val sound = mockk<SoundManager>(relaxed = true)
+        val cues = ClockCues(mockk<SoundManager>(relaxed = true), audioPreferences, CueVibrator { }, StillClock)
         return TimerViewModel(
             timerPreferences,
             tournamentPreferences,
             bankPreferences,
-            sound,
+            cues,
             StillClock,
             audioPreferences,
             SavedChipSetProvider(chipPreferences),

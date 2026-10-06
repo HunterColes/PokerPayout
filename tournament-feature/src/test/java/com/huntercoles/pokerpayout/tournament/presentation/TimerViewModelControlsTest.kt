@@ -17,6 +17,8 @@ import com.huntercoles.pokerpayout.core.utils.ChipRef
 import com.huntercoles.pokerpayout.core.utils.ChipSetChips
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.ColorUpSwap
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCues
+import com.huntercoles.pokerpayout.tournament.domain.clock.CueVibrator
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModelTest.FakeTimeSource
 import io.mockk.mockk
 import io.mockk.verify
@@ -92,7 +94,7 @@ class TimerViewModelControlsTest {
                 timerPreferences,
                 tournamentPreferences,
                 bankPreferences,
-                soundManager,
+                ClockCues(soundManager, audioPreferences, CueVibrator { }, clock),
                 clock,
                 audioPreferences,
                 chipSets

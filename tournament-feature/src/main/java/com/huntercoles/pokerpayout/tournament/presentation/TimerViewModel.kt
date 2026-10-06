@@ -2,9 +2,6 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.huntercoles.pokerpayout.core.R
-import com.huntercoles.pokerpayout.core.audio.SoundManager
-import com.huntercoles.pokerpayout.core.constants.AudioConstants.LEVEL_CHANGE_SOUND_LEAD_SECONDS
 import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
@@ -23,12 +20,17 @@ import com.huntercoles.pokerpayout.core.utils.ChipSetProvider
 import com.huntercoles.pokerpayout.core.utils.SmallestChipChoices
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSettings
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCueTimes
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCues
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSaves
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockTimeline
 import com.huntercoles.pokerpayout.tournament.domain.clock.LevelSegment
+import com.huntercoles.pokerpayout.tournament.domain.clock.SilentCue
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,6 +51,8 @@ import javax.inject.Inject
  *
  * Color-ups use your chip set once it is set up ([ChipSetProvider], PP-091 #9); a change to it
  * re-plans them and leaves the clock where it is.
+ * The saved anchor is the one clock (PP-081): the live clock notification's Pause and Resume change
+ * it too, and this follows ([followSavedClock]) through the same steps as its own button.
  */
 @HiltViewModel
 @Suppress("LongParameterList") // one injected source per thing the clock reads
@@ -56,7 +60,7 @@ class TimerViewModel @Inject constructor(
     private val timerPreferences: TimerPreferences,
     private val tournamentPreferences: TournamentPreferences,
     private val bankPreferences: BankPreferences,
-    private val soundManager: SoundManager,
+    private val cues: ClockCues,
     private val timeSource: TimeSource,
     private val audioPreferences: AudioPreferences,
     private val chipSets: ChipSetProvider
@@ -64,6 +68,11 @@ class TimerViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(TimerUiState())
     val uiState: StateFlow<TimerUiState> = _uiState.asStateFlow()
+
+    /** PP-083: the gold flash at a level change or with one minute left, for the clock's screen. */
+    val flashes: Flow<SilentCue> = cues.flashes
+
+    private val saves = ClockSaves(timerPreferences, tournamentPreferences)
 
     private var anchor = ClockAnchor()
     private var tickJob: Job? = null
@@ -81,13 +90,17 @@ class TimerViewModel @Inject constructor(
     private var chipSet: ChipSetChips? = chipSets.current()
 
     init {
-        soundManager.preloadSound(R.raw.blind_level_up)
+        cues.preload()
         normalizeStoredSmallestChip()
         restore()
         observeTable()
         observeSettings()
         observeChipSet()
+        observeSavedClock()
     }
+
+    /** PP-081: true at most once ever, the first Start asking for the live clock's notification. */
+    fun takeNotificationsAsk(): Boolean = timerPreferences.takeNotificationsAsk()
 
     fun acceptIntent(intent: TimerIntent) {
         when (intent) {
@@ -243,27 +256,52 @@ class TimerViewModel @Inject constructor(
 
     private fun start() {
         markStarted()
+        runFrom(ClockAnchor.runningFrom(anchor.elapsedAt(timeSource), timeSource))
+    }
+
+    /** Runs the clock from [running]: Start and Resume here, or Resume on the notification. */
+    private fun runFrom(running: ClockAnchor) {
         stopFollowingWallClock()
-        val elapsed = anchor.elapsedAt(timeSource)
-        anchor = ClockAnchor.runningFrom(elapsed, timeSource)
-        timerPreferences.saveClock(anchor)
-        tournamentPreferences.setTournamentLocked(true)
-        tournamentPreferences.setIsConfigExpanded(false)
-        lastSeenMillis = elapsed
+        anchor = running
+        saves.resumed(anchor)
+        lastSeenMillis = running.elapsedMillis
         _uiState.update { it.copy(isRunning = true, isFinished = false) }
         startTicking()
     }
 
-    private fun pause() {
-        val elapsed = anchor.elapsedAt(timeSource)
+    private fun pause() = stopAt(ClockAnchor.stopped(anchor.elapsedAt(timeSource)))
+
+    /** Stops the clock at [stopped]: Pause here, or Pause on the notification. */
+    private fun stopAt(stopped: ClockAnchor) {
         tickJob?.cancel()
         tickJob = null
-        anchor = ClockAnchor.stopped(elapsed)
-        timerPreferences.saveClock(anchor)
-        tournamentPreferences.setTournamentLocked(false)
+        anchor = stopped
+        saves.paused(anchor)
         _uiState.update { it.copy(isRunning = false) }
-        show(elapsed, playCues = false)
+        show(stopped.elapsedMillis, playCues = false)
         followWallClockWhilePaused()
+    }
+
+    /**
+     * PP-081: the saved clock's running flag changed. When this clock saved it, the saved anchor is
+     * this one and nothing happens; when the notification's Pause or Resume did, this clock takes it
+     * up through the same steps as its own button.
+     */
+    private fun observeSavedClock() {
+        viewModelScope.launch {
+            timerPreferences.timerRunning.collect { followSavedClock() }
+        }
+    }
+
+    private fun followSavedClock() {
+        val saved = timerPreferences.getClock()
+        val state = _uiState.value
+        val live = state.hasTimerStarted && !state.isFinished
+        when {
+            saved == null || saved == anchor || !live -> Unit
+            anchor.running && !saved.running -> stopAt(saved)
+            !anchor.running && saved.running -> runFrom(saved)
+        }
     }
 
     /** The first start (or jump) freezes the setup so the schedule survives until reset. */
@@ -319,7 +357,8 @@ class TimerViewModel @Inject constructor(
     private fun show(elapsedMillis: Long, playCues: Boolean) {
         val state = _uiState.value
         val timeline = state.timeline
-        if (playCues) playCrossedCues(lastSeenMillis, elapsedMillis, timeline)
+        // The chime, and the quiet cues (PP-083), for every cue passed since the last look
+        if (playCues) cues.play(ClockCueTimes.crossed(timeline, lastSeenMillis, elapsedMillis))
         lastSeenMillis = elapsedMillis
 
         val endMillis = timeline.endSeconds * MILLIS_PER_SECOND
@@ -343,22 +382,6 @@ class TimerViewModel @Inject constructor(
             (exact + MILLIS_PER_SECOND / 2) / MILLIS_PER_SECOND * MILLIS_PER_SECOND
         }
         if (endsAt != state.endsAtWallClock) _uiState.update { it.copy(endsAtWallClock = endsAt) }
-    }
-
-    /**
-     * One chime [LEVEL_CHANGE_SOUND_LEAD_SECONDS] before every level change, break start, break end and
-     * the end of the last level. Crossing-based, so pausing or resuming can't skip or repeat one (B17),
-     * and cues more than a moment stale (the device slept through them) stay silent.
-     */
-    private fun playCrossedCues(fromMillis: Long, toMillis: Long, timeline: ClockTimeline) {
-        if (toMillis <= fromMillis) return
-        val lead = LEVEL_CHANGE_SOUND_LEAD_SECONDS * MILLIS_PER_SECOND
-        val crossed = timeline.segments.any { segment ->
-            val boundary = segment.endSeconds * MILLIS_PER_SECOND
-            val cue = boundary - lead
-            cue > fromMillis && cue <= toMillis && toMillis <= boundary + CUE_GRACE_MILLIS
-        }
-        if (crossed) soundManager.playSound(R.raw.blind_level_up)
     }
 
     private fun finish(endSeconds: Int) {
@@ -746,8 +769,5 @@ class TimerViewModel @Inject constructor(
         const val MAX_BREAK_EVERY = 20
         const val MAX_BREAK_MINUTES = 120
         const val MAX_NOTE = BreakSettings.MAX_MESSAGE_LENGTH
-
-        /** A cue that's this late (the device slept through it) is skipped rather than played late. */
-        const val CUE_GRACE_MILLIS = 2_000L
     }
 }

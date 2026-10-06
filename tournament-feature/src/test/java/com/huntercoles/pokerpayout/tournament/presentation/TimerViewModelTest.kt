@@ -16,6 +16,8 @@ import com.huntercoles.pokerpayout.core.time.TimeSource
 import com.huntercoles.pokerpayout.core.utils.BlindSetupFix
 import com.huntercoles.pokerpayout.core.utils.BlindSetupProblemKind
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCues
+import com.huntercoles.pokerpayout.tournament.domain.clock.CueVibrator
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
@@ -124,7 +126,7 @@ class TimerViewModelTest {
                     timerPreferences,
                     tournamentPreferences,
                     bankPreferences,
-                    soundManager,
+                    ClockCues(soundManager, audioPreferences, CueVibrator { }, clock),
                     clock,
                     audioPreferences,
                     FakeChipSets()

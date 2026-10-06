@@ -154,7 +154,7 @@ their labels line up (a row: the bottom bar; a column: the rail), so a screen ti
 word ("Tournament") is never tapped by mistake, and they check which tab is selected. The steps
 are:
 
-1. **Tournament** (30 steps, five of them on the Payouts tab). The tab is one setup page (S1 v2) that folds into the clock on Start.
+1. **Tournament** (33 steps, five of them on the Payouts tab and three on the live clock notification). The tab is one setup page (S1 v2) that folds into the clock on Start.
    * Launch: the ready ticket (LEVEL 1 · READY, 20:00) and Start. Type the buy-in 12.50 one key
      at a time (v1.1.12 turned it into 120.5), bounty 5, and five taps on the players stepper
      (10 players).
@@ -171,8 +171,15 @@ are:
      * Breaks every 4 levels with the note "Last rebuy"; the verdict must say "2 breaks, ends
        at 3:20". Enter in the note must leave the field, not open Reset.
    * The ticket before the start: LEVEL 1 · READY, 20:00, 25 / 50, next 50 / 100, 3:20 in all.
-   * Start: the setup folds into the running clock (S2) with its strip. -1 must take about a
-     minute off the level's time left and +1 give it back (read from the digits). Skip to level
+   * Start: the setup folds into the running clock (S2) with its strip. The first Start asks for
+     notifications (Android 13+, PP-081); the tour allows it. -1 must take about a
+     minute off the level's time left and +1 give it back (read from the digits).
+   * **Live clock (PP-081)**, three steps: Home with the clock running must post the live clock
+     notification ("Level 1", "Blinds 25 / 50 · Next 50 / 100", a counting-down chronometer, Pause
+     and Open, public on the lock screen), read from `dumpsys notification --noredact`. Pause in the
+     opened shade must turn it into "Level 1 · paused" with the time left and Resume. Open must
+     bring the app back with its clock paused too ("Level 1 of 9 · paused") and the notification
+     gone; the clock's own button then resumes it. Skip to level
      2; at level 4 require "Next · Break" and the break with its note in the schedule; skip into
      the break (S4: "Break · back at Level 5", Last rebuy); pause.
    * Table view: the table-view button forces a landscape screen on the paused break; resume
@@ -259,6 +266,26 @@ com.huntercoles.pokerpayout` appears. Another app's "isn't responding" dialog (o
 usually Pixel Launcher right after a quick boot) is not the app's fault: `ui.py` taps Wait on it
 and carries on. Use `--keep-going` to run all steps even after a failure.
 
+### The live clock notification (PP-081) on the emulator
+
+The live clock steps read the notification from `dumpsys notification --noredact` (the record the app
+posted: its extras, actions and visibility), which needs no screenshot of the shade and works with
+SystemUI's demo mode on. Only Pause and Open are tapped in the real shade
+(`cmd statusbar expand-notifications`, then uiautomator; button labels are matched in any case).
+`live_clock_record` and `wait_live_clock` in `tour.sh` poll for up to 15 s, so a slow host only makes
+them wait. The first Start's permission question is answered by `answer_notifications_ask` in the
+`start-fold` step; `live-clock-shade` also grants the permission with `pm grant`, in case the
+question never came.
+
+One more step is opt-in, since it turns the screen off: `--only live-clock-locked` (with the clock
+running) locks the screen with `KEYCODE_SLEEP`, requires the notification (public) while locked,
+then wakes and dismisses the keyguard and requires it gone with the app in front.
+
+Not checked on the emulator: a vibration you can feel (the tests count the calls), the chime's
+sound (the emulator runs without audio), the lock screen as drawn, and hours of Doze with the
+screen off (the service holds a partial wake lock while the clock runs, so the CPU doesn't sleep
+through a cue; the JVM tests run the driver on virtual time instead).
+
 ### Touring the release build
 
 The release build is shrunk and obfuscated by R8, so a missing keep rule only shows up
@@ -325,8 +352,8 @@ input sweep, about 2 s).
 |---|---|---|---|
 | core | 139 | 0 | Payouts and settlement: presets, rounding (the rows always add up to the pool), standings, 2,000 seeded random tournaments that must conserve money exactly, bounties nobody claimed going to the champion. Money in cents and the money parser. Blind engine: 6,600-config property sweep (every accepted ladder in the 1.3x-2.0x band) plus exact ladders, setup advice whose every offered fix works, color-ups. Chip optimizer: reported crashes, typed failures, a 115,500-call input sweep and a brute-force oracle. FormatUtils. |
 | bank-feature | 44 | 0 | BankViewModel money flows on real prefs: buy-ins, rebuys, knockouts, money conservation over 14 configs and 60 seeded random sessions, live totals when the Tournament settings change, purchases surviving a cleared-and-retyped amount, weights, reset. |
-| tools-feature | 139 | 1 | Odds: 100 golden hand-ranking and equity tests, exhaustive 5- and 7-card evaluator checks, the engine (exact, Monte Carlo, cancellation) and its ViewModel. Chip calculator ViewModel. `OddsBenchmark` is skipped unless `ODDS_BENCH=1`. |
-| tournament-feature | 358 | 0 | TournamentConfigViewModel (rebuy/add-on edits that can't wipe purchases, presets, paid places capped at the player count), the Float-to-cents preference migration. The clock: TimerViewModel on virtual time with a fake monotonic clock (late ticks, sleep gaps, process death mid-level and mid-overtime, reboot, v1.1 migration, chimes including the end chime after a resume, breaks, ante, write cadence, table numbers) and the break/overtime timeline. `BreakMessageFieldTest` is a Robolectric Compose UI test: hardware Enter in the break note must not click Reset. The Tournament tab (M3): `TimerViewModelControlsTest` (the one-minute nudges, End break now, color-up done, next break, projected end, rebuy state, mid-game blind changes that keep the level), `TournamentModeTest` (the setup/fold/clock/panel state machine and where the phone may turn), and the Robolectric screen tests in section 9. |
+| tools-feature | 139 | 1 | The Sound section (S7): chime, volume, and the quiet cues' Vibrate and Flash switches (`ToolsHomeViewModelTest`, `ToolsHomeContentTest`). Odds: 100 golden hand-ranking and equity tests, exhaustive 5- and 7-card evaluator checks, the engine (exact, Monte Carlo, cancellation) and its ViewModel. Chip calculator ViewModel. `OddsBenchmark` is skipped unless `ODDS_BENCH=1`. |
+| tournament-feature | 358 | 0 | TournamentConfigViewModel (rebuy/add-on edits that can't wipe purchases, presets, paid places capped at the player count), the Float-to-cents preference migration. The clock: TimerViewModel on virtual time with a fake monotonic clock (late ticks, sleep gaps, process death mid-level and mid-overtime, reboot, v1.1 migration, chimes including the end chime after a resume, breaks, ante, write cadence, table numbers) and the break/overtime timeline. `BreakMessageFieldTest` is a Robolectric Compose UI test: hardware Enter in the break note must not click Reset. The Tournament tab (M3): `TimerViewModelControlsTest` (the one-minute nudges, End break now, color-up done, next break, projected end, rebuy state, mid-game blind changes that keep the level), `TournamentModeTest` (the setup/fold/clock/panel state machine and where the phone may turn), and the Robolectric screen tests in section 9. The live clock and the quiet cues (PP-081, PP-083): `ClockCueTimesTest` (when the chime, the level change and the one-minute warning fall, the chime's old timing kept exactly), `ClockCuesTest` (what each cue sets off with each switch, and a cue reported by both the clock and the service plays once), `LiveClockCardTest` and `LiveClockNotificationTest` (what the notification says, its countdown, buttons and their broadcasts, the public channel), `LiveClockDriverTest` (on virtual time: posted only when its words change, cues on time from the background, the wake lock only while running, Pause, Resume, the half-hour pause limit, reset and finish), and `LiveClockSyncTest` (the notification's Pause and Resume leave exactly what the clock's button leaves, the clock on screen follows at once, and a command made with the app's process gone is there when it comes back). |
 
 Since the makeover's design-system batch (M0), core also runs the screenshot goldens, the
 device-matrix layout checks and the component semantics tests described in section 9: 224 more
@@ -560,7 +587,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 
 | Module | Class | Goldens (`src/test/screenshots/screens/`) | Layout checks |
 |---|---|---|---|
-| `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted` | S7: all three, at every scroll position |
+| `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted`, `S7_tools_cues_off`, `S7_tools_notifications_off` (PP-081/083: the Vibrate and Flash rows, and the way back to notifications) | S7: all three, at every scroll position |
 | `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
 | `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end`, `S11_chipset_settings` (the stack settings unfolded, keeping back the Tournament's estimate) | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
 | `tools-feature` | `SeatDrawScreenTest` (+ `SeatDrawExtraGoldenTest`) | `S14_seats_empty`, `S14_seats_one_table`, `S14_seats_two_tables`, `S14_button_draw`; `S14_seats_font2x` at tall@2.0 | All three, at every scroll position of each pane; also the name fields and an out-of-date draw with the players unfolded |

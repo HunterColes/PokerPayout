@@ -8,7 +8,7 @@ sound. It is written so that a person *or* an AI agent can run it unattended.
 | JVM unit tests | `./gradlew testDebugUnitTest` | JDK 21 | ~10 s warm (284 tests) |
 | Device smoke tour (screenshots + UI dumps + logcat) | `scripts/device/tour.sh` | emulator (auto-booted) | ~6 min incl. build |
 | Instrumented tests | `./gradlew connectedDebugAndroidTest` | running emulator | compiles; there are 0 instrumented tests (see below) |
-| JVM screenshot tests (Roborazzi) | not set up yet | n/a | n/a |
+| JVM screenshot goldens + layout checks (Roborazzi, section 9) | part of `./gradlew testDebugUnitTest`; re-record with `./gradlew recordRoborazziDebug` | JDK 21 | ~20 s for core's 140 goldens and 48 matrix checks |
 
 ## 1. Prerequisites
 
@@ -206,6 +206,10 @@ about 2 s).
 | tools-feature | 139 | 1 | Odds: 100 golden hand-ranking and equity tests, exhaustive 5- and 7-card evaluator checks, the engine (exact, Monte Carlo, cancellation) and its ViewModel. Chip calculator ViewModel. `OddsBenchmark` is skipped unless `ODDS_BENCH=1`. |
 | tournament-feature | 53 | 3 | Payout use case, TournamentConfigViewModel. The clock: TimerViewModel on virtual time with a fake monotonic clock (late ticks, sleep gaps, process death mid-level and mid-overtime, reboot, v1.1 migration, chimes including the end chime after a resume, breaks, ante, write cadence) and the break/overtime timeline. |
 
+Since the makeover's design-system batch (M0), core also runs the screenshot goldens, the
+device-matrix layout checks and the component semantics tests described in section 9: 224 more
+test executions, about 20 s.
+
 Before v1.2.0 the green run proved little: 245 executions but 101 unique tests (core's ran 3
 times), and 54 tests in JUnit 4/5-mismatched modules never ran. Turning them on surfaced 43
 failures.
@@ -271,8 +275,8 @@ deleted in v1.2.0:
 * `PlayerRowLayoutTest` targeted a now-private composable.
 * `DecimalTextFieldTest` used a stale `PoolConfigurationSection` signature.
 
-The device tour (section 5) covers on-device behaviour. The proposed Roborazzi tier (section 9)
-would cover composables on the JVM. Library modules use the stock `AndroidJUnitRunner`.
+The device tour (section 5) covers on-device behaviour. The Roborazzi tier (section 9) covers
+composables on the JVM. Library modules use the stock `AndroidJUnitRunner`.
 
 ## 8. Troubleshooting
 
@@ -289,14 +293,149 @@ would cover composables on the JVM. Library modules use the stock `AndroidJUnitR
 | Text assertions fail on another machine | Run `boot.sh` again: it re-applies the settings and warns if the locale is not en-US. |
 | Port clash with another emulator | `PP_EMU_PORT=5590 scripts/device/tour.sh` (even numbers 5554-5682). |
 | Low RAM | The emulator uses about 2 GB. The scripts cap Gradle at `-Xmx4g` and the Kotlin daemon at 2 GB. Run one Gradle build at a time. |
+| `Roborazzi: ... is changed.` | A golden no longer matches. Open `<module>/build/outputs/roborazzi/*_compare.png`. If the change is intended, run `./gradlew recordRoborazziDebug` and commit the new PNGs (section 9). |
+| `... doesn't fit on <config>: it is N px tall` | A gallery is taller than that screen's window, so its golden would be cut off. Split it into smaller previews. |
+| A layout assertion fails only at font 2.0 | Real: at 200% the text needs more room. Let it wrap (no fixed heights, no `maxLines = 1` on labels), or reflow to one column. Shrinking text is only for fixed-width slots (see `rememberFittedStyle`). |
 
-## 9. Next tier: JVM screenshot tests (proposal)
+## 9. Screenshot goldens and layout checks (Roborazzi)
 
-Roborazzi (with Robolectric native graphics) would render composables to PNG in a plain
-JVM test, with no emulator and in seconds. It would compare them to golden images committed
-under `src/test/screenshots`. An agent would run `./gradlew verifyRoborazziDebug`, read
-`build/test-results/roborazzi/results-summary.json`, and open the `*_compare.png` diffs for
-any failures. The versions that fit this toolchain, and the setup steps, are in the
-device-harness report. In short: Roborazzi **1.60.0**, the last release whose Kotlin
-metadata Kotlin 2.0.21 can read, plus Robolectric 4.14.1. The JUnit vintage engine it needs is
-already on the test classpath.
+Composables render to PNG in plain JVM tests (Robolectric with native graphics, SDK 34), with
+no emulator. Two layers run on a **device matrix** of eight screens and three font scales:
+
+1. **Goldens.** Each design-system component's `@Preview` gallery is captured and compared,
+   pixel for pixel, with a committed golden image. A visual change fails the build until someone
+   re-records on purpose.
+2. **Layout assertions.** Compose semantics checks that fail on their own, without anyone
+   looking at a picture: no text clipped, cut off, ellipsized or broken mid-word; no text pushed
+   off screen; every touch target at least 48 x 48 dp; no overlapping touch targets.
+
+### The device matrix
+
+`core/src/testFixtures/.../core/testing/DeviceMatrix.kt`. Sizes are in dp, rendered at xhdpi (2x).
+
+| Device | Size (dp) | Why |
+|---|---|---|
+| `small` | 320 x 640 | The tightest phone width we support |
+| `phone` | 360 x 780 | The mockup frame, so goldens compare 1:1 with `mockups.html` |
+| `tall` | 412 x 915 | Pixel 7 |
+| `foldable` | 600 x 960 | 7-8 inch tablet, foldable opened flat |
+| `tablet` | 800 x 1280 | 10 inch tablet |
+| `small-land` | 640 x 320 | Rotated small phone: the shortest height |
+| `phone-land` | 780 x 360 | Rotated phone (table view, run it out) |
+| `tablet-land` | 1280 x 800 | Rotated tablet |
+
+Font scales are 1.0, 1.3 and 2.0. Robolectric runs SDK 34, so 2.0 scales large text
+non-linearly, exactly as Android 14 does. Robolectric draws status and navigation bars, so the
+app window is a little shorter than the screen (the `phone` window is 360 x 724 dp).
+
+* **Layout assertions run on all 24 cells** (`DeviceMatrix.all`).
+* **Goldens are stored for 10 of them** (`DeviceMatrix.goldens`): every device at 1.0, `phone`
+  at 1.3, and `small` and `phone` at 2.0. The assertions cover the rest without storing
+  pictures.
+
+### Where the goldens live
+
+`<module>/src/test/screenshots/<group>/<Name>/<Name>_<device>-<w>x<h>_font<scale>.png`, for example
+`core/src/test/screenshots/components/PokerButton/PokerButton_small-320x640_font2.0.png`. One
+folder per component, so a reviewer can flip through one component across the matrix.
+`components/Shell/` holds a whole screen assembled from the components, captured at the full
+window size: the place to see stretch and rotate.
+
+### Commands
+
+```bash
+./gradlew testDebugUnitTest            # runs everything and VERIFIES the goldens (the CI gate)
+./gradlew :core:recordRoborazziDebug   # re-records core's goldens: only for an intended UI change
+./gradlew :core:compareRoborazziDebug  # writes diffs without failing (for a PR's before/after)
+./gradlew :core:verifyRoborazziDebug   # verify explicitly
+./gradlew :core:testDebugUnitTest --tests '*ComponentLayoutTest*'   # just the matrix assertions
+```
+
+Plain `testDebugUnitTest` verifies because `gradle.properties` sets
+`roborazzi.test.verify=true`. The record, compare and verify tasks override that setting. CI
+(`.github/workflows/ci.yml`) runs `testDebugUnitTest`, so a changed picture fails CI, and the
+failure uploads the diffs with the reports.
+
+### Reviewing a change
+
+1. A verify failure says `Roborazzi: .../PokerPill_phone-360x780_font1.0.png is changed.`
+2. Open `<module>/build/outputs/roborazzi/<Name>_<config>_compare.png` (Claude Code's Read tool
+   shows PNGs). Each compare image is reference | diff | new, side by side, with the changed
+   pixels in red in the middle.
+3. `build/test-results/roborazzi/debug/results-summary.json` lists every capture as
+   `unchanged`, `changed` or `added`; `build/reports/roborazzi/debug/index.html` is the same
+   as a page.
+4. If the change is intended, run `recordRoborazziDebug`, look at the new goldens next to
+   `mockups.html` (at least `small` at 2.0, a tablet and a landscape one), and commit them in
+   the same commit as the code that changed them. Say in the commit which components changed.
+
+Never commit re-recorded goldens to hide a change you didn't mean, just as you wouldn't
+regenerate a lint baseline to hide a finding.
+
+### Determinism
+
+* Fonts: Barlow Condensed is bundled in `core/src/main/res/font`, and Robolectric's native
+  graphics renders Roboto from its own android-all jar, so no system fonts are involved.
+* Animation: previews and goldens render inside `PokerTheme(reducedMotion = true)`, which turns
+  off every component animation (the pulsing next-card slot becomes a static outline).
+* Locale: the qualifiers pin `en-US`, and test JVMs run with `user.language=en`.
+* Time: nothing in a component reads the clock. Tests that need time (the stepper's
+  repeat-while-held, the 8 s Undo window) use the Compose test clock or `runTest` virtual time.
+* Comparison: Roborazzi's default per-pixel tolerance (colour distance 0.007) absorbs
+  anti-aliasing noise, and `changeThreshold = 0` makes any real pixel change fail.
+
+### Writing a screenshot or layout test (feature modules too)
+
+The kit is in `core`'s **test fixtures** (`core/src/testFixtures`). A feature module adds
+`testImplementation(testFixtures(project(":core")))`, the `roborazzi` plugin, the same
+`roborazzi { outputDir.set(file("src/test/screenshots")) }` block as `core/build.gradle.kts`, and
+`isIncludeAndroidResources = true`. Then:
+
+```kotlin
+@RunWith(ParameterizedRobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [34])
+class ClockScreenTest(private val config: ScreenConfig) {
+    @get:Rule val screen = ScreenTestRule(config)   // applies size, orientation, locale, font scale
+
+    @Test fun running() {
+        screen.compose.setContent { PokerTheme(reducedMotion = true) { ClockContent(fixtureState) } }
+        LayoutAssertions.assertTextFits(screen.compose, "S2 on ${config.id}")
+        LayoutAssertions.assertTouchTargets(screen.compose, "S2 on ${config.id}", strict = false)
+        screen.compose.onRoot().captureGolden("screens", "S2_clock_running", config)
+    }
+
+    companion object {
+        @JvmStatic @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
+        fun configs() = DeviceMatrix.parameters(DeviceMatrix.goldens)
+    }
+}
+```
+
+* `LayoutAssertions.assertTextFits`: every text fits its box (no overflow, no line cut off by
+  `maxLines`, no ellipsis, no word broken across lines, nothing off the side of the screen).
+  Mark a text that may ellipsize (a top-bar subtitle) with `Modifier.semantics { mayTruncate = true }`.
+* `LayoutAssertions.assertVisibleTextUnclipped`: no fully visible text is clipped by a parent.
+  Call it at each scroll position (see `ComponentLayoutTest.forEachScrollPosition`).
+* `LayoutAssertions.assertTouchTargets`: 48 x 48 dp and no overlaps. `strict = true` demands
+  the clickable node itself be 48 dp (the design-system components do); `strict = false`
+  accepts Compose's expansion of a smaller node, as long as no neighbour is in the way.
+* `captureGolden` refuses to capture something taller than the window, because the picture
+  would silently cut it off. Split a long gallery instead.
+* Render sheets through their content composable (`PokerSheetContent`), not through
+  `ModalBottomSheet`: a modal window doesn't capture under Robolectric.
+
+`LayoutAssertionsTest` proves each check fails on the breakage it describes; extend it when you
+add a check.
+
+### The tests in core today
+
+| Class | Runs | What |
+|---|---|---|
+| `ComponentGoldenTest` | 14 galleries x 10 goldens = 140 | Each component's `@Preview` gallery, plus `Shell` |
+| `ComponentLayoutTest` | 2 x 24 cells = 48 | Every gallery in one scrolling column, and the shell, through all three layout checks |
+| `ComponentSemanticsTest` | 11 | TalkBack: roles (checkbox, radio button, tab, button), names ("Ace of spades", "Rebuy, 1 taken, Locked"), headings, field errors; taps; the stepper's ends and repeat-while-held |
+| `DesignTokensTest` | 6 | Every contrast pairing in the design spec, computed; the six original colours and the sunset ones unchanged |
+| `TypographyTest` | 5 | Barlow loads; `tnum` makes every digit the same width (and without it they differ); the licence ships |
+| `UndoSnackbarTest` | 4 | Undo inside the 8 s window counts, after it doesn't (virtual time) |
+| `LayoutAssertionsTest` | 11 | The checks themselves catch what they claim |

@@ -25,7 +25,10 @@ timber                              = "5.0.1"
 test-junit                          = "5.11.3"
 test-mockk                          = "1.13.13"
 test-turbine                        = "1.2.0"
-test-robolectric                    = "4.12.1"
+test-robolectric                    = "4.14.1"
+# 1.60.0 is the newest Roborazzi whose Kotlin metadata (2.0) Kotlin 2.0.21 can read; 1.61.0+ is 2.3.
+# Take the latest once Kotlin is >= 2.2 (PP-023).
+test-roborazzi                      = "1.60.0"
 test-androidx-core                  = "1.6.1"
 
 # android test libraries
@@ -50,6 +53,7 @@ kotlin-parcelize                    = { id = "org.jetbrains.kotlin.plugin.parcel
 kotlin-serialization                = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp                                 = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 ktlint                              = { id = "org.jmailen.kotlinter", version.ref = "ktlint" }
+roborazzi                           = { id = "io.github.takahirom.roborazzi", version.ref = "test-roborazzi" }
 
 
 [libraries]
@@ -82,6 +86,10 @@ test-mockk-agent                   = { group = "io.mockk", name = "mockk-agent-j
 test-turbine                        = { group = "app.cash.turbine", name = "turbine", version.ref = "test-turbine" }
 test-robolectric                    = { group = "org.robolectric", name = "robolectric", version.ref = "test-robolectric" }
 test-androidx-core                  = { group = "androidx.test", name = "core", version.ref = "test-androidx-core" }
+test-compose-ui                     = { group = "androidx.compose.ui", name = "ui-test-junit4", version.ref = "test-android-compose-ui-test" } # Compose UI tests on the JVM (Robolectric)
+test-roborazzi                      = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "test-roborazzi" }
+test-roborazzi-compose              = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "test-roborazzi" }
+test-roborazzi-junit-rule           = { group = "io.github.takahirom.roborazzi", name = "roborazzi-junit-rule", version.ref = "test-roborazzi" }
 
 # android test libraries
 test-android-benchmark-macro        = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "test-android-baseline-profile" }
@@ -106,6 +114,13 @@ common-test = [
     "test-mockk",
     "test-mockk-agent",
     "test-turbine"
+]
+screenshot-test = [
+    "test-compose-ui",
+    "test-robolectric",
+    "test-roborazzi",
+    "test-roborazzi-compose",
+    "test-roborazzi-junit-rule"
 ]
 common-android-test = [
     "test-android-compose",

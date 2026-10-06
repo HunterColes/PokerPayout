@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -22,6 +23,19 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    // Shared screenshot-test kit (device matrix, layout assertions, golden paths) in
+    // src/testFixtures. Feature modules use it with testImplementation(testFixtures(project(":core"))).
+    testFixtures {
+        enable = true
+    }
+
+    testOptions {
+        unitTests {
+            // Robolectric needs the merged resources (fonts, strings) to render composables.
+            isIncludeAndroidResources = true
+        }
     }
 
     buildTypes {
@@ -62,9 +76,24 @@ dependencies {
     implementation(libs.timber)
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.debug.compose.ui.tooling)
+    debugImplementation(libs.debug.compose.manifest) // ComponentActivity for Compose tests on Robolectric
     testImplementation(libs.bundles.common.test)
+    testImplementation(libs.bundles.screenshot.test)
+    testImplementation(libs.test.androidx.core)
     androidTestImplementation(libs.bundles.common.android.test)
+
+    testFixturesImplementation(platform(libs.compose.bom))
+    testFixturesImplementation(libs.compose.material3)
+    testFixturesApi(libs.test.junit4)
+    testFixturesApi(libs.bundles.screenshot.test)
 
     ksp(libs.hilt.compiler)
     kspAndroidTest(libs.hilt.compiler)
+}
+
+// Screenshot goldens are committed under src/test/screenshots. ./gradlew testDebugUnitTest verifies
+// them (roborazzi.test.verify=true in gradle.properties); ./gradlew recordRoborazziDebug re-records
+// them deliberately. See docs/TESTING.md, section 9.
+roborazzi {
+    outputDir.set(file("src/test/screenshots"))
 }

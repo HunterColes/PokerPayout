@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -147,7 +148,11 @@ private fun BreaksSection(breaks: BreakSettings, onIntent: (TimerIntent) -> Unit
 internal fun BreakMessageField(message: String, onChange: (String) -> Unit, isLocked: Boolean) {
     val focusManager = LocalFocusManager.current
     var text by remember { mutableStateOf(message) }
-    LaunchedEffect(message) { if (message != text) text = message }
+    var isFocused by remember { mutableStateOf(false) }
+    // Outside changes (a reset) show up once the user isn't typing. While typing, the saved value
+    // trails the field by a frame or two, and copying it back undid fast keystrokes: "Last rebuy"
+    // came out as "Last ebuyr" on the device tour.
+    LaunchedEffect(message) { if (!isFocused && message != text) text = message }
     OutlinedTextField(
         value = text,
         onValueChange = {
@@ -163,6 +168,7 @@ internal fun BreakMessageField(message: String, onChange: (String) -> Unit, isLo
         colors = PokerTextFieldDefaults.colors(isLocked = isLocked),
         modifier = Modifier
             .fillMaxWidth()
+            .onFocusChanged { isFocused = it.isFocused }
             .leaveOnHardwareEnter { focusManager.clearFocus(force = true) }
     )
 }

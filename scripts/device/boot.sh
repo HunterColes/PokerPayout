@@ -157,8 +157,9 @@ fi
 start=$(date +%s)
 mode="quick boot"; (( COLD )) && mode="cold boot"; (( WIPE )) && mode="wiped, cold boot"
 log "booting $PP_AVD on $ANDROID_SERIAL (headless, $mode) ..."
-"$ADB" start-server >/dev/null 2>&1
-nohup setsid "$EMULATOR" "${args[@]}" >"$STATE_DIR/emulator.log" 2>&1 < /dev/null &
+# Without our fds: the emulator must not hold the caller's flock (see without_fds in lib.sh).
+nohup setsid python3 -c 'import os, sys; os.closerange(3, 65536); os.execvp(sys.argv[1], sys.argv[1:])' \
+  "$EMULATOR" "${args[@]}" >"$STATE_DIR/emulator.log" 2>&1 < /dev/null &
 echo $! > "$STATE_DIR/emulator.pid"
 
 # Wait for adb, then sys.boot_completed, then a responsive package manager.

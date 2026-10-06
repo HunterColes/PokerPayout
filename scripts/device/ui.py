@@ -181,8 +181,37 @@ def parse(xml_text):
     return nodes
 
 
+APP_LABEL = "Poker Payout"
+FOREIGN_ANR_RE = re.compile(r"^(.+) isn['’]t responding$")
+
+
+def dismiss_foreign_anr(nodes):
+    """Tap "Wait" on another app's "X isn't responding" dialog; True if one was dismissed.
+
+    On a loaded host the emulator's own apps (usually Pixel Launcher, right after a quick boot)
+    can ANR, and the system dialog then covers the app under test. That is not the app's fault, so
+    wait it out. An ANR of the app under test is left on screen: tour.sh fails the step on it.
+    """
+    for n in nodes:
+        m = FOREIGN_ANR_RE.match(n.text)
+        if m and m.group(1) != APP_LABEL:
+            wait = next((w for w in nodes if w.text == "Wait" and w.area > 0), None)
+            if wait is None:
+                return False
+            x, y = wait.center
+            shell("input tap %d %d" % (x, y))
+            sys.stderr.write("[ui] dismissed system dialog: %r (tapped Wait)\n" % n.text)
+            time.sleep(1)
+            return True
+    return False
+
+
 def snapshot():
     xml_text = dump_xml()
+    for _ in range(3):
+        if not dismiss_foreign_anr(parse(xml_text)):
+            break
+        xml_text = dump_xml()
     last = os.environ.get("PP_UI_LAST_XML")  # tour.sh reuses the final dump of a step
     if last:
         with open(last, "w", encoding="utf-8") as f:

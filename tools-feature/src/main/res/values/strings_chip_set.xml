@@ -113,6 +113,17 @@
     <string name="chip_set_starting_stack_own">Your own · Tournament has %1$s</string>
     <string name="chip_set_use_tournament_stack">Use Tournament\'s stack</string>
     <string name="chip_set_reserve">Keep back for rebuys and add-ons</string>
+    <!-- Where the kept-back stacks come from until you set them (PP-091 #3):
+         "From Tournament setup: 5 for rebuys (about half the players) and 9 for add-ons (one each)." -->
+    <string name="chip_set_estimate">From Tournament setup: %1$s.</string>
+    <!-- More than the 50 stacks the chip set keeps back: "…and 30 for add-ons (one each), 50 at most." -->
+    <string name="chip_set_estimate_capped">From Tournament setup: %1$s, %2$d at most.</string>
+    <string name="chip_set_estimate_none">From Tournament setup: no rebuys or add-ons.</string>
+    <string name="chip_set_estimate_rebuys_cutoff">%1$d for rebuys (about half the players)</string>
+    <string name="chip_set_estimate_rebuys_all_game">%1$d for rebuys (one each, no cutoff)</string>
+    <string name="chip_set_estimate_add_ons">%1$d for add-ons (one each)</string>
+    <string name="chip_set_reserve_own">Your own · Tournament setup suggests %1$d</string>
+    <string name="chip_set_use_tournament_reserve">Use Tournament\'s estimate</string>
     <string name="chip_set_max_colours">Colours per stack, at most</string>
     <string name="chip_set_shape">Stack shape</string>
 

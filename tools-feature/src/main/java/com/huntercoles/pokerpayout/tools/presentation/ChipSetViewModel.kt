@@ -15,6 +15,7 @@ import com.huntercoles.pokerpayout.core.utils.ChipColour
 import com.huntercoles.pokerpayout.core.utils.ChipDistributionCurve
 import com.huntercoles.pokerpayout.core.utils.ChipInventory
 import com.huntercoles.pokerpayout.core.utils.InventoryChip
+import com.huntercoles.pokerpayout.core.utils.KeptBackEstimate
 import com.huntercoles.pokerpayout.core.utils.PlanStacksUseCase
 import com.huntercoles.pokerpayout.core.utils.SmallestChipChoices
 import com.huntercoles.pokerpayout.core.utils.StackPlan
@@ -42,6 +43,8 @@ import javax.inject.Inject
  * @property players and [tournamentStack] come from the Tournament setup, the one source of truth
  *   (the stack the clock runs, once it has started); [ChipSetSettings.stackOverride] can stand in.
  * @property smallBlind the first small blind (the Tournament's smallest chip).
+ * @property reserveEstimate the stacks to keep back for rebuys and add-ons by the Tournament's
+ *   settings, kept back until you set your own ([ChipSetSettings.reserveOverride]).
  * @property plan the plan for everything above; null until the first one is worked out.
  * @property hasSchedule whether the Tournament setup makes a blind schedule (the color-up plan).
  * @property editor the colour sheet, when open.
@@ -51,6 +54,7 @@ data class ChipSetUiState(
     val players: Int = 0,
     val tournamentStack: Int = 0,
     val smallBlind: Int = 0,
+    val reserveEstimate: KeptBackEstimate = KeptBackEstimate.NONE,
     val plan: StackPlan? = null,
     val hasSchedule: Boolean = false,
     val editor: ColourEditor? = null
@@ -58,6 +62,10 @@ data class ChipSetUiState(
     val inventory: ChipInventory get() = settings.inventory
     val startingStack: Int get() = settings.stackOverride ?: tournamentStack
     val stackFromTournament: Boolean get() = settings.stackOverride == null
+
+    /** Stacks kept back for rebuys and add-ons: yours once you set it, else the Tournament's estimate. */
+    val reserveStacks: Int get() = settings.reserveOverride ?: reserveEstimate.stacks
+    val reserveFromTournament: Boolean get() = settings.reserveOverride == null
 }
 
 /** The colour sheet: edits [editing], or adds a colour when it is null. */
@@ -76,7 +84,9 @@ sealed interface ChipSetIntent {
 
     /** Takes a colour out of the set, with Undo. */
     data class RemoveColour(val colour: ChipColour) : ChipSetIntent
-    data class SetReserve(val stacks: Int) : ChipSetIntent
+
+    /** Keep [stacks] back for rebuys and add-ons; null keeps back the Tournament's estimate again. */
+    data class SetReserve(val stacks: Int?) : ChipSetIntent
     data class SetMaxColours(val count: Int) : ChipSetIntent
     data class SetShape(val shape: ChipDistributionCurve) : ChipSetIntent
 
@@ -91,7 +101,8 @@ sealed interface ChipSetIntent {
  * The chip set (S11, PP-033): plans starting stacks from the chips you own, live. Every change to
  * the set or the settings is saved and re-planned at once (no Generate button); the plan runs on the
  * compute dispatcher and a newer change cancels it. Players and the starting stack follow the
- * Tournament setup; the clock's schedule ([BlindScheduleProvider]) gives the color-up plan.
+ * Tournament setup, and so do the stacks kept back until you set them ([KeptBackEstimate]); the
+ * clock's schedule ([BlindScheduleProvider]) gives the color-up plan.
  */
 @HiltViewModel
 class ChipSetViewModel @Inject constructor(
@@ -108,7 +119,8 @@ class ChipSetViewModel @Inject constructor(
             settings = chipPreferences.current(),
             players = tournamentPreferences.getPlayerCount(),
             tournamentStack = tournamentPreferences.getStartingChips(),
-            smallBlind = SmallestChipChoices.normalize(tournamentPreferences.getSmallestChip())
+            smallBlind = SmallestChipChoices.normalize(tournamentPreferences.getSmallestChip()),
+            reserveEstimate = estimate(tournamentPreferences.config.value, tournamentPreferences.getRebuyUntilLevel())
         )
     )
     val uiState: StateFlow<ChipSetUiState> = _uiState.asStateFlow()
@@ -126,9 +138,13 @@ class ChipSetViewModel @Inject constructor(
                     it.copy(hasSchedule = true, tournamentStack = loaded.startingChips, smallBlind = loaded.smallestChip)
                 }
             }
-            combine(chipPreferences.settings, tournamentPreferences.config) { settings, config -> settings to config.numPlayers }
-                .collect { (settings, players) ->
-                    _uiState.update { it.copy(settings = settings, players = players) }
+            combine(
+                chipPreferences.settings,
+                tournamentPreferences.config,
+                tournamentPreferences.rebuyUntilLevel
+            ) { settings, config, cutoff -> Triple(settings, config.numPlayers, estimate(config, cutoff)) }
+                .collect { (settings, players, reserve) ->
+                    _uiState.update { it.copy(settings = settings, players = players, reserveEstimate = reserve) }
                     replan()
                 }
         }
@@ -146,7 +162,7 @@ class ChipSetViewModel @Inject constructor(
                 save { setInventory(saved) }
             }
             is ChipSetIntent.RemoveColour -> removeColour(inventory, intent.colour)
-            is ChipSetIntent.SetReserve -> save { setReserveStacks(intent.stacks) }
+            is ChipSetIntent.SetReserve -> save { setReserveOverride(intent.stacks) }
             is ChipSetIntent.SetMaxColours -> save { setMaxColours(intent.count) }
             is ChipSetIntent.SetShape -> save { setShape(intent.shape) }
             is ChipSetIntent.SetStackOverride -> save {
@@ -195,7 +211,7 @@ class ChipSetViewModel @Inject constructor(
             startingStack = state.startingStack,
             players = state.players,
             smallBlind = state.smallBlind,
-            reserveStacks = state.settings.reserveStacks,
+            reserveStacks = state.reserveStacks,
             maxColours = state.settings.maxColours,
             curve = state.settings.shape,
             schedule = schedule
@@ -205,6 +221,14 @@ class ChipSetViewModel @Inject constructor(
             _uiState.update { it.copy(plan = plan) }
         }
     }
+
+    /** The stacks to keep back by the Tournament's settings (PP-091 #3). */
+    private fun estimate(config: TournamentPreferences.TournamentConfigData, rebuyUntilLevel: Int) = KeptBackEstimate.of(
+        players = config.numPlayers,
+        rebuyCents = config.money.rebuyCents,
+        addOnCents = config.money.addOnCents,
+        rebuyUntilLevel = rebuyUntilLevel
+    )
 }
 
 /** The few strings the chip set's ViewModel shows itself: its snackbars. */

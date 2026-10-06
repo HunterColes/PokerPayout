@@ -1095,14 +1095,16 @@ s_chip_calc_reset() {
 }
 s_chip_calc_settings() {
   # The old advanced settings live on as stack settings: keep 2 stacks back for rebuys, and the
-  # color-up plan counts them as in play
+  # color-up plan counts them as in play. Until the stepper is touched the number is the
+  # Tournament's estimate (PP-091 #3): none here, the reset left no rebuys or add-ons
   ui scroll-to "re=(?i)stack settings" --max 6
   ui tap "re=(?i)^stack settings"
   ui scroll-to "text=Stack shape" --max 4
   ui assert-text "text=Starting stack" "text=Keep back for rebuys and add-ons" "text=Colours per stack, at most" \
-    "re=More small chips" "re=Lots of small chips" || return 1
+    "re=More small chips" "re=Lots of small chips" "text=From Tournament setup: no rebuys or add-ons." || return 1
   ui tap "desc=Increase Keep back for rebuys and add-ons"
   ui tap "desc=Increase Keep back for rebuys and add-ons"
+  ui assert-text "text=Your own · Tournament setup suggests 0" "text=Use Tournament's estimate" || return 1
   ui scroll up --times 6
   ui scroll-to "re=You keep 2 back" --max 6
   ui assert-text "re=You keep 2 back" || return 1

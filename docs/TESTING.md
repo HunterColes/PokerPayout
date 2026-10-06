@@ -213,8 +213,9 @@ are:
 6. **Chip set** (S11, 6 steps; Tools still selected). The piles must add up to the Tournament's
    5,000 and agree with the "N chips a stack · K colours" line (v1.1.12 showed "Total Chips 0");
    the color-up plan from the clock's schedule; 10 greens in the colour sheet must give "Short
-   10 green 25s for 5 players"; reset applies at once with Undo; the stack settings keep 2
-   stacks back and the color-up plan counts 7 stacks in play.
+   10 green 25s for 5 players"; reset applies at once with Undo; the stack settings keep back
+   the Tournament's estimate until the stepper is touched (PP-091 #3; here "no rebuys or
+   add-ons"), then keep 2 stacks back as "your own", and the color-up plan counts 7 stacks in play.
 7. Back to Tournament.
 8. **Rail** (4 steps). `wm density 240` makes the phone's window 720 dp wide: the tabs must
    move to a rail down the left edge (PP-087), with the screen recreated where it was; Tools and
@@ -538,7 +539,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 |---|---|---|---|
 | `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted` | S7: all three, at every scroll position |
 | `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
-| `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end` | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
+| `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end`, `S11_chipset_settings` (the stack settings unfolded, keeping back the Tournament's estimate) | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
 | `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament: touch targets |
 | `tournament-feature` | `TournamentScreenGoldenTest` | `S1_setup_{before,invalid}`, `S1_fold_300ms`, `S1_running_strip`, `S1_panel_{open,unlocked}`, `S2_clock_{ready,running,paused,final_minutes,overtime,finished}`, `S2_clock_running_font2x`, `S3_table_{running,paused,break}` (landscape cells), `S4_break_{colorup,done,plain}`, `Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet` | All three checks on all 24 cells (the fold frame: none, it is mid-animation) |
 | `tournament-feature` | `TournamentInteractionTest`, `TournamentRotationTest`, `SetupFoldTest` | none | What each control sends; rotation per device class (Robolectric `+land` shows the table view, `+port` the clock, other tabs portrait on phones, tablets free, state kept through recreation); the fold plays once and is cut under Reduce motion |

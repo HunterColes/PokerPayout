@@ -23,7 +23,8 @@ import javax.inject.Singleton
  * @property stackOverride a starting stack to plan instead of the Tournament's; null to follow it.
  * @property shape the shape the counts follow (the old "distribution curve").
  * @property maxColours at most this many chip values in a stack (the old "denominations").
- * @property reserveStacks stacks to keep back for rebuys and add-ons.
+ * @property reserveOverride stacks to keep back for rebuys and add-ons, once you set it; null to keep
+ *   back the Tournament's estimate ([com.huntercoles.pokerpayout.core.utils.KeptBackEstimate]).
  */
 data class ChipSetSettings(
     val inventory: ChipInventory = ChipInventory.HOME_SET,
@@ -31,7 +32,7 @@ data class ChipSetSettings(
     val stackOverride: Int? = null,
     val shape: ChipDistributionCurve = ChipDistributionCurve.LinearSteep,
     val maxColours: Int = DEFAULT_MAX_COLOURS,
-    val reserveStacks: Int = 0
+    val reserveOverride: Int? = null
 ) {
     companion object {
         const val DEFAULT_MAX_COLOURS = 5
@@ -90,8 +91,18 @@ class ChipCalculatorPreferences @Inject constructor(
         publish()
     }
 
-    fun setReserveStacks(stacks: Int) {
-        prefs.edit().putInt(RESERVE_STACKS_KEY, stacks.coerceIn(ChipSetSettings.RESERVE_RANGE)).apply()
+    /**
+     * Keep [stacks] back for rebuys and add-ons from now on, whatever the Tournament says; null keeps
+     * back the Tournament's estimate again (PP-091 #3).
+     */
+    fun setReserveOverride(stacks: Int?) {
+        val editor = prefs.edit()
+        if (stacks != null) {
+            editor.putInt(RESERVE_STACKS_KEY, stacks.coerceIn(ChipSetSettings.RESERVE_RANGE))
+        } else {
+            editor.remove(RESERVE_STACKS_KEY)
+        }
+        editor.apply()
         publish()
     }
 
@@ -108,8 +119,8 @@ class ChipCalculatorPreferences @Inject constructor(
             .putBoolean(INVENTORY_REVIEWED_KEY, settings.inventoryReviewed)
             .putString(STACK_SHAPE_KEY, settings.shape.id)
             .putInt(DENOMINATION_COUNT_KEY, settings.maxColours)
-            .putInt(RESERVE_STACKS_KEY, settings.reserveStacks)
         settings.stackOverride?.let { editor.putInt(CUSTOM_TOTAL_CHIPS_KEY, it) }
+        settings.reserveOverride?.let { editor.putInt(RESERVE_STACKS_KEY, it) }
         editor.apply()
         publish()
     }
@@ -125,7 +136,12 @@ class ChipCalculatorPreferences @Inject constructor(
         shape = prefs.getString(STACK_SHAPE_KEY, null)?.let(ChipDistributionCurve::fromId) ?: ChipDistributionCurve.LinearSteep,
         maxColours = prefs.getInt(DENOMINATION_COUNT_KEY, ChipSetSettings.DEFAULT_MAX_COLOURS)
             .coerceIn(ChipSetSettings.MAX_COLOURS_RANGE),
-        reserveStacks = prefs.getInt(RESERVE_STACKS_KEY, 0).coerceIn(ChipSetSettings.RESERVE_RANGE)
+        // Saved only once you set it; with nothing saved, the Tournament's estimate applies
+        reserveOverride = if (prefs.contains(RESERVE_STACKS_KEY)) {
+            prefs.getInt(RESERVE_STACKS_KEY, 0).coerceIn(ChipSetSettings.RESERVE_RANGE)
+        } else {
+            null
+        }
     )
 
     /**

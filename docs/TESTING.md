@@ -262,7 +262,7 @@ and carries on. Use `--keep-going` to run all steps even after a failure.
 
 The release build is shrunk and obfuscated by R8, so a missing keep rule only shows up
 there. After changing `app/proguard-rules.pro`, a dependency, or anything loaded by
-reflection (Hilt, navigation routes, Room, `@Parcelize`), tour the release APK:
+reflection (Hilt, navigation routes, `@Parcelize`), tour the release APK:
 
 ```bash
 flock /tmp/pokerpayout-emulator.lock scripts/device/tour.sh --release --stop

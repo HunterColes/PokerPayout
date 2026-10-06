@@ -10,8 +10,6 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    // Baseline profile plugin disabled for F-Droid reproducible builds
-    // alias(libs.plugins.baseline.profile)
     alias(libs.plugins.detekt)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin)
@@ -171,20 +169,9 @@ dependencies {
     implementation(project(":tools-feature"))
 
     implementation(libs.hilt)
-    implementation(libs.navigation) // needed for Room
-    implementation(libs.room.ktx)
     implementation(libs.timber)
 
-    // Baseline profiles disabled for F-Droid reproducible builds
-    // implementation(libs.test.android.profile.installer)
-    // baselineProfile(project(":baseline-profiles"))
-
     ksp(libs.hilt.compiler)
-    ksp(libs.room.compiler)
-}
-
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 abstract class StripBaselineProfilesTask : DefaultTask() {

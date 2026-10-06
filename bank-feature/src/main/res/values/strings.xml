@@ -199,7 +199,6 @@
     <string name="bank_structure">Structure</string>
 
     <!-- Reset (⋮) -->
-    <string name="bank_reset">Reset bank</string>
     <string name="bank_reset_title">Reset the bank?</string>
     <plurals name="bank_reset_body">
         <item quantity="one">Clears the name, buy-in, rebuys, add-ons, knockouts and payout for %d player. The clock and the tournament setup stay as they are.</item>

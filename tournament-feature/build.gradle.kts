@@ -58,7 +58,6 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.navigation)
     implementation(libs.navigation.hilt)
-    implementation(libs.room)
     implementation(libs.timber)
     
     // Testing dependencies

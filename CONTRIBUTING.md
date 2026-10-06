@@ -12,10 +12,10 @@ Pull requests are welcome! You can look at [issues](https://github.com/HunterCol
 
 ## Development Setup
 
-See the [Build & Installation](README.md#build--installation) section in the README for:
-- Prerequisites (Android Studio, Java 17)
+See the [Build](README.md#build) section in the README for:
+- Prerequisites (JDK 21, the Android SDK)
 - Build commands
-- Testing procedures
+- Testing procedures ([docs/TESTING.md](docs/TESTING.md))
 
 ## Guidelines
 

@@ -32,8 +32,6 @@ object Money {
         } else {
             0L
         }
-
-    fun dollarsOf(cents: Long): Double = cents / CENTS_PER_DOLLAR.toDouble()
 }
 
 /**

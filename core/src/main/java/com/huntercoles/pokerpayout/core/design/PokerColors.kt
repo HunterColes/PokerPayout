@@ -96,7 +96,6 @@ object PokerColors {
 
     /** The paused clock dims its digits to 70%. */
     const val PokerPausedAlpha = 0.7f
-    const val PokerPausedBackgroundAlpha = 0.3f
 
     // Sunset colours: kept so the feature screens compile until they move to the new tokens (M1+).
 

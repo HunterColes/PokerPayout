@@ -30,11 +30,6 @@ object ChipDenominations {
         BLACK, PINK, PURPLE, YELLOW, LIGHT_BLUE, BROWN
     )
 
-    // Get chips up to a certain value
-    fun getChipsUpTo(maxValue: Int): List<ChipInfo> {
-        return ALL_CHIPS.filter { it.value <= maxValue }
-    }
-
     // Get chip by value
     fun getChipByValue(value: Int): ChipInfo? {
         return ALL_CHIPS.firstOrNull { it.value == value }

@@ -1,25 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Calculator Screen -->
-    <string name="calculator_title">Poker Payout Calculator</string>
-    <string name="tournament_config">Tournament Configuration</string>
-    <string name="number_of_players">Number of Players: %d</string>
-    <string name="buy_in_label">Buy-in per player ($)</string>
-    <string name="food_pool_label">Food pool per player ($)</string>
-    <string name="bounty_label">Bounty per player ($)</string>
-    <string name="pool_summary">Pool Summary</string>
-    <string name="prize_pool">Prize Pool: $%s</string>
-    <string name="food_pool">Food Pool: $%s</string>
-    <string name="bounty_pool">Bounty Pool: $%s</string>
-    <string name="total_pool">Total Pool: $%s</string>
-    <string name="per_player">Per Player: $%s</string>
-    <string name="tournament_payouts">Tournament Payouts</string>
-    <string name="place_suffix_st">st</string>
-    <string name="place_suffix_nd">nd</string>
-    <string name="place_suffix_rd">rd</string>
-    <string name="place_suffix_th">th</string>
-    <string name="weight_percentage" formatted="false">Weight: %d (%.1f%%)</string>
-
     <!-- Tournament tab (the title is core's navigation_tournament, so it follows the tab's name) -->
     <string name="tournament_reset">Reset tournament</string>
     <string name="tournament_reset_title">Reset tournament?</string>
@@ -40,7 +20,4 @@
     <string name="tournament_turn_off_description">A %1$s amount of $0 clears the %2$d %3$s recorded in the Bank. Keep them to leave the amount at %4$s.</string>
     <string name="tournament_keep">Keep</string>
     <string name="tournament_clear">Clear %1$s</string>
-
-    <!-- Payouts tab (S6 restyles it in M4) -->
-    <string name="payouts_locked">Locked: the clock has started</string>
 </resources>

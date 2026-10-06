@@ -13,6 +13,8 @@ import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.utils.BlindSetupProblemKind
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCues
+import com.huntercoles.pokerpayout.tournament.domain.clock.CueVibrator
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModelTest.FakeTimeSource
 import io.mockk.mockk
 import io.mockk.verify
@@ -87,7 +89,7 @@ class TimerViewModelControlsTest {
                 timerPreferences,
                 tournamentPreferences,
                 bankPreferences,
-                soundManager,
+                ClockCues(soundManager, audioPreferences, CueVibrator { }, clock),
                 clock,
                 audioPreferences
             ) as T

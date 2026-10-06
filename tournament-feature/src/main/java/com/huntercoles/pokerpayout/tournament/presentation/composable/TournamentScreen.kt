@@ -1,8 +1,13 @@
 package com.huntercoles.pokerpayout.tournament.presentation.composable
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,7 +40,10 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
 import com.huntercoles.pokerpayout.core.design.components.ConfirmSheet
 import com.huntercoles.pokerpayout.core.design.components.LocalWidthClass
@@ -73,10 +82,13 @@ fun TournamentScreen(
     val setup by calculatorViewModel.uiState.collectAsStateWithLifecycle()
     val timer by timerViewModel.uiState.collectAsStateWithLifecycle()
     var ui by rememberSaveable { mutableStateOf(TournamentUi.initial(timerViewModel.uiState.value.hasTimerStarted)) }
-    val actions = remember(calculatorViewModel, timerViewModel, onOpenBank, onOpenPayouts, onOpenSound) {
+    val askForNotifications = rememberNotificationsAsk(timerViewModel)
+    val actions = remember(calculatorViewModel, timerViewModel, onOpenBank, onOpenPayouts, onOpenSound, askForNotifications) {
         TournamentActions(
             onSetupIntent = calculatorViewModel::acceptIntent,
             onTimerIntent = { intent ->
+                // PP-081: the first Start is when the live clock's notification first matters
+                if (intent == TimerIntent.ToggleTimer && !timerViewModel.uiState.value.hasTimerStarted) askForNotifications()
                 // The blind fields are mirrored in the setup ViewModel, which Reset reads.
                 intent.toConfigIntent()?.let(calculatorViewModel::acceptIntent)
                 timerViewModel.acceptIntent(intent)
@@ -96,7 +108,46 @@ fun TournamentScreen(
             if (activity?.isChangingConfigurations != true) timerViewModel.acceptIntent(TimerIntent.SetTableView(false))
         }
     }
-    TournamentContent(setup = setup, timer = timer, ui = ui, actions = actions)
+    val flash = rememberCueFlashes(timerViewModel)
+    Box(Modifier.fillMaxSize()) {
+        TournamentContent(setup = setup, timer = timer, ui = ui, actions = actions)
+        CueFlash(flash)
+    }
+}
+
+/** PP-083: the clock's flashes while the tab is on screen; one that comes while it isn't is dropped. */
+@Composable
+private fun rememberCueFlashes(timerViewModel: TimerViewModel): FlashRequest? {
+    var flash by remember { mutableStateOf<FlashRequest?>(null) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(timerViewModel, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            timerViewModel.flashes.collect { cue -> flash = FlashRequest(cue, (flash?.id ?: 0) + 1) }
+        }
+    }
+    return flash
+}
+
+/**
+ * PP-081: on Android 13 and up, asks once ever for permission to post notifications, so the live
+ * clock can show in the shade and on the lock screen. Never again, whatever the answer: everything
+ * else works without it, and Tools, Sound offers the way back to it.
+ */
+@Composable
+private fun rememberNotificationsAsk(timerViewModel: TimerViewModel): () -> Unit {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        // Allowed or not, the clock starts as asked; the notification shows only if allowed
+    }
+    return remember(context, launcher, timerViewModel) {
+        {
+            val missing = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            if (missing && timerViewModel.takeNotificationsAsk()) {
+                runCatching { launcher.launch(Manifest.permission.POST_NOTIFICATIONS) }
+            }
+        }
+    }
 }
 
 /**

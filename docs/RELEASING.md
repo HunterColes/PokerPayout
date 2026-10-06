@@ -68,7 +68,7 @@ Without `--notes-file`, the script drafts notes from `git log <last tag>..HEAD`.
 | build | `clean :app:assembleRelease`, signed with the debug key | signed with the release key |
 | APK checks | name, package/version, not debuggable, v2 signature, no baseline profile, embedded commit = release commit, signer vs `AllowedAPKSigningKeys` (a mismatch is a warning; `--require-release-key` makes it fatal, exit 3) | signer mismatch is fatal |
 | repro check | `--repro-check`: fresh clone, F-Droid's signing-config strip, `gradle clean` + `gradle assembleRelease` from `app/`, byte compare outside the signing block | on by default |
-| ship | prints what it would do | master is protected (PR + green CI), so: push `release/vX.Y.Z`, open a PR with the notes, wait for every check, merge it with a merge commit, tag the release commit itself (the exact tree that was built and verified), push the tag, `gh release create` with the APK, check that F-Droid's `Binaries:` URL serves the same bytes, and return the checkout to an up-to-date `master` |
+| ship | prints what it would do | master is protected (PR + green CI), so: push `release/vX.Y.Z`, open a PR with the notes, wait for every check, merge it with a merge commit (the one PR that isn't squashed: the APK embeds its commit hash), tag the release commit itself (the exact commit that was built and verified), push the tag, `gh release create` with the APK, check that F-Droid's `Binaries:` URL serves the same bytes, and return the checkout to an up-to-date `master` |
 
 If anything fails before the release branch is pushed, `--publish` deletes its local branch
 and leaves you on `master` exactly as before. After the push nothing is rolled back: a red CI

@@ -107,6 +107,11 @@ jobs:
           fi
           echo "== End of tour.log"
           tail -60 "$dir/tour.log"
+          if [[ -f "$dir/logcat.txt" ]]; then
+            echo "== Last app and window lines in logcat"
+            grep -E "pokerpayout|WindowManager|ActivityTaskManager|ActivityManager|InputDispatcher|Orientation|rotation" \
+              "$dir/logcat.txt" | tail -80 || true
+          fi
 
       - name: Upload the tour report
         if: success() || failure()

@@ -34,6 +34,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -158,7 +160,10 @@ internal fun SetupNumberField(
     )
 }
 
-/** One choice from a short list ("Every 4", "End of L4", "From L5"), in a menu under the field. */
+/**
+ * One choice from a short list ("Every 4", "End of L4", "From L5"), in a menu under the field. The
+ * current one is gold, bold and ticked in the menu, and TalkBack hears it as selected.
+ */
 @Suppress("LongParameterList") // label, options, selection, wording, pick, modifier
 @Composable
 internal fun <T> SetupSelectField(
@@ -210,6 +215,12 @@ internal fun <T> SetupSelectField(
                     onClick = {
                         expanded = false
                         onPick(option)
+                    },
+                    modifier = Modifier.semantics { this.selected = isSelected },
+                    trailingIcon = if (isSelected) {
+                        { Icon(PokerIcons.Check, null, tint = PokerColors.PokerGold, modifier = Modifier.size(18.dp)) }
+                    } else {
+                        null
                     },
                 )
             }

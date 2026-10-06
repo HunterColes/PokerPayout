@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,12 +20,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.R
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
@@ -195,9 +200,14 @@ private fun PlacesRow(places: Int, maxPlaces: Int, playerCount: Int, enabled: Bo
     }
 }
 
+/**
+ * One place: its amount and its weight. A place that pays more than the one above it is marked with
+ * a warning sign and a red amount, and TalkBack reads the error, so it isn't told by colour alone.
+ */
 @Suppress("LongParameterList") // one row: place, weight, amount, error, lock, change
 @Composable
 private fun WeightRow(place: Int, weight: Int, amountCents: Long, isError: Boolean, enabled: Boolean, onChange: (Int) -> Unit) {
+    val errorText = stringResource(R.string.payout_structure_error)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             text = ordinalOf(place),
@@ -205,13 +215,22 @@ private fun WeightRow(place: Int, weight: Int, amountCents: Long, isError: Boole
             color = if (place == 1) PokerColors.PokerGold else PokerColors.CardWhite,
             modifier = Modifier.widthIn(min = 40.dp),
         )
-        Text(
-            text = FormatUtils.formatMoney(amountCents),
-            style = PokerType.NumberM,
-            color = if (isError) PokerColors.Danger else PokerColors.CardWhite,
-            textAlign = TextAlign.End,
+        Row(
             modifier = Modifier.weight(1f),
-        )
+            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (isError) {
+                Icon(PokerIcons.Info, contentDescription = null, tint = PokerColors.Danger, modifier = Modifier.size(18.dp))
+            }
+            Text(
+                text = FormatUtils.formatMoney(amountCents),
+                style = PokerType.NumberM,
+                color = if (isError) PokerColors.Danger else PokerColors.CardWhite,
+                textAlign = TextAlign.End,
+                modifier = Modifier.semantics { if (isError) error(errorText) },
+            )
+        }
         PokerStepper(
             value = weight,
             onValueChange = onChange,

@@ -13,6 +13,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
@@ -27,6 +28,8 @@ import com.huntercoles.pokerpayout.core.design.components.CardSlot
 import com.huntercoles.pokerpayout.core.design.components.CardSlotState
 import com.huntercoles.pokerpayout.core.design.components.EquityBar
 import com.huntercoles.pokerpayout.core.design.components.KnockoutBadge
+import com.huntercoles.pokerpayout.core.design.components.PayoutPreview
+import com.huntercoles.pokerpayout.core.design.components.PayoutStructureContent
 import com.huntercoles.pokerpayout.core.design.components.PlayingCard
 import com.huntercoles.pokerpayout.core.design.components.PokerChip
 import com.huntercoles.pokerpayout.core.design.components.PokerField
@@ -38,6 +41,8 @@ import com.huntercoles.pokerpayout.core.design.components.PokerTopBar
 import com.huntercoles.pokerpayout.core.design.components.ToggleChip
 import com.huntercoles.pokerpayout.core.design.components.UndoSnackbar
 import com.huntercoles.pokerpayout.core.design.components.pokerNavItems
+import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import com.huntercoles.pokerpayout.core.testing.Device
 import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
@@ -100,6 +105,21 @@ class ComponentSemanticsTest {
         rebuy.assertIsNotEnabled().assert(hasToggleState(ToggleableState.On))
         rebuy.performClick()
         assertEquals(0, rebuyTaps)
+    }
+
+    /** A place weighted at or above the one before it is an error TalkBack reads, not just a red amount (PP-024). */
+    @Test
+    fun weightsOutOfOrderAreErrorsNotJustRed() {
+        show {
+            PayoutStructureContent(
+                current = PayoutSettings(weights = listOf(10, 20, 5), preset = null, rounding = PayoutRounding.ONE_DOLLAR),
+                preview = PayoutPreview(prizePoolCents = 35_000L, playerCount = 9),
+                onSave = {},
+                onDismiss = {},
+            )
+        }
+        // 1st (10) is under 2nd (20), so both are out of order; 3rd (5) is fine.
+        rule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Error), useUnmergedTree = true).assertCountEquals(2)
     }
 
     @Test

@@ -44,6 +44,7 @@ import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerStepper
+import com.huntercoles.pokerpayout.core.design.components.presetLabel
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
@@ -243,7 +244,7 @@ private fun PayoutsRow(setup: TournamentConfigUiState, openPayouts: () -> Unit) 
     val places = setup.paidPlaces
     val summary = stringResource(
         R.string.setup_payouts_summary,
-        setup.payoutPreset?.label ?: stringResource(R.string.setup_payouts_custom),
+        setup.payoutPreset?.let { presetLabel(it) } ?: stringResource(R.string.setup_payouts_custom),
         pluralStringResource(R.plurals.setup_places, places, places),
         setup.config.payoutRounding.label,
     )

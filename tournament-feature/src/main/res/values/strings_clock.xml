@@ -213,6 +213,8 @@
     <string name="break_color_up_race">Odd %1$s go to a chip race: one card per odd chip, high cards win the new %2$s.</string>
     <string name="break_chips_plural">%1$s %2$ss</string>
     <string name="break_chip_single">%1$s %2$s</string>
+    <!-- Chips of a value with no colour of their own: "300s" -->
+    <string name="break_chips_number_plural">%1$ss</string>
     <string name="break_color_up_done">Color-up done</string>
     <string name="break_color_up_out">%1$s are out of play</string>
     <string name="break_undo">Undo</string>

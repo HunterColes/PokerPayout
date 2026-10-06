@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.tournament.presentation.composable
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import com.huntercoles.pokerpayout.core.design.components.presetLabel
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
@@ -86,7 +87,7 @@ internal object SetupSummary {
     /** "Standard · 3 paid · rounded to $5": the payouts row folded. */
     @Composable
     fun payoutsLine(setup: TournamentConfigUiState): String = listOf(
-        setup.payoutPreset?.label ?: stringResource(R.string.setup_payouts_custom),
+        setup.payoutPreset?.let { presetLabel(it) } ?: stringResource(R.string.setup_payouts_custom),
         stringResource(R.string.strip_paid, setup.paidPlaces),
         stringResource(R.string.strip_rounded, setup.config.payoutRounding.label),
     ).joinToString(stringResource(R.string.strip_separator))

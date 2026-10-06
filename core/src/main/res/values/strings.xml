@@ -21,6 +21,35 @@
     <string name="design_equity">Win %1$s, tie %2$s</string>
     <string name="design_equity_estimate">Win about %1$s, tie about %2$s, still estimating</string>
     <string name="design_chip">%1$s %2$s chip</string>
+    <!-- The chip colours, in ChipColour's order: names, then as words in running text -->
+    <string-array name="design_chip_colours">
+        <item>White</item>
+        <item>Red</item>
+        <item>Blue</item>
+        <item>Grey</item>
+        <item>Green</item>
+        <item>Orange</item>
+        <item>Black</item>
+        <item>Pink</item>
+        <item>Purple</item>
+        <item>Yellow</item>
+        <item>Light blue</item>
+        <item>Brown</item>
+    </string-array>
+    <string-array name="design_chip_colour_words">
+        <item>white</item>
+        <item>red</item>
+        <item>blue</item>
+        <item>grey</item>
+        <item>green</item>
+        <item>orange</item>
+        <item>black</item>
+        <item>pink</item>
+        <item>purple</item>
+        <item>yellow</item>
+        <item>light blue</item>
+        <item>brown</item>
+    </string-array>
 
     <!-- Playing cards: "Ace of spades", "10 of hearts" -->
     <string name="card_name">%1$s of %2$s</string>

@@ -581,7 +581,7 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 | `ComponentLayoutTest` | 2 x 24 cells = 48 | Every gallery in one scrolling column, and the shell, through all three layout checks |
 | `AppShellTest` | 4 x 24 cells = 96 | The bar below 600 dp and the rail from 600 dp, by window width; tab geometry; the screen capped at 720 dp and centred; the shell through all three layout checks |
 | `NavBarTest` | 10 | Every screen's tab (tools keep Tools selected, B16); tab taps don't pile up on the back stack and Back returns to Tournament; tapping a tab inside a tool returns to its list |
-| `ComponentSemanticsTest` | 11 | TalkBack: roles (checkbox, radio button, tab, button), names ("Ace of spades", "Rebuy, 1 taken, Locked"), headings, field errors; taps; the stepper's ends and repeat-while-held |
+| `ComponentSemanticsTest` | 12 | TalkBack: roles (checkbox, radio button, tab, button), names ("Ace of spades", "Rebuy, 1 taken, Locked"), headings, field errors (and payout weights out of order, which aren't only red); taps; the stepper's ends and repeat-while-held |
 | `DesignTokensTest` | 5 | Every contrast pairing in the design spec, computed; the six original colours unchanged (the sunset colours were retired once no screen used them) |
 | `TypographyTest` | 5 | Barlow loads; `tnum` makes every digit the same width (and without it they differ); the licence ships |
 | `UndoSnackbarTest` | 4 | Undo inside the 8 s window counts, after it doesn't (virtual time) |

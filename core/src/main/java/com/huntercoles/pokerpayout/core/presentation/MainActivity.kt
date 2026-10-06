@@ -38,6 +38,21 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var snackbarController: SnackbarController
 
+    /** PP-081: the live clock notification shows while the app is out of sight. */
+    @Inject
+    lateinit var visibilityListeners: @JvmSuppressWildcards Set<AppVisibilityListener>
+
+    override fun onStart() {
+        super.onStart()
+        visibilityListeners.forEach { it.onAppVisible() }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // A rotation stops and recreates the activity; the app never left the screen.
+        if (!isChangingConfigurations) visibilityListeners.forEach { it.onAppHidden() }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Portrait on phones, free on tablets (PP-079, PP-088), from the first frame of a fresh start.

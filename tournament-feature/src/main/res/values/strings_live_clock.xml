@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PP-081: the live clock notification, in the shade and on the lock screen -->
+<resources>
+    <string name="live_clock_channel">Clock in the background</string>
+    <string name="live_clock_channel_description">The level, its time left and the blinds while the clock runs and the app is out of sight</string>
+    <!-- Titles: "Level 4", "Level 10 · overtime", "Break 1", "Level 4 · paused" -->
+    <string name="live_clock_level">Level %1$d</string>
+    <string name="live_clock_level_overtime">Level %1$d · overtime</string>
+    <string name="live_clock_break">Break %1$d</string>
+    <string name="live_clock_paused">%1$s · paused</string>
+    <!-- Text: "Blinds 300 / 600 · Next 500 / 1,000"; paused, "12:41 left · " first -->
+    <string name="live_clock_blinds">Blinds %1$s</string>
+    <string name="live_clock_with_ante">%1$s, ante %2$s</string>
+    <string name="live_clock_next">Next %1$s</string>
+    <string name="live_clock_next_break">Next: %1$d-min break</string>
+    <string name="live_clock_final">Final level</string>
+    <string name="live_clock_back_at">Back at Level %1$d: %2$s</string>
+    <string name="live_clock_left">%1$s left</string>
+    <!-- The buttons -->
+    <string name="live_clock_pause">Pause</string>
+    <string name="live_clock_resume">Resume</string>
+    <string name="live_clock_open">Open</string>
+</resources>

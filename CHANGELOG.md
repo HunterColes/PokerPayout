@@ -3,6 +3,18 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.3.8 (on master, not published)
+
+- **Live clock in the notifications and on the lock screen:** while the clock runs and the app is
+  out of sight, an ongoing notification shows the level, a live countdown, the blinds now and next,
+  and Pause / Resume / Open buttons. Pausing there pauses the clock everywhere. On Android 13 and
+  up the first Start asks once for permission to show it.
+- **Quiet cues:** a vibration and a gold flash of the clock at each level change and with a minute
+  left, for quiet rooms and muted phones. Each has its own switch in Tools › Sound; under Reduce
+  motion the flash is a steady gold frame.
+- New permissions for this: notifications, a foreground service while the clock runs in the
+  background, keeping the processor awake for on-time cues, and vibration. Still no internet.
+
 ## 1.3.7 (on master, not published)
 
 Small changes the owner chose:

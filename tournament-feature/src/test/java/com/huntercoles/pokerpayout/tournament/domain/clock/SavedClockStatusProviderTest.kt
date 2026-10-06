@@ -78,16 +78,13 @@ class SavedClockStatusProviderTest {
     private fun clock(): TimerViewModel {
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                TimerViewModel(
-                    timerPreferences,
-                    tournamentPreferences,
-                    bankPreferences,
-                    mockk<SoundManager>(relaxed = true),
-                    time,
-                    AudioPreferences(ApplicationProvider.getApplicationContext()),
-                    FakeChipSets(),
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                val audio = AudioPreferences(ApplicationProvider.getApplicationContext())
+                val cues = ClockCues(mockk<SoundManager>(relaxed = true), audio, CueVibrator { }, time)
+                return TimerViewModel(
+                    timerPreferences, tournamentPreferences, bankPreferences, cues, time, audio, FakeChipSets(),
                 ) as T
+            }
         }
         return ViewModelProvider(store, factory)[TimerViewModel::class.java].also { dispatcher.scheduler.runCurrent() }
     }

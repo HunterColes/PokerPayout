@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- PP-081: the live clock notification. Android 13+ asks the user once, at the first Start. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Its foreground service, so the clock's cues keep sounding on time in the background -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- The CPU awake while the clock runs in the background, so a cue isn't late -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- PP-083: the quiet cues -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application>
+        <service
+            android:name="com.huntercoles.pokerpayout.tournament.live.LiveClockService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Poker tournament blind clock: shows the current level and its live countdown while the app is in the background, and keeps the level-change cues on time. Runs only while the clock runs and the app is out of sight." />
+        </service>
+
+        <receiver
+            android:name="com.huntercoles.pokerpayout.tournament.live.ClockActionReceiver"
+            android:exported="false" />
+    </application>
+
+</manifest>

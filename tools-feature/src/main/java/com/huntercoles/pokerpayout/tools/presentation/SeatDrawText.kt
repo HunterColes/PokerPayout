@@ -60,6 +60,17 @@ internal class SeatDrawText(private val res: Resources) {
     }
 
     /**
+     * TalkBack's one stop per seat: "Seat 3, Alice, table 1", then the card it drew and its pills
+     * once dealt ("Seat 5, Bob, table 1, King of spades, Button").
+     */
+    fun seatDescription(table: Int, seat: Int, name: String, cardName: String?, role: SeatRole?): String {
+        val seatLine = res.getString(R.string.seat_draw_seat_description, seat, name, table)
+        return (listOfNotNull(cardName) + rolePills(role)).fold(seatLine) { all, more ->
+            res.getString(R.string.seat_draw_description_more, all, more)
+        }
+    }
+
+    /**
      * The draw as plain text for ACTION_SEND: a heading, then each table's seats in order with the
      * button and the blinds marked, and who has the button with which card; then the rule.
      */

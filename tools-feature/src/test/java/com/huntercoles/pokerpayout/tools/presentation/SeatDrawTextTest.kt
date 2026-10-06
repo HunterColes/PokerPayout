@@ -20,6 +20,9 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class SeatDrawTextTest {
 
+    /** The rule keeps each suit with its "beats", so a line never starts with a lone symbol. */
+    private val nbsp = '\u00A0'
+
     private val text = SeatDrawText(ApplicationProvider.getApplicationContext<Context>().resources)
 
     /** Suit symbols carry U+FE0E (text style, not emoji). */
@@ -59,7 +62,7 @@ class SeatDrawTextTest {
             4. Ben
             Button: Sam, seat 1, with A♣
 
-            High card gets the button. If ranks tie, the suit decides: ♠ beats ♥ beats ♦ beats ♣.
+            High card gets the button. If ranks tie, the suit decides: ♠ beats$nbsp♥ beats$nbsp♦ beats$nbsp♣.
         """.trimIndent().suits()
         assertEquals(expected, text.share(dealt))
     }
@@ -96,7 +99,7 @@ class SeatDrawTextTest {
             2. Bo · big blind
             Button: Ann, seat 1, with Q♦
 
-            High card gets the button. If ranks tie, the suit decides: ♠ beats ♥ beats ♦ beats ♣.
+            High card gets the button. If ranks tie, the suit decides: ♠ beats$nbsp♥ beats$nbsp♦ beats$nbsp♣.
         """.trimIndent().suits()
         assertEquals(expected, text.share(headsUp))
     }

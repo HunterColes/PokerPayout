@@ -15,10 +15,17 @@
     <string name="seat_draw_share">Share the seats</string>
 
     <!-- Players -->
+    <string name="seat_draw_whos_playing">Who\'s playing</string>
     <string name="seat_draw_players">Players</string>
     <string name="seat_draw_from_bank">From the Bank</string>
     <string name="seat_draw_changed">Changed for this draw</string>
     <string name="seat_draw_seats_per_table">Seats per table</string>
+    <!-- The folded card once there is a draw: "10 players · 9 per table · from the Bank" -->
+    <string name="seat_draw_players_summary">%1$s\u00A0· %2$d per table\u00A0· %3$s</string>
+    <string name="seat_draw_summary_from_bank">from the Bank</string>
+    <string name="seat_draw_summary_changed">changed for this draw</string>
+    <string name="seat_draw_players_show">Show players</string>
+    <string name="seat_draw_players_hide">Hide players</string>
     <!-- "1 table of 9", "2 tables of 5" -->
     <plurals name="seat_draw_plan_even">
         <item quantity="one">%1$d table of %2$d</item>
@@ -40,7 +47,7 @@
     <string name="seat_draw_deal_button">Deal for the button</string>
     <string name="seat_draw_deal_again">Deal again</string>
     <string name="seat_draw_how">Seats are drawn at random, and the tables balanced: their sizes differ by at most one.</string>
-    <string name="seat_draw_rule">High card gets the button. If ranks tie, the suit decides: ♠︎ beats ♥︎ beats ♦︎ beats ♣︎.</string>
+    <string name="seat_draw_rule">High card gets the button. If ranks tie, the suit decides: ♠︎ beats\u00A0♥︎ beats\u00A0♦︎ beats\u00A0♣︎.</string>
     <string name="seat_draw_rule_spoken">High card gets the button. If ranks tie, the suit decides: spades, then hearts, then diamonds, then clubs.</string>
     <string name="seat_draw_stale">The players changed since this draw. Redraw seats to seat everyone.</string>
 

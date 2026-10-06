@@ -496,6 +496,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted` | S7: all three, at every scroll position |
 | `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
 | `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end` | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
+| `tools-feature` | `SeatDrawScreenTest` (+ `SeatDrawExtraGoldenTest`) | `S14_seats_empty`, `S14_seats_one_table`, `S14_seats_two_tables`, `S14_button_draw`; `S14_seats_font2x` at tall@2.0 | All three, at every scroll position of each pane; also the name fields and an out-of-date draw with the players unfolded |
 | `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament`, `Shell_payouts`, `Shell_payouts_locked` | Payouts: all three. Tournament (M3 restyles the body): touch targets |
 | `bank-feature` | `BankTabScreenTest` | `Shell_bank` | The top bar's reset button (M4 restyles the body) |
 

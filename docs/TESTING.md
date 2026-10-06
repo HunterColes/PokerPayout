@@ -148,12 +148,14 @@ their labels line up (a row: the bottom bar; a column: the rail), so a screen ti
 word ("Tournament") is never tapped by mistake, and they check which tab is selected. The steps
 are:
 
-1. **Tournament** (21 steps).
+1. **Tournament** (22 steps).
    * Launch. Type the buy-in 12.50 one key at a time (v1.1.12 turned it into 120.5), bounty 5,
      and move the players slider to 11.
-   * **Payouts tab:** the place rows must add up to the prize pool to the cent ($137.50), and
-     must not increase down the table. Then the Top-heavy preset (60/30/10), and the editor with
-     $5 rounding, where every place below 1st must be a whole $5.
+   * **Payouts tab (S6):** one row per place paid, adding up to the prize pool in the top bar
+     and to "Adds up to" under the rows, to the cent, and never increasing down the table. Then
+     the Top-heavy preset, whose "what 1st gets" preview must be what the 1st row pays; $5
+     rounding on the page, where every place below 1st must be a whole $5; the payout structure
+     sheet; and Share, which must open the system share sheet with the payouts in it.
    * **Blinds tab:**
      * The smallest-chip menu must offer real chips (1, 5, 10, 25, 50, 100, 250 ...); pick 25.
      * Type 25-minute rounds and require the reason ("doesn't divide") and the "Use 20-min
@@ -169,16 +171,23 @@ are:
      level 5 from the table view's own controls (still landscape); leave it and require
      portrait again.
    * Reset: the clock is back at LEVEL 1, 20:00, 50 / 100.
-2. **Bank** (15 steps). Set the rebuy amount to $10. Rename Player 1 to Alice with no Enter,
-   switch tabs and come back: the name must survive. Confirm a buy-in (the dialog must say
-   "Alice has paid"); record a rebuy; knock out Player 2 and require the "5th" badge to sit on
-   the field's top edge, clear of the name. Open the payout-weights editor and the pool-summary
-   dialog; scroll. Then clear the Rebuy amount and retype 15 by switching tabs: the recorded
-   rebuy must survive (the keyboard is up when the tab is tapped). Leave the field empty: "Turn
-   rebuys off?" must ask first, and Keep must bring back the $15 and the rebuy.
-3. **Payouts tab** (3 steps). The same table as the Tournament tab's panel, adding up to the
-   prize pool with the Bank's buy-in and rebuy; the structure editor; Back returns to Tournament
-   (B16: Back no longer walks through every tab tapped).
+2. **Bank** (21 steps). Set the rebuy amount to $10. The labelled header (Player, Buy-in,
+   Rebuy, Out, Paid) and the top bar. Rename Player 1 to Alice with no Enter, switch tabs and
+   come back: the name must survive. A buy-in in one tap, with "Alice paid the buy-in" and UNDO
+   on the snackbar; UNDO must take it back. A rebuy in one tap. Knock out Player 2 from the
+   knockout sheet ("5TH PLACE"; Alice picked, applied with no second dialog): the 5th badge must
+   sit in the Out column, clear of the name. Three more out with nobody credited: Alice is the
+   champion; her pay-out sheet; Mark paid. The pool breakdown and payout structure sheets; scroll.
+   Then clear the Rebuy amount and retype 15 by switching tabs: the recorded rebuy must survive
+   (the keyboard is up when the tab is tapped). Leave the field empty: "Turn rebuys off?" must ask
+   first, and Keep must bring back the $15 and the rebuy. Then the cutoff (PP-030): "rebuys until
+   level 1" with the clock in level 2 must lock the Rebuy column, a tap must record nothing, and
+   the note under the list must say why; then reset the tournament. Until setup has its "Rebuys
+   until" field (M3), the tour writes the preference with `run-as`, so on a release build these
+   two steps only check that the column is open with no cutoff.
+3. **Payouts tab** (3 steps). The finished night: Alice and Player 5 by name in their rows,
+   adding up to the prize pool; the structure sheet; Back returns to Tournament (B16: Back no
+   longer walks through every tab tapped).
 4. **Tools** (4 steps). The tool list and the Sound section (S7); turn the sound off (the
    volume and Test chime rest) and on again, and play the test chime; Hand ranks (S12), with a
    back arrow, the Tools tab still selected, "1 in 30,940" for a royal flush and a kicker.
@@ -496,8 +505,9 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted` | S7: all three, at every scroll position |
 | `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
 | `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end` | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
-| `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament`, `Shell_payouts`, `Shell_payouts_locked` | Payouts: all three. Tournament (M3 restyles the body): touch targets |
-| `bank-feature` | `BankTabScreenTest` | `Shell_bank` | The top bar's reset button (M4 restyles the body) |
+| `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament (M3 restyles the body): touch targets |
+| `tournament-feature` | `PayoutsTabScreenTest` | `S6_payouts_{standard,topheavy,custom,finished}`, `S6_payouts_font2x` | All three, at every scroll position, and locked while the clock runs |
+| `bank-feature` | `BankScreensTest` | `S5_bank_{before_buyins,midgame,rebuys_open,no_rebuys,champion,30players}`, `S5_bank_font2x`, `S5b_knockout_sheet`, `S5b_count_sheet`, `S5c_payout_{champion,second}`, `S5c_pool_breakdown`, `Z2_bank_small`, `Z5_bank_tablet` | All three, at every scroll position. A sheet is rendered as its content over the screen behind, since a modal window doesn't capture under Robolectric |
 
 The screens' ViewModels are the real ones over Robolectric's in-memory preferences, set up as the
 mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app shows.
@@ -514,4 +524,5 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 | `DesignTokensTest` | 6 | Every contrast pairing in the design spec, computed; the six original colours and the sunset ones unchanged |
 | `TypographyTest` | 5 | Barlow loads; `tnum` makes every digit the same width (and without it they differ); the licence ships |
 | `UndoSnackbarTest` | 4 | Undo inside the 8 s window counts, after it doesn't (virtual time) |
+| `MoneyComponentsTest` | 3 x 24 cells = 72 | `MoneyMeter`, `PlaceBadge` and `PayoutStructureSheet`: goldens on the 10, all three layout checks on all 24 |
 | `LayoutAssertionsTest` | 11 | The checks themselves catch what they claim |

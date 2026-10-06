@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Money components (M4): MoneyMeter, PlaceBadge, PayoutStructureSheet -->
+    <string name="money_meter_of">of %1$s</string>
+    <string name="money_meter_description">%1$s: %2$s of %3$s</string>
+    <string name="money_meter_complete">%1$s: %2$s, complete</string>
+    <string name="place_badge_finished">Finished %1$s</string>
+    <string name="place_badge_champion">Champion, 1st</string>
+
+    <string name="payout_structure_title">Payout structure</string>
+    <string name="payout_structure_hint">Higher weights pay more. Places below 1st are rounded, and 1st gets what\'s left, so it always adds up.</string>
+    <string name="payout_structure_locked">Locked while the clock runs. Pause it to change the payouts.</string>
+    <string name="payout_structure_presets">Preset · what 1st gets</string>
+    <string name="payout_structure_round_to">Round to</string>
+    <string name="payout_structure_places">Places paid</string>
+    <plurals name="payout_structure_places_hint">
+        <item quantity="one">Recommended for %1$d players: %2$d place. At most %3$d.</item>
+        <item quantity="other">Recommended for %1$d players: %2$d places. At most %3$d.</item>
+    </plurals>
+    <string name="payout_structure_weights">Weight of each place</string>
+    <string name="payout_structure_weight">%1$s weight</string>
+    <string name="payout_structure_error">Each place needs a lower weight than the one above it.</string>
+    <string name="payout_structure_pool">Prize pool %1$s</string>
+    <string name="payout_structure_save">Save structure</string>
+    <string name="payout_structure_cancel">Cancel</string>
+    <string name="payout_structure_close">Close</string>
+    <string name="payout_preset_top_heavy">Top-heavy</string>
+    <string name="payout_preset_standard">Standard</string>
+    <string name="payout_preset_flat">Flat</string>
+</resources>

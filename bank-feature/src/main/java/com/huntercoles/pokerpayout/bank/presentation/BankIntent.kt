@@ -1,40 +1,62 @@
 package com.huntercoles.pokerpayout.bank.presentation
 
-import android.os.Parcelable
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
-import kotlinx.parcelize.Parcelize
 
-sealed class BankIntent {
-    data class PlayerNameChanged(val playerId: Int, val name: String) : BankIntent()
-    data class BuyInToggled(val playerId: Int) : BankIntent()
-    data class OutToggled(val playerId: Int) : BankIntent()
-    data class PayedOutToggled(val playerId: Int) : BankIntent()
-    data class PlayerCountChanged(val count: Int) : BankIntent()
-    data class PlayerRebuyChanged(val playerId: Int, val rebuys: Int) : BankIntent()
-    data class PlayerAddonChanged(val playerId: Int, val addons: Int) : BankIntent()
-    data class ShowPlayerActionDialog(val playerId: Int, val action: PlayerActionType) : BankIntent()
-    object ConfirmPlayerAction : BankIntent()
-    data class ConfirmPlayerActionWithCount(
-        val count: Int? = null,
-        val selectedPlayerId: Int? = null
-    ) : BankIntent()
-    object CancelPlayerAction : BankIntent()
-    object ShowResetDialog : BankIntent()
-    object HideResetDialog : BankIntent()
-    object ConfirmReset : BankIntent()
-    object ShowWeightsDialog : BankIntent()
-    object HideWeightsDialog : BankIntent()
-    data class UpdateWeights(val weights: List<Int>) : BankIntent()
-    data class UpdatePayoutSettings(val settings: PayoutSettings) : BankIntent()
-    object ShowPoolSummaryDialog : BankIntent()
-    object HidePoolSummaryDialog : BankIntent()
-}
+/**
+ * What the Bank can be asked to do. Routine actions apply at once and can be undone ([Undo], or the
+ * snackbar); only Reset asks first.
+ */
+sealed interface BankIntent {
+    // Rows ----------------------------------------------------------------------------------------
 
-@Parcelize
-enum class PlayerActionType : Parcelable {
-    BUY_IN,
-    OUT,
-    PAYED_OUT,
-    REBUY,
-    ADDON
+    /** Rename; blank goes back to "Player N". Not an undoable action. */
+    data class PlayerNameChanged(val playerId: Int, val name: String) : BankIntent
+
+    /** Buy-in cell: paid, or not paid any more. */
+    data class BuyInToggled(val playerId: Int) : BankIntent
+
+    /** Tap Rebuy or Add-on: one more, at today's price, while the column is open. */
+    data class AddPurchase(val playerId: Int, val kind: Purchase) : BankIntent
+
+    /** Hold Rebuy or Add-on: the count sheet. */
+    data class OpenCount(val playerId: Int, val kind: Purchase) : BankIntent
+
+    /** The count sheet's answer: removes the newest first, adds at today's price. */
+    data class SetCount(val playerId: Int, val kind: Purchase, val count: Int) : BankIntent
+
+    /** Out cell of a player still in: the knockout sheet (S5b). */
+    data class OpenKnockout(val playerId: Int) : BankIntent
+
+    /** The knockout sheet's answer: applies at once, crediting [eliminatorId] (null: nobody). */
+    data class KnockOut(val playerId: Int, val eliminatorId: Int?) : BankIntent
+
+    /** Out cell of a player who is out (the place disc): back in the game. */
+    data class BringBack(val playerId: Int) : BankIntent
+
+    /** Paid cell: the pay-out sheet (S5c). */
+    data class OpenPayOut(val playerId: Int) : BankIntent
+
+    /** The pay-out sheet's answer. */
+    data class SetPaid(val playerId: Int, val paid: Boolean) : BankIntent
+
+    // The rest of the screen ----------------------------------------------------------------------
+
+    data object ShowPoolBreakdown : BankIntent
+
+    data object ShowPayoutStructure : BankIntent
+
+    data class UpdatePayoutSettings(val settings: PayoutSettings) : BankIntent
+
+    data object ShowResetConfirm : BankIntent
+
+    data object ConfirmReset : BankIntent
+
+    /** Closes whichever sheet is open. */
+    data object DismissSheet : BankIntent
+
+    /** Takes back the newest action (up to the last 20). */
+    data object Undo : BankIntent
+
+    /** The top bar's bell: the clock's chime on or off. */
+    data object ToggleMute : BankIntent
 }

@@ -77,6 +77,44 @@ class SettleTournamentUseCaseTest {
         assertEquals(result.pool.payableCents, result.assignedCents)
     }
 
+    @Test
+    fun `rebuys and add-ons count at the price each was bought at`() {
+        // PP-085: one $10 rebuy, then the amount went to $15 and player 2 rebought twice
+        val players = listOf(
+            BankPlayer(1, boughtIn = true, rebuyPricesCents = listOf(1_000)),
+            BankPlayer(2, boughtIn = true, rebuyPricesCents = listOf(1_500, 1_500), addOnPricesCents = listOf(500)),
+            BankPlayer(3, boughtIn = true, eliminatedBy = 1)
+        )
+        // Today's amounts are different again; they don't matter for recorded purchases
+        val result = settle(
+            players,
+            listOf(3),
+            money(2_500, rebuy = 4_000, addOn = 9_900),
+            listOf(2, 1),
+            PayoutRounding.ONE_DOLLAR
+        )
+
+        assertEquals(4_000L, result.pool.rebuyCents)
+        assertEquals(500L, result.pool.addOnCents)
+        assertEquals(3 * 2_500L + 4_500L, result.pool.prizePoolCents)
+        val byId = result.players.associateBy { it.playerId }
+        assertEquals(2_500L + 1_000L, byId.getValue(1).costCents)
+        assertEquals(1_000L, byId.getValue(1).rebuyCostCents)
+        assertEquals(2_500L + 3_000L + 500L, byId.getValue(2).costCents)
+        assertEquals(500L, byId.getValue(2).addOnCostCents)
+        assertEquals(3 * 2_500L + 4_500L, result.paidInCents)
+    }
+
+    @Test
+    fun `without recorded prices every purchase costs today's amount, as before`() {
+        val result = settle(
+            listOf(BankPlayer(1, rebuys = 2), BankPlayer(2, addOns = 1)),
+            emptyList(), money(1_000, rebuy = 700, addOn = 300), listOf(1), PayoutRounding.ONE_DOLLAR
+        )
+        assertEquals(1_400L, result.pool.rebuyCents)
+        assertEquals(300L, result.pool.addOnCents)
+    }
+
     // ---- The conservation property --------------------------------------------------------------
 
     /**
@@ -124,6 +162,9 @@ class SettleTournamentUseCaseTest {
             assertEquals(result.pool.prizePoolCents, result.payoutTable.totalCents, context)
         }
         if (result.isComplete) assertEquals(payable, result.assignedCents, context)
+        // What the players paid for purchases is what the pool holds for them
+        assertEquals(result.pool.rebuyCents, result.players.sumOf { it.rebuyCostCents }, context)
+        assertEquals(result.pool.addOnCents, result.players.sumOf { it.addOnCostCents }, context)
     }
 
     /** A Bank tab driven at random. */
@@ -142,6 +183,13 @@ class SettleTournamentUseCaseTest {
             else -> List(random.nextInt(1, 10)) { random.nextInt(1, 999) }
         }
         private val rounding = PayoutRounding.entries.random(random)
+
+        /** Half the tournaments record a price per purchase, and change the price as they go (PP-085). */
+        private val priced = random.nextBoolean()
+        private fun prices(
+            count: Int,
+            today: Long
+        ) = List(count) { if (random.nextBoolean()) today else random.pick(0L, 500L, 999L, 1_234L) }
         private val players = (1..playerCount).associateWith { BankPlayer(it) }.toMutableMap()
         private val order = mutableListOf<Int>()
 
@@ -157,8 +205,12 @@ class SettleTournamentUseCaseTest {
             val player = players.getValue(id)
             when (random.nextInt(8)) {
                 0 -> players[id] = player.copy(boughtIn = !player.boughtIn)
-                1 -> players[id] = player.copy(rebuys = random.nextInt(0, 21))
-                2 -> players[id] = player.copy(addOns = random.nextInt(0, 21))
+                1 -> players[id] = random.nextInt(0, 21).let { n ->
+                    if (priced) player.copy(rebuyPricesCents = prices(n, money.rebuyCents)) else player.copy(rebuys = n)
+                }
+                2 -> players[id] = random.nextInt(0, 21).let { n ->
+                    if (priced) player.copy(addOnPricesCents = prices(n, money.addOnCents)) else player.copy(addOns = n)
+                }
                 3, 4 -> knockOut(id)
                 5 -> if (id in order) { // back in the game
                     order.remove(id)

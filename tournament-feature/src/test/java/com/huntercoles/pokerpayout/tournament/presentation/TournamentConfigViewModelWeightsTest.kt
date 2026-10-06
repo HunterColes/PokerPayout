@@ -58,11 +58,12 @@ class TournamentConfigViewModelWeightsTest {
     private val amounts get() = state.payoutTable.places.map { it.amountCents }
 
     @Test
-    fun `default weights pay one place for the default five players`() {
+    fun `default weights pay two places for the default five players`() {
         assertEquals(5, state.playerCount)
-        assertEquals(listOf(35), state.config.payoutWeights)
-        // 5 x 20 buy-in, all to 1st
-        assertEquals(listOf(10_000L), amounts)
+        // PP-086: 5 players pay 2 places (it was 1, winner takes all)
+        assertEquals(listOf(35, 20), state.config.payoutWeights)
+        // 5 x 20 buy-in, 35:20 -> 2nd 36.36 -> $36, 1st $64
+        assertEquals(listOf(6_400L, 3_600L), amounts)
     }
 
     @Test
@@ -147,8 +148,8 @@ class TournamentConfigViewModelWeightsTest {
         assertTrue(tournamentPreferences.isInDefaultState())
         assertTrue(timerPreferences.isInDefaultState())
         assertEquals(180, timerPreferences.getGameDurationMinutes())
-        assertEquals(listOf(35), state.config.payoutWeights)
+        assertEquals(listOf(35, 20), state.config.payoutWeights)
         assertEquals(PayoutRounding.ONE_DOLLAR, state.config.payoutRounding)
-        assertEquals(listOf(10_000L), amounts)
+        assertEquals(listOf(6_400L, 3_600L), amounts)
     }
 }

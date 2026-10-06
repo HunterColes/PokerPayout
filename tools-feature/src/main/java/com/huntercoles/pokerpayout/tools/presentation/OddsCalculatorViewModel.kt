@@ -139,12 +139,15 @@ class OddsCalculatorViewModel @Inject constructor(
         recalculate()
     }
 
-    /** New hand / clear table: applies now, with Undo on the snackbar for a few seconds. */
+    /**
+     * New hand / clear table: applies now, with Undo on the snackbar for a few seconds. The keypad
+     * stays closed meanwhile: the app's snackbar sits where the suit keys would be.
+     */
     private fun replaceTable(message: String, transform: (OddsTable) -> OddsTable) {
         val previous = _uiState.value.table
         val next = transform(previous)
         if (next == previous) return
-        edit { TableEdit(next, KeypadState(target = next.nextOpen())) }
+        edit { TableEdit(next, KeypadState()) }
         viewModelScope.launch {
             if (snackbars.showUndo(message, messages.undo)) {
                 edit { TableEdit(previous, KeypadState()) }

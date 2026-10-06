@@ -355,7 +355,7 @@ class OddsCalculatorViewModelTest {
             assertEquals(3, vm.state.table.seats.size)
             assertTrue(vm.state.table.seats.all { it.isUnknown && !it.folded })
             assertTrue(vm.state.table.boardCards.isEmpty())
-            assertEquals(SlotRef.Hole(0, 0), vm.state.keypad.target)
+            assertNull(vm.state.keypad.target, "the keypad stays closed under the Undo snackbar")
 
             testScheduler.runCurrent()
             val snackbar = snackbars.hostState.currentSnackbarData!!

@@ -522,10 +522,11 @@ s_odds_more_players() {
   ui assert-text "text~=Player 4" "text~=Folded" "re=^≈?[0-9]+\.[0-9]%$"
 }
 s_odds_reset_new_hand() {
-  # New hand (the header's ↺) clears every card and fold at once and keeps the four seats. Undo is
-  # on the app's snackbar once MainActivity hosts it (M2); tap it if it's there.
+  # New hand (the header's ↺) clears every card and fold at once and keeps the four seats; the
+  # keypad stays closed under the Undo snackbar. Undo is on the app's snackbar once MainActivity
+  # hosts it (M2); tap it if it's there.
   ui tap "desc=New hand"
-  ui assert-text "desc=Player 1, card 1, empty. Next" "text~=Pick cards" || return 1
+  ui assert-text "desc=Player 1, card 1, empty" "text~=Pick cards" || return 1
   if ui find text=UNDO >/dev/null 2>&1; then
     ui tap text=UNDO
     ui wait "desc=Turn, 7 of hearts" --timeout 10 || return 1
@@ -534,7 +535,6 @@ s_odds_reset_new_hand() {
   else
     echo "no Undo snackbar on screen (MainActivity doesn't host the app's snackbar yet)"
   fi
-  ui tap text=Done
   ui scroll-to "desc=Player 4, options"
 }
 s_odds_reset_table() {
@@ -542,7 +542,7 @@ s_odds_reset_table() {
   ui tap "text=Clear table" --scroll-in scrollable
   ui wait-gone "desc=Player 3, options" --timeout 10 || return 1
   ui scroll up --times 3
-  ui assert-text "desc=Player 1, card 1, empty. Next" "desc=Player 2, options"
+  ui assert-text "desc=Player 1, card 1, empty" "desc=Player 2, options"
 }
 s_hand_ranks() {
   ui back

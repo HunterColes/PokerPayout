@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 
@@ -43,6 +44,9 @@ import com.huntercoles.pokerpayout.core.design.PokerColors
  *
  * [selectedIndex] is the tab to show as selected, or -1 for none. The screen keeps its state when
  * the window crosses 600 dp, because it moves between the two layouts rather than being rebuilt.
+ *
+ * A screen can ask for more room through [RequestShellChrome]: the full width (its own panes), or
+ * the whole window with no tabs (the Tournament tab's table view). It moves there the same way.
  */
 @Suppress("LongParameterList") // the shell's slots: tabs, selection, snackbars, screen
 @Composable
@@ -56,6 +60,7 @@ fun PokerAppShell(
 ) {
     val latestContent by rememberUpdatedState(content)
     val screen = remember { movableContentOf { latestContent() } }
+    val chrome = remember { ShellChrome() }
     // The keyboard padding goes inside the width check: while the keyboard slides in, only the
     // layout changes frame by frame; the shell isn't recomposed (it would recompose the screen too,
     // and slow typing down while the keyboard opens).
@@ -64,9 +69,10 @@ fun PokerAppShell(
             .fillMaxSize()
             .background(PokerColors.PokerBlack),
     ) {
-        CompositionLocalProvider(LocalWidthClass provides widthClassOf(maxWidth)) {
-            when (navLayoutFor(maxWidth)) {
-                NavLayout.Rail -> Row(Modifier.fillMaxSize().imePadding()) {
+        CompositionLocalProvider(LocalWidthClass provides widthClassOf(maxWidth), LocalShellChrome provides chrome) {
+            when {
+                chrome.immersive -> Box(Modifier.fillMaxSize()) { screen() }
+                navLayoutFor(maxWidth) == NavLayout.Rail -> Row(Modifier.fillMaxSize().imePadding()) {
                     PokerNavRail(items = items, selectedIndex = selectedIndex, onSelect = onSelect)
                     ShellScreen(
                         screen = screen,
@@ -77,7 +83,7 @@ fun PokerAppShell(
                             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.End + WindowInsetsSides.Bottom)),
                     )
                 }
-                NavLayout.BottomBar -> Column(Modifier.fillMaxSize().imePadding()) {
+                else -> Column(Modifier.fillMaxSize().imePadding()) {
                     ShellScreen(
                         screen = screen,
                         snackbarHostState = snackbarHostState,
@@ -101,7 +107,7 @@ private fun ShellScreen(screen: @Composable () -> Unit, snackbarHostState: Snack
             modifier = Modifier
                 .fillMaxSize()
                 .wrapContentWidth(Alignment.CenterHorizontally)
-                .widthIn(max = ContentMaxWidth)
+                .widthIn(max = if (LocalShellChrome.current?.fullWidth == true) Dp.Unspecified else ContentMaxWidth)
                 .fillMaxWidth(),
         ) {
             screen()

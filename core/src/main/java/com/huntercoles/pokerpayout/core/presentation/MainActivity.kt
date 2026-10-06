@@ -40,6 +40,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Portrait on phones, free on tablets (PP-079, PP-088), from the first frame of a fresh start.
+        // A recreated activity (a rotation) keeps whatever its screen asked for.
+        if (savedInstanceState == null) {
+            requestedOrientation = OrientationPolicy.base(resources.configuration.smallestScreenWidthDp)
+        }
         // Draw behind transparent system bars with light icons: the app is dark only. (The old
         // theme painted the status bar green with dark icons on it, B13.) The shell and each
         // screen's top bar pad for the bars.
@@ -51,24 +56,26 @@ class MainActivity : ComponentActivity() {
             KeepScreenOnWhileClockRuns(timerPreferences)
 
             PokerTheme {
-                val navController = rememberNavController()
+                AppOrientation {
+                    val navController = rememberNavController()
 
-                PokerNavigationShell(
-                    navController = navController,
-                    factories = navigationFactories,
-                    snackbarHostState = snackbarController.hostState,
-                )
+                    PokerNavigationShell(
+                        navController = navController,
+                        factories = navigationFactories,
+                        snackbarHostState = snackbarController.hostState,
+                    )
 
-                navigationManager
-                    .navigationEvent
-                    .collectWithLifecycle(
-                        key = navController,
-                    ) {
-                        when (it.destination) {
-                            NavigationDestination.Back -> navController.navigateUp()
-                            else -> navController.navigate(it.destination, it.configuration)
+                    navigationManager
+                        .navigationEvent
+                        .collectWithLifecycle(
+                            key = navController,
+                        ) {
+                            when (it.destination) {
+                                NavigationDestination.Back -> navController.navigateUp()
+                                else -> navController.navigate(it.destination, it.configuration)
+                            }
                         }
-                    }
+                }
             }
         }
     }

@@ -8,8 +8,9 @@
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize">
+            <!-- No orientation lock here: phones are portrait and tablets turn freely, set in code
+                 (core/presentation/ScreenOrientation.kt) so the Tournament tab can turn a phone. -->
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -17,7 +17,7 @@
 # Every step: run actions/assertions with ui.py, then save <NN-name>.png (screenshot)
 # and <NN-name>.xml (uiautomator tree). The tour FAILS if an expected text is missing,
 # if logcat shows a FATAL EXCEPTION / ANR for the app, or if the app process dies.
-# Steps registered with `extra_step` (steps-matrix.sh) run only when --only/--steps-file names them.
+# Steps registered with `extra_step` (steps-matrix.sh, steps-listing.sh) run only when --only/--steps-file names them.
 #
 # Output: build/device-reports/<timestamp>/{index.md, *.png, *.xml, logcat.txt, tour.log}
 #         (also symlinked as build/device-reports/latest). Exit code 0 == all steps passed.
@@ -1797,4 +1797,5 @@ extra_step live-clock-open  "Open: paused on screen too; notification gone"     
 extra_step live-clock-locked "Screen locked, clock running: the live clock shows" s_live_clock_locked
 
 source "$DEVICE_SCRIPTS/steps-matrix.sh"   # opt-in steps for the device matrix (extra_step)
+source "$DEVICE_SCRIPTS/steps-listing.sh"  # opt-in steps for the store listing's screenshots (listing.sh)
 run_tour

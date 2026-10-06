@@ -230,6 +230,34 @@ reinstall once. Uninstalling deletes the app's saved data.
    ("supplied reference binary signed with … instead of …"). It isn't disabled, so the next
    cycle after the merge builds it. `fdroid-status.sh` shows the open MR and the pinned key.
 
+## Refreshing the store listing
+
+F-Droid shows what `metadata/en-US/` holds at the release tag: `title.txt`, `short_description.txt`,
+`full_description.txt`, `images/icon.png`, `images/featureGraphic.png` and
+`images/phoneScreenshots/`. A change there needs no fdroiddata merge request; it shows with the next
+release.
+
+| What | How |
+|---|---|
+| Phone screenshots | `gh workflow run listing.yml --ref <branch>` (never master; `-f variant=debug` for the debug build, release is the default). It runs `scripts/device/listing.sh` on GitHub's emulator, commits the pictures to the branch, starts CI on that commit, and uploads them with the tour's report as an artifact. Locally: `flock /tmp/pokerpayout-emulator.lock scripts/device/listing.sh --stop` |
+| Feature graphic | `python3 scripts/listing/feature_graphic.py` (needs `python3-pil`). 1024 x 500: the felt and gold from `PokerColors.kt`, Barlow Condensed from `core/src/main/res/font`, the cards from `icon.png`. Run it again after changing any of those or its wording, and commit the PNG |
+| Words | The three `.txt` files, by hand |
+
+`listing.sh` plays one home game with the tour (`--list` shows the steps): nine named players, a $5
+progressive bounty and $20 rebuys, the clock on level 3 with two rebuys and two knockouts, then a cash
+game and the tools. Its `listing-shot-*` steps (`steps-listing.sh`) each end on a clean screen (no
+snackbar or keyboard, the status bar in boot.sh's demo mode: 12:00, full battery), and their
+screenshots become `01_clock.png` to `08_seat_draw.png` (`02_table_view.png` is landscape). Only a
+run where every step passed copies them; it then removes any other picture in the folder. A failed
+run changes nothing. `--copy-from <report>` copies the pictures of a run's report (the artifact)
+without an emulator. To change a picture, change its step, and its line in `SHOTS` in `listing.sh`.
+Look at every picture before merging.
+
+The words: plain and short, leading with free, no ads, offline and no internet permission. No
+"professional", "casino" or superlatives. The short description stays within 80 characters, with no
+full stop (`fdroid lint` flags punctuation in a summary). F-Droid has no captions for screenshots, so
+the feature list in `full_description.txt` carries what they show.
+
 ## Files
 
 | Path | Role |
@@ -244,3 +272,6 @@ reinstall once. Uninstalling deletes the app's saved data.
 | `scripts/release/lib/metadata.py` | version bump, fdroiddata YAML edits, notes → What's New |
 | `metadata/com.huntercoles.pokerpayout.yml` | mirror of fdroiddata's recipe, rebuilt from upstream on every release |
 | `metadata/en-US/` | title, descriptions, images, `changelogs/<versionCode>.txt`, read by F-Droid from the tag |
+| `scripts/device/listing.sh`, `scripts/device/steps-listing.sh` | the listing's phone screenshots, shot on the emulator ([Refreshing the store listing](#refreshing-the-store-listing)) |
+| `.github/workflows/listing.yml` | the same on GitHub's emulator, committed to the branch |
+| `scripts/listing/feature_graphic.py` | the listing's feature graphic |

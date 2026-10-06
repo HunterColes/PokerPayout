@@ -1,0 +1,133 @@
+# Re-shoot the store listing's phone screenshots (metadata/en-US/images/phoneScreenshots/) on GitHub's
+# emulator with scripts/device/listing.sh, and commit them to the branch it ran on, so the listing can
+# be refreshed without an emulator on a local machine (PP-040; docs/RELEASING.md, "Refreshing the store
+# listing"):
+#
+#   gh workflow run listing.yml --ref <branch> [-f variant=release|debug]
+#
+# Never on master: master is protected, so the pictures land through the branch's pull request. Same
+# emulator as device.yml (boot.sh: API 34, 1080x2400 @ 420dpi, the status bar in demo mode). The
+# release build is debug-signed here, since CI has no keystore; it looks the same. A push made with the
+# workflow token starts no other workflow, so this one starts CI on its new commit itself. The pictures
+# and the tour's report are uploaded as an artifact too: look at them before merging.
+name: Store listing screenshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "Which build to shoot"
+        type: choice
+        options: [release, debug]
+        default: release
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: listing-${{ github.ref }}
+
+jobs:
+  shoot:
+    name: Shoot the listing (${{ inputs.variant }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Refuse master
+        if: github.ref == 'refs/heads/master' || github.ref_type != 'branch'
+        run: |
+          echo "::error::Run this on a branch, not ${GITHUB_REF}: master is protected, so the screenshots land through a pull request."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules > /dev/null
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Emulator and system image
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" --install emulator platform-tools \
+            "system-images;android-34;google_apis_playstore;x86_64" > /dev/null
+
+      - name: Pillow (saves the pictures as optimised RGB PNGs)
+        run: |
+          { sudo apt-get update -qq && sudo apt-get install -y -qq python3-pil; } > /dev/null \
+            || echo "no Pillow: the pictures are copied as the emulator took them"
+
+      - name: Shoot (${{ inputs.variant }})
+        env:
+          VARIANT: ${{ inputs.variant }}
+          PP_BOOT_TIMEOUT: "600"
+        run: |
+          args=(--stop)
+          if [[ "$VARIANT" == release ]]; then args+=(--release); fi
+          scripts/device/listing.sh "${args[@]}"
+
+      # The failing step's screen as text, so a failure can be read from the log alone.
+      - name: Show the failing screen
+        if: failure()
+        run: |
+          dir="$(ls -d build/device-reports/listing-* 2>/dev/null | tail -1)"
+          [[ -n "$dir" ]] || exit 0
+          xml="$(ls -t "$dir"/[0-9]*.xml 2>/dev/null | head -1)"
+          if [[ -n "$xml" ]]; then
+            echo "== Text on screen at the failure ($(basename "$xml")): text | description | bounds"
+            python3 - "$xml" <<'EOF'
+          import sys, xml.etree.ElementTree as ET
+          for n in ET.parse(sys.argv[1]).iter('node'):
+              t, d = n.get('text') or '', n.get('content-desc') or ''
+              if t or d:
+                  print(f"{t!r} | {d!r} | {n.get('bounds')}")
+          EOF
+          fi
+          echo "== End of tour.log"
+          tail -60 "$dir/tour.log"
+
+      - name: Upload the pictures and the report
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: listing-${{ inputs.variant }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            metadata/en-US/images/phoneScreenshots/
+            build/device-reports/
+            build/device/*.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Commit and start CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add -A -- metadata/en-US/images/phoneScreenshots
+          if git diff --cached --quiet; then
+            echo "No picture changed." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "### Store listing pictures"
+            echo '```'; git diff --cached --stat; echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "Re-shoot the store listing screenshots (CI, run ${{ github.run_id }})"
+          # The branch may have moved while this ran; the commit holds only the pictures, so it rebases.
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              pull -q --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          gh workflow run ci.yml --ref "${GITHUB_REF_NAME}"

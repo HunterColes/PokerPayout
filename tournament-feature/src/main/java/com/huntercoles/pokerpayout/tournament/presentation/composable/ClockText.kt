@@ -41,7 +41,7 @@ internal fun colorUpText(chips: List<Int>, formatter: NumberFormat): String =
 /** "25s", "25s and 100s", "5s, 25s and 100s". */
 @Composable
 internal fun chipList(chips: List<Int>, formatter: NumberFormat): String {
-    val names = chips.map { "${formatter.format(it)}s" }
+    val names = chips.map { stringResource(R.string.break_chips_number_plural, formatter.format(it)) }
     return when (names.size) {
         0 -> ""
         1 -> names.single()

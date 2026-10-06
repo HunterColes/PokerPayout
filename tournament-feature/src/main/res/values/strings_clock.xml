@@ -58,7 +58,8 @@
     <string name="setup_prize_pool_starts">Prize pool starts at %1$s and grows with rebuys and add-ons.</string>
     <string name="setup_game_length">Game length</string>
     <string name="setup_hours">hours</string>
-    <string name="setup_level_length">Levels</string>
+    <!-- How long each level lasts, in minutes (the field's suffix is "min") -->
+    <string name="setup_level_length">Level length</string>
     <string name="setup_minutes">min</string>
     <string name="setup_starting_stack">Starting stack</string>
     <string name="setup_breaks_label">Breaks</string>
@@ -138,7 +139,6 @@
     <string name="panel_unlock_body">Money changes count for everyone from now on. Blind changes rebuild the schedule from Level %1$d; the time left in this level is kept.</string>
     <string name="panel_unlock_confirm">Unlock to edit</string>
     <string name="panel_unlock_keep">Keep locked</string>
-    <string name="panel_not_applied">Not applied: %1$s</string>
 
     <!-- S2: the clock -->
     <string name="clock_level_time_left">Level %1$d · time left</string>
@@ -149,7 +149,6 @@
     <string name="clock_no_blinds">The blind setup can\'t be played. Open setup to fix it.</string>
     <string name="clock_pill_paused">Paused</string>
     <string name="clock_pill_final">Final minutes</string>
-    <string name="clock_pill_overtime">Overtime</string>
     <string name="clock_pill_ready">Ready</string>
     <string name="clock_played">%1$s played</string>
     <string name="clock_level_length">%1$d-min level</string>
@@ -157,7 +156,6 @@
     <string name="clock_bb_ante">BB ante</string>
     <string name="clock_bb_ante_amount">BB ante %1$s</string>
     <string name="clock_next_level">Next · Level %1$d</string>
-    <string name="clock_next_level_short">Next · L%1$d</string>
     <string name="clock_next_overtime">Next · Level %1$d · overtime</string>
     <string name="clock_next_break">Next · Break</string>
     <string name="clock_next_none">Final level</string>
@@ -176,14 +174,11 @@
     <string name="clock_stat_players">Players</string>
     <string name="clock_stat_of">of %1$d</string>
     <string name="clock_stat_avg">Avg stack</string>
-    <string name="clock_stat_avg_short">Avg</string>
     <string name="clock_stat_bb">%1$s BB</string>
     <string name="clock_stat_pool">Prize pool</string>
-    <string name="clock_stat_pool_short">Pool</string>
     <string name="clock_info_break_after">Break after Level %1$d</string>
     <string name="clock_in">in %1$s</string>
     <string name="clock_info_ends">Tournament ends about %1$s</string>
-    <string name="clock_info_ends_short">Ends about %1$s</string>
     <string name="clock_info_overtime">Overtime</string>
     <string name="clock_info_overtime_by">+%1$s</string>
     <string name="clock_info_finished">Tournament finished</string>
@@ -208,7 +203,6 @@
     <string name="schedule_last_level">last level</string>
     <string name="schedule_overtime">overtime</string>
     <string name="schedule_break">Break · %1$d min</string>
-    <string name="schedule_details">%1$s · %2$s</string>
 
     <!-- S4: breaks and the color-up -->
     <string name="break_add_ons_close">Add-ons close when the break ends</string>
@@ -219,12 +213,13 @@
     <string name="break_color_up_race">Odd %1$s go to a chip race: one card per odd chip, high cards win the new %2$s.</string>
     <string name="break_chips_plural">%1$s %2$ss</string>
     <string name="break_chip_single">%1$s %2$s</string>
+    <!-- Chips of a value with no colour of their own: "300s" -->
+    <string name="break_chips_number_plural">%1$ss</string>
     <string name="break_color_up_done">Color-up done</string>
     <string name="break_color_up_out">%1$s are out of play</string>
     <string name="break_undo">Undo</string>
     <string name="break_add_ons">Add-ons · %1$s each</string>
     <string name="break_add_ons_count">%1$d of %2$d</string>
-    <string name="break_add_ons_description">%1$d of %2$d players have taken the add-on</string>
     <!-- %1$s is the amount, shown in gold -->
     <string name="break_prize_pool_now">Prize pool now %1$s</string>
     <string name="break_record_in_bank">Record in Bank</string>

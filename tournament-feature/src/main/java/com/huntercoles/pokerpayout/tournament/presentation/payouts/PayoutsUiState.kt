@@ -36,7 +36,6 @@ data class PayoutsUiState(
     val preset: PayoutPreset? get() = settings.preset
 
     val canPlaceMore: Boolean get() = !isLocked && places < maxPlaces
-    val canPlaceFewer: Boolean get() = !isLocked && places > 1
 }
 
 /** One paid place. [sharePercent] is the rounded amount's share of the pool, not the raw weight. */

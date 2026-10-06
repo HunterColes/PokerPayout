@@ -89,22 +89,26 @@ fun ColourEditorContent(state: ChipSetUiState, editor: ColourEditor, onIntent: (
             colour = picked
             if (!valueTyped) valueText = picked.standardValue.toString()
         }
+        val valueLabel = stringResource(R.string.chip_set_value)
         PokerField(
             value = valueText,
             onValueChange = { typed ->
                 valueText = typed.filter(Char::isDigit).take(MAX_VALUE_DIGITS)
                 valueTyped = true
             },
-            label = stringResource(R.string.chip_set_value),
+            label = valueLabel,
             isError = valueError != null,
             supportingText = valueError,
+            fieldModifier = Modifier.semantics { contentDescription = valueLabel },
         )
+        val countLabel = stringResource(R.string.chip_set_count)
         PokerField(
             value = countText,
             onValueChange = { typed -> countText = typed.filter(Char::isDigit).take(MAX_COUNT_DIGITS) },
-            label = stringResource(R.string.chip_set_count),
+            label = countLabel,
             isError = countError != null,
             supportingText = countError,
+            fieldModifier = Modifier.semantics { contentDescription = countLabel },
         )
         val chip = if (value != null && count != null && valueError == null) InventoryChip(colour, value, count) else null
         SheetButtons(editing, chip, onIntent)

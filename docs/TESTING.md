@@ -297,7 +297,7 @@ through a cue; the JVM tests run the driver on virtual time instead).
 
 The release build is shrunk and obfuscated by R8, so a missing keep rule only shows up
 there. After changing `app/proguard-rules.pro`, a dependency, or anything loaded by
-reflection (Hilt, navigation routes, Room, `@Parcelize`), tour the release APK:
+reflection (Hilt, navigation routes, `@Parcelize`), tour the release APK:
 
 ```bash
 flock /tmp/pokerpayout-emulator.lock scripts/device/tour.sh --release --stop
@@ -599,7 +599,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end`, `S11_chipset_settings` (the stack settings unfolded, keeping back the Tournament's estimate) | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
 | `tools-feature` | `SeatDrawScreenTest` (+ `SeatDrawExtraGoldenTest`) | `S14_seats_empty`, `S14_seats_one_table`, `S14_seats_two_tables`, `S14_button_draw`; `S14_seats_font2x` at tall@2.0 | All three, at every scroll position of each pane; also the name fields and an out-of-date draw with the players unfolded |
 | `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament: touch targets |
-| `tournament-feature` | `TournamentScreenGoldenTest` | `S1_setup_{before,invalid}`, `S1_fold_300ms`, `S1_running_strip`, `S1_panel_{open,unlocked}`, `S2_clock_{ready,running,paused,final_minutes,overtime,finished}`, `S2_clock_running_font2x`, `S3_table_{running,paused,break}` (landscape cells), `S4_break_{colorup,done,plain}`, `S4_break_chipset` (the color-up with a chip set set up in Tools, PP-091 #9), `Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet` | All three checks on all 24 cells (the fold frame: none, it is mid-animation) |
+| `tournament-feature` | `TournamentScreenGoldenTest` | `S1_setup_{before,invalid}`, `S1_fold_300ms`, `S1_running_strip`, `S1_panel_{open,unlocked}`, `S2_clock_{ready,running,paused,final_minutes,overtime,finished}`, `S2_clock_running_font2x`, `S3_table_{running,paused,break}` (landscape cells), `S4_break_{colorup,done,plain}`, `S4_break_chipset` (the color-up with a chip set set up in Tools, PP-091 #9), `Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet` | All three checks on all 24 cells (the fold frame: none, it is mid-animation); the top bar's buttons stay 48 x 48 dp at every scroll position. `SetupStripTest`: the strip shows whole settings, as many as fit |
 | `tournament-feature` | `TournamentInteractionTest`, `TournamentRotationTest`, `SetupFoldTest` | none | What each control sends; rotation per device class (Robolectric `+land` shows the table view, `+port` the clock, other tabs portrait on phones, tablets free, state kept through recreation; ✕ in a turned table view holds for that turn only, with the phone's hold faked through `LocalPhoneHold`); the fold plays once and is cut under Reduce motion |
 | `tournament-feature` | `PayoutsTabScreenTest` | `S6_payouts_{standard,topheavy,custom,finished}`, `S6_payouts_font2x` | All three, at every scroll position, and locked while the clock runs |
 | `bank-feature` | `BankScreensTest` | `S5_bank_{before_buyins,midgame,rebuys_open,no_rebuys,champion,30players}`, `S5_bank_font2x`, `S5b_knockout_sheet`, `S5b_count_sheet`, `S5c_payout_{champion,second}`, `S5c_pool_breakdown`, `Z2_bank_small`, `Z5_bank_tablet` | All three, at every scroll position. A sheet is rendered as its content over the screen behind, since a modal window doesn't capture under Robolectric |
@@ -616,14 +616,16 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 | `ComponentLayoutTest` | 2 x 24 cells = 48 | Every gallery in one scrolling column, and the shell, through all three layout checks |
 | `AppShellTest` | 4 x 24 cells = 96 | The bar below 600 dp and the rail from 600 dp, by window width; tab geometry; the screen capped at 720 dp and centred; the shell through all three layout checks |
 | `NavBarTest` | 10 | Every screen's tab (tools keep Tools selected, B16); tab taps don't pile up on the back stack and Back returns to Tournament; tapping a tab inside a tool returns to its list |
-| `ComponentSemanticsTest` | 11 | TalkBack: roles (checkbox, radio button, tab, button), names ("Ace of spades", "Rebuy, 1 taken, Locked"), headings, field errors; taps; the stepper's ends and repeat-while-held |
-| `DesignTokensTest` | 6 | Every contrast pairing in the design spec, computed; the six original colours and the sunset ones unchanged |
+| `ComponentSemanticsTest` | 12 | TalkBack: roles (checkbox, radio button, tab, button), names ("Ace of spades", "Rebuy, 1 taken, Locked"), headings, field errors (and payout weights out of order, which aren't only red); taps; the stepper's ends and repeat-while-held |
+| `DesignTokensTest` | 5 | Every contrast pairing in the design spec, computed; the six original colours unchanged (the sunset colours were retired once no screen used them) |
 | `TypographyTest` | 5 | Barlow loads; `tnum` makes every digit the same width (and without it they differ); the licence ships |
 | `UndoSnackbarTest` | 4 | Undo inside the 8 s window counts, after it doesn't (virtual time) |
 | `MoneyComponentsTest` | 3 x 24 cells = 72 | `MoneyMeter`, `PlaceBadge` and `PayoutStructureSheet`: goldens on the 10, all three layout checks on all 24 |
 | `MoneyFieldTest` | 4 | `MoneyField`: typed text kept key by key, cents out, one commit on Done, focus loss or the field going away; 0 is an amount, empty is none |
 | `LayoutAssertionsTest` | 11 | The checks themselves catch what they claim |
 | `ScreenOrientationTest` | 3 | Phones portrait unless the screen on show asks for more, and portrait again when it goes; free from 600 dp; a screen can take the full width beside the rail, or the whole window |
+| `SystemBarsTest` | 1 | Light status and navigation bar icons on the dark app (B13) |
+| `SoundManagerTest` | 3 | A loaded chime plays at the slider's volume now, not the one it had when loaded (B12); silent at 0 and with the sound off. The player is a recording fake |
 
 ## 10. The device matrix: real screens, sizes, fonts and rotation
 

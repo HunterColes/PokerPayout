@@ -71,6 +71,9 @@
     <string name="bank_note_add_ons_closed_level">add-ons closed after level %1$d</string>
     <string name="bank_note_add_ons_closed_break">add-ons closed after break %1$d</string>
     <string name="bank_note_join">%1$s · %2$s.</string>
+    <string name="bank_note_rebuys_only">%1$s.</string>
+    <!-- The cutoffs, then bank_note_taken -->
+    <string name="bank_note_then">%1$s %2$s</string>
     <string name="bank_note_taken">Taken ones stay filled; hold one to correct it.</string>
 
     <!-- The line under a name -->
@@ -199,7 +202,6 @@
     <string name="bank_structure">Structure</string>
 
     <!-- Reset (⋮) -->
-    <string name="bank_reset">Reset bank</string>
     <string name="bank_reset_title">Reset the bank?</string>
     <plurals name="bank_reset_body">
         <item quantity="one">Clears the name, buy-in, rebuys, add-ons, knockouts and payout for %d player. The clock and the tournament setup stay as they are.</item>

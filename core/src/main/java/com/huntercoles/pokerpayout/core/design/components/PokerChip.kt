@@ -29,6 +29,7 @@ import com.huntercoles.pokerpayout.core.design.ChipDenominations
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.utils.ChipColour
 
 /**
  * A poker chip, drawn: the denomination's colour (from [ChipDenominations], the physical chips),
@@ -53,8 +54,9 @@ fun PokerChip(
 ) {
     val chip = ChipDenominations.getChipByValue(denomination)
     val style = chipStyle(color ?: chip?.color ?: UnknownChip)
+    val colourName = ChipColour.forStandardValue(denomination)?.let { chipColourName(it) }.orEmpty()
     val description = contentDescription
-        ?: stringResource(R.string.design_chip, chip?.name ?: "", chipLabel(denomination)).trim()
+        ?: stringResource(R.string.design_chip, colourName, chipLabel(denomination)).trim()
     Box(
         modifier = modifier
             .size(size)

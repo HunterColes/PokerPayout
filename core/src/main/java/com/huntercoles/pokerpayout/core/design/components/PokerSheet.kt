@@ -34,7 +34,7 @@ private val SheetShape = RoundedCornerShape(topStart = PokerDimens.CornerSheet, 
 private const val SCRIM_ALPHA = 0.62f
 
 /**
- * One bottom sheet per decision, in place of dialog chains (`PokerDialog`, the confirmation
+ * One bottom sheet per decision, in place of dialog chains (the old `PokerDialog`, the confirmation
  * dialogs, the weights dialog): a Material modal sheet in FeltGreen with 28 dp top corners and a
  * DarkGold handle, an optional [title] (a heading for TalkBack) and the content below it.
  *

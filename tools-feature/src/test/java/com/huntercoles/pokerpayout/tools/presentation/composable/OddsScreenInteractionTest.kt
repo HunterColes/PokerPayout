@@ -2,6 +2,9 @@ package com.huntercoles.pokerpayout.tools.presentation.composable
 
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -93,6 +96,16 @@ class OddsScreenInteractionTest {
             ),
             sent,
         )
+    }
+
+    /** The seat's name stands in for its text, so its status is the node's state (PP-024). */
+    @Test
+    fun `TalkBack hears who is the favourite and who is ahead right now`() {
+        odds(OddsFixtures.flopExact)
+        screen.compose.onNodeWithContentDescription("Player 1, options")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Favourite"))
+        screen.compose.onNodeWithContentDescription("Player 2, options")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Ahead right now"))
     }
 
     @Test

@@ -59,9 +59,6 @@ class DesignTokensTest {
         assertTrue(contrast(PokerColors.Chalk, PokerColors.FeltHigh) < AA_TEXT)
         assertTrue(contrast(PokerColors.DarkGold, PokerColors.FeltGreen) < AA_TEXT)
         assertTrue(contrast(PokerColors.FeltLine, PokerColors.FeltGreen) < AA_UI)
-        // Today's selected nav tab: a gold icon on AccentGreen.
-        @Suppress("DEPRECATION")
-        assertTrue(contrast(PokerColors.PokerGold, PokerColors.AccentGreen) < AA_UI)
     }
 
     @Test
@@ -72,24 +69,6 @@ class DesignTokensTest {
         assertEquals(Color(0xFFFFD700), PokerColors.PokerGold)
         assertEquals(Color(0xFFB8860B), PokerColors.DarkGold)
         assertEquals(Color(0xFFF5F5F5), PokerColors.CardWhite)
-    }
-
-    @Suppress("DEPRECATION")
-    @Test
-    fun `sunset colours keep their old values until every screen has moved off them`() {
-        assertEquals(Color(0xFF4CAF50), PokerColors.AccentGreen)
-        assertEquals(Color(0xFF32CD32), PokerColors.SuccessGreen)
-        assertEquals(Color(0xFFDC143C), PokerColors.ErrorRed)
-        assertEquals(Color(0xFFE0E0E0), PokerColors.TextSecondary)
-        assertEquals(Color(0xFF1B5E20), PokerColors.MediumGreen)
-        assertEquals(Color(0xFF2E7D32), PokerColors.LightGreen)
-        assertEquals(Color(0xFFFFF8DC), PokerColors.LightGold)
-        assertEquals(PokerColors.FeltGreen, PokerColors.BackgroundPrimary)
-        assertEquals(PokerColors.DarkGreen, PokerColors.BackgroundSecondary)
-        assertEquals(PokerColors.MediumGreen, PokerColors.BackgroundTertiary)
-        assertEquals(PokerColors.DarkGreen, PokerColors.SurfacePrimary)
-        assertEquals(PokerColors.LightGreen, PokerColors.SurfaceSecondary)
-        assertEquals(PokerColors.MediumGreen, PokerColors.SurfaceTertiary)
     }
 
     @Test

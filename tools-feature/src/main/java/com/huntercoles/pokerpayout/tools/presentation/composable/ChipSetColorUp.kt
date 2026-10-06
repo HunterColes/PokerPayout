@@ -174,7 +174,8 @@ private fun StatusIcon(ok: Boolean) {
 
 /** "green 25s": the chips in running text. */
 @Composable
-private fun spokenChips(chip: ChipRef): String = "${colourAdjective(chip.colour)} ${chipNumber(chip.value)}s"
+private fun spokenChips(chip: ChipRef): String =
+    stringResource(R.string.chip_set_spoken_chips, colourAdjective(chip.colour), chipNumber(chip.value))
 
 private val SmallChipSize = 32.dp
 private val ChipOverlap = 20.dp

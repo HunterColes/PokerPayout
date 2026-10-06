@@ -460,7 +460,7 @@ s_blinds_tab() {
   # Scroll to the verdict itself: how far a swipe flings depends on the emulator's speed (CI's is
   # slower), so the line under the chips isn't always on screen once "Smallest chip" is.
   ui scroll-to "text~=Works: " --max 6
-  ui assert-text "has=Game length" "has=Levels" "has=Starting stack" "text=Smallest chip" \
+  ui assert-text "has=Game length" "has=Level length" "has=Starting stack" "text=Smallest chip" \
     "text~=Works: 9 levels, 50 / 100 to 5,000 / 10,000"
 }
 s_smallest_chip() {
@@ -472,7 +472,7 @@ s_smallest_chip() {
 }
 s_invalid_setup() {
   # PP-020: an invalid setup says why and offers the nearest valid round length
-  ui set-text has=Levels class=EditText --value 25
+  ui set-text "has=Level length" class=EditText --value 25
   ui enter
   ui scroll-to "Use 20-min rounds (9 levels)" --max 4   # under the verdict, can be below the fold
   ui assert-text "text~=Can't build blinds" "text~=doesn't divide into 25-minute rounds" "Use 20-min rounds (9 levels)"
@@ -480,7 +480,7 @@ s_invalid_setup() {
 s_invalid_setup_fixed() {
   ui tap "text=Use 20-min rounds (9 levels)"
   ui wait-gone "text~=Can't build blinds"
-  ui assert-text "has=Levels|20" "text~=Works: 9 levels, 25 / 50 to 5,000 / 10,000"
+  ui assert-text "has=Level length|20" "text~=Works: 9 levels, 25 / 50 to 5,000 / 10,000"
 }
 s_breaks() {
   # PP-026: a break every 4 levels with a note; the verdict counts the breaks and the new end
@@ -802,7 +802,7 @@ s_setup_unlock() {
   ui assert-text "Edit money and blinds?" "Keep locked" "text=Unlock to edit" || return 1
   ui tap "text=Unlock to edit"
   ui wait-gone "Edit money and blinds?"
-  ui assert-text "text~=Unlocked: money and blinds" "has=Buy-in" "has=Levels"
+  ui assert-text "text~=Unlocked: money and blinds" "has=Buy-in" "has=Level length"
 }
 s_setup_closed() {
   # Closing setup locks it again; the clock never stopped
@@ -1120,7 +1120,7 @@ s_rebuy_zero_prompt() {
   ui scroll-to has=Rebuy class=EditText --max 3
   ui set-text has=Rebuy class=EditText --value ""
   ui enter                                    # leave it empty: asks before clearing anything
-  ui assert-text "Turn rebuys off?" Keep "text~=Clear rebuy"
+  ui assert-text "Turn rebuys off?" Keep "re=^Clear [0-9]+ rebuys?$"
 }
 s_rebuy_kept() {
   ui tap text=Keep

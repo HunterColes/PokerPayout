@@ -66,10 +66,13 @@ fun BlindsConfigPanel(uiState: TimerUiState, onIntent: (TimerIntent) -> Unit, mo
     }
 }
 
-/** Game length and level length: the money and blind fields' "Levels" row. */
+/**
+ * Game length and level length. The boxes line up at the bottom, like the rows below, when one
+ * label wraps at a large font size and the other doesn't.
+ */
 @Composable
 internal fun TimingRow(config: BlindConfiguration, onIntent: (TimerIntent) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
         SetupNumberField(
             value = config.gameDurationHours,
             onCommit = { onIntent(TimerIntent.GameDurationHoursChanged(it)) },

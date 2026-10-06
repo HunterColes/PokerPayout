@@ -12,10 +12,9 @@
 #                   kotlinx-serialization's R8 rules keep each route's INSTANCE and
 #                   serializer(). The route string is the serialName constant that the
 #                   compiler plugin bakes in, so obfuscated class names don't change it.
-#   Room            room-runtime keeps `* extends RoomDatabase`, so AppDatabase_Impl can
-#                   still be loaded by name.
 #   @Parcelize      the default file keeps Parcelable CREATOR fields and enum
-#                   values()/valueOf() (PlayerActionType is a parcelable enum).
+#                   values()/valueOf() (TournamentUi, saved with the Tournament tab,
+#                   holds TournamentMode, an enum).
 #   Preferences     SharedPreferences hold plain strings and numbers ("COUNTDOWN",
 #                   "player", ...). No enum or class is looked up by its name.
 #

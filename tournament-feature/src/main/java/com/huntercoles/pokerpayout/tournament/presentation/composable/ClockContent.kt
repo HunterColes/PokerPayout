@@ -41,7 +41,7 @@ internal fun ClockContent(
     val openPanel = { actions.updateUi { it.openPanel() } }
     if (layout == ClockLayout.TwoPane) {
         Column(Modifier.fillMaxSize().padding(horizontal = gutter)) {
-            SetupStrip(SetupSummary.strip(setup, timer, full = true), openPanel)
+            SetupStrip(SetupSummary.stripParts(setup, timer, full = true), openPanel)
             Row(Modifier.weight(1f).padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 Column(
                     modifier = Modifier.weight(LEFT_PANE).verticalScroll(rememberScrollState()).padding(bottom = 16.dp),
@@ -65,7 +65,7 @@ internal fun ClockContent(
                 .padding(start = gutter, end = gutter, top = 4.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SetupStrip(SetupSummary.strip(setup, timer), openPanel)
+            SetupStrip(SetupSummary.stripParts(setup, timer), openPanel)
             ClockMain(timer, actions, layout)
             ClockSide(setup, timer, showSubs = layout != ClockLayout.Small)
         }

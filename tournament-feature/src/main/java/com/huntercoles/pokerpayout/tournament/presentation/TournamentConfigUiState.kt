@@ -10,10 +10,7 @@ import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences.TournamentConfigData
 
 /** Which purchases a zero amount would clear. */
-enum class PurchaseKind(val singular: String, val plural: String) {
-    REBUY(singular = "rebuy", plural = "rebuys"),
-    ADD_ON(singular = "add-on", plural = "add-ons")
-}
+enum class PurchaseKind { REBUY, ADD_ON }
 
 /** Asks before a zero rebuy or add-on amount clears [count] recorded purchases. */
 data class PurchaseClearPrompt(val kind: PurchaseKind, val count: Int, val keptAmountCents: Long)

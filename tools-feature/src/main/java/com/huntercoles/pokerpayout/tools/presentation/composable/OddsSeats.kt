@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
@@ -218,18 +219,25 @@ internal fun SeatHeader(
     }
 }
 
-/** The seat's name (tap for its menu) and the status line under it. */
+/**
+ * The seat's name (tap for its menu) and the status line under it. The name replaces the merged
+ * text for TalkBack, so the status ("Favourite", "Ahead right now") is the node's state.
+ */
 @Composable
 private fun SeatInfo(ui: SeatUi, table: OddsTable, onIntent: (OddsCalculatorIntent) -> Unit) {
     var menuOpen by remember { mutableStateOf(false) }
     val options = stringResource(R.string.odds_seat_options, ui.name)
+    val status = statusText(ui.status)
     Box {
         Column(
             modifier = Modifier
                 .heightIn(min = PokerDimens.MinTouch)
                 .widthIn(min = PokerDimens.MinTouch)
                 .clickable(role = Role.Button) { menuOpen = true }
-                .semantics { contentDescription = options },
+                .semantics {
+                    contentDescription = options
+                    if (status != null) stateDescription = status
+                },
             verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -250,6 +258,16 @@ private fun SeatInfo(ui: SeatUi, table: OddsTable, onIntent: (OddsCalculatorInte
         }
         SeatMenu(expanded = menuOpen, ui = ui, table = table, onDismiss = { menuOpen = false }, onIntent = onIntent)
     }
+}
+
+/** What the status line under a seat's name says, or null when it says nothing. */
+@Composable
+private fun statusText(status: SeatStatus): String? = when (status) {
+    SeatStatus.Favourite -> stringResource(R.string.odds_favourite)
+    SeatStatus.Folded -> stringResource(R.string.odds_folded)
+    SeatStatus.AheadNow -> stringResource(R.string.odds_ahead_now)
+    is SeatStatus.Hint -> status.text
+    SeatStatus.None -> null
 }
 
 /** Fold or bring back, swap with another seat, random hand, clear the cards, remove the seat. */

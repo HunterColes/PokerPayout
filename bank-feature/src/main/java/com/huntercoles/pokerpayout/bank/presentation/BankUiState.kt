@@ -85,7 +85,6 @@ data class BankUiState(
     val isRebuyEnabled: Boolean get() = money.rebuyCents > 0L
     val isAddOnEnabled: Boolean get() = money.addOnCents > 0L
     val activePlayers: Int get() = players.count { !it.out }
-    val paidOutCount: Int get() = players.count { it.paidOut }
     val totalRebuyCount: Int get() = players.sumOf { it.rebuys }
     val totalAddonCount: Int get() = players.sumOf { it.addons }
     val canUndo: Boolean get() = undoLabel != null

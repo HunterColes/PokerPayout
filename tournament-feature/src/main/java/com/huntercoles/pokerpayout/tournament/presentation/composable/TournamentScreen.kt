@@ -47,7 +47,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
 import com.huntercoles.pokerpayout.core.design.components.ConfirmSheet
 import com.huntercoles.pokerpayout.core.design.components.LocalWidthClass
-import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
 import com.huntercoles.pokerpayout.core.design.components.RequestShellChrome
 import com.huntercoles.pokerpayout.core.design.components.WidthClass
 import com.huntercoles.pokerpayout.core.design.components.fillShellWidth
@@ -57,6 +56,7 @@ import com.huntercoles.pokerpayout.core.presentation.RequestOrientation
 import com.huntercoles.pokerpayout.core.presentation.findActivity
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.tournament.R
+import com.huntercoles.pokerpayout.tournament.presentation.PurchaseKind
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
@@ -306,24 +306,34 @@ private fun resetDescription(uiState: TournamentConfigUiState): String {
     }
 }
 
-/** "Clear recorded purchases?" when a rebuy or add-on amount is left at $0 (PP-014). */
+/**
+ * "Turn rebuys off?" when a rebuy or add-on amount is left at $0 while purchases are recorded
+ * (PP-014): a sheet like every other confirmation, Keep on the left, the red "Clear 3 rebuys" on
+ * the right (PP-049; it was the last old-style dialog).
+ */
 @Composable
 private fun PurchaseClearQuestion(uiState: TournamentConfigUiState, onIntent: (TournamentConfigIntent) -> Unit) {
     uiState.purchaseClearPrompt?.let { prompt ->
-        val noun = if (prompt.count == 1) prompt.kind.singular else prompt.kind.plural
-        PokerConfirmationDialog(
-            title = stringResource(R.string.tournament_turn_off_title, prompt.kind.plural),
-            description = stringResource(
-                R.string.tournament_turn_off_description,
-                prompt.kind.singular,
-                prompt.count,
-                noun,
-                FormatUtils.formatCents(prompt.keptAmountCents)
+        val count = prompt.count
+        val kept = FormatUtils.formatCents(prompt.keptAmountCents)
+        val rebuys = prompt.kind == PurchaseKind.REBUY
+        ConfirmSheet(
+            title = stringResource(if (rebuys) R.string.tournament_turn_off_rebuys else R.string.tournament_turn_off_add_ons),
+            body = pluralStringResource(
+                if (rebuys) R.plurals.tournament_turn_off_rebuys_body else R.plurals.tournament_turn_off_add_ons_body,
+                count,
+                count,
+                kept,
+            ),
+            dismissLabel = stringResource(R.string.tournament_keep),
+            confirmLabel = pluralStringResource(
+                if (rebuys) R.plurals.tournament_clear_rebuys else R.plurals.tournament_clear_add_ons,
+                count,
+                count,
             ),
             onDismiss = { onIntent(TournamentConfigIntent.DismissClearPurchases) },
             onConfirm = { onIntent(TournamentConfigIntent.ConfirmClearPurchases) },
-            cancelText = stringResource(R.string.tournament_keep),
-            confirmText = stringResource(R.string.tournament_clear, noun)
+            destructive = true,
         )
     }
 }

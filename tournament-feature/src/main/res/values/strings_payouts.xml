@@ -11,7 +11,6 @@
     <string name="payouts_prize_pool">Prize pool</string>
     <string name="payouts_structure_label">Structure · what 1st gets</string>
     <string name="payouts_round_to">Round to</string>
-    <string name="payouts_places">Places</string>
     <string name="payouts_places_stepper">Places paid</string>
     <string name="payouts_adds_up">Adds up to %1$s</string>
     <string name="payouts_still_playing">Still playing</string>

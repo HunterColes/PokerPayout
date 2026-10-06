@@ -195,12 +195,13 @@ fun TournamentContent(
         clock = TournamentOrientation.TableViewInputs(clockExists, timer.isTableView, settled.rotationPaused),
     )
     if (tableView) {
+        // ✕ (or Back) shows the clock upright for this turn, whether ⤢ or a turn opened the table
+        // view (PP-094 #2). Closing a ⤢ view must hold too: with rotation locked, Android 14 keeps
+        // the landscape it was asked for as the user's rotation, so following it would bring the
+        // table view straight back.
         val exit = {
-            if (timer.isTableView) {
-                actions.onTimerIntent(TimerIntent.SetTableView(false))
-            } else {
-                actions.updateUi { it.pauseRotation(true) }
-            }
+            if (timer.isTableView) actions.onTimerIntent(TimerIntent.SetTableView(false))
+            actions.updateUi { it.pauseRotation(true) }
         }
         RequestShellChrome(immersive = true)
         HideSystemBars()

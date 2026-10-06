@@ -4,6 +4,11 @@
 # (<module>/lint-baseline.xml, <module>/detekt-baseline.xml). The unit-test task fails if a module
 # runs fewer tests than it declares (see the root build.gradle.kts).
 #
+# The unit-test step also verifies the screenshot goldens (<module>/src/test/screenshots, Roborazzi;
+# roborazzi.test.verify=true in gradle.properties), so a visual change fails CI until someone
+# re-records the goldens on purpose with ./gradlew recordRoborazziDebug. On a failure the
+# reference | diff | new images are uploaded with the reports (build/outputs/roborazzi).
+#
 # No secrets are used, and the token is read-only, so pull requests from forks run the same job.
 name: CI
 
@@ -35,7 +40,7 @@ jobs:
       # Caches Gradle state (read-only outside the default branch) and validates the wrapper jar.
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Unit tests (all modules)
+      - name: Unit tests and screenshot goldens (all modules)
         run: ./gradlew testDebugUnitTest --continue
 
       - name: Android Lint (new issues only)
@@ -54,5 +59,6 @@ jobs:
           path: |
             */build/reports/
             */build/test-results/
+            */build/outputs/roborazzi/
           if-no-files-found: ignore
           retention-days: 14

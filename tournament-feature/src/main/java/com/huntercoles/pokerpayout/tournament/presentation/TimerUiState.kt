@@ -2,7 +2,6 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
 import com.huntercoles.pokerpayout.core.utils.BlindSetupProblem
-import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
 import com.huntercoles.pokerpayout.core.utils.ChipSetChips
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSegment
@@ -174,8 +173,6 @@ data class TimerUiState(
     /** Next is possible until the last overtime level. */
     val canGoForward: Boolean
         get() = currentSegmentIndex in 0 until timeline.segments.lastIndex
-
-    val maxOvertimeLevels: Int get() = BlindStructureCalculator.MAX_OVERTIME_LEVELS
 
     companion object {
         const val LOW_FRACTION = 0.25

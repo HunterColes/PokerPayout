@@ -20,6 +20,8 @@ android {
 
     testOptions {
         targetSdk = 34
+        // Robolectric needs the merged manifest to start the Compose test activity
+        unitTests.isIncludeAndroidResources = true
     }
 
     buildFeatures {
@@ -61,6 +63,7 @@ dependencies {
     // Testing dependencies
     testImplementation(libs.bundles.common.test)
     testImplementation(libs.test.robolectric)
+    testImplementation(libs.test.android.compose)
     testImplementation(libs.test.androidx.core)
     androidTestImplementation(libs.bundles.common.android.test)
     androidTestImplementation(platform(libs.compose.bom))

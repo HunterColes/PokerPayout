@@ -15,11 +15,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
@@ -30,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.components.PokerTextFieldDefaults
+import com.huntercoles.pokerpayout.core.design.components.leaveOnHardwareEnter
 import com.huntercoles.pokerpayout.core.utils.MoneyInput
 import java.util.Locale
 
@@ -116,20 +112,13 @@ internal fun MoneyTextField(
         enabled = !isLocked,
         colors = PokerTextFieldDefaults.colors(isLocked = isLocked),
         modifier = modifier
-            .clearFocusOnEnter { focusManager.clearFocus(force = true) }
+            .leaveOnHardwareEnter { focusManager.clearFocus(force = true) }
             .onFocusChanged { focusState ->
                 if (isFocused && !focusState.isFocused) commit()
                 if (!isFocused && focusState.isFocused) centsBeforeEdit = valueCents
                 isFocused = focusState.isFocused
             }
     )
-}
-
-/** Hardware Enter leaves the field (which commits it) instead of typing a newline. */
-private fun Modifier.clearFocusOnEnter(clearFocus: () -> Unit): Modifier = onPreviewKeyEvent { event ->
-    val isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter
-    if (isEnter && event.type == KeyEventType.KeyUp) clearFocus()
-    isEnter
 }
 
 /** Sends typed amounts to [onTyped] and committed ones to [onCommitted]. */

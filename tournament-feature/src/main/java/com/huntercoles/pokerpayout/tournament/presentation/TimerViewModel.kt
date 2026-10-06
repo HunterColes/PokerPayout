@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -697,7 +698,10 @@ class TimerViewModel @Inject constructor(
         }
     }
 
-    /** The rebuy cutoff (Tournament setup) and the chime's mute (Tools, Sound), as they change. */
+    /**
+     * The rebuy cutoff (Tournament setup) and the chime's mute (Tools, Sound), as they change; and a
+     * whole setup put in before the start (a preset loaded, PP-032), read again as a blind change.
+     */
     private fun observeSettings() {
         _uiState.update {
             it.copy(rebuyUntilLevel = tournamentPreferences.getRebuyUntilLevel(), isMuted = audioPreferences.getIsMuted())
@@ -707,6 +711,11 @@ class TimerViewModel @Inject constructor(
         }
         viewModelScope.launch {
             audioPreferences.isMuted.collect { muted -> _uiState.update { it.copy(isMuted = muted) } }
+        }
+        viewModelScope.launch {
+            tournamentPreferences.setupRevision.drop(1).collect {
+                if (!_uiState.value.hasTimerStarted) changeSetup { loadConfig(frozen = false) }
+            }
         }
     }
 

@@ -286,7 +286,8 @@ elif [[ ! -x $TOUR ]]; then
 else
   t0=$(date +%s); newlog device-tour
   # One emulator per machine: wait for any agent's tour to finish, and shut it down after.
-  flock /tmp/pokerpayout-emulator.lock "$TOUR" --stop >"$log" 2>&1 \
+  # --release tours the minified (R8) build, i.e. the code that actually ships.
+  flock /tmp/pokerpayout-emulator.lock "$TOUR" --release --stop >"$log" 2>&1 \
     || fail_step "device tour" "failed (report: build/device-reports/latest)" "$log"
   line_ok "device tour" "passed ($(elapsed "$t0"))"
 fi

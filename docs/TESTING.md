@@ -9,7 +9,7 @@ sound. It is written so that a person *or* an AI agent can run it unattended.
 | Device smoke tour (screenshots + UI dumps + logcat) | `scripts/device/tour.sh` | emulator (auto-booted) | ~6 min incl. build |
 | Instrumented tests | `./gradlew connectedDebugAndroidTest` | running emulator | compiles; there are 0 instrumented tests (see below) |
 | JVM screenshot goldens + layout checks (Roborazzi, section 9) | part of `./gradlew testDebugUnitTest`; re-record with `./gradlew recordRoborazziDebug` | JDK 21 | ~20 s for core's 140 goldens and 48 matrix checks |
-| Device matrix: the real app on 10 screen sizes, fonts and rotations (section 10) | `scripts/device/matrix.sh` | emulator (auto-booted) | ~41 min (8 profiles) |
+| Device matrix: the real app on 10 screen sizes, fonts and rotations (section 10) | `scripts/device/matrix.sh` | emulator (auto-booted) | focused set (4 profiles) not yet timed on 1.3.4; 41 min for 8 profiles on 1.3.0 |
 
 ## 1. Prerequisites
 
@@ -580,9 +580,10 @@ catches what Robolectric can't: system bars and insets, the soft keyboard, real 
 activity being recreated, gestures and scrolling, and the process staying alive through it all.
 
 ```bash
-flock /tmp/pokerpayout-emulator.lock scripts/device/matrix.sh --stop   # build, install, the 8 default profiles
+flock /tmp/pokerpayout-emulator.lock scripts/device/matrix.sh --stop   # build, install, the focused 4 profiles
+scripts/device/matrix.sh --profiles daily              # the once-a-day set (7 profiles); all = every one
 scripts/device/matrix.sh --no-build                    # reuse the last APK
-scripts/device/matrix.sh --profiles small,tablet       # some profiles (--list shows them; all = every one)
+scripts/device/matrix.sh --profiles small,tablet       # some profiles (--list shows them)
 scripts/device/matrix.sh --steps bank,ime,ime-done     # your own steps (launch and profile come first)
 scripts/device/matrix.sh --full                        # every tour step on every profile
 scripts/device/matrix.sh --release                     # the R8 build
@@ -598,19 +599,33 @@ with `adb shell wm size` and `wm density`, and sets `font_scale` and `user_rotat
 seconds, needs no extra AVDs or system images, and the app really relays out: the `profile`
 step checks that the app's window is exactly the overridden screen.
 
-| Profile | Screen | dp | Font | Set | Why |
-|---|---|---|---|---|---|
-| `small` | 720 x 1280 @ 360 | 320 x 569 | 1.0 | smoke | The smallest phone we support; most screens run below the fold |
-| `small-f1.3` | 720 x 1280 @ 360 | 320 x 569 | 1.3 | screens | Large text on it |
-| `small-f2.0` | 720 x 1280 @ 360 | 320 x 569 | 2.0 | screens | The worst case: the largest text on the smallest screen |
-| `compact` | 1080 x 2400 @ 480 | 360 x 800 | 1.0 | screens | The commonest Android phone width (the mockups' frame) |
-| `default` | the emulator's own | 411 x 914 | 1.0 | screens | Pixel 7 class; the plain tour covers it step by step |
-| `default-f2.0` | the emulator's own | 411 x 914 | 2.0 | screens | The largest text on a common phone |
-| `foldable` | 1768 x 2208 @ 420 | 673 x 841 | 1.0 | screens | A foldable opened flat: the rail, a nearly square window |
-| `tablet` | 1600 x 2560 @ 320 | 800 x 1280 | 1.0 | smoke | A 10-inch tablet held upright: the rail, the 720 dp content cap |
-| `default-f1.3` | the emulator's own | 411 x 914 | 1.3 | screens | Not in the default run: it found nothing `default` and `default-f2.0` don't |
-| `large` | 1440 x 3120 @ 560 | 411 x 891 | 1.0 | screens | Not in the default run: the same dp as `default` at 3.5x, and it found nothing more |
-| `tablet-land` | 1600 x 2560 @ 320, turned 90 | 800 x 1280 | 1.0 | smoke | Not in the default run: the tablet turned. Today the app keeps it upright, so it is `tablet` again |
+| Profile | Screen | dp | Font | Turns | Set | Why |
+|---|---|---|---|---|---|---|
+| `small` | 720 x 1280 @ 360 | 320 x 569 | 1.0 | no | smoke | The smallest phone we support; most screens run below the fold |
+| `small-f1.3` | 720 x 1280 @ 360 | 320 x 569 | 1.3 | no | screens | Large text on it |
+| `small-f2.0` | 720 x 1280 @ 360 | 320 x 569 | 2.0 | no | screens | The worst case: the largest text on the smallest screen |
+| `compact` | 1080 x 2400 @ 480 | 360 x 800 | 1.0 | no | screens | The commonest Android phone width (the mockups' frame) |
+| `default` | the emulator's own | 411 x 914 | 1.0 | no | screens | Pixel 7 class; the plain tour covers it step by step |
+| `default-f2.0` | the emulator's own | 411 x 914 | 2.0 | no | screens | The largest text on a common phone |
+| `foldable` | 1768 x 2208 @ 420 | 673 x 841 | 1.0 | yes | screens | A foldable opened flat: the rail, a nearly square window |
+| `tablet` | 1600 x 2560 @ 320 | 800 x 1280 | 1.0 | yes | smoke | A 10-inch tablet held upright: the rail, the 720 dp content cap |
+| `default-f1.3` | the emulator's own | 411 x 914 | 1.3 | no | screens | Not in the default run: it found nothing `default` and `default-f2.0` don't |
+| `large` | 1440 x 3120 @ 560 | 411 x 891 | 1.0 | no | screens | Not in the default run: the same dp as `default` at 3.5x, and it found nothing more |
+| `tablet-land` | 1600 x 2560 @ 320, turned 90 | 1280 x 800 | 1.0 | yes | smoke | Not in the default run: the tablet turned, every tab landscape (`rotate` and `rotate-clock` turn every profile anyway) |
+
+**Turns** follows the app's rotation rules (M3, PP-079/PP-088), by the smallest width:
+
+* **Phones** (under 600 dp): every tab is portrait, except the Tournament tab once a clock exists,
+  which follows the display: turned, the clock is the table view (S3); upright, the clock (S2).
+* **Foldables and tablets** (600 dp and up): every tab turns with the display; turned, the clock
+  stays the clock (two panes from 840 dp).
+* On every size the table-view button (⤢) shows the table view in landscape until ✕.
+
+**Sets** (PP-093): `focused` is the routine run and the default (`small`, `small-f2.0`,
+`default-f2.0`, `tablet`); `daily` runs once a day (`small`, `small-f1.3`, `small-f2.0`, `compact`,
+`default-f2.0`, `foldable`, `tablet`; not `default`, which the plain tour covers on every pull
+request); `all` runs every profile. On GitHub, the `Device matrix` job in `device.yml` runs a set
+by hand: `gh workflow run device.yml --ref <branch> -f job=matrix -f profiles=focused`.
 
 The emulator scales any override onto its panel, so sizes bigger than 1080 x 2400 work too.
 Screenshots come out at the profile's own size. SystemUI forgets its demo mode when the size
@@ -620,18 +635,22 @@ changes, so the matrix sends it again (the clock stays at 12:00).
 
 Each profile runs one of two step sets (`--list` prints them):
 
-* **smoke** (31 steps, on `small` and `tablet`): launch, the configuration and a rebuy amount,
-  Payouts (the folder tab), Blinds and the smallest chip, the collapsed clock; Bank, a rebuy, the
-  soft keyboard, the pool summary dialog, the Payouts tab, Tools, Hand ranks, Odds through to the
-  exact results, Chip set and its breakdown; back to Tournament, start the clock, the table view
-  (also from a display turned to 270), rotation, the tab layout, and the process still alive.
-* **screens** (25 steps, everywhere else): the same screens and dialogs without the keyboard, the
-  Odds keypad round and the turned table view, none of which change with the text size.
+* **smoke** (50 steps, on `small` and `tablet`), in the tour's own order: setup (money, the
+  Payouts tab and its structure sheet, blinds, the smallest chip, breaks, the ready ticket); Start,
+  which folds setup into the clock; two levels on to the first break; the table view from its
+  button and back; End break now; the running clock turned both ways; the setup panel over the
+  clock; a reset; the Bank (rename, buy-in, rebuy, a knockout, the pool and structure sheets) and
+  the soft keyboard; the Payouts tab; Tools, Hand ranks, Odds to the exact result, the chip set;
+  the rebuy cutoff with a clock running; process death; the other tabs turned; the tab layout.
+* **screens** (44 steps, everywhere else): the same without the keyboard and the Odds keypad
+  round, neither of which changes with the text size.
 
-`--full` runs every tour step on every profile instead, with the matrix steps added, and the
-`rail` steps (the density trick) on profiles under 600 dp. The sets can name steps the tour
-doesn't have (a step renamed on another branch, like the chip set's): the matrix warns once and
-skips them.
+`--full` runs every tour step on every profile instead, with the matrix steps added. On profiles
+of 600 dp and up it leaves out the steps that assume a phone: the `rail` steps (the density
+trick) and the tour's `table-view`, `table-view-resume`, `table-view-exit`, `rotate-to-table` and
+`rotate-back` (landscape table view, the turned clock as the table view); `table-view-land` and
+`rotate-clock` check the wide rules there instead. The sets can name steps the tour doesn't have
+(a step renamed on another branch): the matrix warns once and skips them.
 
 After a failed step the matrix's tour (`PP_TOUR_RECOVER=1`) presses Back if no tabs are on screen,
 so a dialog the failure left open doesn't fail every step after it; the failed step's
@@ -643,10 +662,13 @@ The matrix's own steps are opt-in tour steps in `scripts/device/steps-matrix.sh`
 |---|---|
 | `profile` | The app's window is the profile's screen (it relaid out), the font scale took, the orientation is right. Writes `display.env` (size, density, font, insets) for the checks |
 | `nav-layout` | Four tabs: a bottom bar below 600 dp, a rail down the left from 600 dp, on the profile as it is |
-| `rotate` | `user_rotation` 1, then 3, with the accelerometer off: the app stays upright (portrait-only), its tabs still work while the display is turned, and it is the same process |
-| `table-view-land` | The table view opens landscape on any profile (its screenshot is the landscape clock) |
-| `table-view-back` | Leaving it returns to portrait; again with the display turned to 270 |
-| `table-view-close` | Leaving it returns to portrait (the screens set) |
+| `rotate`, `rotate-upright` | On Tools and Bank, `user_rotation` 1, then 3, with the accelerometer off: a phone stays upright, a wide screen turns; the tabs work either way. `rotate`'s screenshot is the Bank turned to 270; `rotate-upright` turns it upright and checks it is the same process |
+| `rotate-clock`, `rotate-clock-back` | The running clock turned to 90 (the screenshot), then 270, then upright: on a phone the table view (no tabs), on a wide screen the clock itself in landscape (tabs and all); the same level throughout |
+| `table-view-land` | The table-view button: the clock alone, full screen, no tabs, landscape |
+| `table-view-close` | ✕: back to the clock, in the profile's orientation |
+| `table-view-back` | ✕, then the same with the display turned to 270 (on a phone the turned clock already is the table view) |
+| `setup-close` | Closes the setup panel opened over the running clock (the tour's `setup-panel`); the clock runs on |
+| `process-death` | PP-093: the app in the background, killed as low memory does (`am kill`), opened again from the launcher. The clock must be on the same level with its time still counting (within 4 s of the time that passed, no restart), and every Bank cell (buy-in, rebuy, out, paid) the same as before |
 | `ime`, `ime-done` | The soft keyboard over the lowest name field on the Bank: the field stays above it |
 | `payouts-screen` | The Payouts tab's table adds up (the rail step's check, at any width) |
 
@@ -710,7 +732,11 @@ screen (then fix the step, minimally).
 
 ### Time
 
-Measured on this machine (2026-10-06, host load 1 to 6), the default run took **41 minutes**:
+These times are from 1.3.0 (before M3), when the default run was 8 profiles with shorter step
+sets; it took **41 minutes** on this machine (2026-10-06, host load 1 to 6). The focused set on
+1.3.4 hasn't been timed in full. In a part-run on 1.3.4, 30 of its steps took 10 minutes on
+`small` and 5 on `default`; expect about 40 to 50 minutes for the focused set, and about 80 for
+the daily one.
 
 | Profile | Set | Time |
 |---|---|---|
@@ -746,15 +772,19 @@ The emulator is shared and keeps `wm size` and `wm density` across reboots, so:
 * **A profile:** add a line to `PROFILES` in `matrix.sh` (name, `WxH`, dpi, font, rotation,
   turns, step set, description). To run it by default, add its name to `DEFAULT_PROFILES`, and
   keep an eye on the run's time.
-* **A rotated profile:** set its rotation to 1 (or 3). `turns` says whether the app's screens
-  turn with the display there: `no` today, because the app is portrait-only. Once PP-088 lets
-  tablets rotate, set `turns` to `yes` on `tablet-land` and add it to `DEFAULT_PROFILES`. The
-  `profile`, `rotate` and `table-view-back` steps then expect landscape there.
-* **A rotation step** (for example once the Clock batch rotates the clock): use the helpers in
-  `steps-matrix.sh`: `rotate_to land|port|seascape`, `require_orientation land|port` and
-  `orientation_at <rotation>`. A step that rotates leaves a mark, so the rotation comes back
-  however the tour ends. Note: every `uiautomator dump` re-freezes the rotation at the display's
-  current one, so under a portrait-only screen it would turn a user rotation of 90 back to 0;
-  `rotate_to` (and a rotated profile) sets `PP_UI_HOLD_ROTATION`, and `ui.py` puts the rotation
-  back after each dump. `require_user_rotation N` checks it held. Register it with `extra_step` and add it to `SMOKE_STEPS` (and
-  `SCREENS_STEPS` if it should run on every profile).
+* **A rotated profile:** set its rotation to 1 (or 3). `turns` says whether the app's ordinary
+  screens turn with the display there: `yes` from 600 dp (PP-088), `no` on phones, where only the
+  running clock turns (into the table view). The `profile`, `rotate`, `table-view-*` and
+  `rotate-clock` steps read it (and the smallest width) to know what to expect.
+* **A rotation step:** use the helpers in `steps-matrix.sh`: `rotate_to land|port|seascape`,
+  `require_orientation land|port`, `orientation_at <rotation>` (ordinary screens on this profile)
+  and `wide_screen` (smallest width 600 dp and up). A step that rotates leaves a mark
+  (`$OUT/.rotation`, "accelerometer user", the same mark the tour's `rotate-to-table` uses), so
+  the rotation comes back however the tour ends.
+* Every `uiautomator dump` re-freezes the rotation at the display's current one, so under a
+  portrait-only screen it would turn a user rotation of 90 back to 0. `rotate_to` (and a rotated
+  profile) sets `PP_UI_HOLD_ROTATION`, and `ui.py` puts the rotation back after each dump;
+  `require_user_rotation N` checks it held.
+* Register the step with `extra_step` (a name and function the tour doesn't use: the tour dies
+  on a name registered twice) and add it to `SMOKE_STEPS` (and `SCREENS_STEPS` to run it on every
+  profile).

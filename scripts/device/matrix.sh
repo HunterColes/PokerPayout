@@ -4,10 +4,11 @@
 # overrides on the AVD (no extra AVDs); the emulator is put back to its own 1080x2400 @ 420 dpi,
 # font scale 1.0, rotation 0 however the run ends.
 #
-#   scripts/device/matrix.sh                    # build, install, each default profile's steps
+#   scripts/device/matrix.sh                    # build, install, the focused profiles' steps
 #                                               # (the smoke set or the shorter screens set)
+#   scripts/device/matrix.sh --profiles daily   # the once-a-day set (7 profiles); all = every one
 #   scripts/device/matrix.sh --full             # every tour step on every profile (slow)
-#   scripts/device/matrix.sh --profiles small,tablet   # just these profiles (--list shows them; all)
+#   scripts/device/matrix.sh --profiles small,tablet   # just these profiles (--list shows them)
 #   scripts/device/matrix.sh --steps bank,ime,ime-done # these steps (after launch and profile)
 #   scripts/device/matrix.sh --no-build | --release | --stop
 #   scripts/device/matrix.sh --list             # the profiles and the step sets, then exit
@@ -25,8 +26,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 # ------------------------------------------------------------------ profiles
 # name          size       dpi  font rot turns set      what it stands for
 #   size/dpi "-" = the emulator's own 1080x2400 @ 420. rot = user rotation (0 upright, 1 = 90).
-#   turns = "no" while the app's screens are locked to portrait (today); set "yes" on a profile
-#   once its screens rotate (PP-088), and the rotation checks then expect landscape there.
+#   turns = "yes" where every tab turns with the display (smallest width 600 dp and up: PP-088);
+#   "no" on phones, where only the Tournament tab's running clock turns, into the table view
+#   (PP-079; the rotate-clock step checks that on every profile).
 #   set = the steps it runs by default: smoke (everything below) or screens (the key screens).
 PROFILES=(
   "small         720x1280   360  1.0  0  no   smoke    320 x 569 dp: the smallest phone we support"
@@ -37,42 +39,57 @@ PROFILES=(
   "default-f1.3  -          -    1.3  0  no   screens  default at 130 % text"
   "default-f2.0  -          -    2.0  0  no   screens  default at 200 % text"
   "large         1440x3120  560  1.0  0  no   screens  411 x 891 dp at 3.5x: a big QHD phone (Pixel 7 Pro class)"
-  "foldable      1768x2208  420  1.0  0  no   screens  673 x 841 dp: a foldable opened flat; the rail"
-  "tablet        1600x2560  320  1.0  0  no   smoke    800 x 1280 dp: a 10-inch tablet held upright; the rail"
-  "tablet-land   1600x2560  320  1.0  1  no   smoke    the tablet turned 90: the portrait-only app stays upright (PP-088)"
+  "foldable      1768x2208  420  1.0  0  yes  screens  673 x 841 dp: a foldable opened flat; the rail"
+  "tablet        1600x2560  320  1.0  0  yes  smoke    800 x 1280 dp: a 10-inch tablet held upright; the rail"
+  "tablet-land   1600x2560  320  1.0  1  yes  smoke    the tablet turned 90: 1280 x 800 dp, every tab landscape (PP-088)"
 )
-# The default run keeps to about 40 minutes. Not in it: large (the same dp as default, only denser:
-# it found nothing default didn't), default-f1.3 (between default and default-f2.0: the same) and
-# tablet-land (identical to tablet until PP-088). --profiles all runs every profile.
-DEFAULT_PROFILES="small small-f1.3 small-f2.0 compact default default-f2.0 foldable tablet"
+# Named sets for --profiles (PP-093):
+#   focused  the routine run (the default): the smallest phone with its full smoke set, the worst
+#            text cases on the smallest and a common phone, and the tablet with its smoke set
+#   daily    once a day: also 130 % text, the 360 dp phone and the foldable. Not `default`: the
+#            plain tour covers that screen step by step on every pull request
+#   all      every profile. Never in a named set: large (the same dp as default, only denser: it
+#            found nothing default didn't), default-f1.3 (between default and default-f2.0) and
+#            tablet-land (the tablet turned; rotate and rotate-clock turn every profile anyway)
+FOCUSED_PROFILES="small small-f2.0 default-f2.0 tablet"
+DAILY_PROFILES="small small-f1.3 small-f2.0 compact default-f2.0 foldable tablet"
+DEFAULT_PROFILES="$FOCUSED_PROFILES"
 
 # ------------------------------------------------------------------ steps
-# The smoke set: every tab and tool once, the keyboard, Odds through to exact results, the clock
-# running and its table view (also from a turned display), rotation and the tab layout. The order
-# matters: each step starts where the one before left off. A name the tour doesn't have is
-# skipped with a warning, so the sets can name a step before or after a rename: the chip set's
-# result is `chip-calc-generated` before M6 and `chip-calc-stack` after it.
-SMOKE_STEPS="launch profile tournament-config rebuy-amount payouts-tab blinds-tab smallest-chip
-  config-collapsed bank bank-rebuy ime ime-done pool-summary bank-scrolled payouts-screen tools
-  hand-ranks odds-empty odds-card-picker odds-hole-cards odds-flop odds-results chip-calc
-  chip-calc-generated chip-calc-stack back-to-tournament timer-running table-view-land
-  table-view-back rotate nav-layout app-alive"
-# The screens set: the same screens and dialogs, without the keyboard, the Odds keypad round and
-# the rotated table view (none of which change with the text size), to keep the run short.
-SCREENS_STEPS="launch profile tournament-config rebuy-amount payouts-tab blinds-tab smallest-chip
-  config-collapsed bank bank-rebuy pool-summary bank-scrolled payouts-screen tools hand-ranks
-  chip-calc chip-calc-generated chip-calc-stack odds-empty back-to-tournament timer-running
-  table-view-land table-view-close rotate nav-layout app-alive"
-# Matrix steps added to --full (before app-alive; each one finds its own screen).
-FULL_EXTRAS="ime ime-done table-view-land table-view-back rotate nav-layout"
-# These force a phone's window to 720 dp (wm density) and expect the bottom bar back after: only
-# under 600 dp, and only in --full (the plain tour runs them; nav-layout checks the real rail on
-# the wide profiles).
-PHONE_ONLY="rail rail-tools rail-payouts rail-restored"
+# The smoke set: every tab and tool, the Tournament tab from setup through the clock, a break, the
+# table view and the turned clock to a reset, the Bank's records, the keyboard, Odds through to the
+# exact result, the chip set, the rebuy cutoff with a running clock, process death, rotation and
+# the tab layout. The order matters: each step starts where the one before left off (the same
+# order as the tour's own). A name the tour doesn't have is skipped with a warning.
+SMOKE_STEPS="launch profile tournament-config payouts-tab payouts-editor blinds smallest-chip breaks
+  ready-ticket start-fold timer-next-level timer-break table-view-land table-view-close end-break
+  rotate-clock rotate-clock-back setup-panel setup-close tournament-reset tournament-reset-ok rebuy-amount
+  bank bank-rename bank-buyin bank-rebuy bank-knockout-sheet bank-knockout-done pool-summary
+  weights-editor weights-closed ime ime-done payouts-screen tools hand-ranks odds-empty
+  odds-card-picker odds-hole-cards odds-flop odds-results chip-calc chip-calc-stack
+  bank-cutoff process-death rotate rotate-upright nav-layout app-alive"
+# The screens set: the same screens and sheets without the keyboard and the Odds keypad round
+# (neither changes with the text size), to keep the run short.
+SCREENS_STEPS="launch profile tournament-config payouts-tab payouts-editor blinds smallest-chip breaks
+  ready-ticket start-fold timer-next-level timer-break table-view-land table-view-close end-break
+  rotate-clock rotate-clock-back setup-panel setup-close tournament-reset tournament-reset-ok rebuy-amount
+  bank bank-rename bank-buyin bank-rebuy bank-knockout-sheet bank-knockout-done pool-summary
+  weights-editor weights-closed payouts-screen tools hand-ranks odds-empty chip-calc
+  chip-calc-stack bank-cutoff process-death rotate rotate-upright nav-layout app-alive"
+# Matrix steps added to --full: after the step named, these (each finds its own screen). After
+# bank-rebuy-blocked the clock runs in level 2 and the Bank has its records.
+FULL_EXTRAS_AFTER_bank_rebuy_blocked="rotate-clock rotate-clock-back table-view-land table-view-close process-death"
+FULL_EXTRAS_BEFORE_app_alive="ime ime-done rotate rotate-upright nav-layout"
+# Only on phones (smallest width under 600 dp), and only in --full: the rail steps force a phone's
+# window to 720 dp and expect the bottom bar back; the tour's own table-view and rotate-to-table
+# steps expect a phone's rules (landscape, the turned clock as the table view). On wide profiles
+# nav-layout, table-view-land and rotate-clock check the wide rules instead.
+PHONE_ONLY="rail rail-tools rail-payouts rail-restored table-view table-view-resume table-view-exit
+  rotate-to-table rotate-back"
 # The contact sheet's columns (one that no profile ran is left out).
-KEY_SCREENS="launch payouts-tab blinds-tab config-collapsed timer-running table-view-land bank ime
-  pool-summary payouts-screen tools hand-ranks odds-empty odds-results chip-calc-generated
-  chip-calc-stack rotate"
+KEY_SCREENS="launch payouts-tab blinds ready-ticket start-fold timer-break table-view-land rotate-clock
+  setup-panel bank bank-knockout-sheet pool-summary ime payouts-screen tools hand-ranks odds-results
+  chip-calc-stack process-death rotate"
 
 usage() { sed -n '2,22p' "$0"; }
 BUILD=1; VARIANT=debug; FULL=0; STOP_AFTER=0; LIST=0; ONLY_PROFILES=""; STEPS=""
@@ -97,13 +114,19 @@ if (( LIST )); then
   for p in "${PROFILES[@]}"; do
     read -r n s d f r t stepset desc <<<"$p"
     printf '%-13s %-10s %-4s %-4s %-3s %-5s %-8s %s%s\n' "$n" "$s" "$d" "$f" "$r" "$t" "$stepset" "$desc" \
-      "$([[ " $DEFAULT_PROFILES " == *" $n "* ]] && echo "" || echo " (not in the default run)")"
+      "$([[ " $FOCUSED_PROFILES " == *" $n "* ]] && echo " [focused]" || { [[ " $DAILY_PROFILES " == *" $n "* ]] && echo " [daily]"; } || true)"
   done
+  echo; echo "focused (the default): $FOCUSED_PROFILES"
+  echo "daily: $DAILY_PROFILES"
   echo; echo "smoke steps: $(xargs <<<"$SMOKE_STEPS")"
   echo; echo "screens steps: $(xargs <<<"$SCREENS_STEPS")"
   exit 0
 fi
-[[ "$ONLY_PROFILES" == all ]] && ONLY_PROFILES="$(for p in "${PROFILES[@]}"; do echo "${p%% *}"; done | xargs)"
+case "$ONLY_PROFILES" in
+  all) ONLY_PROFILES="$(for p in "${PROFILES[@]}"; do echo "${p%% *}"; done | xargs)" ;;
+  focused) ONLY_PROFILES="$FOCUSED_PROFILES" ;;
+  daily) ONLY_PROFILES="$DAILY_PROFILES" ;;
+esac
 read -r -a RUN_PROFILES <<<"$(tr ',' ' ' <<<"${ONLY_PROFILES:-$DEFAULT_PROFILES}")"
 for n in "${RUN_PROFILES[@]}"; do profile_line "$n" >/dev/null || die "unknown profile: $n (see --list)"; done
 
@@ -189,9 +212,10 @@ FULL_STEPS=""
 if (( FULL )); then
   while IFS=$'\t' read -r name kind _; do
     [[ "$kind" == tour ]] || continue
-    [[ "$name" == app-alive ]] && FULL_STEPS="$FULL_STEPS $FULL_EXTRAS"
+    [[ "$name" == app-alive ]] && FULL_STEPS="$FULL_STEPS $FULL_EXTRAS_BEFORE_app_alive"
     FULL_STEPS="$FULL_STEPS $name"
     [[ "$name" == launch ]] && FULL_STEPS="$FULL_STEPS profile"
+    [[ "$name" == bank-rebuy-blocked ]] && FULL_STEPS="$FULL_STEPS $FULL_EXTRAS_AFTER_bank_rebuy_blocked"
   done < <("$DEVICE_SCRIPTS/tour.sh" --list)
 fi
 CUSTOM_STEPS=""
@@ -224,13 +248,14 @@ for name in "${RUN_PROFILES[@]}"; do
   adb_ shell settings put system user_rotation "$rot"
   sleep 2
   demo_status_bar
-  # The steps for this profile: the phone-only ones only under 600 dp
-  phys_w="$(adb_ shell wm size | tr -d '\r' | sed -n 's/.*size: \([0-9]*\)x.*/\1/p' | tail -1)"
+  # The steps for this profile: the phone-only ones only under 600 dp (smallest width)
+  phys="$(adb_ shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)"
+  phys_w=${phys%x*}; (( phys_w < ${phys#*x} )) || phys_w=${phys#*x}
   dpi="$(adb_ shell wm density | tr -d '\r' | awk '{print $NF}' | tail -1)"
   steps=""
   for s in $(steps_for "$stepset"); do
     [[ "$KNOWN_STEPS" == *" $s "* ]] || continue
-    if (( phys_w * 160 / dpi >= 600 )) && [[ " $PHONE_ONLY " == *" $s "* ]]; then continue; fi
+    if (( phys_w * 160 / dpi >= 600 )) && [[ " $(xargs <<<"$PHONE_ONLY") " == *" $s "* ]]; then continue; fi
     steps="$steps $s"
   done
   echo "[matrix] $name ($desc): $(display_state), $(wc -w <<<"$steps") steps"

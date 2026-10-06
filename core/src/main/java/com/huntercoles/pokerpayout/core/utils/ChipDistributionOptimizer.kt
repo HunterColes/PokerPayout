@@ -170,6 +170,227 @@ object ChipDistributionOptimizer {
         )
     }
 
+    // ------------------------------------------------------------ chips you own (PP-033)
+
+    /**
+     * Most smallest-chip units a capped stack may be worth (the stack divided by the chips' common
+     * divisor). The reachability tables are bitsets this long; a home game never comes close
+     * (5,000 in 25s is 200 units).
+     */
+    const val MAX_CAPPED_UNITS = 200_000
+
+    /** Nodes one monotone search under caps may visit before the shape is relaxed instead. */
+    private const val DEAD_END_BUDGET_PER_SET = 20_000
+
+    /**
+     * One player's stack from the chips you own: like [optimize], but the candidate chips are
+     * [chips] (ascending, distinct; `chips[0]` is the smallest chip in play and always in the
+     * stack) and a stack may hold at most `caps[i]` of `chips[i]` (what you own, shared between the
+     * stacks you need). Chips with a cap of 0 are left out.
+     *
+     * The choice follows [optimize]'s rules: sets of up to [denominationCount] chips, the counts
+     * closest to [curve]'s ideal, the best fit score winning (40–80 chips doubling it). Two hard
+     * rules come first: the stack adds up exactly and stays under the caps. So when the caps leave
+     * no stack that keeps a linear curve's never-rising counts, the shape is relaxed
+     * ([CappedStack.shapeRelaxed]); and when no stack of up to [denominationCount] chips fits, more
+     * chips are used ([CappedStack.moreChipsThanAsked]).
+     *
+     * @return null when no exact stack fits under the caps at all (see [canMakeWithinCaps]), or
+     *   when the stack is worth more than [MAX_CAPPED_UNITS] units.
+     */
+    @Suppress("ReturnCount", "CyclomaticComplexMethod") // one early return per impossible input, then one per pass
+    fun optimizeWithinCaps(
+        targetValue: Int,
+        chips: IntArray,
+        caps: IntArray,
+        denominationCount: Int,
+        curve: ChipDistributionCurve
+    ): CappedStack? {
+        val usable = usableChips(targetValue, chips, caps) ?: return null
+        val budget = SearchBudget(NODE_BUDGET_PER_CALL)
+        val linear = isMonotone(curve)
+        val wanted = denominationCount.coerceAtLeast(1)
+        val larger = usable.drop(1)
+        fun bestOfSize(count: Int, monotone: Boolean): ChipDistributionResult? {
+            var best: ChipDistributionResult? = null
+            var bestScore = -1.0
+            forEachCombination(larger, count - 1) { combo ->
+                val denominations = IntArray(count)
+                val subsetCaps = IntArray(count)
+                denominations[0] = chips[0]
+                subsetCaps[0] = caps[0]
+                for (j in combo.indices) {
+                    denominations[j + 1] = chips[combo[j]]
+                    subsetCaps[j + 1] = caps[combo[j]]
+                }
+                val result = solveWithinCaps(targetValue, denominations, subsetCaps, curve, monotone, budget)
+                    ?: return@forEachCombination
+                val score = if (result.totalChips in PREFERRED_CHIP_RANGE) {
+                    result.fitScore * PREFERRED_RANGE_FIT_BOOST
+                } else {
+                    result.fitScore
+                }
+                if (score > bestScore) {
+                    best = result
+                    bestScore = score
+                }
+            }
+            return best
+        }
+
+        for (monotone in if (linear) listOf(true, false) else listOf(false)) {
+            for (count in minOf(wanted, usable.size) downTo 1) {
+                bestOfSize(count, monotone)?.let { return CappedStack(it, shapeRelaxed = linear && !it.isNonIncreasing()) }
+            }
+        }
+        for (count in wanted + 1..usable.size) {
+            bestOfSize(count, monotone = false)?.let {
+                return CappedStack(it, shapeRelaxed = linear && !it.isNonIncreasing(), moreChipsThanAsked = true)
+            }
+        }
+        return null
+    }
+
+    /**
+     * Whether any exact stack worth [targetValue] fits under [caps]: at least one `chips[0]`, and up
+     * to `caps[i]` of each `chips[i]`. Exactly when [optimizeWithinCaps] has an answer (for stacks
+     * up to [MAX_CAPPED_UNITS] units), but much cheaper: one bounded-knapsack bitset pass.
+     */
+    fun canMakeWithinCaps(targetValue: Int, chips: IntArray, caps: IntArray): Boolean {
+        val usable = usableChips(targetValue, chips, caps) ?: return false
+        val unit = usable.fold(0) { acc, i -> gcd(acc, chips[i]) }
+        val reach = CappedReach(
+            d = IntArray(usable.size) { chips[usable[it]] },
+            caps = IntArray(usable.size) { caps[usable[it]] },
+            unit = unit.toLong(),
+            maxAmount = targetValue.toLong(),
+            atLeastOne = BooleanArray(usable.size) { it == 0 }
+        )
+        return reach.canMake(usable.size, targetValue.toLong())
+    }
+
+    /**
+     * Indexes of the chips a stack may use (a cap of at least 1), or null when [targetValue] can't
+     * be planned at all: bad input, no smallest chip, not a multiple of the chips' common divisor,
+     * or more than [MAX_CAPPED_UNITS] of it.
+     */
+    private fun usableChips(targetValue: Int, chips: IntArray, caps: IntArray): List<Int>? {
+        val wellFormed = targetValue >= 1 && chips.isNotEmpty() && chips.size == caps.size
+        if (!wellFormed || caps[0] < 1) return null
+        val usable = chips.indices.filter { caps[it] >= 1 }
+        val unit = usable.fold(0) { acc, i -> gcd(acc, chips[i]) }
+        return usable.takeIf { targetValue % unit == 0 && targetValue / unit <= MAX_CAPPED_UNITS }
+    }
+
+    private fun ChipDistributionResult.isNonIncreasing(): Boolean = quantities.zipWithNext().all { (a, b) -> a >= b }
+
+    /** [solveForDenominations] under per-chip caps. */
+    @Suppress("LongParameterList") // the search's inputs, passed through
+    private fun solveWithinCaps(
+        targetValue: Int,
+        denominations: IntArray,
+        caps: IntArray,
+        curve: ChipDistributionCurve,
+        monotone: Boolean,
+        budget: SearchBudget
+    ): ChipDistributionResult? {
+        // An unreachable target fails the reachability check at once (solve() returns null)
+        val unit = denominations.fold(0) { acc, d -> gcd(acc, d) }
+        val idealY = idealCurveValues(denominations, curve)
+        val ideal = idealQuantities(targetValue, denominations, idealY)
+        val reach = CappedReach(
+            d = denominations,
+            caps = caps,
+            unit = unit.toLong(),
+            maxAmount = targetValue.toLong(),
+            atLeastOne = BooleanArray(denominations.size) { true }
+        )
+        val limits = SearchLimits(caps, reach, deadEnds = if (monotone) SearchBudget(DEAD_END_BUDGET_PER_SET) else null)
+        val quantities = ExactCountSearch(denominations, ideal, monotone, budget, limits).solve(targetValue.toLong())
+            ?: return null
+
+        val maxQty = quantities.max().toDouble()
+        return ChipDistributionResult(
+            denominations = denominations.toList(),
+            quantities = quantities.toList(),
+            fitScore = calculateFitScore(idealY, DoubleArray(quantities.size) { quantities[it] / maxQty }),
+            totalChips = quantities.sum(),
+            totalValue = targetValue,
+            curveUsed = curve
+        )
+    }
+
+    /**
+     * Exact reachability under caps, as bitsets over amounts in [unit]s: table k holds every amount
+     * the first k chips make with 1..caps[j] of chip j (0..caps[j] where [atLeastOne] is false).
+     * Built with binary splitting, so a cap of c costs about log2(c) shifted ORs per table.
+     */
+    private class CappedReach(
+        d: IntArray,
+        caps: IntArray,
+        private val unit: Long,
+        maxAmount: Long,
+        atLeastOne: BooleanArray
+    ) {
+        private val bits = maxAmount / unit + 1
+        private val words = ((bits + WORD_BITS - 1) / WORD_BITS).toInt()
+        private val tables = arrayOfNulls<LongArray>(d.size + 1)
+
+        init {
+            var table = LongArray(words).also { it[0] = 1L }
+            tables[0] = table
+            for (k in d.indices) {
+                val step = d[k] / unit
+                var optional = caps[k].toLong()
+                if (atLeastOne[k]) {
+                    table = shifted(table, step)
+                    optional -= 1
+                }
+                var chunk = 1L
+                while (optional > 0) {
+                    val take = minOf(chunk, optional)
+                    val shift = take * step
+                    if (shift < bits) table = orShifted(table, shift)
+                    optional -= take
+                    chunk *= 2
+                }
+                tables[k + 1] = table
+            }
+        }
+
+        /** Whether the first [k] chips make [amount] exactly. */
+        fun canMake(k: Int, amount: Long): Boolean {
+            val index = amount / unit
+            val inTable = amount >= 0 && amount % unit == 0L && index < bits
+            val table = tables[k]
+            return inTable && table != null && (table[(index / WORD_BITS).toInt()] ushr (index % WORD_BITS).toInt()) and 1L == 1L
+        }
+
+        private fun shifted(source: LongArray, shift: Long): LongArray {
+            val result = LongArray(words)
+            if (shift >= bits) return result
+            val wordShift = (shift / WORD_BITS).toInt()
+            val bitShift = (shift % WORD_BITS).toInt()
+            for (w in words - 1 downTo wordShift) {
+                val from = w - wordShift
+                var value = source[from] shl bitShift
+                if (bitShift != 0 && from > 0) value = value or (source[from - 1] ushr (WORD_BITS.toInt() - bitShift))
+                result[w] = value
+            }
+            return result
+        }
+
+        private fun orShifted(source: LongArray, shift: Long): LongArray {
+            val moved = shifted(source, shift)
+            for (w in moved.indices) moved[w] = moved[w] or source[w]
+            return moved
+        }
+
+        private companion object {
+            const val WORD_BITS = 64L
+        }
+    }
+
     private fun idealCurveValues(denominations: IntArray, curve: ChipDistributionCurve): DoubleArray {
         val min = denominations.first().toDouble()
         val max = denominations.last().toDouble()
@@ -212,6 +433,14 @@ object ChipDistributionOptimizer {
     private class SearchBudget(var remaining: Int)
 
     /**
+     * A capped search's limits: at most [caps] of each chip, [reach] (exact reachability of each
+     * free prefix under them), and [deadEnds], the nodes it may visit at all, dead ends included
+     * (null for no limit). Only the monotone search under caps can walk into dead ends, because
+     * [reach] ignores the ordering.
+     */
+    private class SearchLimits(val caps: IntArray, val reach: CappedReach, val deadEnds: SearchBudget?)
+
+    /**
      * Least-squares exact count search for one denomination set.
      *
      * Variables are q[0..n-1] for ascending denominations d. Constraints: Σ d[i]·q[i] = target,
@@ -238,8 +467,13 @@ object ChipDistributionOptimizer {
         private val d: IntArray,
         private val ideal: DoubleArray,
         private val monotone: Boolean,
-        private val budget: SearchBudget
+        private val budget: SearchBudget,
+        /** Per-chip limits ([optimizeWithinCaps]); null for none. */
+        private val limits: SearchLimits? = null
     ) {
+        private val caps = limits?.caps
+        private val cappedReach = limits?.reach
+        private val deadEnds = limits?.deadEnds
         private val n = d.size
         private val base = d[0].toLong()
 
@@ -304,7 +538,8 @@ object ChipDistributionOptimizer {
 
         fun solve(target: Long): IntArray? {
             // All n variables free, each at least 1.
-            if (!canMake(n, target - prefixValue[n - 1])) return null
+            val capped = cappedReach?.canMake(n, target) ?: true
+            if (!capped || !canMake(n, target - prefixValue[n - 1])) return null
             search(n - 1, target, 0.0, 1L)
             return best?.let { q -> IntArray(n) { q[it].toInt() } }
         }
@@ -320,6 +555,7 @@ object ChipDistributionOptimizer {
             if (i == 0) {
                 // canMake() one level up guarantees divisibility and q[0] ≥ lowerBound.
                 val q0 = remaining / base
+                if (caps != null && q0 > caps[0]) return
                 val cost = costSoFar + square(q0 - ideal[0])
                 if (cost < bestCost) {
                     bestCost = cost
@@ -331,7 +567,8 @@ object ChipDistributionOptimizer {
 
             val di = d[i].toLong()
             val belowValue = prefixValue[i - 1]
-            val high = if (monotone) remaining / prefixValue[i] else (remaining - belowValue) / di
+            val uncapped = if (monotone) remaining / prefixValue[i] else (remaining - belowValue) / di
+            val high = if (caps != null) minOf(uncapped, caps[i].toLong()) else uncapped
             val low = lowerBound
             if (high < low) return
 
@@ -348,11 +585,13 @@ object ChipDistributionOptimizer {
                 val qi = if (downBound <= upBound) down-- else up++
 
                 if (best != null && --budget.remaining < 0) budgetExhausted = true
+                if (deadEnds != null && --deadEnds.remaining < 0) budgetExhausted = true
                 if (budgetExhausted) return
 
                 val nextRemaining = remaining - di * qi
                 val nextLowerBound = if (monotone) qi else 1L
                 if (!canMake(i, nextRemaining - nextLowerBound * belowValue)) continue
+                if (cappedReach != null && !cappedReach.canMake(i, nextRemaining)) continue
                 val cost = costSoFar + square(qi - ideal[i])
                 if (cost + residueBound(i, nextRemaining, nextLowerBound) >= bestCost) continue
                 current[i] = qi

@@ -38,12 +38,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
 import com.huntercoles.pokerpayout.core.design.components.ConfirmSheet
 import com.huntercoles.pokerpayout.core.design.components.LocalWidthClass
-import com.huntercoles.pokerpayout.core.design.components.PayoutPreview
 import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
 import com.huntercoles.pokerpayout.core.design.components.RequestShellChrome
-import com.huntercoles.pokerpayout.core.design.components.WeightsEditorDialog
 import com.huntercoles.pokerpayout.core.design.components.WidthClass
-import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.design.components.fillShellWidth
 import com.huntercoles.pokerpayout.core.presentation.HideSystemBars
 import com.huntercoles.pokerpayout.core.presentation.RequestOrientation
 import com.huntercoles.pokerpayout.core.presentation.findActivity
@@ -160,8 +158,8 @@ private fun TabBody(
         WidthClass.Expanded -> ClockLayout.TwoPane
         else -> ClockLayout.Phone
     }
-    RequestShellChrome(fullWidth = layout == ClockLayout.TwoPane && ui.mode != TournamentMode.Setup)
-    Column(modifier.fillMaxSize()) {
+    val wide = layout == ClockLayout.TwoPane && ui.mode != TournamentMode.Setup
+    Column(modifier.fillMaxSize().then(if (wide) Modifier.fillShellWidth() else Modifier)) {
         TournamentTopBar(timer, ui.mode, actions, small = small, wide = layout == ClockLayout.TwoPane)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (ui.mode) {
@@ -226,7 +224,7 @@ private fun TournamentDialogs(setup: TournamentConfigUiState, actions: Tournamen
             destructive = true,
         )
     }
-    PayoutDialogs(uiState = setup, onIntent = actions.onSetupIntent)
+    PurchaseClearQuestion(uiState = setup, onIntent = actions.onSetupIntent)
 }
 
 /** The reset question says what a reset takes with it, including purchases recorded in the Bank. */
@@ -250,23 +248,9 @@ private fun resetDescription(uiState: TournamentConfigUiState): String {
     }
 }
 
-/** The payout editor and the "clear recorded purchases?" question (PP-014). The Payouts tab shows them too. */
+/** "Clear recorded purchases?" when a rebuy or add-on amount is left at $0 (PP-014). */
 @Composable
-internal fun PayoutDialogs(uiState: TournamentConfigUiState, onIntent: (TournamentConfigIntent) -> Unit) {
-    if (uiState.showWeightsEditor) {
-        WeightsEditorDialog(
-            current = PayoutSettings(
-                weights = uiState.config.payoutWeights,
-                preset = uiState.payoutPreset,
-                rounding = uiState.config.payoutRounding
-            ),
-            preview = PayoutPreview(prizePoolCents = uiState.pool.prizePoolCents, playerCount = uiState.playerCount),
-            onSave = { onIntent(TournamentConfigIntent.UpdatePayoutSettings(it)) },
-            onDismiss = { onIntent(TournamentConfigIntent.HideWeightsEditor) },
-            isLocked = uiState.isTournamentLocked
-        )
-    }
-
+private fun PurchaseClearQuestion(uiState: TournamentConfigUiState, onIntent: (TournamentConfigIntent) -> Unit) {
     uiState.purchaseClearPrompt?.let { prompt ->
         val noun = if (prompt.count == 1) prompt.kind.singular else prompt.kind.plural
         PokerConfirmationDialog(

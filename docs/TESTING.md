@@ -148,13 +148,15 @@ their labels line up (a row: the bottom bar; a column: the rail), so a screen ti
 word ("Tournament") is never tapped by mistake, and they check which tab is selected. The steps
 are:
 
-1. **Tournament** (26 steps). The tab is one setup page (S1 v2) that folds into the clock on Start.
+1. **Tournament** (29 steps, five of them on the Payouts tab). The tab is one setup page (S1 v2) that folds into the clock on Start.
    * Launch: the ready ticket (LEVEL 1 · READY, 20:00) and Start. Type the buy-in 12.50 one key
      at a time (v1.1.12 turned it into 120.5), bounty 5, and five taps on the players stepper
      (10 players).
-   * **Payouts tab:** the place rows must add up to the prize pool to the cent ($125), and
-     must not increase down the table. Then the Top-heavy preset (60/30/10), and the editor with
-     $5 rounding, where every place below 1st must be a whole $5.
+   * **Payouts tab (S6):** one row per place paid, adding up to the prize pool in the top bar
+     and to "Adds up to" under the rows, to the cent, and never increasing down the table. Then
+     the Top-heavy preset, whose "what 1st gets" preview must be what the 1st row pays; $5
+     rounding on the page, where every place below 1st must be a whole $5; the payout structure
+     sheet; and Share, which must open the system share sheet with the payouts in it.
    * **Blinds** (a section of the same page):
      * The smallest chip is a row of real chips (1, 5, 25, 100 ...), radio buttons named by
        colour and value; pick 25.
@@ -178,28 +180,35 @@ are:
      asks in a sheet first, then opens them; closing locks them again.
    * New tournament… (the menu) asks first; the reset unfolds setup at LEVEL 1 · READY, 20:00,
      50 / 100.
-2. **Bank** (15 steps). Set the rebuy amount to $10. Rename Player 1 to Alice with no Enter,
-   switch tabs and come back: the name must survive. Confirm a buy-in (the dialog must say
-   "Alice has paid"); record a rebuy; knock out Player 2 and require the "5th" badge to sit on
-   the field's top edge, clear of the name. Open the payout-weights editor and the pool-summary
-   dialog; scroll. Then clear the Rebuy amount and retype 15 by switching tabs: the recorded
-   rebuy must survive (the keyboard is up when the tab is tapped). Leave the field empty: "Turn
-   rebuys off?" must ask first, and Keep must bring back the $15 and the rebuy.
-3. **Payouts tab** (3 steps). The same table as the Tournament tab's panel, adding up to the
-   prize pool with the Bank's buy-in and rebuy; the structure editor; Back returns to Tournament
-   (B16: Back no longer walks through every tab tapped).
+2. **Bank** (21 steps). Set the rebuy amount to $10. The labelled header (Player, Buy-in,
+   Rebuy, Out, Paid) and the top bar. Rename Player 1 to Alice with no Enter, switch tabs and
+   come back: the name must survive. A buy-in in one tap, with "Alice paid the buy-in" and UNDO
+   on the snackbar; UNDO must take it back. A rebuy in one tap. Knock out Player 2 from the
+   knockout sheet ("5TH PLACE"; Alice picked, applied with no second dialog): the 5th badge must
+   sit in the Out column, clear of the name. Three more out with nobody credited: Alice is the
+   champion; her pay-out sheet; Mark paid. The pool breakdown and payout structure sheets; scroll.
+   Then clear the Rebuy amount and retype 15 by switching tabs: the recorded rebuy must survive
+   (the keyboard is up when the tab is tapped). Leave the field empty: "Turn rebuys off?" must ask
+   first, and Keep must bring back the $15 and the rebuy. Then the cutoff (PP-030): "rebuys until
+   level 1" with the clock in level 2 must lock the Rebuy column, a tap must record nothing, and
+   the note under the list must say why; then reset the tournament. The cutoff is set with setup's "Rebuys
+   until" field, on both builds.
+3. **Payouts tab** (3 steps). The finished night: Alice and Player 5 by name in their rows,
+   adding up to the prize pool; the structure sheet; Back returns to Tournament (B16: Back no
+   longer walks through every tab tapped).
 4. **Tools** (4 steps). The tool list and the Sound section (S7); turn the sound off (the
-   volume and Test chime rest) and on again, and play the test chime; Hand ranks, with a back
-   arrow and the Tools tab still selected.
+   volume and Test chime rest) and on again, and play the test chime; Hand ranks (S12), with a
+   back arrow, the Tools tab still selected, "1 in 30,940" for a royal flush and a kicker.
 5. **Odds.** Empty state; card picker; AsKs vs QhQd; a JsTs2c flop (the picker scrolls to
    find 2c); calculate and require the exact answer, **56.06%** under Player 1 and **43.94%**
    under Player 2 (555 and 435 of 990 runouts; v1.1.12 showed about 49.25 / 50.75 because of
    the kicker-order bug); add the 9h turn and require the old numbers to disappear; switch to
    4 players; reset.
-6. **Chip set** (the chip calculator, Tools still selected): Generate and require
-   Total Chips to be non-zero and equal to the sum of the "× N" rows (26 for the defaults;
-   v1.1.12 showed 0), and Denominations to equal the number of rows; open the advanced
-   settings; scroll.
+6. **Chip set** (S11, 6 steps; Tools still selected). The piles must add up to the Tournament's
+   5,000 and agree with the "N chips a stack · K colours" line (v1.1.12 showed "Total Chips 0");
+   the color-up plan from the clock's schedule; 10 greens in the colour sheet must give "Short
+   10 green 25s for 5 players"; reset applies at once with Undo; the stack settings keep 2
+   stacks back and the color-up plan counts 7 stacks in play.
 7. Back to Tournament.
 8. **Rail** (4 steps). `wm density 240` makes the phone's window 720 dp wide: the tabs must
    move to a rail down the left edge (PP-087), with the screen recreated where it was; Tools and
@@ -359,6 +368,7 @@ composables on the JVM. Library modules use the stock `AndroidJUnitRunner`.
 | `Roborazzi: ... is changed.` | A golden no longer matches. Open `<module>/build/outputs/roborazzi/*_compare.png`. If the change is intended, run `./gradlew recordRoborazziDebug` and commit the new PNGs (section 9). |
 | `... doesn't fit on <config>: it is N px tall` | A gallery is taller than that screen's window, so its golden would be cut off. Split it into smaller previews. |
 | A layout assertion fails only at font 2.0 | Real: at 200% the text needs more room. Let it wrap (no fixed heights, no `maxLines = 1` on labels), or reflow to one column. Shrinking text is only for fixed-width slots (see `rememberFittedStyle`). |
+| A golden folder you deleted comes back as untracked after a test run | Roborazzi keeps a copy of every golden under `<module>/build/intermediates/roborazzi/` and restores it into `src/test/screenshots/`. Delete a retired golden in both places (or run `./gradlew clean`). Never `git add -A` after a test run without checking `git status`. CI starts clean, so it is unaffected. |
 
 ## 9. Screenshot goldens and layout checks (Roborazzi)
 
@@ -501,11 +511,14 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 
 | Module | Class | Goldens (`src/test/screenshots/screens/`) | Layout checks |
 |---|---|---|---|
-| `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted`, `Shell_handranks` | S7: all three, at every scroll position. Hand ranks (M6 restyles the list): touch targets |
-| `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament`, `Shell_payouts`, `Shell_payouts_locked` | Payouts: all three. Tournament: touch targets |
+| `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted` | S7: all three, at every scroll position |
+| `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
+| `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end` | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
+| `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament: touch targets |
 | `tournament-feature` | `TournamentScreenGoldenTest` | `S1_setup_{before,invalid}`, `S1_fold_300ms`, `S1_running_strip`, `S1_panel_{open,unlocked}`, `S2_clock_{ready,running,paused,final_minutes,overtime,finished}`, `S2_clock_running_font2x`, `S3_table_{running,paused,break}` (landscape cells), `S4_break_{colorup,done,plain}`, `Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet` | All three checks on all 24 cells (the fold frame: none, it is mid-animation) |
 | `tournament-feature` | `TournamentInteractionTest`, `TournamentRotationTest`, `SetupFoldTest` | none | What each control sends; rotation per device class (Robolectric `+land` shows the table view, `+port` the clock, other tabs portrait on phones, tablets free, state kept through recreation); the fold plays once and is cut under Reduce motion |
-| `bank-feature` | `BankTabScreenTest` | `Shell_bank` | The top bar's reset button (M4 restyles the body) |
+| `tournament-feature` | `PayoutsTabScreenTest` | `S6_payouts_{standard,topheavy,custom,finished}`, `S6_payouts_font2x` | All three, at every scroll position, and locked while the clock runs |
+| `bank-feature` | `BankScreensTest` | `S5_bank_{before_buyins,midgame,rebuys_open,no_rebuys,champion,30players}`, `S5_bank_font2x`, `S5b_knockout_sheet`, `S5b_count_sheet`, `S5c_payout_{champion,second}`, `S5c_pool_breakdown`, `Z2_bank_small`, `Z5_bank_tablet` | All three, at every scroll position. A sheet is rendered as its content over the screen behind, since a modal window doesn't capture under Robolectric |
 
 The screens' ViewModels are the real ones over Robolectric's in-memory preferences, set up as the
 mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app shows.
@@ -522,5 +535,6 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 | `DesignTokensTest` | 6 | Every contrast pairing in the design spec, computed; the six original colours and the sunset ones unchanged |
 | `TypographyTest` | 5 | Barlow loads; `tnum` makes every digit the same width (and without it they differ); the licence ships |
 | `UndoSnackbarTest` | 4 | Undo inside the 8 s window counts, after it doesn't (virtual time) |
+| `MoneyComponentsTest` | 3 x 24 cells = 72 | `MoneyMeter`, `PlaceBadge` and `PayoutStructureSheet`: goldens on the 10, all three layout checks on all 24 |
 | `LayoutAssertionsTest` | 11 | The checks themselves catch what they claim |
 | `ScreenOrientationTest` | 3 | Phones portrait unless the screen on show asks for more, and portrait again when it goes; free from 600 dp; a screen can take the full width beside the rail, or the whole window |

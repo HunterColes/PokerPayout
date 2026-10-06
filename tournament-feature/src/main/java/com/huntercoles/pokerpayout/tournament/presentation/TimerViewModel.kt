@@ -656,8 +656,9 @@ class TimerViewModel @Inject constructor(
                     combine(
                         bankPreferences.eliminationOrder,
                         bankPreferences.totalRebuys,
-                        bankPreferences.totalAddons
-                    ) { eliminated, rebuys, addOns -> BankCounts(eliminated, rebuys, addOns) }
+                        bankPreferences.totalAddons,
+                        bankPreferences.revision, // a purchase's price can change with its count unchanged
+                    ) { eliminated, rebuys, addOns, _ -> BankCounts(eliminated, rebuys, addOns) }
                 ) { config, bankCounts -> config to bankCounts }
                 .collect { (config, bankCounts) ->
                     tableConfig = config
@@ -690,8 +691,14 @@ class TimerViewModel @Inject constructor(
             playerCount = players,
             playersLeft = left,
             averageStack = if (left > 0) (chips / left).toInt() else 0,
-            // The same prize pool the Payouts table splits (buy-ins, rebuys and add-ons; no food or bounty)
-            prizePoolCents = PoolBreakdown.of(tableConfig.money, players, bank.rebuys, bank.addOns).prizePoolCents
+            // The same prize pool the Payouts table splits (buy-ins, rebuys and add-ons at the prices
+            // they were bought at; no food or bounty)
+            prizePoolCents = PoolBreakdown.withRecordedPurchases(
+                tableConfig.money,
+                players,
+                bankPreferences.getRecordedRebuyCents(),
+                bankPreferences.getRecordedAddOnCents(),
+            ).prizePoolCents
         )
         val purchases = Purchases(
             rebuyCents = tableConfig.money.rebuyCents,

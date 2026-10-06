@@ -221,62 +221,129 @@ s_tournament_config() {
   ui assert-text text=12.50 text=5 "has=Players|10"            # leaving the field shows the saved amount
 }
 
-# The payout table on screen: the place rows must add up to the "Prize pool" shown above them,
-# to the cent; with a unit (cents) every place below 1st must be a whole number of units.
+# The Payouts tab's table (S6): the rows must add up to the prize pool in the top bar ("$125 prize
+# pool · 3 places paid") to the cent, and to "Adds up to $125" under them; one row per place paid;
+# no lower place paying more; with a unit (cents) every place below 1st a whole number of units.
+# A row is one node for TalkBack ("1st, Still playing, $63, 50%") or, failing that, the texts on
+# one line.
 check_payout_table() { # $1 = ui dump, $2 = rounding unit in cents (default 100)
   python3 - "$1" "${2:-100}" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 unit = int(sys.argv[2])
+AMOUNT = r"\$[\d,]+(?:\.\d\d)?"
+def cents(s):
+    whole, _, frac = s[1:].replace(",", "").partition(".")
+    return int(whole) * 100 + int(frac or 0)
 nodes = []
 for n in ET.parse(sys.argv[1]).iter("node"):
     b = [int(v) for v in re.findall(r"-?\d+", n.get("bounds", ""))]
-    if n.get("text") and len(b) == 4:
-        nodes.append((n.get("text"), (b[1] + b[3]) // 2, b[0]))
-money = re.compile(r"^\$([\d,]+)\.(\d\d)$")
-cents = lambda t: int(money.match(t).group(1).replace(",", "")) * 100 + int(money.match(t).group(2))
-def on_row(y):
-    return [t for t, cy, _ in nodes if abs(cy - y) < 25 and money.match(t)]
-label = next((n for n in nodes if n[0] == "Prize pool"), None)
-if not label:
-    sys.exit("[ui] FAIL no 'Prize pool' on screen")
-pool = cents(on_row(label[1])[0])
-rows = sorted((cy, t) for t, cy, _ in nodes if re.fullmatch(r"\d+(st|nd|rd|th)", t) and cy > label[1])
-amounts = []
-for cy, place in rows:
-    found = on_row(cy)
-    if not found:
-        sys.exit("[ui] FAIL no amount on the %s row" % place)
-    amounts.append(cents(found[0]))
-print("payout table: pool %d cents, places %s = %d" % (pool, amounts, sum(amounts)))
-if not amounts:
-    sys.exit("[ui] FAIL no payout rows under the prize pool")
+    for t in (n.get("text") or "", n.get("content-desc") or ""):
+        if t and len(b) == 4:
+            nodes.append((t, (b[1] + b[3]) // 2, b[0]))
+sub = next((m for t, _, _ in nodes for m in [re.fullmatch(r"(%s) prize pool · (\d+) places? paid" % AMOUNT, t)] if m), None)
+if not sub:
+    sys.exit("[ui] FAIL no '$X prize pool · N places paid' subtitle")
+pool, places = cents(sub.group(1)), int(sub.group(2))
+ORD = r"\d+(?:st|nd|rd|th)"
+rows = {}
+for t, cy, _ in nodes:
+    m = re.fullmatch(r"(%s), (.+), (%s), [\d.]+%%" % (ORD, AMOUNT), t)
+    if m:
+        rows[m.group(1)] = (cy, cents(m.group(3)), m.group(2))
+if not rows:  # not merged: the ordinal and the amount on one line
+    for t, cy, _ in nodes:
+        if re.fullmatch(ORD, t):
+            found = sorted((x, a) for a, y, x in nodes if abs(y - cy) < 25 and re.fullmatch(AMOUNT, a))
+            if found:
+                rows[t] = (cy, cents(found[-1][1]), "")
+ordered = [rows[k] for k in sorted(rows, key=lambda k: int(re.match(r"\d+", k).group()))]
+amounts = [a for _, a, _ in ordered]
+print("payout table: pool %d cents, %d places paid, rows %s = %d, holders %s"
+      % (pool, places, amounts, sum(amounts), [h for _, _, h in ordered]))
+if len(amounts) != places:
+    sys.exit("[ui] FAIL %d payout rows on screen for %d places paid" % (len(amounts), places))
 if sum(amounts) != pool:
     sys.exit("[ui] FAIL payout rows add up to %d cents, prize pool is %d" % (sum(amounts), pool))
+adds = next((t for t, _, _ in nodes if t.startswith("Adds up to ")), None)
+if adds is None or cents(adds[len("Adds up to "):]) != pool:
+    sys.exit("[ui] FAIL expected 'Adds up to' the prize pool, got %r" % adds)
 if any(a % unit for a in amounts[1:]):
     sys.exit("[ui] FAIL places below 1st are not whole multiples of %d cents: %s" % (unit, amounts))
 if amounts != sorted(amounts, reverse=True):
     sys.exit("[ui] FAIL a lower place pays more than a higher one: %s" % amounts)
 PY
 }
+# The selected preset's preview ("what 1st gets") must be what the 1st row pays.
+check_first_preview() { # $1 = ui dump, $2 = preset label
+  python3 - "$1" "$2" <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+dump, preset = sys.argv[1], sys.argv[2]
+MONEY = r"\$[\d,]+(?:\.\d\d)?"
+nodes = []
+for n in ET.parse(dump).iter("node"):
+    texts = [t for t in (n.get("text"), n.get("content-desc")) if t]
+    texts += [d.get("text") for d in n.iter("node") if d is not n and d.get("text")]
+    nodes.append((n, texts))
+chosen = [n for n, texts in nodes if n.get("selected") == "true" or n.get("checked") == "true"]
+option = next((n for n in chosen if any(t.startswith(preset) for t in
+              [n.get("text") or "", n.get("content-desc") or ""] + [d.get("text") or "" for d in n.iter("node")])), None)
+if option is None:
+    sys.exit("[ui] FAIL the %s preset isn't selected" % preset)
+words = " ".join([option.get("text") or "", option.get("content-desc") or ""] + [d.get("text") or "" for d in option.iter("node")])
+preview = re.search(MONEY, words)
+# The 1st row: the amount furthest right on the line of the "1st" label
+def centre_y(n):
+    b = [int(v) for v in re.findall(r"-?\d+", n.get("bounds", ""))]
+    return ((b[1] + b[3]) // 2, b[0]) if len(b) == 4 else (None, None)
+label = next((n for n, _ in nodes if n.get("text") == "1st"), None)
+first = None
+if label is not None:
+    y = centre_y(label)[0]
+    on_line = sorted((centre_y(n)[1], n.get("text")) for n, _ in nodes
+                     if re.fullmatch(MONEY, n.get("text") or "") and abs(centre_y(n)[0] - y) < 25)
+    first = on_line[-1][1] if on_line else None
+print("%s selected: %r; 1st row pays %s" % (preset, words.strip(), first))
+if not preview or preview.group(0) != first:
+    sys.exit("[ui] FAIL the %s preview (%s) isn't what 1st gets (%s)" % (preset, preview and preview.group(0), first))
+PY
+}
 s_payouts_tab() {
-  ui tap text=Payouts
-  ui assert-text "Prize pool" Top-heavy Standard Flat 1st "desc=Edit payout structure" || return 1
+  # S6: the payouts on their own tab. The pool in big digits with where it came from, the
+  # presets with what 1st would get, rounding, and one row per place, adding up to the pool.
+  tab Payouts
+  ui assert-text "PRIZE POOL" "text~=prize pool · 3 places paid" Top-heavy Standard Flat "Round to" "Places paid" \
+    "desc=Share the payouts" "desc=Edit payout structure" || return 1
+  require_tab_selected Payouts
   check_payout_table "$PP_UI_LAST_XML"
 }
 s_payouts_preset() {
   ui tap text=Top-heavy
-  ui assert-text 'text=60%' 'text=30%' 'text=10%' || return 1   # 10 players -> 3 places, 60/30/10
+  ui assert-text "text~=prize pool · 3 places paid" || return 1
   check_payout_table "$PP_UI_LAST_XML"
-}
-s_payouts_editor() {
-  ui tap "desc=Edit payout structure"
-  ui assert-text "text~=Payout Structure" "Round to" 'text=$5' "Places paid" Save Cancel
+  check_first_preview "$PP_UI_LAST_XML" Top-heavy
 }
 s_payouts_rounded() {
+  # Round to $5 on the page itself: every place below 1st a whole $5, still adding up
   ui tap 'text=$5'
-  ui tap text=Save
-  ui assert-text "text~=rounded to \$5" || return 1
+  ui assert-text "text~=prize pool · 3 places paid" || return 1
   check_payout_table "$PP_UI_LAST_XML" 500
+}
+s_payouts_editor() {
+  # The payout structure sheet (PP-048: as tall as what it holds, no empty dialog)
+  ui tap "desc=Edit payout structure"
+  ui assert-text "text=Payout structure" "PRESET · WHAT 1ST GETS" "ROUND TO" "Places paid" "WEIGHT OF EACH PLACE" \
+    "text=Save structure" Cancel || return 1
+  ui tap text=Cancel
+  ui wait-gone "text=Save structure"
+}
+s_payouts_share() {
+  # Share as text: the system's share sheet opens with the payouts in it; Back closes it
+  ui tap "desc=Share the payouts"
+  ui assert-text "text~=Poker night payouts" || return 1
+  ui back
+  ui wait "desc=Share the payouts"
+  tab Tournament
+  ui wait "Start clock"
 }
 # The blind setup and the clock (PP-015/020/025/026/051). Default setup: 3 h of 20-minute
 # rounds from a 50 chip to 5,000 = 9 levels, 50/100 to 5,000/10,000. The blinds are a section of
@@ -493,10 +560,13 @@ s_rebuy_amount() {
   ui assert-text "has=Rebuy|10"
 }
 
-# Bank ---------------------------------------------------------------------
+# Bank (S5 v2) ---------------------------------------------------------------
+# One line per player under a labelled header (Buy-in, Rebuy, Out, Paid; Add-on is hidden while
+# add-ons cost $0). A tap applies at once and the snackbar offers UNDO for 8 s (PP-030).
 s_bank() {
   tab Bank
-  ui assert-text "desc=Reset bank" "text~=Pool Summary" "Player 1" "Buy-in pending" "Payout pending" || return 1
+  ui assert-text Player Buy-in Rebuy Out Paid "Player 1" "text~=players · " Collected "Paid out" Breakdown \
+    "text=Payout structure" "desc=More options" "desc=Nothing to undo" || return 1
   require_tab_selected Bank
 }
 s_bank_rename() {
@@ -508,85 +578,154 @@ s_bank_rename() {
   tab Bank
   ui assert-text text=Alice
 }
-s_bank_buyin_dialog() {
-  ui tap "desc=Buy-in pending"
-  ui assert-text "text~=Alice has paid the buy-in" Okay Cancel
+s_bank_buyin() {
+  # No confirm dialog any more: the tap records the buy-in, and the snackbar says what happened
+  ui tap "desc=Alice, buy-in, not paid"
+  ui assert-text "desc=Alice, buy-in, paid" "text~=Alice paid the buy-in · " text=UNDO "text~=collected"
 }
-s_bank_buyin_done() {
-  ui tap text=Okay
-  ui assert-text "Buy-in completed"
+s_bank_undo() {
+  # UNDO on the snackbar takes it back; then record it again for the steps after
+  ui tap text=UNDO
+  ui assert-text "desc=Alice, buy-in, not paid" || return 1
+  ui tap "desc=Alice, buy-in, not paid"
+  ui assert-text "desc=Alice, buy-in, paid" "desc~=Undo: Alice paid the buy-in"
 }
 s_bank_rebuy() {
-  ui tap "desc=Rebuy available" --index 0
-  ui assert-text "text~=has purchased a rebuy" Okay || return 1
-  ui tap text=Okay
-  ui assert-text "desc=Rebuy active" "text=1x"
+  ui tap "desc=Alice, rebuy, none yet"
+  ui assert-text "desc=Alice, rebuy, 1 taken" "text=Rebuy for Alice · \$10"
 }
-s_bank_knockout_dialog() {
-  ui tap "desc=Still in" --index 1
-  ui assert-text Okay Cancel
+s_bank_knockout_sheet() {
+  # S5b: who knocked out whom. Nothing happens until a choice is made.
+  ui tap "desc=Knock out Player 2"
+  ui assert-text "text=Player 2 is out" "text=5TH PLACE" "re=^Nobody" "text=Knock out Player 2"
 }
 s_bank_knockout_done() {
-  ui tap text=Okay
-  ui assert-text "Knocked out" "desc~=Finished " || return 1
+  # Pick Alice and confirm: applied at once, with no second dialog
+  ui tap text=Alice
+  ui tap "text=Knock out Player 2"
+  ui wait-gone "text=Player 2 is out"
+  ui assert-text "desc=Player 2, out, 5th, knocked out by Alice. Bring back" "text~=Player 2 is out in 5th" \
+    "text~=OUT · 1" || return 1
   check_placement_badge "$PP_UI_LAST_XML"
 }
-# The knocked-out player's place sits on the name field's top edge, clear of the name (PP-047;
-# v1.1.12 painted a big number over it).
+# The knocked-out player's place is a badge in the Out column, clear of the name (PP-047;
+# v1.1.12 painted a big number over the name, v1.2 a badge on its top edge).
 check_placement_badge() {
   python3 - "$1" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 def box(n):
     return [int(v) for v in re.findall(r"-?\d+", n.get("bounds", ""))]
-all_nodes = list(ET.parse(sys.argv[1]).iter("node"))
-badges = [n for n in all_nodes if re.fullmatch(r"Finished \d+(st|nd|rd|th)", n.get("content-desc") or "")]
-fields = [n for n in all_nodes if "EditText" in (n.get("class") or "")]
+nodes = list(ET.parse(sys.argv[1]).iter("node"))
+badges = [n for n in nodes if re.fullmatch(r".+, out, \d+(st|nd|rd|th)\b.*Bring back", n.get("content-desc") or "")]
+fields = [n for n in nodes if "EditText" in (n.get("class") or "")]
 if not badges:
-    sys.exit("[ui] FAIL no placement badge")
+    sys.exit("[ui] FAIL no place badge in the Out column")
 for badge in badges:
-    bx1, by1, bx2, by2 = box(badge)
-    field = next((f for f in fields if box(f)[0] <= bx1 <= box(f)[2] and box(f)[1] - 40 <= by2 <= box(f)[3]), None)
+    name = badge.get("content-desc").split(",")[0]
+    field = next((f for f in fields if f.get("text") == name), None)
     if field is None:
-        sys.exit("[ui] FAIL badge %r is not on a name field" % badge.get("content-desc"))
+        sys.exit("[ui] FAIL no name field for %r" % name)
+    bx1, by1, bx2, by2 = box(badge)
     fx1, fy1, fx2, fy2 = box(field)
-    text_top = fy1 + (fy2 - fy1) * 0.3   # the name is centred; its glyphs start below this line
-    print("badge %r %s on field %r %s" % (badge.get("content-desc"), box(badge), field.get("text"), box(field)))
-    if by2 > text_top:
-        sys.exit("[ui] FAIL badge bottom %d reaches into the name (text starts ~%d)" % (by2, text_top))
+    print("badge %r %s, name field %s" % (badge.get("content-desc"), box(badge), box(field)))
+    if not (fy1 < (by1 + by2) // 2 < fy2 + 60):
+        sys.exit("[ui] FAIL the badge isn't on its player's row")
+    if bx1 < fx2:
+        sys.exit("[ui] FAIL the badge (from x=%d) overlaps the name (to x=%d)" % (bx1, fx2))
 PY
 }
+s_bank_champion() {
+  # The other three go out with nobody credited; Alice is left, on a gold row at the top
+  local p
+  for p in 3 4 5; do
+    ui tap "desc=Knock out Player $p"
+    ui tap "re=^Nobody"
+    ui tap "text=Knock out Player $p"
+    ui wait-gone "text=Player $p is out"
+  done
+  ui assert-text "desc=Alice, champion" CHAMPION "text~=Finished · Alice wins · " "text~=OUT · 4"
+}
+s_bank_payout_sheet() {
+  # S5c: what to hand the champion, and how it adds up
+  ui tap "desc~=Alice, paid out, \$"
+  ui assert-text "text=Pay Alice" "Hand over" "text~=Mark paid · \$"
+}
+s_bank_paid() {
+  ui tap "text~=Mark paid · \$"
+  ui wait-gone "text=Pay Alice"
+  ui assert-text "desc=Alice, paid out" "text~=Paid Alice \$" "text~=Finished · Alice wins · "
+}
+s_pool_summary() {
+  # The pool and where it came from; the rebuy is inside the prize pool, not on top of it
+  ui tap text=Breakdown
+  ui assert-text "text=Pool breakdown" "Prize pool" "· of which rebuys" "Total pool" 1st 2nd Close
+}
 s_weights_editor() {
-  ui tap "desc=Edit payout weights"
-  ui assert-text "text~=Payout Structure" "Higher weights = larger payouts." "Round to" Save Cancel
+  ui tap text=Close
+  ui wait-gone "text=Pool breakdown"
+  ui tap "text=Payout structure"
+  ui assert-text "Places paid" "WEIGHT OF EACH PLACE" "text=Save structure" Cancel
 }
 s_weights_close() {
   ui tap text=Cancel
-  ui wait-gone "text~=Payout Structure"
-}
-s_pool_summary() {
-  ui tap "desc=Pool Summary Details"
-  ui assert-text "text~=Pool Summary Breakdown" "Prize Pool:" "Rebuy Pool:" "Total Pool:" Payouts 1st Close
+  ui wait-gone "text=Save structure"
 }
 s_bank_scrolled() {
-  ui tap text=Close
   ui scroll down --times 2
-  ui assert-text "Buy-in pending"
+  ui assert-text "text~=OUT · 4" "desc=Player 2, out, 5th, knocked out by Alice. Bring back"
+}
+# What the Tournament tab's rebuy steps (M3) check in the Bank: Alice's one rebuy, still recorded.
+bank_has_alices_rebuy() {
+  ui assert-text "desc=Alice, rebuy, 1 taken"
 }
 
-# Payouts tab (D1, M2) ---------------------------------------------------------
+# The rebuy cutoff (PP-030): "rebuys until level 1", with the clock in level 2, closes the Rebuy
+# column. It is set with setup's "Rebuys until" field, so both builds check it.
+s_bank_cutoff() {
+  tab Tournament
+  ui scroll-to "has=Rebuys until" clickable --max 3
+  ui tap "has=Rebuys until" clickable
+  ui tap "text=End of L1"
+  ui assert-text "has=Rebuys until|End of L1" || return 1
+  ui tap "Start clock"
+  ui wait "desc=Pause timer"
+  ui tap "desc=Next blind level"
+  ui assert-text "text~=Level 2 · time left" || return 1
+  tab Bank
+  ui assert-text "desc=Rebuy, closed" "desc=Alice, rebuy, closed after level 1, 1 taken"
+}
+s_bank_rebuy_blocked() {
+  # A tap does nothing after the cutoff; the note under the list says why
+  ui tap "desc=Alice, rebuy, closed after level 1, 1 taken"
+  sleep 1
+  ui assert-text "desc=Alice, rebuy, closed after level 1, 1 taken" || return 1
+  ui find "text~=Rebuy for Alice" && { echo "[ui] FAIL a rebuy was recorded after the cutoff"; return 1; }
+  ui scroll-to "text~=Rebuys closed after level 1" --max 3
+  ui assert-text "text~=Rebuys closed after level 1. Taken ones stay filled"
+}
+s_bank_cutoff_reset() {
+  # Reset the tournament for the steps after: clock back to level 1, cutoff and rebuys cleared
+  tab Tournament
+  ui tap "desc=More options"
+  ui tap "text=New tournament…"
+  ui tap "text=Reset tournament"
+  ui wait-gone "text=Reset tournament?"
+  ui assert-text "text~=Level 1 · ready" "Start clock"
+}
+
+# Payouts tab (S6) after the Bank: the finished night, with names ------------------------------
 s_payouts_nav() {
-  # Its own tab now: the same table as the Tournament tab's panel (after the reset: 5 players,
-  # rounded to $1), with the Bank's buy-in and rebuy in it, still adding up to the prize pool
+  # The champion and the runner-up by name in their rows, still adding up to the prize pool
   tab Payouts
-  ui assert-text "Prize pool" Top-heavy Standard Flat 1st "desc=Edit payout structure" "text~=of 5 paid" || return 1
+  ui assert-text "text~=prize pool · 2 places paid" "desc=Share the payouts" "text~=Alice" "text~=Player 5" || return 1
   require_tab_selected Payouts
   check_payout_table "$PP_UI_LAST_XML"
 }
 s_payouts_nav_editor() {
   ui tap "desc=Edit payout structure"
-  ui assert-text "text~=Payout Structure" "Round to" "Places paid" Save Cancel || return 1
+  ui assert-text "Places paid" "text=Save structure" Cancel || return 1
   ui tap text=Cancel
-  ui wait-gone "text~=Payout Structure"
+  ui wait-gone "text=Save structure"
 }
 s_payouts_nav_back() {
   # B16: Back from any tab goes to the first tab, not back through every tab tapped
@@ -602,7 +741,7 @@ s_rebuy_retype() {
   ui set-text has=Rebuy class=EditText --value ""
   for key in 1 5; do ui type "$key"; done
   tab Bank                                    # leave the field by switching tabs
-  ui assert-text "desc=Rebuy active" "text=1x"
+  bank_has_alices_rebuy
 }
 s_rebuy_zero_prompt() {
   tab Tournament
@@ -616,7 +755,7 @@ s_rebuy_kept() {
   ui wait-gone "Turn rebuys off?"
   ui assert-text text=15 || return 1          # the saved amount comes back into the field
   tab Bank
-  ui assert-text "desc=Rebuy active" "text=1x"
+  bank_has_alices_rebuy
 }
 
 # Tools --------------------------------------------------------------------
@@ -654,11 +793,13 @@ s_sound_on() {
   ui assert-text "Test chime" "desc=Chime volume"
 }
 s_hand_ranks() {
-  # A tool's screen keeps Tools selected (B16) and has a back arrow. It also holds everything the
-  # removed (unreachable) "Rules" popup showed.
+  # S12: a tool's screen keeps Tools selected (B16) and has a back arrow. Each hand shows how often
+  # it comes up by the river: the royal flush is 1 in 30,940 of the 133,784,560 seven-card hands.
   ui tap "text=Hand ranks"
-  ui assert-text "Best to worst" desc=Back "text~=Royal Flush" "text~=High Card" || return 1
-  require_tab_selected Tools
+  ui assert-text "Best to worst" desc=Back "re=Royal flush" "re=1 in 30,940" || return 1
+  require_tab_selected Tools || return 1
+  ui scroll-to "re=High card" --max 6
+  ui assert-text "re=High card" "re=17\.4%" "re=kicker"
 }
 s_odds_empty() {
   # The Settings volume dialog may still be open: the dump only sees a dialog's window, so if the
@@ -765,49 +906,100 @@ s_odds_reset_table() {
   ui assert-text "desc=Player 1, card 1, empty" "desc=Player 2, options"
 }
 s_chip_calc() {
+  # S11: the chip calculator is the chip set now, planned from the chips you own (no Generate)
   ui back
   ui tap "text=Chip set"
-  ui assert-text "text=Chip set" desc=Back "desc=Reset chip set" Generate || return 1
+  ui assert-text "text=Chip set" desc=Back "desc=Reset chip set" "text~=Chips you own" "Green 25" \
+    "desc=Increase Green 25 chips, by 5" "text~=Add a colour" || return 1
   require_tab_selected Tools
 }
-s_chip_calc_generated() {
-  ui tap Generate
-  ui assert-text "text~=Chip Breakdown" "Total Chips" "Total Value" 're=^× [0-9]+$' || return 1
-  check_chip_totals "$PP_UI_LAST_XML"
+s_chip_calc_stack() {
+  # Each player's stack: the piles add up to the Tournament's 5,000, and the reserve check says
+  # how many more stacks the box holds for rebuys and add-ons
+  ui scroll-to "re=enough left for|no full stack is left" --max 4
+  ui assert-text "text~=Each player gets" "text~=5,000 from Tournament setup" "re=chips? a stack ·" || return 1
+  check_chip_totals "$PP_UI_LAST_XML" 5000
 }
-# The stats row against the breakdown rows in a UI dump: Total Chips must be non-zero and
-# equal the sum of the "× N" counts (v1.1.12 showed 0), and Denominations must equal the
-# number of rows, so a row below the fold can't drop out of the sum unnoticed.
+# The stack picture against its totals in a UI dump: every pile's "N × V" times its value must add up
+# to the stack ($2), the chips to the "N chips a stack" line, and the colours to its count.
 check_chip_totals() {
-  python3 - "$1" <<'PY'
+  python3 - "$1" "$2" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
-nodes = set()
+stack = int(sys.argv[2])
+labels = []
 for n in ET.parse(sys.argv[1]).iter("node"):
-    b = [int(v) for v in re.findall(r"-?\d+", n.get("bounds", ""))]
-    label = n.get("text") or n.get("content-desc") or ""
-    if label and len(b) == 4:
-        nodes.add((label, (b[0] + b[2]) // 2, b[1], b[3]))
-def stat(name):  # the number shown directly above a stat's label
-    label = next((n for n in nodes if n[0] == name), None)
-    above = [n for n in nodes if label and re.fullmatch(r"\d+", n[0]) and 0 <= label[2] - n[3] < 200]
-    if not above:
-        sys.exit("[ui] FAIL no value shown for %r" % name)
-    return int(min(above, key=lambda n: abs(n[1] - label[1]))[0])
-total, denoms = stat("Total Chips"), stat("Denominations")
-counts = [int(n[0][2:]) for n in sorted(nodes, key=lambda n: n[2]) if re.fullmatch(r"× \d+", n[0])]
-print("chip stats: Total Chips %d, Denominations %d, row counts %s (sum %d)" % (total, denoms, counts, sum(counts)))
-if len(counts) != denoms:
-    sys.exit("[ui] FAIL %d breakdown rows on screen but Denominations is %d" % (len(counts), denoms))
-if total <= 0 or total != sum(counts):
-    sys.exit("[ui] FAIL Total Chips is %d but the breakdown adds up to %d" % (total, sum(counts)))
+    for key in ("text", "content-desc"):
+        if n.get(key):
+            labels.append(n.get(key))
+def value(text):
+    text = text.replace(",", "")
+    if text.endswith("K"):
+        return int(float(text[:-1]) * 1000)
+    if text.endswith("M"):
+        return int(float(text[:-1]) * 1000000)
+    return int(text)
+piles = {}
+for label in labels:
+    for count, chip in re.findall(r"(\d+) × ([\d.,]+[KM]?)", label):
+        piles[value(chip)] = int(count)
+totals = next((re.search(r"(\d+) chips? a stack · (\d+) colours? · ([\d,]+)", l) for l in labels
+               if re.search(r"chips? a stack ·", l)), None)
+if not piles or totals is None:
+    sys.exit("[ui] FAIL no stack picture or totals on screen: %s" % labels)
+worth = sum(v * c for v, c in piles.items())
+chips, colours, shown = int(totals.group(1)), int(totals.group(2)), value(totals.group(3))
+print("stack: %s = %d in %d chips; totals say %d chips, %d colours, %d" % (
+    " + ".join("%d × %d" % (c, v) for v, c in sorted(piles.items())), worth, sum(piles.values()), chips, colours, shown))
+if worth != stack or shown != stack:
+    sys.exit("[ui] FAIL the piles add up to %d and the totals say %d, not %d" % (worth, shown, stack))
+if chips != sum(piles.values()) or colours != len(piles):
+    sys.exit("[ui] FAIL the totals (%d chips, %d colours) don't match the piles" % (chips, colours))
 PY
 }
-s_chip_calc_advanced() {
-  ui tap "desc=Expand advanced settings"
-  ui assert-text "Smallest Chip" "Starting Chips" Denoms "Distribution Curve"
+s_chip_calc_colorup() {
+  # The color-up plan reads the clock's schedule (5,000 from 50s; the tour's reset cleared the
+  # breaks, so color-ups fall at the start of a level): the 25s go into 100s from level 4
+  ui scroll-to "re=Counted for \d+ stacks in play" --max 4
+  ui assert-text "text~=Color-up plan" "re=Start of Level 4: green 25s into black 100s" "re=blacks needed"
 }
-s_chip_calc_scrolled() {
-  ui scroll down --times 2
+s_chip_calc_short() {
+  # Only 10 greens for 5 players: no stack adds up, so the screen says what is short and by how much.
+  # Edit the colour in its sheet (the stepper moves in fives; the sheet takes exact counts).
+  ui scroll up --times 4
+  ui tap "text=Green 25"
+  ui assert-text "text=Edit Green 25" "text~=Each chip is worth" "text~=How many you own" "text=Remove Green 25" || return 1
+  ui set-text class=EditText text=150 --value 10
+  ui enter                                    # Done puts the keyboard away
+  ui tap text=Save
+  ui wait-gone "text=Edit Green 25" --timeout 10 || return 1
+  ui scroll-to "re=\+10 more" --max 4
+  ui assert-text "re=Short 10 green 25s for 5 players\." "re=full stacks? of 5,000" "re=With 10 more"
+}
+s_chip_calc_reset() {
+  # Reset applies at once (back to the 500-chip starting set) and offers Undo on the snackbar
+  ui scroll up --times 4
+  ui tap "desc=Reset chip set"
+  ui assert-text "text~=500-chip starting set" "text=UNDO" "desc=Increase Green 25 chips, by 5" || return 1
+  ui wait-gone text=UNDO --timeout 15 || return 1
+  ui scroll-to "re=enough left for|no full stack is left" --max 4
+  ui assert-text "re=chips? a stack ·" || return 1
+  check_chip_totals "$PP_UI_LAST_XML" 5000
+}
+s_chip_calc_settings() {
+  # The old advanced settings live on as stack settings: keep 2 stacks back for rebuys, and the
+  # color-up plan counts them as in play
+  ui scroll-to "re=(?i)stack settings" --max 6
+  ui tap "re=(?i)^stack settings"
+  ui scroll-to "text=Stack shape" --max 4
+  ui assert-text "text=Starting stack" "text=Keep back for rebuys and add-ons" "text=Colours per stack, at most" \
+    "re=More small chips" "re=Lots of small chips" || return 1
+  ui tap "desc=Increase Keep back for rebuys and add-ons"
+  ui tap "desc=Increase Keep back for rebuys and add-ons"
+  ui scroll up --times 6
+  ui scroll-to "re=You keep 2 back" --max 6
+  ui assert-text "re=You keep 2 back" || return 1
+  ui scroll-to "re=Counted for 7 stacks in play" --max 6
+  ui assert-text "re=Counted for 7 stacks in play \(5 players and 2 kept back\)"
 }
 s_back_to_tournament() {
   tab Tournament
@@ -843,7 +1035,7 @@ s_rail_tools() {
 }
 s_rail_payouts() {
   tab Payouts
-  ui assert-text "Prize pool" 1st || return 1
+  ui assert-text "PRIZE POOL" "text~=prize pool · " || return 1
   require_tab_selected Payouts
   check_payout_table "$PP_UI_LAST_XML"
 }
@@ -851,7 +1043,7 @@ s_rail_restored() {
   adb_ shell wm density reset
   rm -f "$DENSITY_MARK"
   sleep 3
-  ui assert-text "Prize pool" || return 1
+  ui assert-text "PRIZE POOL" || return 1
   local tabs; tabs="$(tab_positions "$PP_UI_LAST_XML")"; echo "$tabs"
   python3 - "$tabs" <<'PY' || return 1
 import sys
@@ -871,10 +1063,11 @@ s_app_alive() {
 
 step launch               "Fresh launch (data cleared): setup page, ready ticket" s_launch
 step tournament-config    "Type buy-in 12.50 key by key, bounty 5, players 10"  s_tournament_config
-step payouts-tab          "Payouts tab: rows add up to the prize pool"          s_payouts_tab
-step payouts-preset       "Top-heavy preset: 60/30/10, still adds up"           s_payouts_preset
-step payouts-editor       "Payout structure editor"                             s_payouts_editor
+step payouts-tab          "Payouts tab (S6): rows add up to the prize pool"     s_payouts_tab
+step payouts-preset       "Top-heavy: 1st gets what its preview said"           s_payouts_preset
 step payouts-rounded      "Round to \$5: lower places in \$5, adds up"           s_payouts_rounded
+step payouts-editor       "Payout structure sheet opens and closes"             s_payouts_editor
+step payouts-share        "Share as text: the share sheet has the payouts"      s_payouts_share
 step blinds               "Blind setup on the setup page, with its verdict"     s_blinds_tab
 step smallest-chip        "Smallest chip from a row of chips: pick 25"          s_smallest_chip
 step invalid-setup        "25-minute rounds: reason and nearest fix shown"      s_invalid_setup
@@ -898,27 +1091,33 @@ step setup-closed         "Close setup: the clock still running"                
 step tournament-reset     "New tournament…: the reset question"                 s_tournament_reset_dialog
 step tournament-reset-ok  "Reset: setup unfolds, level 1 ready"                 s_tournament_reset_confirm
 step rebuy-amount         "Rebuy amount \$10 for the Bank steps"                 s_rebuy_amount
-step bank                 "Bank tab, default players"                           s_bank
+step bank                 "Bank tab (S5 v2): labelled header, top bar"          s_bank
 step bank-rename          "Rename Player 1 to Alice, switch tabs, name kept"    s_bank_rename
-step bank-buyin-dialog    "Buy-in action dialog"                                s_bank_buyin_dialog
-step bank-buyin-done      "Buy-in confirmed"                                    s_bank_buyin_done
-step bank-rebuy           "Record a rebuy"                                      s_bank_rebuy
-step bank-knockout-dialog "Knock-out dialog for Player 2"                       s_bank_knockout_dialog
-step bank-knockout-done   "Knock-out confirmed; place badge clear of the name" s_bank_knockout_done
-step weights-editor       "Payout weights editor dialog"                        s_weights_editor
-step weights-closed       "Cancel weights editor"                               s_weights_close
-step pool-summary         "Pool summary breakdown dialog"                       s_pool_summary
+step bank-buyin           "Buy-in in one tap; snackbar with UNDO"               s_bank_buyin
+step bank-undo            "UNDO takes the buy-in back; record it again"         s_bank_undo
+step bank-rebuy           "Record a rebuy in one tap"                           s_bank_rebuy
+step bank-knockout-sheet  "Knockout sheet for Player 2 (S5b)"                   s_bank_knockout_sheet
+step bank-knockout-done   "Alice knocked Player 2 out; 5th badge clear of name" s_bank_knockout_done
+step bank-champion        "Three more out; Alice is the champion"               s_bank_champion
+step bank-payout-sheet    "Pay-out sheet for the champion (S5c)"                s_bank_payout_sheet
+step bank-paid            "Mark paid: Paid column, finished subtitle"           s_bank_paid
+step pool-summary         "Pool breakdown sheet"                                s_pool_summary
+step weights-editor       "Payout structure sheet from the Bank"                s_weights_editor
+step weights-closed       "Cancel the payout structure sheet"                   s_weights_close
 step bank-scrolled        "Bank list scrolled down"                             s_bank_scrolled
 step rebuy-retype         "Clear and retype the Rebuy amount; rebuy kept"       s_rebuy_retype
 step rebuy-zero-prompt    "Leave Rebuy empty: asks before clearing"             s_rebuy_zero_prompt
 step rebuy-kept           "Keep: amount and rebuy stay"                         s_rebuy_kept
-step payouts-nav          "Payouts tab: same table, adds up with the rebuy"     s_payouts_nav
-step payouts-nav-editor   "Payouts tab: structure editor opens and closes"      s_payouts_nav_editor
+step bank-cutoff          "Rebuys until level 1, clock in level 2: closed"      s_bank_cutoff
+step bank-rebuy-blocked   "A rebuy tap after the cutoff does nothing"           s_bank_rebuy_blocked
+step bank-cutoff-reset    "Reset the tournament: clock and cutoff cleared"      s_bank_cutoff_reset
+step payouts-nav          "Payouts tab: the finished night by name, adds up"    s_payouts_nav
+step payouts-nav-editor   "Payouts tab: structure sheet opens and closes"       s_payouts_nav_editor
 step payouts-nav-back     "Back from a tab returns to Tournament (B16)"         s_payouts_nav_back
 step tools                "Tools tab: tool list and Sound (S7)"                 s_tools
 step sound-off            "Sound off: switch off, volume and chime rest"        s_sound_off
 step sound-on             "Sound back on; test chime"                           s_sound_on
-step hand-ranks           "Hand ranks: back arrow, Tools stays selected"        s_hand_ranks
+step hand-ranks           "Hand ranks (S12): how often by the river, kickers"   s_hand_ranks
 step odds-empty           "Odds: empty table, first slot waiting"              s_odds_empty
 step odds-card-picker     "Docked keypad: ranks, then suits that wait"          s_card_picker
 step odds-hole-cards      "Keypad: AsKs vs QhQd, auto-advance to the flop"      s_hole_cards
@@ -929,10 +1128,12 @@ step odds-card-clears     "Add the turn 7h: stale odds go, 36.36% comes"        
 step odds-4-players       "Add two players, fold Player 3"                      s_odds_more_players
 step odds-reset-new-hand  "New hand: cards cleared, seats kept"                 s_odds_reset_new_hand
 step odds-reset-table     "Clear table: back to two empty seats"               s_odds_reset_table
-step chip-calc            "Chip set (the chip calculator), Tools selected"      s_chip_calc
-step chip-calc-generated  "Generate chip breakdown"                             s_chip_calc_generated
-step chip-calc-advanced   "Advanced settings expanded"                          s_chip_calc_advanced
-step chip-calc-scrolled   "Chip calculator scrolled"                            s_chip_calc_scrolled
+step chip-calc            "Chip set (S11): chips you own, Tools selected"       s_chip_calc
+step chip-calc-stack      "Each player's stack adds up to 5,000; reserve check" s_chip_calc_stack
+step chip-calc-colorup    "Color-up plan from the blind schedule"               s_chip_calc_colorup
+step chip-calc-short      "Only 10 greens: short, by how many, and the fix"     s_chip_calc_short
+step chip-calc-reset      "Reset to the starting set at once, with Undo"        s_chip_calc_reset
+step chip-calc-settings   "Stack settings: keep 2 stacks back for rebuys"       s_chip_calc_settings
 step back-to-tournament   "Back to Tournament tab, state intact"                s_back_to_tournament
 step rail                 "720 dp wide: tabs move to a rail (PP-087)"           s_rail
 step rail-tools           "Rail: Tools tab"                                     s_rail_tools

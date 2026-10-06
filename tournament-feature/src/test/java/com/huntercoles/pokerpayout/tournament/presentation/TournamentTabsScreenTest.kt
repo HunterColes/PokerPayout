@@ -21,11 +21,9 @@ import com.huntercoles.pokerpayout.core.testing.LayoutAssertions
 import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
-import com.huntercoles.pokerpayout.core.testing.forEachScrollPosition
 import com.huntercoles.pokerpayout.core.time.TimeSource
 import com.huntercoles.pokerpayout.tournament.presentation.composable.TournamentActions
 import com.huntercoles.pokerpayout.tournament.presentation.composable.TournamentContent
-import com.huntercoles.pokerpayout.tournament.presentation.payouts.PayoutsContent
 import io.mockk.mockk
 import org.junit.After
 import org.junit.Before
@@ -37,13 +35,14 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The Tournament and Payouts tabs inside the app's shell, on every cell of the device matrix, with
+ * The Tournament tab inside the app's shell, on every cell of the device matrix, with
  * goldens on the [DeviceMatrix.goldens] cells. The ViewModels are the real ones over real (in-memory)
  * preferences, set up as the mockups' game: 9 players, $40 buy-in, $5 food, $5 bounty, $40 rebuy,
  * $10 add-on, before the clock starts.
  *
- * Payouts is checked in full. The Tournament tab here is its setup page (S1 v2) inside the shell; its
- * own tests (TournamentScreenGoldenTest) check every state of it across the matrix.
+ * The Tournament tab here is its setup page (S1 v2) inside the shell; its own tests
+ * (TournamentScreenGoldenTest) check every state of it across the matrix. The Payouts tab has its
+ * own test (`PayoutsTabScreenTest`).
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -100,36 +99,6 @@ class TournamentTabsScreenTest(private val config: ScreenConfig) {
         }
         LayoutAssertions.assertTouchTargets(screen.compose, "Tournament tab on ${config.id}", strict = false)
         golden("Shell_tournament")
-    }
-
-    @Test
-    fun payoutsTab() {
-        val viewModel = configViewModel()
-        screen.compose.setContent {
-            val state by viewModel.uiState.collectAsState()
-            InAppShell(NavTab.Payouts) { PayoutsContent(uiState = state, onIntent = {}) }
-        }
-        val where = "Payouts tab on ${config.id}"
-        LayoutAssertions.assertTextFits(screen.compose, where)
-        LayoutAssertions.assertTouchTargets(screen.compose, where, strict = false)
-        golden("Shell_payouts")
-        screen.compose.forEachScrollPosition { position ->
-            LayoutAssertions.assertVisibleTextUnclipped(screen.compose, "$where, $position")
-        }
-    }
-
-    @Test
-    fun payoutsTabOnceTheClockHasStarted() {
-        tournamentPreferences.setTournamentLocked(true)
-        val viewModel = configViewModel()
-        screen.compose.setContent {
-            val state by viewModel.uiState.collectAsState()
-            InAppShell(NavTab.Payouts) { PayoutsContent(uiState = state, onIntent = {}) }
-        }
-        val where = "locked Payouts tab on ${config.id}"
-        LayoutAssertions.assertTextFits(screen.compose, where)
-        LayoutAssertions.assertTouchTargets(screen.compose, where, strict = false)
-        golden("Shell_payouts_locked")
     }
 
     private fun configViewModel() = viewModel {

@@ -86,13 +86,12 @@ class ScreenOrientationTest {
 
     @Test
     @Config(qualifiers = "w1280dp-h800dp-land")
-    fun `a screen can take the full width beside the rail, or the whole window`() {
-        var fullWidth by mutableStateOf(false)
+    fun `a screen can take the whole window, with no tabs, and give it back`() {
         var immersive by mutableStateOf(false)
         compose.setContent {
             PokerTheme(reducedMotion = true) {
                 PokerAppShell(items = pokerNavItems(), selectedIndex = 0, onSelect = {}) {
-                    RequestShellChrome(fullWidth = fullWidth, immersive = immersive)
+                    RequestShellChrome(immersive = immersive)
                     Box(Modifier.fillMaxSize().testTag(SCREEN))
                 }
             }
@@ -102,19 +101,14 @@ class ScreenOrientationTest {
         assertEquals(ContentMaxWidth, capped.right - capped.left)
         compose.onNodeWithText("Bank").assertExists() // the rail
 
-        fullWidth = true
-        compose.waitForIdle()
-        val wide = compose.onNodeWithTag(SCREEN).getBoundsInRoot()
-        assertTrue("full width beside the rail: ${wide.right - wide.left}", wide.right - wide.left > 1000.dp)
-
         immersive = true
         compose.waitForIdle()
         compose.onNodeWithText("Bank").assertDoesNotExist() // no tabs
         val whole = compose.onNodeWithTag(SCREEN).getBoundsInRoot()
         assertEquals(0.dp, whole.left)
+        assertEquals(1280.dp, whole.right)
 
         immersive = false
-        fullWidth = false
         compose.waitForIdle()
         compose.onNodeWithText("Bank").assertExists()
     }

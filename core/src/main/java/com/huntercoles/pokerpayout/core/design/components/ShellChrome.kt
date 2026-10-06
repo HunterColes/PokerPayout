@@ -9,17 +9,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 
 /**
- * What the screen on show asks of [PokerAppShell] around it. Two screens need more than a centred
- * column beside the tabs: the Tournament tab's two panes from 840 dp (Z4), which use the whole
- * width, and its table view (S3), which takes the whole window, tabs and system bars included.
- * Screens ask with [RequestShellChrome]; nothing changes for screens that don't.
+ * What the screen on show asks of [PokerAppShell] around it: the whole window, tabs and system bars
+ * included (the Tournament tab's table view, S3). Screens ask with [RequestShellChrome]; nothing
+ * changes for screens that don't. (A screen that wants the full width beside the tabs uses
+ * [fillShellWidth] instead.)
  */
 @Stable
 class ShellChrome {
-    /** No [ContentMaxWidth] cap: the screen lays out its own panes. */
-    var fullWidth: Boolean by mutableStateOf(false)
-        internal set
-
     /** No tabs and no insets: the screen fills the window (pair it with hiding the system bars). */
     var immersive: Boolean by mutableStateOf(false)
         internal set
@@ -28,16 +24,12 @@ class ShellChrome {
 /** The shell's [ShellChrome], or null outside a [PokerAppShell]. */
 val LocalShellChrome = staticCompositionLocalOf<ShellChrome?> { null }
 
-/** While composed, asks the shell for the full width and/or the whole window. */
+/** While composed, asks the shell for the whole window. */
 @Composable
-fun RequestShellChrome(fullWidth: Boolean = false, immersive: Boolean = false) {
+fun RequestShellChrome(immersive: Boolean = false) {
     val chrome = LocalShellChrome.current ?: return
-    DisposableEffect(chrome, fullWidth, immersive) {
-        chrome.fullWidth = fullWidth
+    DisposableEffect(chrome, immersive) {
         chrome.immersive = immersive
-        onDispose {
-            chrome.fullWidth = false
-            chrome.immersive = false
-        }
+        onDispose { chrome.immersive = false }
     }
 }

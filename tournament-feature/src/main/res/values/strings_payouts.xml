@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Payouts tab (S6). The title is core's navigation_payouts. -->
+    <plurals name="payouts_subtitle">
+        <item quantity="one">%2$s prize pool · %1$d place paid</item>
+        <item quantity="other">%2$s prize pool · %1$d places paid</item>
+    </plurals>
+    <string name="payouts_locked_running">Locked while the clock runs. Pause it to change the payouts.</string>
+    <string name="payouts_share">Share the payouts</string>
+    <string name="payouts_edit">Edit payout structure</string>
+    <string name="payouts_prize_pool">Prize pool</string>
+    <string name="payouts_structure_label">Structure · what 1st gets</string>
+    <string name="payouts_round_to">Round to</string>
+    <string name="payouts_places">Places</string>
+    <string name="payouts_places_stepper">Places paid</string>
+    <string name="payouts_adds_up">Adds up to %1$s</string>
+    <string name="payouts_still_playing">Still playing</string>
+    <string name="payouts_share_percent">%1$s%%</string>
+    <plurals name="payouts_recommend">
+        <item quantity="one">Recommended for %1$d players: %2$d place.</item>
+        <item quantity="other">Recommended for %1$d players: %2$d places.</item>
+    </plurals>
+    <string name="payouts_pay_recommended">Pay %1$d</string>
+    <string name="payouts_custom">Custom</string>
+    <string name="payouts_preset_top_heavy">Top-heavy</string>
+    <string name="payouts_preset_standard">Standard</string>
+    <string name="payouts_preset_flat">Flat</string>
+    <string name="payouts_separator">" · "</string>
+
+    <!-- The bubble strip -->
+    <string name="payouts_bubble">The bubble</string>
+    <plurals name="payouts_bubble_to_money">
+        <item quantity="one">%d more out to the money</item>
+        <item quantity="other">%d more out to the money</item>
+    </plurals>
+    <string name="payouts_bubble_in_money">In the money</string>
+    <string name="payouts_bubble_finished">Finished</string>
+    <string name="payouts_bubble_caption">Finishing places, %1$s to 1st. The next player out finishes %2$s.</string>
+    <string name="payouts_bubble_caption_done">Finishing places, %1$s to 1st.</string>
+    <string name="payouts_seat_out">%1$s, finished, not paid</string>
+    <string name="payouts_seat_cashed">%1$s, finished, paid</string>
+    <string name="payouts_seat_bubble">%1$s, still to play for, not paid</string>
+    <string name="payouts_seat_money">%1$s, still to play for, paid</string>
+
+    <!-- Bounties -->
+    <string name="payouts_bounties_title">Bounties · %1$s a head</string>
+    <string name="payouts_bounties_still_out">%1$s still out there</string>
+    <string name="payouts_bounties_none">No knockouts yet.</string>
+    <string name="payouts_bounty_champion">own bounty and unclaimed</string>
+    <string name="payouts_food">Food: %1$s, kept out of the prize pool.</string>
+
+    <!-- Where the pool came from: "9 buy-ins $360 · 1 rebuy $40 · 5 add-ons $50" -->
+    <plurals name="payouts_buy_ins">
+        <item quantity="one">%1$d buy-in %2$s</item>
+        <item quantity="other">%1$d buy-ins %2$s</item>
+    </plurals>
+    <plurals name="payouts_rebuys">
+        <item quantity="one">%1$d rebuy %2$s</item>
+        <item quantity="other">%1$d rebuys %2$s</item>
+    </plurals>
+    <plurals name="payouts_add_ons">
+        <item quantity="one">%1$d add-on %2$s</item>
+        <item quantity="other">%1$d add-ons %2$s</item>
+    </plurals>
+
+    <!-- Share as text -->
+    <string name="payouts_share_title">Poker night payouts</string>
+    <string name="payouts_share_pool">Prize pool %1$s (%2$s)</string>
+    <string name="payouts_share_row">%1$s: %2$s</string>
+    <string name="payouts_share_row_winner">%1$s · %2$s</string>
+    <string name="payouts_share_structure">%1$s, rounded to %2$s</string>
+    <string name="payouts_share_bounties">Bounties, %1$s a head: %2$s</string>
+    <string name="payouts_share_claim">%1$s %2$s (%3$s)</string>
+    <string name="payouts_share_champion_bounty">%1$s %2$s (own bounty and unclaimed)</string>
+</resources>

@@ -2,6 +2,8 @@ package com.huntercoles.pokerpayout.core.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
+import com.huntercoles.pokerpayout.core.utils.Money
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -10,11 +12,25 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/**
+ * What the Bank recorded, per player.
+ *
+ * Rebuys and add-ons keep the price each was bought at (PP-085): `player_rebuy_prices_<id>` holds
+ * them in cents, oldest first, next to the old `player_rebuys_<id>` count, which stays in step for
+ * readers that only count. Purchases recorded before PP-085 had no price; [migratePurchasePrices]
+ * prices them once at the amount set then.
+ */
 @Singleton
 class BankPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val prefs: SharedPreferences = context.getSharedPreferences("bank_prefs", Context.MODE_PRIVATE)
+
+    init {
+        // Before any total below is read.
+        migratePurchasePrices()
+    }
+
     private val _eliminationOrder = MutableStateFlow(readEliminationOrderFromPrefs())
     val eliminationOrder: Flow<List<Int>> = _eliminationOrder.asStateFlow()
     private val _totalRebuys = MutableStateFlow(calculateTotalRebuys())
@@ -25,39 +41,39 @@ class BankPreferences @Inject constructor(
 
     /** Bumped by every write, so screens that only read the Bank (the Tournament tab) can refresh. */
     val revision: StateFlow<Long> = _revision.asStateFlow()
-    
+
     fun savePlayerName(playerId: Int, name: String) {
         prefs.edit().putString("$PLAYER_NAME_PREFIX$playerId", name).apply()
         changed()
     }
-    
+
     fun getPlayerName(playerId: Int): String {
         return prefs.getString("$PLAYER_NAME_PREFIX$playerId", "Player $playerId") ?: "Player $playerId"
     }
-    
+
     fun savePlayerBuyInStatus(playerId: Int, buyIn: Boolean) {
         prefs.edit().putBoolean("player_buyin_$playerId", buyIn).apply()
         changed()
     }
-    
+
     fun getPlayerBuyInStatus(playerId: Int): Boolean {
         return prefs.getBoolean("player_buyin_$playerId", false)
     }
-    
+
     fun savePlayerOutStatus(playerId: Int, out: Boolean) {
         prefs.edit().putBoolean("player_out_$playerId", out).apply()
         changed()
     }
-    
+
     fun getPlayerOutStatus(playerId: Int): Boolean {
         return prefs.getBoolean("player_out_$playerId", false)
     }
-    
+
     fun savePlayerPayedOutStatus(playerId: Int, payedOut: Boolean) {
         prefs.edit().putBoolean("player_payedout_$playerId", payedOut).apply()
         changed()
     }
-    
+
     fun getPlayerPayedOutStatus(playerId: Int): Boolean {
         return prefs.getBoolean("player_payedout_$playerId", false)
     }
@@ -78,23 +94,68 @@ class BankPreferences @Inject constructor(
         return prefs.getInt("$PLAYER_ELIMINATED_BY_PREFIX$playerId", -1)
             .takeIf { it > 0 }
     }
-    
+
+    /**
+     * Sets [playerId]'s rebuy count. Rebuys kept keep their prices; new ones are priced at the
+     * newest recorded one, or today's rebuy amount. The Bank records prices itself through
+     * [savePlayerRebuyPrices]; this is for callers that only count.
+     */
     fun savePlayerRebuys(playerId: Int, rebuys: Int) {
-        prefs.edit().putInt("$PLAYER_REBUYS_PREFIX$playerId", rebuys).apply()
-        changed()
+        savePlayerRebuyPrices(playerId, resized(getPlayerRebuyPrices(playerId), rebuys, ::currentRebuyPriceCents))
     }
-    
+
     fun getPlayerRebuys(playerId: Int): Int {
         return prefs.getInt("$PLAYER_REBUYS_PREFIX$playerId", 0)
     }
-    
-    fun savePlayerAddons(playerId: Int, addons: Int) {
-        prefs.edit().putInt("$PLAYER_ADDONS_PREFIX$playerId", addons).apply()
+
+    /** What each of [playerId]'s rebuys cost, oldest first. */
+    fun getPlayerRebuyPrices(playerId: Int): List<Long> =
+        readPrices(REBUY_PRICES_PREFIX, PLAYER_REBUYS_PREFIX, playerId, ::currentRebuyPriceCents)
+
+    /** Records [playerId]'s rebuys at [pricesCents], oldest first (the count follows). */
+    fun savePlayerRebuyPrices(playerId: Int, pricesCents: List<Long>) {
+        writePrices(REBUY_PRICES_PREFIX, PLAYER_REBUYS_PREFIX, playerId, pricesCents)
         changed()
     }
-    
+
+    /** Sets [playerId]'s add-on count, as [savePlayerRebuys] does for rebuys. */
+    fun savePlayerAddons(playerId: Int, addons: Int) {
+        savePlayerAddonPrices(playerId, resized(getPlayerAddonPrices(playerId), addons, ::currentAddOnPriceCents))
+    }
+
     fun getPlayerAddons(playerId: Int): Int {
         return prefs.getInt("$PLAYER_ADDONS_PREFIX$playerId", 0)
+    }
+
+    /** What each of [playerId]'s add-ons cost, oldest first. */
+    fun getPlayerAddonPrices(playerId: Int): List<Long> =
+        readPrices(ADDON_PRICES_PREFIX, PLAYER_ADDONS_PREFIX, playerId, ::currentAddOnPriceCents)
+
+    /** Records [playerId]'s add-ons at [pricesCents], oldest first (the count follows). */
+    fun savePlayerAddonPrices(playerId: Int, pricesCents: List<Long>) {
+        writePrices(ADDON_PRICES_PREFIX, PLAYER_ADDONS_PREFIX, playerId, pricesCents)
+        changed()
+    }
+
+    /** Every recorded rebuy, at the price it was bought at. */
+    fun getRecordedRebuyCents(): Long = sumOfPrices(REBUY_PRICES_PREFIX)
+
+    /** Every recorded add-on, at the price it was bought at. */
+    fun getRecordedAddOnCents(): Long = sumOfPrices(ADDON_PRICES_PREFIX)
+
+    /** The level [playerId] was knocked out at, if the clock was running then. */
+    fun getPlayerOutLevel(playerId: Int): Int? =
+        prefs.getInt("$PLAYER_OUT_LEVEL_PREFIX$playerId", 0).takeIf { it > 0 }
+
+    fun savePlayerOutLevel(playerId: Int, level: Int?) {
+        val editor = prefs.edit()
+        if (level == null || level <= 0) {
+            editor.remove("$PLAYER_OUT_LEVEL_PREFIX$playerId")
+        } else {
+            editor.putInt("$PLAYER_OUT_LEVEL_PREFIX$playerId", level)
+        }
+        editor.apply()
+        changed()
     }
 
     fun getTotalRebuyCount(): Int = _totalRebuys.value
@@ -104,7 +165,7 @@ class BankPreferences @Inject constructor(
     fun clearAllRebuys() {
         val editor = prefs.edit()
         prefs.all.keys
-            .filter { it.startsWith(PLAYER_REBUYS_PREFIX) }
+            .filter { it.startsWith(PLAYER_REBUYS_PREFIX) || it.startsWith(REBUY_PRICES_PREFIX) }
             .forEach { editor.remove(it) }
         editor.apply()
         changed()
@@ -113,7 +174,7 @@ class BankPreferences @Inject constructor(
     fun clearAllAddons() {
         val editor = prefs.edit()
         prefs.all.keys
-            .filter { it.startsWith(PLAYER_ADDONS_PREFIX) }
+            .filter { it.startsWith(PLAYER_ADDONS_PREFIX) || it.startsWith(ADDON_PRICES_PREFIX) }
             .forEach { editor.remove(it) }
         editor.apply()
         changed()
@@ -167,7 +228,7 @@ class BankPreferences @Inject constructor(
             changed()
         }
     }
-    
+
     /**
      * Check if bank data is in default state (all default names, no boxes checked)
      */
@@ -178,21 +239,21 @@ class BankPreferences @Inject constructor(
             if (savedName != "Player $playerId") {
                 return false
             }
-            
+
             // Check if any boxes are checked or any rebuys/addons exist
-            val hasStatusChange = getPlayerBuyInStatus(playerId) || 
-                getPlayerOutStatus(playerId) || 
+            val hasStatusChange = getPlayerBuyInStatus(playerId) ||
+                getPlayerOutStatus(playerId) ||
                 getPlayerPayedOutStatus(playerId)
             val hasRebuyAddon = getPlayerRebuys(playerId) > 0 || getPlayerAddons(playerId) > 0
             val hasEliminationAssignment = getPlayerEliminatedBy(playerId) != null
-            
+
             if (hasStatusChange || hasRebuyAddon || hasEliminationAssignment) {
                 return false
             }
         }
         return true
     }
-    
+
     /**
      * Reset all bank data to default values
      */
@@ -208,6 +269,94 @@ class BankPreferences @Inject constructor(
         editor.apply()
         _eliminationOrder.value = emptyList()
         clearAllEliminatedBy()
+    }
+
+    // Purchase prices (PP-085) -------------------------------------------------------------------
+
+    private fun readPrices(pricesPrefix: String, countPrefix: String, playerId: Int, price: () -> Long): List<Long> {
+        val count = prefs.getInt("$countPrefix$playerId", 0).coerceAtLeast(0)
+        val stored = prefs.getString("$pricesPrefix$playerId", null)
+            ?.split(",")
+            ?.mapNotNull { it.trim().toLongOrNull()?.coerceAtLeast(0L) }
+            .orEmpty()
+        // The count is what every reader agrees on; a missing or short list is priced at today's amount.
+        return if (stored.size == count) stored else resized(stored, count, price)
+    }
+
+    private fun writePrices(pricesPrefix: String, countPrefix: String, playerId: Int, pricesCents: List<Long>) {
+        val editor = prefs.edit()
+        if (pricesCents.isEmpty()) {
+            editor.remove("$pricesPrefix$playerId").remove("$countPrefix$playerId")
+        } else {
+            editor.putString("$pricesPrefix$playerId", pricesCents.joinToString(",") { it.coerceAtLeast(0L).toString() })
+                .putInt("$countPrefix$playerId", pricesCents.size)
+        }
+        editor.apply()
+    }
+
+    private fun sumOfPrices(pricesPrefix: String): Long {
+        val countPrefix = if (pricesPrefix == REBUY_PRICES_PREFIX) PLAYER_REBUYS_PREFIX else PLAYER_ADDONS_PREFIX
+        val price = if (pricesPrefix == REBUY_PRICES_PREFIX) ::currentRebuyPriceCents else ::currentAddOnPriceCents
+        return prefs.all.keys
+            .filter { it.startsWith(countPrefix) }
+            .mapNotNull { it.removePrefix(countPrefix).toIntOrNull() }
+            .sumOf { id -> readPrices(pricesPrefix, countPrefix, id, price).sum() }
+    }
+
+    /**
+     * Purchases recorded before PP-085 have a count and no prices. Price each once, at the rebuy or
+     * add-on amount set now, so a later change to the amount doesn't re-value them.
+     */
+    private fun migratePurchasePrices() {
+        val stored = prefs.all
+        val editor = prefs.edit()
+        var migrated = false
+        listOf(
+            Triple(PLAYER_REBUYS_PREFIX, REBUY_PRICES_PREFIX, ::currentRebuyPriceCents),
+            Triple(PLAYER_ADDONS_PREFIX, ADDON_PRICES_PREFIX, ::currentAddOnPriceCents)
+        ).forEach { (countPrefix, pricesPrefix, price) ->
+            stored.forEach { (key, value) ->
+                val playerId = key.takeIf { it.startsWith(countPrefix) }?.removePrefix(countPrefix)?.toIntOrNull()
+                val count = (value as? Int) ?: 0
+                if (playerId != null && count > 0 && !stored.containsKey("$pricesPrefix$playerId")) {
+                    editor.putString("$pricesPrefix$playerId", List(count) { price() }.joinToString(","))
+                    migrated = true
+                }
+            }
+        }
+        if (migrated) editor.apply()
+    }
+
+    /** Today's rebuy amount, read from the Tournament settings (any Bank write may need it). */
+    private fun currentRebuyPriceCents(): Long =
+        tournamentPriceCents(TOURNAMENT_REBUY_CENTS_KEY, TOURNAMENT_REBUY_LEGACY_KEY, MoneySettings.DEFAULT.rebuyCents)
+
+    private fun currentAddOnPriceCents(): Long =
+        tournamentPriceCents(TOURNAMENT_ADDON_CENTS_KEY, TOURNAMENT_ADDON_LEGACY_KEY, MoneySettings.DEFAULT.addOnCents)
+
+    /**
+     * An amount from `tournament_prefs` without depending on TournamentPreferences (which may not
+     * exist yet, or not have migrated its v1.1.x Float amounts yet): the cents key, else the
+     * legacy Float, else the default.
+     */
+    private fun tournamentPriceCents(centsKey: String, legacyKey: String, default: Long): Long {
+        val tournament = context.getSharedPreferences(TOURNAMENT_PREFS, Context.MODE_PRIVATE)
+        val legacy = tournament.all[legacyKey]
+        return when {
+            tournament.contains(centsKey) -> tournament.getLong(centsKey, default)
+            legacy is Float -> Money.centsOfLegacyFloat(legacy)
+            else -> default
+        }.coerceAtLeast(0L)
+    }
+
+    private fun resized(prices: List<Long>, count: Int, price: () -> Long): List<Long> {
+        val target = count.coerceAtLeast(0)
+        return if (target <= prices.size) {
+            prices.take(target)
+        } else {
+            val fill = prices.lastOrNull() ?: price()
+            prices + List(target - prices.size) { fill }
+        }
     }
 
     private fun changed() {
@@ -243,5 +392,16 @@ class BankPreferences @Inject constructor(
         private const val PLAYER_REBUYS_PREFIX = "player_rebuys_"
         private const val PLAYER_ADDONS_PREFIX = "player_addons_"
         private const val PLAYER_ELIMINATED_BY_PREFIX = "player_eliminated_by_"
+        private const val REBUY_PRICES_PREFIX = "player_rebuy_prices_"
+        private const val ADDON_PRICES_PREFIX = "player_addon_prices_"
+        private const val PLAYER_OUT_LEVEL_PREFIX = "player_out_level_"
+
+        // TournamentPreferences' file and keys for the rebuy and add-on amounts (read only, for
+        // pricing purchases; BankPreferencesPricesTest keeps the two in step).
+        private const val TOURNAMENT_PREFS = "tournament_prefs"
+        private const val TOURNAMENT_REBUY_CENTS_KEY = "rebuy_per_player_cents"
+        private const val TOURNAMENT_ADDON_CENTS_KEY = "addon_per_player_cents"
+        private const val TOURNAMENT_REBUY_LEGACY_KEY = "rebuy_per_player"
+        private const val TOURNAMENT_ADDON_LEGACY_KEY = "addon_per_player"
     }
 }

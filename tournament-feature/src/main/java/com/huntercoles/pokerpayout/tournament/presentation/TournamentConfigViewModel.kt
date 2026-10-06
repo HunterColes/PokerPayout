@@ -115,7 +115,12 @@ class TournamentConfigViewModel @Inject constructor(
         val config = tournamentPreferences.getCurrentTournamentConfig()
         val rebuys = bankPreferences.getTotalRebuyCount()
         val addOns = bankPreferences.getTotalAddonCount()
-        val pool = PoolBreakdown.of(config.money, config.numPlayers, rebuys, addOns)
+        val pool = PoolBreakdown.withRecordedPurchases(
+            config.money,
+            config.numPlayers,
+            bankPreferences.getRecordedRebuyCents(),
+            bankPreferences.getRecordedAddOnCents(),
+        )
         val table = calculatePayoutsUseCase(
             prizePoolCents = pool.prizePoolCents,
             weights = config.payoutWeights,

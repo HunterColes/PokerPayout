@@ -20,8 +20,8 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The Tools tab (S7) inside the app's shell, on every cell of the device matrix: the layout checks
  * everywhere (text fits, nothing clipped at any scroll position, 48 dp targets that don't overlap),
- * and a golden on the [DeviceMatrix.goldens] cells. Hand ranks is there too, as the tool screen that
- * keeps Tools selected and shows the back arrow (its list is restyled in M6, S12).
+ * and a golden on the [DeviceMatrix.goldens] cells. The tools' own screens have their own tests
+ * (`HandRanksScreenTest`, `ChipSetScreenTest`, the odds tests).
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -35,22 +35,6 @@ class ToolsTabScreenTest(private val config: ScreenConfig) {
 
     @Test
     fun toolsMuted() = check("S7_tools_muted", ToolsHomeUiState(soundOn = false, volume = 0.7f))
-
-    @Test
-    fun handRanksKeepsToolsSelected() {
-        screen.compose.setContent { InAppShell(NavTab.Tools) { HandRanksScreen(onBack = {}) } }
-        val where = "Hand ranks on ${config.id}"
-        LayoutAssertions.assertTouchTargets(screen.compose, where, strict = true)
-        if (config in DeviceMatrix.goldens) screen.compose.onRoot().captureGolden("screens", "Shell_handranks", config)
-        // At 200% the old card faces' ranks outgrow the faces (M6 moves the list to CardFace, whose
-        // ranks keep their size); below that the whole list must fit, descriptions included.
-        if (config.fontScale < 2f) {
-            LayoutAssertions.assertTextFits(screen.compose, where)
-            screen.compose.forEachScrollPosition { position ->
-                LayoutAssertions.assertVisibleTextUnclipped(screen.compose, "$where, $position")
-            }
-        }
-    }
 
     private fun check(name: String, state: ToolsHomeUiState) {
         screen.compose.setContent {

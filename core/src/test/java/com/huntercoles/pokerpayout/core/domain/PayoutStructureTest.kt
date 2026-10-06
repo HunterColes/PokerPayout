@@ -61,13 +61,28 @@ class PayoutStructureTest {
     @Test
     fun `pay about a third of the field, never more places than players`() {
         assertEquals(1, PayoutPlaces.recommended(3))
-        assertEquals(1, PayoutPlaces.recommended(5))
+        assertEquals(1, PayoutPlaces.recommended(4))
+        assertEquals(2, PayoutPlaces.recommended(5)) // PP-086: was 1, winner takes all
         assertEquals(2, PayoutPlaces.recommended(6))
         assertEquals(3, PayoutPlaces.recommended(10))
         assertEquals(9, PayoutPlaces.recommended(30))
         assertEquals(3, PayoutPlaces.maxFor(3))
         assertEquals(9, PayoutPlaces.maxFor(30))
         assertEquals(1, PayoutPlaces.maxFor(0))
+    }
+
+    @Test
+    fun `PP-086 changes the recommendation for 5 players and nothing else from 2 to 30`() {
+        // The v1.3.1 rule, kept here as the reference: a plain third of the field, 1 to 9.
+        fun before(players: Int) = (players / 3).coerceIn(1, PayoutPlaces.MAX)
+        val changed = (2..30).filter { PayoutPlaces.recommended(it) != before(it) }
+        assertEquals(listOf(5), changed)
+        assertEquals(
+            listOf(1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 9),
+            (2..30).map { PayoutPlaces.recommended(it) }
+        )
+        // Never more places than players
+        (1..30).forEach { assertTrue(PayoutPlaces.recommended(it) <= PayoutPlaces.maxFor(it)) }
     }
 
     @Test

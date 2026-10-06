@@ -2,129 +2,209 @@ package com.huntercoles.pokerpayout.core.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.huntercoles.pokerpayout.core.utils.ChipDistributionCurve
+import com.huntercoles.pokerpayout.core.utils.ChipDistributionOptimizer
+import com.huntercoles.pokerpayout.core.utils.ChipDistributionOutcome
+import com.huntercoles.pokerpayout.core.utils.ChipInventory
+import com.huntercoles.pokerpayout.core.utils.SmallestChipChoices
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Everything the chip set (S11, PP-033) saves.
+ *
+ * @property inventory the chips you own.
+ * @property inventoryReviewed false until you first change the set: a set the app filled in (the
+ *   starting set, or one made from your old calculator setup) asks you to check its counts.
+ * @property stackOverride a starting stack to plan instead of the Tournament's; null to follow it.
+ * @property shape the shape the counts follow (the old "distribution curve").
+ * @property maxColours at most this many chip values in a stack (the old "denominations").
+ * @property reserveStacks stacks to keep back for rebuys and add-ons.
+ */
+data class ChipSetSettings(
+    val inventory: ChipInventory = ChipInventory.HOME_SET,
+    val inventoryReviewed: Boolean = false,
+    val stackOverride: Int? = null,
+    val shape: ChipDistributionCurve = ChipDistributionCurve.LinearSteep,
+    val maxColours: Int = DEFAULT_MAX_COLOURS,
+    val reserveStacks: Int = 0
+) {
+    companion object {
+        const val DEFAULT_MAX_COLOURS = 5
+        val MAX_COLOURS_RANGE = 1..8
+        val RESERVE_RANGE = 0..50
+    }
+}
+
+/**
+ * The chip set's saved settings ([ChipSetSettings]).
+ *
+ * Up to v1.3.0 this was the chip calculator: a starting-chips override, a curve (saved by its
+ * display name), a denomination count and the last generated breakdown. [migrateLegacySetup] turns
+ * that into an inventory once, so an existing user keeps their setup: their last stack's colours,
+ * with counts for their players twice over. The override, count and curve carry on as the stack
+ * settings; the breakdown and fit score are gone (the plan is live now).
+ */
 @Singleton
 class ChipCalculatorPreferences @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext context: Context,
+    private val tournamentPreferences: TournamentPreferences
 ) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("chip_calculator_prefs", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    private val _customTotalChips = MutableStateFlow(getCustomTotalChips())
-    val customTotalChips: Flow<Int> = _customTotalChips.asStateFlow()
-
-    private val _selectedCurve = MutableStateFlow(getSelectedCurve())
-    val selectedCurve: Flow<String> = _selectedCurve.asStateFlow()
-
-    private val _denominationCount = MutableStateFlow(getDenominationCount())
-    val denominationCount: Flow<Int> = _denominationCount.asStateFlow()
-
-    private val _chipBreakdown = MutableStateFlow(getChipBreakdown())
-    val chipBreakdown: Flow<List<Pair<Int, Int>>> = _chipBreakdown.asStateFlow()
-
-    fun getCustomTotalChips(): Int {
-        return prefs.getInt(CUSTOM_TOTAL_CHIPS_KEY, 0) // 0 means use tournament config value
+    init {
+        migrateLegacySetup()
     }
 
-    fun setCustomTotalChips(total: Int) {
-        prefs.edit().putInt(CUSTOM_TOTAL_CHIPS_KEY, total).apply()
-        _customTotalChips.value = total
+    private val _settings = MutableStateFlow(read())
+    val settings: StateFlow<ChipSetSettings> = _settings.asStateFlow()
+
+    fun current(): ChipSetSettings = _settings.value
+
+    /** Saves [inventory] as the set you own, and marks it as checked by you. */
+    fun setInventory(inventory: ChipInventory) {
+        prefs.edit().putString(INVENTORY_KEY, inventory.encode()).putBoolean(INVENTORY_REVIEWED_KEY, true).apply()
+        publish()
     }
 
-    fun clearCustomTotal() {
-        prefs.edit().remove(CUSTOM_TOTAL_CHIPS_KEY).apply()
-        _customTotalChips.value = 0
+    /** Plan [stack] instead of the Tournament's starting stack; null follows the Tournament again. */
+    fun setStackOverride(stack: Int?) {
+        val editor = prefs.edit()
+        if (stack != null && stack > 0) editor.putInt(CUSTOM_TOTAL_CHIPS_KEY, stack) else editor.remove(CUSTOM_TOTAL_CHIPS_KEY)
+        editor.apply()
+        publish()
     }
 
+    fun setShape(shape: ChipDistributionCurve) {
+        prefs.edit().putString(STACK_SHAPE_KEY, shape.id).apply()
+        publish()
+    }
+
+    fun setMaxColours(count: Int) {
+        val valid = count.coerceIn(ChipSetSettings.MAX_COLOURS_RANGE)
+        prefs.edit().putInt(DENOMINATION_COUNT_KEY, valid).apply()
+        publish()
+    }
+
+    fun setReserveStacks(stacks: Int) {
+        prefs.edit().putInt(RESERVE_STACKS_KEY, stacks.coerceIn(ChipSetSettings.RESERVE_RANGE)).apply()
+        publish()
+    }
+
+    /** Back to the starting set and default stack settings. */
     fun resetAllData() {
-        prefs.edit().clear().apply()
-        _customTotalChips.value = 0
-        _selectedCurve.value = getSelectedCurve()
-        _denominationCount.value = getDenominationCount()
-        _chipBreakdown.value = getChipBreakdown()
+        prefs.edit().clear().putString(INVENTORY_KEY, ChipInventory.HOME_SET.encode()).apply()
+        publish()
     }
 
-    fun isInDefaultState(): Boolean {
-        return getCustomTotalChips() == 0
+    /** Puts back everything [settings] holds (for Undo after a reset). */
+    fun restore(settings: ChipSetSettings) {
+        val editor = prefs.edit().clear()
+            .putString(INVENTORY_KEY, settings.inventory.encode())
+            .putBoolean(INVENTORY_REVIEWED_KEY, settings.inventoryReviewed)
+            .putString(STACK_SHAPE_KEY, settings.shape.id)
+            .putInt(DENOMINATION_COUNT_KEY, settings.maxColours)
+            .putInt(RESERVE_STACKS_KEY, settings.reserveStacks)
+        settings.stackOverride?.let { editor.putInt(CUSTOM_TOTAL_CHIPS_KEY, it) }
+        editor.apply()
+        publish()
     }
 
-    fun getSelectedCurve(): String {
-        return prefs.getString(SELECTED_CURVE_KEY, "Linear Steep") ?: "Linear Steep"
+    private fun publish() {
+        _settings.value = read()
     }
 
-    fun setSelectedCurve(curveName: String) {
-        prefs.edit().putString(SELECTED_CURVE_KEY, curveName).apply()
-        _selectedCurve.value = curveName
-    }
-
-    fun getDenominationCount(): Int {
-        return prefs.getInt(DENOMINATION_COUNT_KEY, 5)
-    }
-
-    fun setDenominationCount(count: Int) {
-        prefs.edit().putInt(DENOMINATION_COUNT_KEY, count).apply()
-        _denominationCount.value = count
-    }
-
-    fun getChipBreakdown(): List<Pair<Int, Int>> {
-        val breakdownString = prefs.getString(CHIP_BREAKDOWN_KEY, "") ?: ""
-        if (breakdownString.isEmpty()) return emptyList()
-        
-        return breakdownString.split(";").mapNotNull { pairString ->
-            val parts = pairString.split(",")
-            if (parts.size == 2) {
-                val denom = parts[0].toIntOrNull()
-                val qty = parts[1].toIntOrNull()
-                if (denom != null && qty != null) denom to qty else null
-            } else null
-        }
-    }
+    private fun read(): ChipSetSettings = ChipSetSettings(
+        inventory = ChipInventory.decode(prefs.getString(INVENTORY_KEY, null)) ?: ChipInventory.HOME_SET,
+        inventoryReviewed = prefs.getBoolean(INVENTORY_REVIEWED_KEY, false),
+        stackOverride = prefs.getInt(CUSTOM_TOTAL_CHIPS_KEY, 0).takeIf { it > 0 },
+        shape = prefs.getString(STACK_SHAPE_KEY, null)?.let(ChipDistributionCurve::fromId) ?: ChipDistributionCurve.LinearSteep,
+        maxColours = prefs.getInt(DENOMINATION_COUNT_KEY, ChipSetSettings.DEFAULT_MAX_COLOURS)
+            .coerceIn(ChipSetSettings.MAX_COLOURS_RANGE),
+        reserveStacks = prefs.getInt(RESERVE_STACKS_KEY, 0).coerceIn(ChipSetSettings.RESERVE_RANGE)
+    )
 
     /**
-     * Save a generated breakdown and its fit score together, in one edit, before notifying
-     * [chipBreakdown] collectors. A collector therefore never sees a breakdown paired with the
-     * previous run's fit score.
+     * Once, before anything reads the inventory: build it from the chip calculator's settings.
+     *
+     * - A saved breakdown (the last Generate) gives its colours and per-player counts.
+     * - Otherwise, if the calculator was ever used, its settings are run once more as it would have
+     *   (starting chips or the override, the Tournament's smallest chip, the denomination count and
+     *   the curve) and the answer's colours are used.
+     * - A calculator that was never used starts from [ChipInventory.HOME_SET].
+     *
+     * Counts are the per-player counts for the Tournament's players twice over, in rolls of 25
+     * ([ChipInventory.fromLastStack]); the screen asks you to check them. The curve moves from its
+     * display name to its id; the breakdown, fit score and v1.1.x total are removed.
      */
-    fun saveResult(breakdown: List<Pair<Int, Int>>, fitScore: Double) {
-        val breakdownString = breakdown.joinToString(";") { "${it.first},${it.second}" }
-        prefs.edit()
-            .putString(CHIP_BREAKDOWN_KEY, breakdownString)
-            .putFloat(FIT_SCORE_KEY, fitScore.toFloat())
+    private fun migrateLegacySetup() {
+        if (prefs.contains(INVENTORY_KEY)) return
+        val players = tournamentPreferences.getPlayerCount()
+        val lastStack = readLegacyBreakdown().ifEmpty { if (calculatorWasUsed()) rerunCalculator() else emptyList() }
+        val inventory = ChipInventory.fromLastStack(lastStack, players) ?: ChipInventory.HOME_SET
+        val editor = prefs.edit()
+            .putString(INVENTORY_KEY, inventory.encode())
+            .putBoolean(INVENTORY_REVIEWED_KEY, false)
+            .remove(LEGACY_CHIP_BREAKDOWN_KEY)
+            .remove(LEGACY_FIT_SCORE_KEY)
             .remove(LEGACY_TOTAL_PHYSICAL_CHIPS_KEY)
-            .apply()
-        _chipBreakdown.value = breakdown
+            .remove(LEGACY_SELECTED_CURVE_KEY)
+        legacyCurve()?.let { editor.putString(STACK_SHAPE_KEY, it.id) }
+        editor.apply()
     }
 
-    /** Forget the last generated breakdown (e.g. when the latest Generate had no answer). */
-    fun clearResult() {
-        prefs.edit()
-            .remove(CHIP_BREAKDOWN_KEY)
-            .remove(FIT_SCORE_KEY)
-            .remove(LEGACY_TOTAL_PHYSICAL_CHIPS_KEY)
-            .apply()
-        _chipBreakdown.value = emptyList()
+    private fun calculatorWasUsed(): Boolean = LEGACY_SETUP_KEYS.any { prefs.contains(it) }
+
+    private fun legacyCurve(): ChipDistributionCurve? =
+        prefs.getString(LEGACY_SELECTED_CURVE_KEY, null)?.let(ChipDistributionCurve::getCurveByName)
+
+    /** The calculator's answer for its saved settings, as (chip value, chips per player). */
+    private fun rerunCalculator(): List<Pair<Int, Int>> {
+        val stack = prefs.getInt(CUSTOM_TOTAL_CHIPS_KEY, 0).takeIf { it > 0 } ?: tournamentPreferences.getStartingChips()
+        val outcome = ChipDistributionOptimizer.optimize(
+            targetValue = stack,
+            smallestChip = SmallestChipChoices.normalize(tournamentPreferences.getSmallestChip()),
+            denominationCount = prefs.getInt(DENOMINATION_COUNT_KEY, ChipSetSettings.DEFAULT_MAX_COLOURS),
+            curve = legacyCurve() ?: ChipDistributionCurve.LinearSteep
+        )
+        return (outcome as? ChipDistributionOutcome.Success)?.distribution?.let { it.denominations.zip(it.quantities) }.orEmpty()
     }
 
-    fun getFitScore(): Double? {
-        val score = prefs.getFloat(FIT_SCORE_KEY, -1f)
-        return if (score >= 0) score.toDouble() else null
-    }
-
-    /** Physical chips in the saved breakdown, derived from it so the two can't disagree. */
-    fun getTotalPhysicalChips(): Int = getChipBreakdown().sumOf { it.second }
+    /** v1.1.x–v1.3.0's "value,count;value,count" breakdown. */
+    private fun readLegacyBreakdown(): List<Pair<Int, Int>> =
+        prefs.getString(LEGACY_CHIP_BREAKDOWN_KEY, null).orEmpty().split(";").mapNotNull { pair ->
+            val parts = pair.split(",").takeIf { it.size == 2 }
+            val value = parts?.get(0)?.toIntOrNull()?.takeIf { it > 0 }
+            val count = parts?.get(1)?.toIntOrNull()?.takeIf { it > 0 }
+            if (value != null && count != null) value to count else null
+        }
 
     companion object {
+        private const val PREFS_NAME = "chip_calculator_prefs"
+        private const val INVENTORY_KEY = "chip_inventory"
+        private const val INVENTORY_REVIEWED_KEY = "chip_inventory_reviewed"
+        private const val STACK_SHAPE_KEY = "stack_shape"
+        private const val RESERVE_STACKS_KEY = "reserve_stacks"
+
+        // Kept from the chip calculator, same meaning.
         private const val CUSTOM_TOTAL_CHIPS_KEY = "custom_total_chips"
-        private const val SELECTED_CURVE_KEY = "selected_curve"
         private const val DENOMINATION_COUNT_KEY = "denomination_count"
-        private const val CHIP_BREAKDOWN_KEY = "chip_breakdown"
-        private const val FIT_SCORE_KEY = "fit_score"
-        // Written by v1.1.x; now derived from the breakdown and only removed.
+
+        // The chip calculator's, read once by the migration and then removed.
+        private const val LEGACY_SELECTED_CURVE_KEY = "selected_curve"
+        private const val LEGACY_CHIP_BREAKDOWN_KEY = "chip_breakdown"
+        private const val LEGACY_FIT_SCORE_KEY = "fit_score"
         private const val LEGACY_TOTAL_PHYSICAL_CHIPS_KEY = "total_physical_chips"
+
+        private val LEGACY_SETUP_KEYS = listOf(
+            CUSTOM_TOTAL_CHIPS_KEY,
+            DENOMINATION_COUNT_KEY,
+            LEGACY_SELECTED_CURVE_KEY,
+            LEGACY_CHIP_BREAKDOWN_KEY
+        )
     }
 }

@@ -76,6 +76,11 @@ JDK 21 toolchain (F-Droid's buildserver has only JDK 21; bytecode targets 17). T
 
   The lock is shared by every agent and session; always take it. Check `uptime` first: heavy load
   (the owner runs Unity) breaks uiautomator. Reports land in `build/device-reports/<run>/`.
+- **On CI instead of this machine:** every pull request also runs the tour on GitHub's emulator
+  (`.github/workflows/device.yml`, debug and release; `gh workflow run device.yml --ref <branch>`
+  for any branch). `gh workflow run goldens.yml --ref <branch>` re-records the goldens on GitHub
+  and commits them to the branch. Local builds can starve the owner's machine (it runs Unity), so
+  don't build locally unless the owner has said builds are fine; never run several at once.
 
 ## Git, CI and releases (details: docs/RELEASING.md)
 

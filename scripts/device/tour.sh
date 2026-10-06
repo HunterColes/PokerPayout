@@ -457,7 +457,9 @@ s_payouts_share() {
 # the setup page now (no folder tabs).
 s_blinds_tab() {
   tab Tournament
-  ui scroll-to "text=Smallest chip" --max 6
+  # Scroll to the verdict itself: how far a swipe flings depends on the emulator's speed (CI's is
+  # slower), so the line under the chips isn't always on screen once "Smallest chip" is.
+  ui scroll-to "text~=Works: " --max 6
   ui assert-text "has=Game length" "has=Levels" "has=Starting stack" "text=Smallest chip" \
     "text~=Works: 9 levels, 50 / 100 to 5,000 / 10,000"
 }
@@ -1098,7 +1100,7 @@ s_chip_calc_settings() {
   # color-up plan counts them as in play
   ui scroll-to "re=(?i)stack settings" --max 6
   ui tap "re=(?i)^stack settings"
-  ui scroll-to "text=Stack shape" --max 4
+  ui scroll-to "re=Lots of small chips" --max 4   # the lowest thing checked (a fling's reach varies)
   ui assert-text "text=Starting stack" "text=Keep back for rebuys and add-ons" "text=Colours per stack, at most" \
     "re=More small chips" "re=Lots of small chips" || return 1
   ui tap "desc=Increase Keep back for rebuys and add-ons"

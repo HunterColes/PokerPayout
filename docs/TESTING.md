@@ -589,6 +589,8 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 | `MoneyFieldTest` | 4 | `MoneyField`: typed text kept key by key, cents out, one commit on Done, focus loss or the field going away; 0 is an amount, empty is none |
 | `LayoutAssertionsTest` | 11 | The checks themselves catch what they claim |
 | `ScreenOrientationTest` | 3 | Phones portrait unless the screen on show asks for more, and portrait again when it goes; free from 600 dp; a screen can take the full width beside the rail, or the whole window |
+| `SystemBarsTest` | 1 | Light status and navigation bar icons on the dark app (B13) |
+| `SoundManagerTest` | 3 | A loaded chime plays at the slider's volume now, not the one it had when loaded (B12); silent at 0 and with the sound off. The player is a recording fake |
 
 ## 10. The device matrix: real screens, sizes, fonts and rotation
 

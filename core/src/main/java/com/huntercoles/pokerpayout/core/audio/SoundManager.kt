@@ -26,6 +26,9 @@ class SoundManager @Inject constructor(
     private var mediaPlayer: MediaPlayer? = null
     private var currentSoundResId: Int = -1
     private var isPrepared = false
+
+    /** Makes each player; a test puts in one that records what it is asked to do. */
+    internal var newPlayer: () -> MediaPlayer = { MediaPlayer() }
     
     private val audioManager: AudioManager by lazy {
         context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -52,7 +55,7 @@ class SoundManager @Inject constructor(
             releasePlayer()
             
             // Create and prepare new MediaPlayer
-            mediaPlayer = MediaPlayer().apply {
+            mediaPlayer = newPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_GAME)
@@ -136,7 +139,7 @@ class SoundManager @Inject constructor(
             // Otherwise, prepare and play
             releasePlayer()
             
-            mediaPlayer = MediaPlayer().apply {
+            mediaPlayer = newPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_GAME)

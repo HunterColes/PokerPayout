@@ -1,11 +1,8 @@
 package com.huntercoles.pokerpayout.core.presentation
 
-import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -45,13 +42,8 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) {
             requestedOrientation = OrientationPolicy.base(resources.configuration.smallestScreenWidthDp)
         }
-        // Draw behind transparent system bars with light icons: the app is dark only. (The old
-        // theme painted the status bar green with dark icons on it, B13.) The shell and each
-        // screen's top bar pad for the bars.
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-        )
+        // The shell and each screen's top bar pad for the bars.
+        drawBehindDarkSystemBars()
         setContent {
             KeepScreenOnWhileClockRuns(timerPreferences)
 

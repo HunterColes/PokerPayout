@@ -3,6 +3,20 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.3.9 (on master, not published)
+
+House cleaning and accessibility:
+
+- The setup strip shows whole settings instead of cutting one off, at every phone width.
+- The level-length field on the setup page is labelled "Level length" (it said "Levels").
+- "Turn rebuys off?" is a sheet like the other confirmations, with a red "Clear N rebuys".
+- TalkBack names the chip set's fields, and hears which odds seat is the favourite. Payout weights
+  out of order show a warning sign, run-it-out lines have their own patterns, and setup menus tick
+  the current choice, so nothing relies on colour alone.
+- Under the hood: the unused database, old scaffolding, retired colours and build leftovers are
+  gone, and the README and store description say plainly what the app is: free, no ads, no
+  accounts, no internet permission.
+
 ## 1.3.8 (on master, not published)
 
 - **Live clock in the notifications and on the lock screen:** while the clock runs and the app is

@@ -474,6 +474,7 @@ s_invalid_setup() {
   # PP-020: an invalid setup says why and offers the nearest valid round length
   ui set-text has=Levels class=EditText --value 25
   ui enter
+  ui scroll-to "Use 20-min rounds (9 levels)" --max 4   # under the verdict, can be below the fold
   ui assert-text "text~=Can't build blinds" "text~=doesn't divide into 25-minute rounds" "Use 20-min rounds (9 levels)"
 }
 s_invalid_setup_fixed() {

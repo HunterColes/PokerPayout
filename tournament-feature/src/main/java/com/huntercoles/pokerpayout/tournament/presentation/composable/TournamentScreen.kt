@@ -87,8 +87,11 @@ fun TournamentScreen(
         TournamentActions(
             onSetupIntent = calculatorViewModel::acceptIntent,
             onTimerIntent = { intent ->
-                // PP-081: the first Start is when the live clock's notification first matters
-                if (intent == TimerIntent.ToggleTimer && !timerViewModel.uiState.value.hasTimerStarted) askForNotifications()
+                // PP-081: the first Start (of a setup that can start) is when the live clock first matters
+                val before = timerViewModel.uiState.value
+                if (intent == TimerIntent.ToggleTimer && !before.hasTimerStarted && before.setupProblem == null) {
+                    askForNotifications()
+                }
                 // The blind fields are mirrored in the setup ViewModel, which Reset reads.
                 intent.toConfigIntent()?.let(calculatorViewModel::acceptIntent)
                 timerViewModel.acceptIntent(intent)

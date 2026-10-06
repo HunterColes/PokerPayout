@@ -119,7 +119,8 @@ def unique_warnings(profiles):
         for f in p["findings"]:
             if f["severity"] != "warn":
                 continue
-            groups.setdefault((f["check"], f["label"]), []).append((p, f))
+            # a node without a label is told apart by what was found (its size, say)
+            groups.setdefault((f["check"], f["label"] or "(no label: %s)" % f["detail"]), []).append((p, f))
     return sorted(groups.items(), key=lambda kv: (kv[0][0], -len(kv[1]), kv[0][1]))
 
 

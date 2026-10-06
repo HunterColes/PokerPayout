@@ -631,10 +631,11 @@ wait_screen() {
 }
 s_rotate_close() {
   # PP-094 #2: ✕ in the turned table view shows the clock upright, but only while the phone stays
-  # on its side. Upright again, then on its side again, the table view is back. No UI dump between
-  # the ✕ and the second turn: every uiautomator dump puts the user rotation back to the display's
-  # (upright, once the clock is), which to the app is the phone turned upright.
-  { ui tap "desc=Exit table view" && wait_screen port; } || { restore_rotation; return 1; }
+  # on its side. Upright again, then on its side again, the table view is back. Every uiautomator
+  # dump puts the user rotation back to the display's (upright, once the clock is), which to the
+  # app is the phone turned upright: the tap holds it on its side (PP_UI_HOLD_ROTATION, see ui.py),
+  # and nothing dumps between the ✕ and the second turn.
+  { PP_UI_HOLD_ROTATION=1 ui tap "desc=Exit table view" && wait_screen port; } || { restore_rotation; return 1; }
   sleep 2 # longer than the app waits before it counts the phone as upright
   local usr; usr="$(adb_ shell settings get system user_rotation | tr -d '\r')"
   if [[ "$usr" != 1 ]] || ! wait_screen port; then

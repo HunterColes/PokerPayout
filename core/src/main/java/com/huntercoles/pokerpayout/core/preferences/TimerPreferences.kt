@@ -5,9 +5,11 @@ import android.content.SharedPreferences
 import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
 import com.huntercoles.pokerpayout.core.time.ClockAnchor
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -80,6 +82,27 @@ class TimerPreferences @Inject constructor(
     }
 
     data class LegacyClock(val elapsedSeconds: Int, val running: Boolean, val savedAtWallMillis: Long)
+
+    /**
+     * Emits whenever anything here is saved: the clock starting, pausing, jumping, finishing or
+     * resetting, or a clock setting changing (PP-081: the live clock notification follows the saved
+     * clock). Never per tick, since a running clock writes nothing.
+     */
+    fun observeChanges(): Flow<Unit> = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(Unit) }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
+    /**
+     * PP-081: true the first time it is called, ever, and false after: the first Start asks for
+     * permission to show the live clock notification once, and never again whatever the answer.
+     */
+    fun takeNotificationsAsk(): Boolean {
+        if (prefs.getBoolean(NOTIFICATIONS_ASKED_KEY, false)) return false
+        prefs.edit().putBoolean(NOTIFICATIONS_ASKED_KEY, true).apply()
+        return true
+    }
 
     fun setGameDurationMinutes(minutes: Int) {
         prefs.edit().putInt(GAME_DURATION_MINUTES_KEY, minutes).apply()
@@ -244,6 +267,9 @@ class TimerPreferences @Inject constructor(
         private const val BREAK_MESSAGE_KEY = "break_message"
         private const val BIG_BLIND_ANTE_FROM_LEVEL_KEY = "big_blind_ante_from_level"
         private const val COLOR_UP_DONE_KEY = "color_up_done_after_levels"
+
+        // PP-081: not part of the clock, so no reset clears it
+        private const val NOTIFICATIONS_ASKED_KEY = "notifications_permission_asked"
 
         // v1.1.x clock, read once and migrated to the anchor
         private const val LEGACY_CURRENT_TIME_SECONDS_KEY = "current_time_seconds"

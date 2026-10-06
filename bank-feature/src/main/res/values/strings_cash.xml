@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The cash game in the Bank (S13, PP-029). -->
+<resources>
+    <!-- After an action, on the snackbar with Undo -->
+    <string name="cash_undo">Undo</string>
+    <string name="cash_done_bought_in">%1$s bought in · %2$s</string>
+    <string name="cash_done_topped_up">%1$s topped up · %2$s</string>
+    <string name="cash_done_buy_in_removed">Removed %1$s\'s %2$s buy-in</string>
+    <string name="cash_done_cashed_out">%1$s cashed out %2$s</string>
+    <string name="cash_done_count_cleared">%1$s\'s count cleared</string>
+    <string name="cash_done_player_removed">Removed %1$s</string>
+    <string name="cash_done_split">Split the %1$s across the stacks</string>
+    <string name="cash_done_recount">Split taken back: recount the chips</string>
+    <string name="cash_done_paid">%1$s paid %2$s %3$s</string>
+    <string name="cash_done_unpaid">%1$s hasn\'t paid %2$s yet</string>
+    <plurals name="cash_done_cleared">
+        <item quantity="one">Cleared the cash game (1 player)</item>
+        <item quantity="other">Cleared the cash game (%d players)</item>
+    </plurals>
+    <string name="cash_default_name">Player %1$d</string>
+
+    <!-- Share as text (ACTION_SEND text/plain) -->
+    <string name="cash_share_title">Poker night: cash game</string>
+    <string name="cash_share_balanced">Cash in %1$s · counted out %2$s · balanced</string>
+    <string name="cash_share_split">Cash in %1$s · counted out %2$s · the %3$s difference split across the stacks</string>
+    <string name="cash_share_out_split">%1$s (%2$s after the split)</string>
+    <string name="cash_share_up">%1$s: in %2$s, out %3$s, up %4$s</string>
+    <string name="cash_share_down">%1$s: in %2$s, out %3$s, down %4$s</string>
+    <string name="cash_share_even">%1$s: in %2$s, out %3$s, even</string>
+    <plurals name="cash_share_settle">
+        <item quantity="one">Settle up, 1 payment:</item>
+        <item quantity="other">Settle up, %d payments:</item>
+    </plurals>
+    <string name="cash_share_payment">%1$s pays %2$s %3$s</string>
+    <string name="cash_share_payment_paid">%1$s pays %2$s %3$s (paid)</string>
+    <string name="cash_share_nobody_pays">Everyone is even: no payments.</string>
+</resources>

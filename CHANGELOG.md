@@ -3,6 +3,14 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.3.10 (on master, not published)
+
+- **Presets:** save the night's setup (money, blinds, payouts and, if you like, your chip set)
+  under a name, and load it next time in one tap, with Undo. Loading waits for a new tournament,
+  so a game in progress can't change. Rename and delete them from the list.
+- **Share the setup as text:** the money, every level and break with its color-up, and the
+  payouts, for the group chat.
+
 ## 1.3.9 (on master, not published)
 
 House cleaning and accessibility:

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The odds screen (S8, S9) and run it out (S10). In their own file so other batches editing
+     strings.xml don't collide with these. -->
+<resources>
+    <string name="odds_snackbar_new_hand">New hand</string>
+    <string name="odds_snackbar_table_cleared">Table cleared to two players</string>
+    <string name="odds_undo">Undo</string>
+    <string name="odds_error_cant_calculate">These cards can\'t be worked out.</string>
+    <string name="odds_error_failed">Couldn\'t work out the odds: %1$s</string>
+</resources>

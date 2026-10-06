@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName") // interim: the S8/S9 rewrite replaces this file
+
 package com.huntercoles.pokerpayout.tools.presentation.composable
 
 import androidx.compose.foundation.BorderStroke
@@ -36,16 +38,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerDialog
-import com.huntercoles.pokerpayout.core.design.components.PokerConfirmationDialog
 import com.huntercoles.pokerpayout.core.design.components.PokerHeaderWithAction
 import com.huntercoles.pokerpayout.core.design.components.invertHorizontally
 import com.huntercoles.pokerpayout.core.design.components.PlayingCard
 import com.huntercoles.pokerpayout.core.design.components.PlayingCardView as CorePlayingCardView
+import com.huntercoles.pokerpayout.tools.poker.Cards
 import com.huntercoles.pokerpayout.tools.poker.OddsResult
 import com.huntercoles.pokerpayout.tools.poker.PlayerOdds
 import com.huntercoles.pokerpayout.tools.presentation.OddsCalculatorIntent
 import com.huntercoles.pokerpayout.tools.presentation.OddsCalculatorUiState
 import com.huntercoles.pokerpayout.tools.presentation.OddsCalculatorViewModel
+import com.huntercoles.pokerpayout.tools.presentation.SlotRef
+import com.huntercoles.pokerpayout.tools.presentation.SlotValue
 
 // Data classes for poker functionality
 // Note: This UI-layer PlayingCard (from core) uses String for display flexibility.
@@ -56,19 +60,6 @@ data class Player(
     val id: Int,
     val name: String,
     val cards: List<PlayingCard> = emptyList()
-)
-
-enum class CardType {
-    PLAYER_CARD, COMMUNITY_CARD
-}
-
-data class PokerGameState(
-    val players: List<Player> = emptyList(),
-    val communityCards: List<PlayingCard> = emptyList(),
-    val showCardPicker: Boolean = false,
-    val selectedPlayerForCard: Int? = null,
-    val selectedCardType: CardType? = null,
-    val isSimulating: Boolean = false
 )
 
 // All 52 cards in a deck - sorted by rank (A-K), then suit (C-H-S-D)
@@ -109,12 +100,20 @@ fun OddsCalculatorScreen(
     OddsCalculatorContent(state = uiState, onIntent = viewModel::acceptIntent)
 }
 
-/** Stateless odds screen: renders [state] and reports every user action as an intent. */
+/**
+ * Stateless odds screen: renders [state] and reports every user action as an intent. Interim
+ * wiring of the pre-makeover layout to the live-odds ViewModel; the S8/S9 redesign replaces it.
+ */
 @Composable
 fun OddsCalculatorContent(
     state: OddsCalculatorUiState,
     onIntent: (OddsCalculatorIntent) -> Unit
 ) {
+    val table = state.table
+    val players = table.seats.mapIndexed { i, seat ->
+        Player(id = i + 1, name = "Player ${i + 1}", cards = seat.known.map(::toPlayingCard))
+    }
+    val communityCards = table.boardCards.map(::toPlayingCard)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -122,73 +121,64 @@ fun OddsCalculatorContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header with Reset Button
         PokerHeaderWithAction(
             title = "🃏 Poker Odds Calculator",
-            onActionClick = { onIntent(OddsCalculatorIntent.ShowResetDialog) },
+            onActionClick = { onIntent(OddsCalculatorIntent.NewHand) },
             actionContentDescription = "Reset"
         )
-
-        // Reset Confirmation Dialog
-        PokerConfirmationDialog(
-            title = "Reset odds calculator?",
-            description = "This will reset all player cards and community cards.",
-            onDismiss = { onIntent(OddsCalculatorIntent.HideResetDialog) },
-            onConfirm = { onIntent(OddsCalculatorIntent.ConfirmReset) },
-            isVisible = state.showResetDialog
-        )
-
-        // Player Management
         PlayerManagementCard(
-            playerCount = state.playerCount,
-            onPlayerCountChange = { newCount ->
-                onIntent(OddsCalculatorIntent.PlayerCountChanged(newCount))
+            playerCount = table.seats.size,
+            onPlayerCountChange = { count ->
+                repeat((count - table.seats.size).coerceAtLeast(0)) { onIntent(OddsCalculatorIntent.AddPlayer) }
+                repeat((table.seats.size - count).coerceAtLeast(0)) { k ->
+                    onIntent(OddsCalculatorIntent.RemovePlayer(table.seats.size - 1 - k))
+                }
+                onIntent(OddsCalculatorIntent.CloseKeypad)
             },
-            isSimulating = state.isSimulating,
-            canCalculate = state.canCalculate,
+            isSimulating = state.isCalculating,
+            canCalculate = false,
             error = state.error,
-            onCalculate = { onIntent(OddsCalculatorIntent.Calculate) }
+            onCalculate = {}
         )
-
-        // Players Cards
         PlayersCardsSection(
-            players = state.players,
+            players = players,
             result = state.result,
-            onPlayerCardClick = { playerId ->
-                onIntent(OddsCalculatorIntent.ShowCardPickerForPlayer(playerId))
+            onPlayerCardClick = { id ->
+                val seat = table.seats[id - 1]
+                val open = seat.cards.indexOfFirst { it !is SlotValue.Known }.coerceAtLeast(0)
+                onIntent(OddsCalculatorIntent.SelectSlot(SlotRef.Hole(id - 1, open)))
             },
-            onRemovePlayerCard = { playerId, cardIndex ->
-                onIntent(OddsCalculatorIntent.PlayerCardRemoved(playerId, cardIndex))
+            onRemovePlayerCard = { id, cardIndex ->
+                onIntent(OddsCalculatorIntent.SelectSlot(SlotRef.Hole(id - 1, cardIndex)))
+                onIntent(OddsCalculatorIntent.Backspace)
+                onIntent(OddsCalculatorIntent.CloseKeypad)
             }
         )
-
-        // Community Cards
         CommunityCardsSection(
-            communityCards = state.communityCards,
-            onCommunityCardClick = {
-                onIntent(OddsCalculatorIntent.ShowCardPickerForCommunity)
-            },
+            communityCards = communityCards,
+            onCommunityCardClick = { onIntent(OddsCalculatorIntent.SelectSlot(SlotRef.Board(communityCards.size))) },
             onRemoveCommunityCard = { cardIndex ->
-                onIntent(OddsCalculatorIntent.CommunityCardRemoved(cardIndex))
+                onIntent(OddsCalculatorIntent.SelectSlot(SlotRef.Board(cardIndex)))
+                onIntent(OddsCalculatorIntent.Backspace)
+                onIntent(OddsCalculatorIntent.CloseKeypad)
             }
         )
     }
 
-    // Card Picker Dialog
-    if (state.showCardPicker) {
-        val usedCards = state.players.flatMap { it.cards } + state.communityCards
+    if (state.keypad.isOpen) {
+        val usedCards = table.usedCards.map(::toPlayingCard)
         CardPickerDialog(
             allCards = allCards,
             usedCards = usedCards,
-            onCardSelected = { selectedCard ->
-                val cardString = "${selectedCard.rank}${selectedCard.suit}"
-                onIntent(OddsCalculatorIntent.CardSelected(cardString))
-            },
-            onDismiss = {
-                onIntent(OddsCalculatorIntent.HideCardPicker)
-            }
+            onCardSelected = { card -> onIntent(OddsCalculatorIntent.PlaceCard(Cards.parse(card.rank + card.suit))) },
+            onDismiss = { onIntent(OddsCalculatorIntent.CloseKeypad) }
         )
     }
+}
+
+private fun toPlayingCard(card: Int): PlayingCard {
+    val text = Cards.format(card)
+    return PlayingCard(rank = text.substring(0, 1), suit = text.substring(1))
 }
 
 @Composable

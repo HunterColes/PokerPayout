@@ -1,8 +1,11 @@
 package com.huntercoles.pokerpayout.tournament.presentation.composable
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
@@ -18,10 +21,10 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.ViewModelStore
 import com.huntercoles.pokerpayout.core.design.PokerTheme
-import com.huntercoles.pokerpayout.core.design.components.PokerSheetContent
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentMode
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentUi
 import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetSheet
@@ -71,14 +74,21 @@ class PresetsInteractionTest {
         savedZone?.let(TimeZone::setDefault)
     }
 
-    /** The sheet's body as [state] has it (a modal window isn't needed to tap it). */
+    /**
+     * The sheet's title and body as [state] has them, on their own, as the Bank's sheet tests do. Not
+     * inside [com.huntercoles.pokerpayout.core.design.components.PokerSheetContent]: its shadow clips
+     * to a shape with only its top corners rounded, which Compose hit-tests as a path, and
+     * Robolectric's legacy graphics can't intersect paths, so a touch there would miss. (On a phone
+     * it lands; the device tour taps through the real sheet.)
+     */
     private fun showSheet(start: PresetsUiState) {
         state = start
         compose.setContent {
             PokerTheme(reducedMotion = true) {
                 val sheet = state.sheet
                 if (sheet != null) {
-                    PokerSheetContent(title = presetsSheetTitle(state, sheet)) {
+                    Column {
+                        Text(presetsSheetTitle(state, sheet))
                         PresetsSheetBody(
                             state = state,
                             sheet = sheet,
@@ -118,7 +128,13 @@ class PresetsInteractionTest {
         ui = TournamentUi(mode = TournamentMode.PanelOpen)
         compose.waitForIdle()
         compose.onNodeWithText("Loading waits for a new tournament", substring = true).assertExists()
-        compose.onNode(hasText("Presets") and hasClickAction()).tap()
+        // The panel's shadow clips to a shape with only its bottom corners rounded: under Robolectric's
+        // legacy graphics a touch inside it misses (and lands on the scrim behind), so the row's click
+        // is run as TalkBack would run it
+        compose.onNode(hasText("Presets") and hasClickAction())
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
         assertEquals(listOf<PresetsIntent>(PresetsIntent.Open, PresetsIntent.Open), sent)
     }
 

@@ -199,24 +199,26 @@ tab() { # $1 = label
 
 # ------------------------------------------------------------------ steps
 # Tournament ---------------------------------------------------------------
+# S1 v2 (M3): one setup page (the ready ticket, players, money, blinds, a payouts row, Start) that
+# folds into the clock on Start. A text field is an EditText that holds its label as a child, so
+# fields are found by label: `has=Buy-in class=EditText`.
 s_launch() {
   ui launch --clear
-  # One header per screen (M2): the tab's name and its reset button; four tabs below. The clock
-  # card sits below the configuration; its controls are below the fold until it collapses.
-  ui assert-text "text=Tournament" "desc=Reset tournament" Bank Payouts Tools "Tournament Configuration" \
-    "Buy-in (\$)" "LEVEL 1" READY || return 1
+  # One header per screen (M2): the tab's name and its reset button; four tabs below. The ready
+  # ticket shows level 1 with its full time; Start sits at the foot of the page.
+  ui assert-text "text=Tournament" "desc=Reset tournament" Bank Payouts Tools "text~=Setup · not started" \
+    "text~=Level 1 · ready" text=20:00 "has=Buy-in" "Start clock" || return 1
   require_tab_selected Tournament
 }
 s_tournament_config() {
   # One keystroke at a time, with recomposition in between: v1.1.12 moved the cursor in front of
   # the '.' after every change and turned "12.50" into "120.5" (B10).
-  ui set-text 'text=Buy-in ($)' --value ""
+  ui set-text has=Buy-in class=EditText --value ""
   for key in 1 2 . 5 0; do ui type "$key"; done
   ui assert-text text=12.50 || return 1
-  ui set-text 'text=Bounty ($)' --value 5
-  ui slide class=SeekBar --frac 0.26          # players slider 3..30 -> ~10
-  ui assert-text text=12.50 text=5            # leaving the field shows the saved amount
-  ui find 're=^(9|10|11)$'                    # player count label moved off the default 5
+  ui set-text has=Bounty class=EditText --value 5
+  for _ in 1 2 3 4 5; do ui tap "desc=Increase Players"; done   # the stepper: 5 -> 10 players
+  ui assert-text text=12.50 text=5 "has=Players|10"            # leaving the field shows the saved amount
 }
 
 # The payout table on screen: the place rows must add up to the "Prize pool" shown above them,
@@ -277,76 +279,109 @@ s_payouts_rounded() {
   check_payout_table "$PP_UI_LAST_XML" 500
 }
 # The blind setup and the clock (PP-015/020/025/026/051). Default setup: 3 h of 20-minute
-# rounds from a 50 chip to 5,000 = 9 levels, 50/100 to 5,000/10,000.
+# rounds from a 50 chip to 5,000 = 9 levels, 50/100 to 5,000/10,000. The blinds are a section of
+# the setup page now (no folder tabs).
 s_blinds_tab() {
-  ui tap text=Blinds
-  ui assert-text "Duration (Hours)" "Round Length (Min)" "Smallest Chip" "Starting Chips" Breaks \
-    "Big-blind ante" "text~=9 levels, 50 / 100 to 5,000 / 10,000"
+  tab Tournament
+  ui scroll-to "text=Smallest chip" --max 6
+  ui assert-text "has=Game length" "has=Levels" "has=Starting stack" "text=Smallest chip" \
+    "text~=Works: 9 levels, 50 / 100 to 5,000 / 10,000"
 }
 s_smallest_chip() {
-  # PP-051: a menu of real chip values, each with its chip colour, not a free-entry field. The menu
-  # is its own window, so a dump shows only its visible items (the list scrolls on past 250).
-  ui tap "has=Smallest Chip|50" clickable
-  ui assert-text text=1 text=5 text=10 text=25 text=50 text=100 text=250 || return 1
-  ui tap text=25
-  ui wait-gone text=250
-  ui assert-text "has=Smallest Chip|25" "text~=9 levels, 25 / 50 to 5,000 / 10,000"
+  # PP-051: a row of real chips (radio buttons TalkBack names by colour and value), not a free
+  # entry field
+  ui assert-text "re= 1 chip$" "re= 5 chip$" "re= 25 chip$" "re= 100 chip$" || return 1
+  ui tap "re= 25 chip$"
+  ui assert-text "text~=Works: 9 levels, 25 / 50 to 5,000 / 10,000"
 }
 s_invalid_setup() {
   # PP-020: an invalid setup says why and offers the nearest valid round length
-  ui set-text "text=Round Length (Min)" --value 25
+  ui set-text has=Levels class=EditText --value 25
   ui enter
   ui assert-text "text~=Can't build blinds" "text~=doesn't divide into 25-minute rounds" "Use 20-min rounds (9 levels)"
 }
 s_invalid_setup_fixed() {
   ui tap "text=Use 20-min rounds (9 levels)"
   ui wait-gone "text~=Can't build blinds"
-  ui assert-text "has=Round Length (Min)|20" "text~=9 levels, 25 / 50 to 5,000 / 10,000"
+  ui assert-text "has=Levels|20" "text~=Works: 9 levels, 25 / 50 to 5,000 / 10,000"
 }
 s_breaks() {
   # PP-026: a break every 4 levels with a note; the verdict counts the breaks and the new end
+  ui scroll-to "has=Breaks|Off" clickable --max 3
   ui tap "has=Breaks|Off" clickable
-  ui tap "text=Every 4 levels"
-  ui assert-text "Break (Min)" "Break note" "text~=9 levels, 25 / 50 to 5,000 / 10,000 · 2 breaks · ends at 3:20" || return 1
-  ui set-text "text=Break note" --value "Last rebuy"
+  ui tap "text=Every 4"
+  ui scroll-to "has=Break note" class=EditText --max 3
+  ui set-text "has=Break note" class=EditText --value "Last rebuy"
   ui enter                                    # leaves the note; it used to click Reset instead
-  ui assert-text "text=Last rebuy" "has=Breaks|Every 4 levels" "has=Break (Min)|10"
+  ui assert-text "text=Last rebuy" "has=Breaks|Every 4" "has=Break length|10" || return 1
+  ui scroll-to "text~=2 breaks, ends at 3:20" --max 3
+  ui assert-text "text~=2 breaks, ends at 3:20"
 }
-s_config_collapsed() {
-  ui scroll up --times 4
-  ui tap desc=Collapse
-  ui wait desc=Expand
-  ui wait-gone "text=Buy-in (\$)"
-  # Before the start the clock already shows level 1, labelled, with its full time
-  ui assert-text "LEVEL 1" READY "LEVEL TIME LEFT" text=20:00 BLINDS "text=25 / 50" "text=Next: 50 / 100" "Start timer"
+s_ready_ticket() {
+  # Before the start the ticket shows level 1, labelled, with its full time, blinds, what's next
+  # and the whole game's shape
+  ui scroll up --times 8
+  ui assert-text "text~=Level 1 · ready" text=20:00 "text=25 / 50" "text~=next 50 / 100" "text~=9 levels · 2 breaks" \
+    "text~=3:20 in all"
 }
-s_timer_running() {
-  ui tap "desc=Start timer"
-  ui assert-text "LEVEL 1" "LEVEL TIME LEFT" "text=Next: 50 / 100" "Tournament Locked" "Pause timer" \
-    "text=Tournament:" "Next blind level" || return 1
+s_start_fold() {
+  # Start folds the setup into the clock (S1 v2 -> S2): the setup becomes a one-line strip, the
+  # ticket the running clock with its controls
+  ui tap "Start clock"
+  ui wait "desc=Pause timer" || return 1
+  ui assert-text "text~=Level 1 of 9 · running" "text~=Level 1 · time left" "desc~=Opens setup" "desc=Remove one minute" \
+    "desc=Add one minute" "desc=Next blind level" "text~=played" || return 1
   ui find 're=^1[0-9]:[0-9]{2}$'            # the level countdown, under 20:00
+}
+# The clock's digits in seconds: the tallest m:ss on screen in the last dump.
+hero_seconds() {
+  python3 - "$PP_UI_LAST_XML" <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+best = None
+for n in ET.parse(sys.argv[1]).iter("node"):
+    m = re.fullmatch(r"(\d{1,2}):(\d{2})", n.get("text") or "")
+    b = [int(v) for v in re.findall(r"-?\d+", n.get("bounds", ""))]
+    if m and len(b) == 4 and (best is None or b[3] - b[1] > best[0]):
+        best = (b[3] - b[1], int(m.group(1)) * 60 + int(m.group(2)))
+print(best[1] if best else -1)
+PY
+}
+s_nudge() {
+  # D5: -1 takes a minute off the level's time left and +1 gives it back, the clock running on
+  local before after back
+  ui assert "desc=Remove one minute" >/dev/null; before="$(hero_seconds)"
+  ui tap "desc=Remove one minute"
+  ui assert "desc=Add one minute" >/dev/null; after="$(hero_seconds)"
+  ui tap "desc=Add one minute"
+  ui assert "desc=Pause timer" >/dev/null; back="$(hero_seconds)"
+  echo "time left: ${before}s, after -1 ${after}s, after +1 ${back}s"
+  (( before - after >= 50 && before - after <= 80 )) || { echo "[ui] FAIL -1 took $((before - after))s off"; return 1; }
+  (( back - after >= 40 && back - after <= 65 )) || { echo "[ui] FAIL +1 gave $((back - after))s back"; return 1; }
 }
 s_timer_next_level() {
   ui tap "desc=Next blind level"
-  ui assert-text "LEVEL 2" "text=50 / 100" "text~=Next: " "Previous blind level"
+  ui assert-text "text~=Level 2 · time left" "text~=Level 2 of 9" "text=50 / 100" "desc=Previous blind level"
 }
 s_timer_break() {
-  ui tap "desc=Next blind level"; ui wait "LEVEL 3"
-  ui tap "desc=Next blind level"; ui wait "LEVEL 4"
-  # The last level before the break says what comes next, and the schedule (below the clock)
-  # shows the break with its note
-  ui assert-text "text=Next: Break · 10 min" || return 1
-  ui scroll-to "text=☕ Break · 10 min" --max 3
-  ui assert-text "text=☕ Break · 10 min" "text~=Last rebuy" || return 1
-  ui scroll up --times 3
+  ui tap "desc=Next blind level"; ui wait "text~=Level 3 · time left"
+  ui tap "desc=Next blind level"; ui wait "text~=Level 4 · time left"
+  # The last level before the break says a break is next, with its length and note; so does the
+  # schedule below the clock
+  ui assert-text "text~=Next · Break" "text=10 min" "text=Last rebuy" || return 1
+  ui scroll-to "text~=Break · 10 min" --max 4
+  ui assert-text "text~=Break · 10 min" || return 1
+  ui scroll up --times 4
   ui tap "desc=Next blind level"
-  ui assert-text BREAK "BREAK TIME LEFT" "text=Last rebuy" "text~=Next: Level 5 · " || return 1
+  # S4: the break's own screen, with its note and End break now
+  ui assert-text "text~=Break · back at Level 5" "text~=Break 1 ·" "text=Last rebuy" || return 1
   ui find 're=^(10:00|9:[0-9]{2})$'
 }
 s_timer_paused() {
-  # PP-046: the play button sits below the digits instead of over them
-  ui tap "desc=Pause timer"
-  ui assert-text "Resume timer" PAUSED "BREAK TIME LEFT"
+  # PP-046: the play button has its own place (on a break, beside End break now), never the digits
+  ui tap "desc=Pause timer" --scroll-in scrollable
+  ui assert "desc=Resume timer" >/dev/null || return 1
+  ui scroll up --times 4
+  ui assert-text "text~=paused" "text~=Break · back at Level 5"
 }
 # Width x height of the current screen, from the PNG header of a screencap.
 screen_size() {
@@ -357,18 +392,17 @@ require_landscape() {
   [[ "${size%x*}" -gt "${size#*x}" ]] || { echo "[ui] FAIL table view isn't landscape ($size)"; return 1; }
 }
 s_table_view() {
-  # PP-025: a full-screen landscape clock, here on the paused break
+  # PP-025: the table-view button forces a full-screen landscape clock (S3), here on the paused break
   ui tap "desc=Table view"
   ui wait "desc=Exit table view"
-  ui assert-text BREAK "BREAK TIME LEFT" "text=Last rebuy" "Resume timer" PAUSED || return 1
+  ui assert-text "text~=Break · back at Level 5" "Resume timer" || return 1
   require_landscape
 }
-s_table_view_level() {
-  # The table view's own controls: resume, then on to level 5 with the clock running
+s_table_view_resume() {
+  # The table view's own controls: resume; the footer has the table's numbers
   ui tap "desc=Resume timer"
   ui wait "desc=Pause timer"
-  ui tap "desc=Next blind level"
-  ui assert-text "LEVEL 5" "LEVEL TIME LEFT" BLINDS "text~=Next: " "Pause timer" "text=Tournament:" || return 1
+  ui assert-text "text~=10 of 10 left" "text~=Pool " "Pause timer" "desc=Exit table view" || return 1
   require_landscape
 }
 s_table_view_exit() {
@@ -377,26 +411,86 @@ s_table_view_exit() {
   sleep 2
   local size; size="$(screen_size)"; echo "screen $size"
   [[ "${size%x*}" -lt "${size#*x}" ]] || { echo "[ui] FAIL not back to portrait ($size)"; return 1; }
-  ui assert-text "LEVEL 5" "Pause timer"
+  ui assert-text "text~=Break · back at Level 5" "text~=Break 1 ·" "desc=Table view"
+}
+s_end_break() {
+  # S4: End break now starts the next level at once
+  ui tap "text=End break now" --scroll-in scrollable
+  ui wait "text~=Level 5 of 9 · running" || return 1
+  ui scroll up --times 4
+  ui assert-text "text~=Level 5 · time left" "text~=Level 5 of 9 · running" "Pause timer"
+}
+# Turning the emulator: auto-rotate off and user_rotation 1 (90 degrees) is a phone on its side.
+# The step that turns it saves the settings first and puts them back if it fails; the next step
+# puts them back either way.
+ROTATION_MARK="$OUT/.rotation"
+restore_rotation() {
+  [[ -f "$ROTATION_MARK" ]] || return 0
+  local acc usr; read -r acc usr < "$ROTATION_MARK"
+  adb_ shell settings put system user_rotation "${usr:-0}"
+  adb_ shell settings put system accelerometer_rotation "${acc:-0}"
+  rm -f "$ROTATION_MARK"
+}
+s_rotate_to_table() {
+  # PP-079: once a clock exists the Tournament tab follows the phone's rotation; on its side the
+  # clock is the table view (S3), with the clock still running
+  printf '%s %s\n' "$(adb_ shell settings get system accelerometer_rotation | tr -d '\r')" \
+    "$(adb_ shell settings get system user_rotation | tr -d '\r')" > "$ROTATION_MARK"
+  adb_ shell settings put system accelerometer_rotation 0
+  adb_ shell settings put system user_rotation 1
+  { ui wait "desc=Exit table view" && require_landscape && ui assert-text "text~=Level 5 · time left" "Pause timer"; } \
+    || { restore_rotation; return 1; }
+}
+s_rotate_back() {
+  # Upright again: the clock (S2), same level, still running
+  restore_rotation
+  adb_ shell settings put system user_rotation 0
+  ui wait-gone "desc=Exit table view"
+  sleep 1
+  local size; size="$(screen_size)"; echo "screen $size"
+  [[ "${size%x*}" -lt "${size#*x}" ]] || { echo "[ui] FAIL not back to portrait ($size)"; return 1; }
+  ui assert-text "text~=Level 5 · time left" "desc=Table view" "Pause timer"
+}
+s_setup_panel() {
+  # The strip opens setup over the running clock: players, rebuys-until, ante and breaks change
+  # any time; money and blinds are locked while the clock runs
+  ui scroll up --times 3
+  ui tap "desc~=Opens setup"
+  ui assert-text "text~=Setup · clock still running" "text~=Change any time" "text~=Locked while the clock runs" \
+    "has=Rebuys until" "Unlock to edit…" || return 1
+}
+s_setup_unlock() {
+  # "Unlock to edit…" asks first, in a sheet; then money and blinds open
+  ui tap "text=Unlock to edit…" --scroll-in scrollable
+  ui assert-text "Edit money and blinds?" "Keep locked" "text=Unlock to edit" || return 1
+  ui tap "text=Unlock to edit"
+  ui wait-gone "Edit money and blinds?"
+  ui assert-text "text~=Unlocked: money and blinds" "has=Buy-in" "has=Levels"
+}
+s_setup_closed() {
+  # Closing setup locks it again; the clock never stopped
+  ui tap "desc=Close setup"
+  ui wait-gone "text~=Unlocked: money and blinds"
+  ui assert-text "text~=Level 5 · time left" "Pause timer" "desc~=Opens setup"
 }
 s_tournament_reset_dialog() {
-  ui tap "desc=Reset tournament"
-  ui assert-text "Reset tournament?" Cancel Reset
+  # Mid-game, reset is "New tournament…" in the menu; it asks first
+  ui tap "desc=More options"
+  ui tap "text=New tournament…"
+  ui assert-text "Reset tournament?" Cancel "text=Reset tournament"
 }
 s_tournament_reset_confirm() {
-  ui tap text=Reset
+  ui tap "text=Reset tournament"
   ui wait-gone "text=Reset tournament?"
-  # The configuration opens again, so the clock card is below it: scroll to it, then back up
-  ui assert-text "LEVEL 1" READY || return 1
-  ui scroll-to "Start timer" --max 4
-  ui assert-text "LEVEL TIME LEFT" text=20:00 "text=50 / 100" "Start timer" || return 1
-  ui scroll up --times 4
+  # Setup unfolds again with the defaults: level 1 ready at 20:00, 50 / 100
+  ui assert-text "text~=Setup · not started" "text~=Level 1 · ready" text=20:00 "text=50 / 100" "Start clock" \
+    "desc=Reset tournament"
 }
 s_rebuy_amount() {
-  ui tap text=Player
-  ui set-text 'text=Rebuy ($)' --value 10
+  ui scroll-to has=Rebuy class=EditText --max 3
+  ui set-text has=Rebuy class=EditText --value 10
   ui enter
-  ui assert-text text=10
+  ui assert-text "has=Rebuy|10"
 }
 
 # Bank ---------------------------------------------------------------------
@@ -410,7 +504,7 @@ s_bank_rename() {
   # up when the tab is tapped: the bar rides above it (edge to edge, M2).
   ui set-text "text=Player 1" class=EditText --value Alice
   tab Tournament
-  ui wait "text~=Tournament Configuration"
+  ui wait "Start clock"
   tab Bank
   ui assert-text text=Alice
 }
@@ -497,21 +591,23 @@ s_payouts_nav_editor() {
 s_payouts_nav_back() {
   # B16: Back from any tab goes to the first tab, not back through every tab tapped
   ui back
-  ui assert-text "text~=Tournament Configuration" "desc=Reset tournament" || return 1
+  ui assert-text "Start clock" "desc=Reset tournament" || return 1
   require_tab_selected Tournament
 }
 
 # Clearing the Rebuy amount to retype it must not wipe recorded rebuys (PP-014).
 s_rebuy_retype() {
   tab Tournament
-  ui set-text 'text=Rebuy ($)' --value ""
+  ui scroll-to has=Rebuy class=EditText --max 3
+  ui set-text has=Rebuy class=EditText --value ""
   for key in 1 5; do ui type "$key"; done
   tab Bank                                    # leave the field by switching tabs
   ui assert-text "desc=Rebuy active" "text=1x"
 }
 s_rebuy_zero_prompt() {
   tab Tournament
-  ui set-text 'text=Rebuy ($)' --value ""
+  ui scroll-to has=Rebuy class=EditText --max 3
+  ui set-text has=Rebuy class=EditText --value ""
   ui enter                                    # leave it empty: asks before clearing anything
   ui assert-text "Turn rebuys off?" Keep "text~=Clear rebuy"
 }
@@ -715,7 +811,7 @@ s_chip_calc_scrolled() {
 }
 s_back_to_tournament() {
   tab Tournament
-  ui assert-text "text~=Tournament Configuration" "LEVEL 1" READY
+  ui assert-text "Start clock" "text~=Level 1 · ready"
 }
 
 # Rail (PP-087) --------------------------------------------------------------
@@ -726,7 +822,7 @@ s_rail() {
   touch "$DENSITY_MARK"
   adb_ shell wm density 240
   sleep 3
-  ui assert-text "text~=Tournament Configuration" "LEVEL 1" || return 1
+  ui assert-text "Start clock" "text~=Level 1 · ready" || return 1
   local tabs; tabs="$(tab_positions "$PP_UI_LAST_XML")"; echo "$tabs"
   python3 - "$tabs" <<'PY' || return 1
 import sys
@@ -773,27 +869,34 @@ s_app_alive() {
   echo "app pid $pid"
 }
 
-step launch               "Fresh launch (data cleared), Tournament tab"         s_launch
-step tournament-config    "Type buy-in 12.50 key by key, bounty 5, players ~10" s_tournament_config
+step launch               "Fresh launch (data cleared): setup page, ready ticket" s_launch
+step tournament-config    "Type buy-in 12.50 key by key, bounty 5, players 10"  s_tournament_config
 step payouts-tab          "Payouts tab: rows add up to the prize pool"          s_payouts_tab
 step payouts-preset       "Top-heavy preset: 60/30/10, still adds up"           s_payouts_preset
 step payouts-editor       "Payout structure editor"                             s_payouts_editor
 step payouts-rounded      "Round to \$5: lower places in \$5, adds up"           s_payouts_rounded
-step blinds-tab           "Blinds tab: setup, breaks, ante, verdict"            s_blinds_tab
-step smallest-chip        "Smallest chip picker: pick 25"                       s_smallest_chip
+step blinds               "Blind setup on the setup page, with its verdict"     s_blinds_tab
+step smallest-chip        "Smallest chip from a row of chips: pick 25"          s_smallest_chip
 step invalid-setup        "25-minute rounds: reason and nearest fix shown"      s_invalid_setup
 step invalid-setup-fixed  "Apply the fix: 20-minute rounds"                     s_invalid_setup_fixed
 step breaks               "Breaks every 4 levels, note 'Last rebuy'"            s_breaks
-step config-collapsed     "Collapse configuration; clock shows level 1 ready"   s_config_collapsed
-step timer-running        "Start: level countdown, Next, tournament line"       s_timer_running
+step ready-ticket         "The ticket: level 1 ready, 20:00, 25 / 50, 3:20"     s_ready_ticket
+step start-fold           "Start: setup folds into the running clock (S2)"      s_start_fold
+step nudge                "-1 and +1: a minute off the level, and back"         s_nudge
 step timer-next-level     "Skip to level 2"                                     s_timer_next_level
-step timer-break          "Skip to the first break"                             s_timer_break
+step timer-break          "Skip to the first break (S4)"                        s_timer_break
 step timer-paused         "Pause on the break"                                  s_timer_paused
-step table-view           "Table view: full-screen landscape clock, on break"   s_table_view
-step table-view-level     "Table view: resume, next level, clock running"       s_table_view_level
+step table-view           "Table-view button: landscape clock, on the break"    s_table_view
+step table-view-resume    "Table view: resume; the table's numbers"             s_table_view_resume
 step table-view-exit      "Leave table view: back to portrait"                  s_table_view_exit
-step tournament-reset     "Reset confirmation dialog"                           s_tournament_reset_dialog
-step tournament-reset-ok  "Confirm reset; timer cleared"                        s_tournament_reset_confirm
+step end-break            "End break now: level 5 starts"                       s_end_break
+step rotate-to-table      "Phone on its side: the table view (PP-079)"          s_rotate_to_table
+step rotate-back          "Upright again: the clock, same level"                s_rotate_back
+step setup-panel          "Strip opens setup over the clock, money locked"      s_setup_panel
+step setup-unlock         "Unlock to edit… asks, then unlocks money and blinds" s_setup_unlock
+step setup-closed         "Close setup: the clock still running"                s_setup_closed
+step tournament-reset     "New tournament…: the reset question"                 s_tournament_reset_dialog
+step tournament-reset-ok  "Reset: setup unfolds, level 1 ready"                 s_tournament_reset_confirm
 step rebuy-amount         "Rebuy amount \$10 for the Bank steps"                 s_rebuy_amount
 step bank                 "Bank tab, default players"                           s_bank
 step bank-rename          "Rename Player 1 to Alice, switch tabs, name kept"    s_bank_rename

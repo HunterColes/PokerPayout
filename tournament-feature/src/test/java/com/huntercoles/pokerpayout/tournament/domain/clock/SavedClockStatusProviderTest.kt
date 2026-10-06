@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.audio.SoundManager
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
+import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
@@ -82,7 +83,8 @@ class SavedClockStatusProviderTest {
                     tournamentPreferences,
                     bankPreferences,
                     mockk<SoundManager>(relaxed = true),
-                    time
+                    time,
+                    AudioPreferences(ApplicationProvider.getApplicationContext()),
                 ) as T
         }
         return ViewModelProvider(store, factory)[TimerViewModel::class.java].also { dispatcher.scheduler.runCurrent() }

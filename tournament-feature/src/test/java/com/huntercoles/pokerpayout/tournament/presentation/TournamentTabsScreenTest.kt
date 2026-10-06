@@ -11,6 +11,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.audio.SoundManager
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.navigation.NavTab
+import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
@@ -21,7 +22,8 @@ import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.time.TimeSource
-import com.huntercoles.pokerpayout.tournament.presentation.composable.PlayContent
+import com.huntercoles.pokerpayout.tournament.presentation.composable.TournamentActions
+import com.huntercoles.pokerpayout.tournament.presentation.composable.TournamentContent
 import io.mockk.mockk
 import org.junit.After
 import org.junit.Before
@@ -38,8 +40,9 @@ import org.robolectric.annotation.GraphicsMode
  * preferences, set up as the mockups' game: 9 players, $40 buy-in, $5 food, $5 bounty, $40 rebuy,
  * $10 add-on, before the clock starts.
  *
- * The Tournament tab's body is the pre-makeover one until M3 (S1, S2), so its check covers what M2
- * owns there: the shell and the top bar. The Payouts tab has its own test (`PayoutsTabScreenTest`).
+ * The Tournament tab here is its setup page (S1 v2) inside the shell; its own tests
+ * (TournamentScreenGoldenTest) check every state of it across the matrix. The Payouts tab has its
+ * own test (`PayoutsTabScreenTest`).
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -78,18 +81,20 @@ class TournamentTabsScreenTest(private val config: ScreenConfig) {
         val setup = configViewModel()
         val timer = viewModel {
             val sound = mockk<SoundManager>(relaxed = true)
-            TimerViewModel(timerPreferences, tournamentPreferences, bankPreferences, sound, StillClock)
+            TimerViewModel(
+                timerPreferences,
+                tournamentPreferences,
+                bankPreferences,
+                sound,
+                StillClock,
+                AudioPreferences(ApplicationProvider.getApplicationContext()),
+            )
         }
         screen.compose.setContent {
             val configState by setup.uiState.collectAsState()
             val timerState by timer.uiState.collectAsState()
             InAppShell(NavTab.Tournament) {
-                PlayContent(
-                    calculatorUiState = configState,
-                    timerUiState = timerState,
-                    onCalculatorIntent = {},
-                    onTimerIntent = {},
-                )
+                TournamentContent(setup = configState, timer = timerState, ui = TournamentUi(), actions = TournamentActions())
             }
         }
         LayoutAssertions.assertTouchTargets(screen.compose, "Tournament tab on ${config.id}", strict = false)

@@ -11,6 +11,28 @@ import com.huntercoles.pokerpayout.tournament.domain.clock.LevelSegment
 /** How urgent the time left in the current level is. Checked most urgent first (B14). */
 enum class TimeTone { NORMAL, LOW, CRITICAL }
 
+/** Rebuys and add-ons: what each costs and how many the Bank has recorded. */
+data class Purchases(
+    val rebuyCents: Long = 0L,
+    val addOnCents: Long = 0L,
+    val rebuysTaken: Int = 0,
+    val addOnsTaken: Int = 0
+)
+
+/** Where rebuys stand, for the clock's info list ("Rebuys open until level 6", "Rebuys closed"). */
+sealed interface RebuyState {
+    val taken: Int
+
+    /** The rebuy amount is $0: the game has no rebuys. */
+    data class Off(override val taken: Int = 0) : RebuyState
+
+    /** Open; [untilLevel] is the last level they are allowed at, or null for no cutoff. */
+    data class Open(val untilLevel: Int?, override val taken: Int) : RebuyState
+
+    /** Closed after [afterLevel]. */
+    data class Closed(val afterLevel: Int, override val taken: Int) : RebuyState
+}
+
 data class TimerUiState(
     val config: BlindConfiguration = BlindConfiguration(),
     /** Seconds of play since the start, pauses excluded. The one clock value; all else derives from it. */
@@ -26,9 +48,65 @@ data class TimerUiState(
     val setupProblem: BlindSetupProblem? = null,
     val showInvalidConfigDialog: Boolean = false,
     val table: TableStats = TableStats(),
-    val isTableView: Boolean = false
+    /** S3 forced on with ⤢ until ✕ (a phone turned sideways shows it without this). */
+    val isTableView: Boolean = false,
+    /** The last level rebuys are allowed at; 0 = no cutoff (TournamentPreferences). */
+    val rebuyUntilLevel: Int = 0,
+    val purchases: Purchases = Purchases(),
+    /** Breaks whose color-up is ticked off, by the level each follows. */
+    val colorUpDoneAfterLevels: Set<Int> = emptySet(),
+    /**
+     * When the scheduled levels and breaks end, as wall-clock millis, if play goes on from now
+     * without pausing. Null in overtime and once finished.
+     */
+    val endsAtWallClock: Long? = null,
+    /** Chimes muted (the top bar's bell; Tools, Sound). */
+    val isMuted: Boolean = false,
+    /**
+     * A mid-game blind change ([TimerIntent.KeepingLevel]) that can't be played, so it wasn't applied:
+     * the clock runs on the setup it had. Cleared by the next change that works.
+     */
+    val midGameProblem: BlindSetupProblem? = null
 ) {
     val gameDurationMinutes: Int get() = config.gameDurationMinutes
+
+    /** The regular levels in the schedule ("Level 6 of 9"). */
+    val regularLevelCount: Int get() = baseBlindLevels.size
+
+    /** The next break after the current segment, or null when none is left. */
+    val nextBreak: BreakSegment?
+        get() = timeline.segments.drop(currentSegmentIndex + 1).firstOrNull { it is BreakSegment } as BreakSegment?
+
+    /** Seconds of play until the next break starts, or null when none is left. */
+    val nextBreakInSeconds: Int? get() = nextBreak?.let { it.startSeconds - elapsedSeconds }
+
+    /** Whether rebuys are off, open (until a level, or all game) or closed, with the count taken. */
+    val rebuyState: RebuyState
+        get() {
+            val taken = purchases.rebuysTaken
+            val until = rebuyUntilLevel
+            return when {
+                purchases.rebuyCents <= 0L -> RebuyState.Off(taken)
+                until <= 0 -> RebuyState.Open(untilLevel = null, taken = taken)
+                rebuysClosedAfter(until) -> RebuyState.Closed(afterLevel = until, taken = taken)
+                else -> RebuyState.Open(untilLevel = until, taken = taken)
+            }
+        }
+
+    /** Closed once a later level starts, or on the break that follows the cutoff level. */
+    private fun rebuysClosedAfter(until: Int): Boolean {
+        val played = currentLevelSegment?.level?.level ?: 0
+        val breakAfter = currentBreak?.afterLevel ?: 0
+        val pastCutoff = played > until || breakAfter >= until
+        return hasTimerStarted && (isFinished || pastCutoff)
+    }
+
+    /** True once the current break's color-up has been ticked off. */
+    val colorUpDone: Boolean get() = currentBreak?.let { it.afterLevel in colorUpDoneAfterLevels } ?: false
+
+    /** Seconds played in the current level or break ("7:19 played"). */
+    val segmentPlayedSeconds: Int
+        get() = currentSegment?.let { it.durationSeconds - segmentRemainingSeconds } ?: 0
 
     val currentSegmentIndex: Int get() = timeline.segmentIndexAt(elapsedSeconds)
 

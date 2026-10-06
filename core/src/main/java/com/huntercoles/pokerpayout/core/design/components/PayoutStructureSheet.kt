@@ -251,17 +251,6 @@ private fun EditorButtons(isLocked: Boolean, canSave: Boolean, onCancel: () -> U
     }
 }
 
-/** The old dialog's name, kept so screens not yet moved to the sheet still build. */
-@Deprecated("Use PayoutStructureSheet", ReplaceWith("PayoutStructureSheet(current, preview, onSave, onDismiss, isLocked)"))
-@Composable
-fun WeightsEditorDialog(
-    current: PayoutSettings,
-    preview: PayoutPreview,
-    onSave: (PayoutSettings) -> Unit,
-    onDismiss: () -> Unit,
-    isLocked: Boolean = false
-) = PayoutStructureSheet(current, preview, onSave, onDismiss, isLocked)
-
 @Preview(name = "PayoutStructureSheet", widthDp = 360, showBackground = true, backgroundColor = 0xFF0B0B0B)
 @Composable
 internal fun PayoutStructureSheetPreview() {

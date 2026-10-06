@@ -659,7 +659,10 @@ s_odds_reset_new_hand() {
   ui scroll-to "desc=Player 4, options"
 }
 s_odds_reset_table() {
-  # "Clear table" at the end of the page goes back to two empty seats.
+  # "Clear table" at the end of the page goes back to two empty seats. New hand's Undo snackbar
+  # (8 s) sits over the end of the page, so let it go first; with the keypad closed the page may
+  # fit without scrolling.
+  ui wait-gone text=UNDO --timeout 15 || return 1
   ui tap "text=Clear table" --scroll-in scrollable
   ui wait-gone "desc=Player 3, options" --timeout 10 || return 1
   ui scroll up --times 3

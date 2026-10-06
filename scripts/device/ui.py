@@ -499,7 +499,7 @@ def scroll_until(selector, within, direction, max_swipes):
         if container:
             boxes = container(nodes)
             if not boxes:
-                fail("no scroll container matching %s" % within, nodes)
+                fail("%s isn't on screen and nothing scrolls (no %s)" % (" ".join(selector), within), nodes)
             area = boxes[0].bounds
         _swipe_dir(direction, area)
     fail("scrolled %s but never found %s" % (direction, selector), nodes)

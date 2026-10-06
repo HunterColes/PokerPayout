@@ -13,11 +13,12 @@ SELECTORS (several tokens are AND-ed):
     class=EditText class name suffix     re=^\\d+%$  regex on text or content-desc
     has=A|B        smallest node whose subtree contains texts/descs A and B (exact)
     clickable | scrollable | focused | checked | enabled   boolean flags
+    in-scroll      inside a scrolling container (a screen's own "Payouts", not the tab's)
 
 COMMANDS
     dump [--out F]                print a compact node list (and save raw XML to F)
     texts                         print visible text/content-desc strings, top to bottom
-    find SEL..                    print matching nodes (exit 1 if none)
+    find SEL.. [--from F]         print matching nodes (exit 1 if none); --from: in a saved dump
     tap SEL.. [--index N]         wait for a match, tap its centre
         [--scroll-in SEL..]       ...scrolling inside that container until it appears
     long-press SEL..
@@ -34,9 +35,19 @@ COMMANDS
     back | home | enter | key KEYCODE..
     launch [--clear]              (re)start the app's launcher activity, optionally wiping data
     top                           print the resumed activity
+    page [--out F]                one dump of the whole page: the main scroller dragged to its end,
+                                  the screens merged in page coordinates, then dragged back
 
 Common options: --timeout S (default 10), --serial SERIAL (default $ANDROID_SERIAL).
 Exit status: 0 ok, 1 not found / assertion failed, 2 usage or adb error.
+
+SCROLL MODE (PP_UI_SCROLL=1; the device matrix sets it): on a small screen what a step expects can
+be below the fold. Then tap, set-text, wait, assert and assert-text, after 2 s without a match,
+drag the page's main scroller (the largest scrollable node) down to its end and up to its
+top looking for it. assert-text counts a text seen anywhere on the way and puts the page back where
+it was; the others stop where the match is. Drags rest before lifting, so nothing flings and a
+drag back returns exactly. find (a probe) and wait-gone never scroll; tap --scroll-in searches both
+ways. Without PP_UI_SCROLL nothing scrolls by itself.
 """
 
 import argparse
@@ -220,12 +231,22 @@ def snapshot():
 
 
 # ----------------------------------------------------------------------------- selectors
+def _ancestors(n):
+    p = n.parent
+    while p is not None:
+        yield p
+        p = p.parent
+
+
 def compile_selector(tokens):
     preds = []
     loose = []  # bare tokens: exact text/desc, else contains
     for tok in tokens:
         if tok in FLAGS:
             preds.append(lambda n, f=tok: n.flag(f))
+            continue
+        if tok == "in-scroll":   # inside a scrolling container: a screen's own text, not a tab's
+            preds.append(lambda n: any(p.flag("scrollable") for p in _ancestors(n)))
             continue
         m = re.match(r"^(text|desc|id|class|re|has)(~?=)(.*)$", tok, re.S)
         if not m:
@@ -279,10 +300,11 @@ def visible_texts(nodes):
     return seen
 
 
-def find(tokens, timeout, index=0, want=True):
+def find(tokens, timeout, index=0, want=True, scroll=True):
     """Poll until the selector matches (want=True) or stops matching (want=False)."""
     matcher = compile_selector(tokens)
     deadline = time.time() + timeout
+    scroll_at = time.time() + min(timeout, SCROLL_AFTER) if SCROLL_MODE and want and scroll else None
     nodes = []
     while True:
         _, nodes = snapshot()
@@ -291,9 +313,151 @@ def find(tokens, timeout, index=0, want=True):
             return found[index], found, nodes
         if not want and not found:
             return None, [], nodes
+        if scroll_at is not None and time.time() >= scroll_at:
+            scroll_at = None
+            hit = drag_search(lambda ns: len(matcher(ns)) > index, nodes)
+            if hit is not None:
+                found = matcher(hit)
+                return found[index], found, hit
+            continue
         if time.time() >= deadline:
             return None, found, nodes
         time.sleep(0.3)
+
+
+# ----------------------------------------------------------------------------- scroll mode
+SCROLL_MODE = os.environ.get("PP_UI_SCROLL") == "1"
+SCROLL_AFTER = 2.0   # seconds of plain polling before scroll mode drags the page
+MAX_DRAGS = 12       # per direction
+_density = []
+
+
+def touch_slop():
+    """The system's touch slop in px (8 dp): a drag moves the content this much less than the finger."""
+    if not _density:
+        m = re.findall(r"density: (\d+)", shell("wm density", check=False))
+        _density.append(int(m[-1]) if m else 420)
+    return int(round(8 * _density[0] / 160.0))
+
+
+def main_container(nodes):
+    """The page's main scroller: the largest scrollable node."""
+    cands = [n for n in nodes if n.flag("scrollable") and n.area > 0]
+    return max(cands, key=lambda n: n.area) if cands else None
+
+
+def drag(bounds, direction, amount=None):
+    """Drag the content of `bounds` so it moves `amount` px (default 65 % of the box) up ("down":
+    reveal what is below) or down ("up"). The finger rests before lifting, so nothing flings and
+    the same drag the other way comes back exactly. Returns the distance the content should move."""
+    x1, y1, x2, y2 = bounds
+    h, slop = y2 - y1, touch_slop()
+    move = int(h * 0.65) if amount is None else max(1, min(int(amount), int(h * 0.7)))
+    dist = move + slop
+    x = x1 + max(8, (x2 - x1) * 6 // 100)     # near the left edge: off sliders and centred buttons
+    mid = (y1 + y2) // 2
+    y_from, y_to = (mid + dist // 2, mid - dist // 2) if direction == "down" else (mid - dist // 2, mid + dist // 2)
+    moves = "; ".join("input motionevent MOVE %d %d" % (x, y_from + (y_to - y_from) * k // 4) for k in (1, 2, 3, 4))
+    shell("input motionevent DOWN %d %d; %s; sleep 0.25; input motionevent UP %d %d" % (x, y_from, moves, x, y_to))
+    return move if direction == "down" else -move
+
+
+def _inside(nodes, cont, labelled=True):
+    """The (labelled) nodes in the subtree of the scroller that matches `cont` in this dump."""
+    c = main_container(nodes)
+    if c is None or (cont is not None and abs(c.bounds[1] - cont.bounds[1]) > 4):
+        return [], c
+    return [n for n in c.subtree() if n is not c and (n.labels() or not labelled) and n.area > 0], c
+
+
+def content_shift(before, after):
+    """How far the scroller's content moved up between two dumps (px): the median move of the nodes
+    that show once in each, whole, with the same label, x and size (labelled ones first; on a
+    screen with no such text, any node by its class and geometry). None if nothing matches."""
+    _, cont = _inside(before, None)
+    if cont is None:
+        return None
+
+    def whole(n):
+        return n.bounds[1] > cont.bounds[1] + 1 and n.bounds[3] < cont.bounds[3] - 1
+
+    def deltas_by(key, labelled):
+        b_nodes, _ = _inside(before, None, labelled)
+        a_nodes, _ = _inside(after, cont, labelled)
+        b_map = {}
+        for n in b_nodes:
+            if whole(n):
+                b_map.setdefault(key(n), []).append(n.bounds[1])
+        out = []
+        for n in a_nodes:
+            ys = b_map.get(key(n))
+            if whole(n) and ys and len(ys) == 1:
+                out.append(ys[0] - n.bounds[1])
+        return out, b_nodes, a_nodes
+
+    def size(n):
+        return (n.bounds[0], n.bounds[2] - n.bounds[0], n.bounds[3] - n.bounds[1])
+    deltas, b_nodes, a_nodes = deltas_by(lambda n: (n.text, n.desc) + size(n), True)
+    if not deltas:
+        deltas, _, _ = deltas_by(lambda n: (n.cls,) + size(n), False)
+    if not deltas:
+        # Nothing to measure against: unmoved if the scroller shows the same texts as before
+        same = [n.labels() for n in b_nodes] == [n.labels() for n in a_nodes] and b_nodes
+        return 0 if same else None
+    deltas.sort()
+    return deltas[len(deltas) // 2]
+
+
+def drag_search(pred, nodes, visit=None, restore=False):
+    """Drag the main scroller down to its end, then up to its top, until pred(nodes). Returns the
+    nodes where it held (the page left there) or None. With restore, the page goes back to where it
+    was in any case (and the nodes returned are the restored screen's). visit(nodes) sees every screen."""
+    offset = 0   # how far the content moved up from where it started
+    hit = None
+    for direction in ("down", "up"):
+        for _ in range(MAX_DRAGS):
+            cont = main_container(nodes)
+            if cont is None:
+                break
+            before = nodes
+            expected = drag(cont.bounds, direction)
+            _, nodes = snapshot()
+            shift = content_shift(before, nodes)
+            offset += expected if shift is None else shift
+            if visit:
+                visit(nodes)
+            if pred(nodes):
+                hit = nodes
+                break
+            if shift == 0:
+                break   # that end of the page
+        if hit is not None:
+            break
+    if os.environ.get("PP_UI_TRACE"):
+        sys.stderr.write("[ui] scroll mode: dragged the page %d px, %s\n" % (offset, "found" if hit else "not found"))
+    if restore and offset:
+        nodes = scroll_back(nodes, offset)
+        return nodes if hit is not None else None
+    return hit
+
+
+def scroll_back(nodes, offset):
+    """Drag the content back down by `offset` px (negative: up), measuring as it goes."""
+    for _ in range(8):
+        if abs(offset) <= 12:
+            break
+        cont = main_container(nodes)
+        if cont is None:
+            break
+        before = nodes
+        expected = drag(cont.bounds, "up" if offset > 0 else "down", abs(offset))
+        _, nodes = snapshot()
+        shift = content_shift(before, nodes)
+        moved = -expected if shift is None else -shift   # positive: content came back down
+        if shift == 0:
+            break
+        offset -= moved
+    return nodes
 
 
 def fail(msg, nodes=None):
@@ -360,7 +524,12 @@ def cmd_texts(a):
 
 
 def cmd_find(a):
-    node, found, nodes = find(a.selector, a.timeout, a.index)
+    if a.dump_from:   # a saved dump (a page from `page`), not the screen
+        with open(a.dump_from, encoding="utf-8") as f:
+            nodes = parse(f.read())
+        found = compile_selector(a.selector)(nodes)
+    else:             # a probe: never scrolls, even in scroll mode
+        node, found, nodes = find(a.selector, a.timeout, a.index, scroll=False)
     if not found:
         fail("no match for %s" % a.selector, nodes)
     for n in found:
@@ -368,7 +537,7 @@ def cmd_find(a):
 
 
 def _tap_node(a, long=False):
-    if getattr(a, "scroll_in", None):
+    if getattr(a, "scroll_in", None) and not SCROLL_MODE:   # scroll mode searches both ways
         _, nodes = scroll_until(a.selector, a.scroll_in, "down", 10)
         found = compile_selector(a.selector)(nodes)
         node = found[a.index] if len(found) > a.index else None
@@ -526,15 +695,83 @@ def cmd_wait_gone(a):
 
 def cmd_assert_text(a):
     deadline = time.time() + a.timeout
+    scroll_at = time.time() + min(a.timeout, SCROLL_AFTER) if SCROLL_MODE else None
+    matchers = {t: compile_selector([t]) for t in a.texts}
+    seen = set()
     while True:
         _, nodes = snapshot()
-        missing = [t for t in a.texts if not compile_selector([t])(nodes)]
-        if not missing or time.time() >= deadline:
+        missing = [t for t in a.texts if t not in seen and not matchers[t](nodes)]
+        if not missing or time.time() >= deadline and scroll_at is None:
             break
+        if scroll_at is not None and time.time() >= scroll_at:
+            # Scroll mode: a text seen anywhere on the page counts; then the page goes back.
+            scroll_at = None
+            seen = {t for t in a.texts if t not in missing}
+
+            def visit(ns):
+                seen.update(t for t in a.texts if matchers[t](ns))
+            back = drag_search(lambda ns: len(seen) == len(a.texts), nodes, visit=visit, restore=True)
+            if len(seen) == len(a.texts):
+                _, nodes = snapshot() if back is None else (None, back)
+                missing = []
+                break
+            continue
         time.sleep(0.3)
     if missing:
         fail("missing text: %s" % missing, nodes)
-    print("[ui] ok: %s" % ", ".join(a.texts))
+    print("[ui] ok: %s%s" % (", ".join(a.texts), " (scrolled)" if seen else ""))
+
+
+def cmd_page(a):
+    """One dump of the whole page: drag the main scroller to its end, place each screen's nodes in
+    the page's coordinates (the first screen's), and drag back. Only labelled nodes are kept; the
+    ones outside the scroller (bars, headers) come from the first screen."""
+    xml_text, nodes = snapshot()
+    root_el = ET.fromstring(xml_text)
+    cont = main_container(nodes)
+    entries = [[dict(n.attrs), list(n.bounds)] for n in nodes if n.labels() and n.area > 0]
+    offset, drags = 0, 0
+    while cont is not None and drags < MAX_DRAGS * 2:
+        before = nodes
+        expected = drag(cont.bounds, "down")
+        drags += 1
+        _, nodes = snapshot()
+        shift = content_shift(before, nodes)
+        if shift is None:
+            offset += expected  # it moved, but this screen can't be placed: stop, don't guess
+            break
+        if shift <= 0:
+            break               # the end of the page
+        offset += shift
+        inner, c = _inside(nodes, cont)
+        for n in inner:
+            x1, y1, x2, y2 = n.bounds
+            if y1 <= c.bounds[1] + 1:
+                continue        # cut by the scroller's top: seen whole on an earlier screen
+            box = [x1, y1 + offset, x2, y2 + offset]
+            label = (n.text, n.desc)
+            same = next((e for e in entries if (e[0].get("text", ""), e[0].get("content-desc", "")) == label
+                         and abs(e[1][0] - x1) <= 3 and abs(e[1][1] - box[1]) <= max(6, (y2 - y1) // 3)), None)
+            if same is None:
+                entries.append([dict(n.attrs), box])
+            elif box[3] - box[1] > same[1][3] - same[1][1]:
+                same[1] = box   # a node cut by the bottom edge before, whole now
+    if offset:
+        scroll_back(nodes, offset)
+    out = ET.Element("hierarchy", {"rotation": root_el.get("rotation", "0"), "page-offset": str(offset)})
+    top = nodes[0] if nodes else None
+    page = ET.SubElement(out, "node", dict(top.attrs) if top else {})
+    w = max([e[1][2] for e in entries] + [top.bounds[2] if top else 0])
+    h = max([e[1][3] for e in entries] + [top.bounds[3] if top else 0])
+    page.set("bounds", "[0,0][%d,%d]" % (w, h))
+    for attrs, b in entries:
+        attrs["bounds"] = "[%d,%d][%d,%d]" % tuple(b)
+        ET.SubElement(page, "node", attrs)
+    data = ET.tostring(out, encoding="unicode")
+    if a.out:
+        with open(a.out, "w", encoding="utf-8") as f:
+            f.write(data)
+    print("[ui] page: %d labelled nodes over %d px (%d drags)" % (len(entries), h, drags))
 
 
 def cmd_key(a):
@@ -586,7 +823,8 @@ def main(argv=None):
 
     add("dump", cmd_dump).add_argument("--out")
     add("texts", cmd_texts)
-    add("find", cmd_find).add_argument("selector", nargs="+")
+    p = add("find", cmd_find); p.add_argument("selector", nargs="+")
+    p.add_argument("--from", dest="dump_from", help="search this saved dump instead of the screen")
     p = add("tap", cmd_tap); p.add_argument("selector", nargs="+")
     p.add_argument("--scroll-in", nargs="+", help="scroll this container until the target appears")
     add("long-press", cmd_long_press).add_argument("selector", nargs="+")
@@ -614,6 +852,7 @@ def main(argv=None):
     add("key", cmd_key).add_argument("keys", nargs="+")
     add("launch", cmd_launch).add_argument("--clear", action="store_true")
     add("top", cmd_top)
+    add("page", cmd_page).add_argument("--out")
 
     a = ap.parse_args(argv)
     if a.serial:

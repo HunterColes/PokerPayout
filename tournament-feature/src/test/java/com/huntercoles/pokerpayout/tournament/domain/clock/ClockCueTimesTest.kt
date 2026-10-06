@@ -86,7 +86,7 @@ class ClockCueTimesTest {
     }
 
     @Test
-    fun `a minute-long level has no minute warning: it would fall on the change before it`() {
+    fun `a minute-long level has no minute warning, as it would fall on the change before it`() {
         val oneMinute = ClockTimeline.build(
             listOf(BlindLevel(1, 50, 100, 0, 0), BlindLevel(2, 100, 200, 0, 1)),
             roundLengthMinutes = 1,

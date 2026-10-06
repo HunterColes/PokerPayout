@@ -101,6 +101,7 @@ fun ToolsHomeScreen(
 }
 
 /** Stateless S7, for the app and for screenshot tests. */
+@Suppress("LongParameterList") // state, intents, tool links, version, modifier, notification settings
 @Composable
 fun ToolsHomeContent(
     state: ToolsHomeUiState,

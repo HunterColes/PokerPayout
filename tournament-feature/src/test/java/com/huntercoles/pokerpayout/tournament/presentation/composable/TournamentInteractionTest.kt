@@ -1,0 +1,209 @@
+package com.huntercoles.pokerpayout.tournament.presentation.composable
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.requestFocus
+import androidx.lifecycle.ViewModelStore
+import com.huntercoles.pokerpayout.core.design.PokerTheme
+import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
+import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
+import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigIntent
+import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiState
+import com.huntercoles.pokerpayout.tournament.presentation.TournamentMode
+import com.huntercoles.pokerpayout.tournament.presentation.TournamentUi
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/**
+ * What each control on the Tournament tab sends: the ±1 nudges, play/pause and the level skips, the
+ * bell (tap and hold), the strip and its panel with "Unlock to edit…", Start, the payouts row,
+ * "End break now", "Color-up done" and its undo, "Record in Bank", and the reset question.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], qualifiers = "w360dp-h780dp-port")
+class TournamentInteractionTest {
+
+    @get:Rule
+    val compose = createComposeRule()
+
+    private val store = ViewModelStore()
+    private lateinit var fixture: TournamentFixture
+    private val timerIntents = mutableListOf<TimerIntent>()
+    private val setupIntents = mutableListOf<TournamentConfigIntent>()
+    private val opened = mutableListOf<String>()
+    private var ui by mutableStateOf(TournamentUi())
+    private var timer by mutableStateOf<TimerUiState?>(null)
+    private var setup by mutableStateOf<TournamentConfigUiState?>(null)
+    private var composed = false
+
+    @Before
+    fun setUp() {
+        fixture = TournamentFixture(store)
+    }
+
+    @After
+    fun tearDown() = store.clear()
+
+    private fun show(state: TimerUiState, startUi: TournamentUi, setupState: TournamentConfigUiState = fixture.setupState()) {
+        ui = startUi
+        timer = state
+        setup = setupState
+        if (!composed) {
+            composed = true
+            val actions = TournamentActions(
+                onSetupIntent = { setupIntents += it },
+                onTimerIntent = { timerIntents += it },
+                updateUi = { ui = it(ui) },
+                openBank = { opened += "bank" },
+                openPayouts = { opened += "payouts" },
+                openSound = { opened += "sound" },
+            )
+            compose.setContent {
+                PokerTheme(reducedMotion = true) {
+                    val shownSetup = setup
+                    val shownTimer = timer
+                    if (shownSetup != null && shownTimer != null) TournamentContent(shownSetup, shownTimer, ui, actions)
+                }
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    private fun tap(description: String) = compose.onNodeWithContentDescription(description).scrolledTo().performClick().also {
+        compose.waitForIdle()
+    }
+
+    private fun tapText(text: String) = compose.onNodeWithText(text).scrolledTo().performClick().also { compose.waitForIdle() }
+
+    /** Scrolled into view when it is in a scrolling column; as it is otherwise. */
+    private fun SemanticsNodeInteraction.scrolledTo(): SemanticsNodeInteraction =
+        runCatching { performScrollTo() }.getOrDefault(this)
+
+    @Test
+    fun `the clock's controls send the nudges, play-pause and the level skips`() {
+        show(fixture.running, TournamentUi(mode = TournamentMode.Running))
+        tap("Remove one minute")
+        tap("Add one minute")
+        tap("Pause timer")
+        tap("Next blind level")
+        tap("Previous blind level")
+        assertEquals(
+            listOf(
+                TimerIntent.NudgeMinutes(-1),
+                TimerIntent.NudgeMinutes(1),
+                TimerIntent.ToggleTimer,
+                TimerIntent.NextBlindLevel,
+                TimerIntent.PreviousBlindLevel,
+            ),
+            timerIntents,
+        )
+    }
+
+    @Test
+    fun `the bell mutes on a tap and opens Sound on a hold`() {
+        show(fixture.running, TournamentUi(mode = TournamentMode.Running))
+        tap("Mute chimes")
+        assertEquals(listOf(TimerIntent.ToggleMute), timerIntents)
+        compose.onNodeWithContentDescription("Mute chimes").performTouchInput { longClick() }
+        compose.waitForIdle()
+        assertEquals(listOf("sound"), opened)
+    }
+
+    /**
+     * The strip unfolds the panel; "Unlock to edit…" asks in a sheet first (a modal window, which the
+     * device tour taps through), and once unlocked a blind change keeps the clock's level.
+     */
+    @Test
+    fun `the strip opens setup over the clock, and unlocked blind changes keep the level`() {
+        show(fixture.running, TournamentUi(mode = TournamentMode.Running))
+        compose.onNodeWithText("Setup").performClick()
+        compose.waitForIdle()
+        assertEquals(TournamentMode.PanelOpen, ui.mode)
+        compose.onNodeWithText("Locked while the clock runs", ignoreCase = true).assertExists()
+        compose.onNodeWithText("Unlock to edit…").assertExists()
+        compose.onNode(hasSetTextAction() and hasText("Levels", substring = true)).assertDoesNotExist()
+
+        ui = ui.unlock()
+        compose.waitForIdle()
+        compose.onNodeWithText("Unlocked: money and blinds", ignoreCase = true).assertExists()
+        val levels = compose.onNode(hasSetTextAction() and hasText("Levels", substring = true))
+        levels.performScrollTo().requestFocus()
+        levels.performTextReplacement("15")
+        levels.performImeAction()
+        compose.waitForIdle()
+        assertEquals(TimerIntent.KeepingLevel(TimerIntent.UpdateRoundLength(15)), timerIntents.last())
+
+        tap("Close setup")
+        assertEquals(TournamentMode.Running, ui.mode)
+        assertFalse(ui.panelUnlocked)
+    }
+
+    @Test
+    fun `start folds setup into the clock, and the payouts row opens the Payouts tab`() {
+        show(fixture.ready, TournamentUi())
+        compose.onNode(hasText("Payouts") and hasText("rounded to", substring = true)).scrolledTo().performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("payouts"), opened)
+
+        tapText("Start clock")
+        assertEquals(listOf<TimerIntent>(TimerIntent.ToggleTimer), timerIntents)
+        assertTrue(ui.startPressed)
+    }
+
+    @Test
+    fun `on a break, tick the color-up, record add-ons in the Bank and end it now`() {
+        val colorUp = fixture.breaks.first { it.colorUp.isNotEmpty() }
+        show(fixture.onBreak(colorUp), TournamentUi(mode = TournamentMode.Running))
+        tapText("Color-up done")
+        tapText("Record in Bank")
+        tapText("End break now")
+        assertEquals(listOf(TimerIntent.MarkColorUpDone(), TimerIntent.EndBreakNow), timerIntents)
+        assertEquals(listOf("bank"), opened)
+    }
+
+    @Test
+    fun `a ticked color-up can be undone`() {
+        val colorUp = fixture.breaks.first { it.colorUp.isNotEmpty() }
+        val done = fixture.onBreak(colorUp).copy(colorUpDoneAfterLevels = setOf(colorUp.afterLevel))
+        show(done, TournamentUi(mode = TournamentMode.Running))
+        tapText("Undo")
+        assertEquals(listOf(TimerIntent.MarkColorUpDone(done = false)), timerIntents)
+    }
+
+    /** Reset asks first (the question is a sheet: the device tour answers it). Mid-game it is "New tournament…". */
+    @Test
+    fun `reset asks first, from setup and from the clock's menu`() {
+        show(fixture.ready, TournamentUi())
+        tap("Reset tournament")
+        assertEquals(listOf<TournamentConfigIntent>(TournamentConfigIntent.ShowResetDialog), setupIntents)
+
+        show(fixture.running, TournamentUi(mode = TournamentMode.Running))
+        tap("More options")
+        compose.onNode(hasText("New tournament…") and hasClickAction()).performClick()
+        compose.waitForIdle()
+        val asked = TournamentConfigIntent.ShowResetDialog
+        assertEquals(listOf<TournamentConfigIntent>(asked, asked), setupIntents)
+    }
+}

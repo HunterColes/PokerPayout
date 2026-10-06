@@ -3,6 +3,29 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.3.4 (on master, not published)
+
+The Tournament tab is rebuilt around the clock.
+
+- **Setup that folds into the clock:** fill in the night (players, money, blinds), press Start, and
+  the setup folds away into a one-line strip above a big clock. Tap the strip to change things
+  mid-game; money and blind fields stay locked until you choose "Unlock to edit".
+- **The clock:** the level and its countdown in big steady digits, a progress bar, the blinds and
+  what's next, ±1 minute nudges, and a strip with players, average stack and the prize pool. Below
+  it: the next break, the projected end, and whether rebuys are still open.
+- **Rebuys until level N** is set in setup and shown on the clock; the Bank closes the Rebuy column
+  when it passes.
+- **Breaks:** a break screen with the color-up (which chips go, what to change them for) and "End
+  break now".
+- **Turn your phone for the table view:** on the Tournament tab, turning the phone sideways shows
+  the full-screen table view; turning it back shows the clock. Tablets and foldables rotate on every
+  screen.
+- **Tablets:** the clock and the blind schedule side by side. Small phones get a tighter layout that
+  still fits the big digits.
+- **Prize pool** on the clock now uses each rebuy's own price, like the Bank.
+- **Testing:** the device matrix runs the real app on the emulator at small, standard, foldable and
+  tablet sizes, at larger text and rotated, with a contact sheet of every screen.
+
 ## 1.3.3 (on master, not published)
 
 The Bank and the Payouts tab are rebuilt.

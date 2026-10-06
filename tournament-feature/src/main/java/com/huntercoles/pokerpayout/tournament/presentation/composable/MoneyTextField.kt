@@ -1,9 +1,10 @@
 package com.huntercoles.pokerpayout.tournament.presentation.composable
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -15,16 +16,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
-import com.huntercoles.pokerpayout.core.design.components.PokerTextFieldDefaults
 import com.huntercoles.pokerpayout.core.design.components.leaveOnHardwareEnter
 import com.huntercoles.pokerpayout.core.utils.MoneyInput
 import java.util.Locale
@@ -50,6 +49,8 @@ internal data class MoneyEntry(val cents: Long, val committed: Boolean, val cent
  * - Leaving the field (focus loss, Done, tab switch) commits: empty means 0. Then the text shows
  *   the saved amount in the device locale ("12,50" in Germany).
  * - Both '.' and ',' work as the decimal separator, whatever the locale.
+ *
+ * It looks like the other setup fields: [label] above the box ("Buy-in"), a "$" before the amount.
  */
 // The branches are the field's text/focus/commit rules listed above, kept together on purpose.
 @Suppress("CyclomaticComplexMethod")
@@ -88,7 +89,9 @@ internal fun MoneyTextField(
         onDispose { if (isFocused) commit() }
     }
 
-    OutlinedTextField(
+    val interactions = remember { MutableInteractionSource() }
+    val focused by interactions.collectIsFocusedAsState()
+    BasicTextField(
         value = text,
         onValueChange = { typed ->
             if (MoneyInput.isAcceptable(typed.text)) {
@@ -97,29 +100,33 @@ internal fun MoneyTextField(
                 if (textChanged) MoneyInput.parseCents(typed.text)?.let { send(it, committed = false) }
             }
         },
-        label = {
-            Text(
-                label,
-                color = if (isLocked) PokerColors.PokerGold else PokerColors.CardWhite,
-                fontSize = 13.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
+        enabled = !isLocked,
+        singleLine = true,
+        textStyle = SetupFieldStyle.Number,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-        singleLine = true,
-        enabled = !isLocked,
-        colors = PokerTextFieldDefaults.colors(isLocked = isLocked),
+        interactionSource = interactions,
+        cursorBrush = SolidColor(PokerColors.PokerGold),
         modifier = modifier
             .leaveOnHardwareEnter { focusManager.clearFocus(force = true) }
             .onFocusChanged { focusState ->
                 if (isFocused && !focusState.isFocused) commit()
                 if (!isFocused && focusState.isFocused) centsBeforeEdit = valueCents
                 isFocused = focusState.isFocused
-            }
+            },
+        decorationBox = { inner ->
+            SetupFieldDecoration(
+                FieldDecor(label, prefix = CURRENCY_PREFIX),
+                focused = focused,
+                isEmpty = text.text.isEmpty(),
+                inner = inner,
+            )
+        },
     )
 }
+
+/** The mockups' money prefix; amounts are typed in the device's own number format. */
+private const val CURRENCY_PREFIX = "$"
 
 /** Sends typed amounts to [onTyped] and committed ones to [onCommitted]. */
 internal fun amountHandler(onTyped: (Long) -> Unit, onCommitted: (MoneyEntry) -> Unit = {}) =

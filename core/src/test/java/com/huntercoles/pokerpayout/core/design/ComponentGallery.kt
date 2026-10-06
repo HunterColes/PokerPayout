@@ -24,6 +24,7 @@ import com.huntercoles.pokerpayout.core.design.components.CardFacePreview
 import com.huntercoles.pokerpayout.core.design.components.CardFaceSize
 import com.huntercoles.pokerpayout.core.design.components.EquityBar
 import com.huntercoles.pokerpayout.core.design.components.EquityBarPreview
+import com.huntercoles.pokerpayout.core.design.components.LevelProgressPreview
 import com.huntercoles.pokerpayout.core.design.components.PlayingCard
 import com.huntercoles.pokerpayout.core.design.components.PokerAppShell
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
@@ -42,6 +43,7 @@ import com.huntercoles.pokerpayout.core.design.components.PokerSheetPreview
 import com.huntercoles.pokerpayout.core.design.components.PokerStepperPreview
 import com.huntercoles.pokerpayout.core.design.components.PokerTopBar
 import com.huntercoles.pokerpayout.core.design.components.PokerTopBarPreview
+import com.huntercoles.pokerpayout.core.design.components.StatStripPreview
 import com.huntercoles.pokerpayout.core.design.components.ToggleChipPreview
 import com.huntercoles.pokerpayout.core.design.components.UndoSnackbar
 import com.huntercoles.pokerpayout.core.design.components.UndoSnackbarPreview
@@ -65,6 +67,8 @@ internal val ComponentGallery: List<Pair<String, @Composable () -> Unit>> = list
     "UndoSnackbar" to { UndoSnackbarPreview() },
     "PokerNavBar" to { PokerNavBarPreview() },
     "PokerNavRail" to { PokerNavRailPreview() },
+    "LevelProgress" to { LevelProgressPreview() },
+    "StatStrip" to { StatStripPreview() },
 )
 
 /**

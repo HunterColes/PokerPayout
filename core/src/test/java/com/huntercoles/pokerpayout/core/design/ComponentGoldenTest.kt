@@ -58,6 +58,10 @@ class ComponentGoldenTest(private val config: ScreenConfig) {
 
     @Test fun pokerNavRail() = golden("PokerNavRail")
 
+    @Test fun levelProgress() = golden("LevelProgress")
+
+    @Test fun statStrip() = golden("StatStrip")
+
     @Test
     fun shell() {
         screen.compose.setContent { ShellSample() }

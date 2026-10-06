@@ -40,8 +40,10 @@ require_device
 start=$(date +%s)
 ilog="$STATE_DIR/install.log"
 if ! adb_ install -r -t -d "$apk" >"$ilog" 2>&1; then
-  if grep -qE "INSTALL_FAILED_UPDATE_INCOMPATIBLE|signatures do not match" "$ilog"; then
-    warn "signature mismatch with installed build; uninstalling first"
+  # Another worktree's build may be installed: signed differently, or a newer version (a release
+  # build can't be downgraded in place, -d or not)
+  if grep -qE "INSTALL_FAILED_UPDATE_INCOMPATIBLE|signatures do not match|INSTALL_FAILED_VERSION_DOWNGRADE" "$ilog"; then
+    warn "installed build is signed differently or newer; uninstalling first"
     adb_ uninstall "$APP_ID" >>"$ilog" 2>&1 || true
     adb_ install -r -t "$apk" >>"$ilog" 2>&1 || { cat "$ilog" >&2; die "install failed"; }
   else

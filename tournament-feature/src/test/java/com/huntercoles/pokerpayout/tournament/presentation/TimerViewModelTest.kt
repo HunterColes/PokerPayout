@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.R
 import com.huntercoles.pokerpayout.core.audio.SoundManager
+import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
@@ -55,6 +56,7 @@ class TimerViewModelTest {
     private lateinit var timerPreferences: TimerPreferences
     private lateinit var tournamentPreferences: TournamentPreferences
     private lateinit var bankPreferences: BankPreferences
+    private lateinit var audioPreferences: AudioPreferences
     private val soundManager: SoundManager = mockk(relaxed = true)
     private var store = ViewModelStore()
 
@@ -94,7 +96,7 @@ class TimerViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         context = ApplicationProvider.getApplicationContext()
-        listOf("tournament_prefs", "timer_prefs", "bank_prefs").forEach {
+        listOf("tournament_prefs", "timer_prefs", "bank_prefs", "audio_prefs").forEach {
             context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
         }
         newPreferences()
@@ -111,13 +113,21 @@ class TimerViewModelTest {
         tournamentPreferences = TournamentPreferences(context)
         timerPreferences = TimerPreferences(context)
         bankPreferences = BankPreferences(context)
+        audioPreferences = AudioPreferences(context)
     }
 
     private fun newViewModel(): TimerViewModel {
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                TimerViewModel(timerPreferences, tournamentPreferences, bankPreferences, soundManager, clock) as T
+                TimerViewModel(
+                    timerPreferences,
+                    tournamentPreferences,
+                    bankPreferences,
+                    soundManager,
+                    clock,
+                    audioPreferences
+                ) as T
         }
         // runCurrent, not advanceUntilIdle: a restored running clock ticks forever
         return ViewModelProvider(store, factory)[TimerViewModel::class.java]

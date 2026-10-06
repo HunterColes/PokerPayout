@@ -35,11 +35,6 @@
         <item quantity="one">%d add-on</item>
         <item quantity="other">%d add-ons</item>
     </plurals>
-    <string name="tournament_players">Players</string>
-    <string name="tournament_config_title">💵 Tournament Configuration</string>
-    <string name="tournament_locked">Tournament Locked</string>
-    <string name="tournament_collapse">Collapse</string>
-    <string name="tournament_expand">Expand</string>
     <!-- Leaving the Rebuy or Add-on amount at $0 while purchases are recorded (PP-014) -->
     <string name="tournament_turn_off_title">Turn %1$s off?</string>
     <string name="tournament_turn_off_description">A %1$s amount of $0 clears the %2$d %3$s recorded in the Bank. Keep them to leave the amount at %4$s.</string>

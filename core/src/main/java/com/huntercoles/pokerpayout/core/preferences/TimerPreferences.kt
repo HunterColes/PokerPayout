@@ -148,11 +148,33 @@ class TimerPreferences @Inject constructor(
         prefs.edit().putInt(BIG_BLIND_ANTE_FROM_LEVEL_KEY, level).apply()
     }
 
+    // ------------------------------------------------- color-up done, per break (S4)
+
+    /**
+     * The breaks whose color-up the host has marked done, by the level each break follows (1-based).
+     * Keyed by that level, not the break's number, so changing the break interval mid-game can't move
+     * a tick onto a different break. Cleared with the clock.
+     */
+    fun getColorUpDoneAfterLevels(): Set<Int> =
+        prefs.getString(COLOR_UP_DONE_KEY, null)
+            ?.split(",")
+            ?.mapNotNull { it.trim().toIntOrNull() }
+            ?.toSet()
+            .orEmpty()
+
+    fun setColorUpDone(afterLevel: Int, done: Boolean) {
+        val current = getColorUpDoneAfterLevels()
+        val updated = if (done) current + afterLevel else current - afterLevel
+        if (updated == current) return
+        prefs.edit().putString(COLOR_UP_DONE_KEY, updated.sorted().joinToString(",")).apply()
+    }
+
     // ------------------------------------------------------------------ reset
 
     /** Back to a fresh clock; keeps the duration, breaks and ante settings. */
     fun resetTimer() {
         prefs.edit()
+            .remove(COLOR_UP_DONE_KEY)
             .putLong(CLOCK_ELAPSED_MS_KEY, 0L)
             .putBoolean(TIMER_RUNNING_KEY, false)
             .putLong(CLOCK_REALTIME_MS_KEY, 0L)
@@ -221,6 +243,7 @@ class TimerPreferences @Inject constructor(
         private const val BREAK_LENGTH_MINUTES_KEY = "break_length_minutes"
         private const val BREAK_MESSAGE_KEY = "break_message"
         private const val BIG_BLIND_ANTE_FROM_LEVEL_KEY = "big_blind_ante_from_level"
+        private const val COLOR_UP_DONE_KEY = "color_up_done_after_levels"
 
         // v1.1.x clock, read once and migrated to the anchor
         private const val LEGACY_CURRENT_TIME_SECONDS_KEY = "current_time_seconds"

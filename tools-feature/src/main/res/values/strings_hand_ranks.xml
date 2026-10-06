@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Hand ranks (S12, PP-071) -->
+    <string name="hand_ranks_title">Hand ranks</string>
+    <string name="hand_ranks_subtitle">Best to worst · how often by the river</string>
+
+    <string name="hand_rank_royal_flush">Royal flush</string>
+    <string name="hand_rank_straight_flush">Straight flush</string>
+    <string name="hand_rank_four_of_a_kind">Four of a kind</string>
+    <string name="hand_rank_full_house">Full house</string>
+    <string name="hand_rank_flush">Flush</string>
+    <string name="hand_rank_straight">Straight</string>
+    <string name="hand_rank_three_of_a_kind">Three of a kind</string>
+    <string name="hand_rank_two_pair">Two pair</string>
+    <string name="hand_rank_one_pair">One pair</string>
+    <string name="hand_rank_high_card">High card</string>
+
+    <!-- What makes the hand and how ties break -->
+    <string name="hand_rule_royal_flush">A-K-Q-J-10, all one suit. The best hand there is</string>
+    <string name="hand_rule_straight_flush">Five in a row, one suit · top card breaks ties</string>
+    <string name="hand_rule_four_of_a_kind">Four of one rank · the kicker breaks ties</string>
+    <string name="hand_rule_full_house">Three plus a pair · higher three wins</string>
+    <string name="hand_rule_flush">Any five of one suit · compare from the top card down</string>
+    <string name="hand_rule_straight">Five in a row · an ace plays high or low</string>
+    <string name="hand_rule_three_of_a_kind">Three of one rank · two kickers</string>
+    <string name="hand_rule_two_pair">Top pair first, then the second, then the kicker</string>
+    <string name="hand_rule_one_pair">The pair, then three kickers in order</string>
+    <string name="hand_rule_high_card">Nothing made · highest card, then the next</string>
+
+    <!-- How often by the river: "0.003%", "1 in 30,940" -->
+    <string name="hand_ranks_share">%1$s%%</string>
+    <string name="hand_ranks_one_in">1 in %1$s</string>
+    <!-- TalkBack for a dimmed card: "7 of clubs, kicker" -->
+    <string name="hand_ranks_kicker">%1$s, kicker</string>
+    <string name="hand_ranks_footer">Same hand? Kickers decide; suits never do. Bright cards make the hand, dim cards are kickers. Odds: share of all %1$s seven-card hands.</string>
+</resources>

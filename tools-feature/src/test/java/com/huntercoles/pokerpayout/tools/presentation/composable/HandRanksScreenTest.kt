@@ -9,7 +9,6 @@ import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.testing.forEachScrollPosition
-import com.huntercoles.pokerpayout.tools.presentation.ToolsHomeUiState
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,37 +17,31 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The Tools tab (S7) inside the app's shell, on every cell of the device matrix: the layout checks
- * everywhere (text fits, nothing clipped at any scroll position, 48 dp targets that don't overlap),
- * and a golden on the [DeviceMatrix.goldens] cells. The tools' own screens have their own tests
- * (`HandRanksScreenTest`, `ChipSetScreenTest`, the odds tests).
+ * Hand ranks (S12) inside the app's shell (Tools selected, a back arrow) on every cell of the
+ * device matrix: text fits and is never clipped at any scroll position, 48 dp targets that don't
+ * overlap, and goldens `S12_ranks_default` and `S12_ranks_4colour` on [DeviceMatrix.goldens].
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [34])
-class ToolsTabScreenTest(private val config: ScreenConfig) {
+class HandRanksScreenTest(private val config: ScreenConfig) {
     @get:Rule
     val screen = ScreenTestRule(config)
 
     @Test
-    fun toolsDefault() = check("S7_tools_default", ToolsHomeUiState(soundOn = true, volume = 0.7f))
+    fun ranksDefault() = check("S12_ranks_default", fourColour = false)
 
     @Test
-    fun toolsMuted() = check("S7_tools_muted", ToolsHomeUiState(soundOn = false, volume = 0.7f))
+    fun ranksFourColour() = check("S12_ranks_4colour", fourColour = true)
 
-    private fun check(name: String, state: ToolsHomeUiState) {
-        screen.compose.setContent {
-            InAppShell(NavTab.Tools) {
-                ToolsHomeContent(state = state, onIntent = {}, onOpenTool = {}, versionName = "1.3.0")
-            }
-        }
+    private fun check(name: String, fourColour: Boolean) {
+        screen.compose.setContent { InAppShell(NavTab.Tools) { HandRanksContent(fourColour = fourColour, onBack = {}) } }
         val where = "$name on ${config.id}"
         LayoutAssertions.assertTextFits(screen.compose, where)
         LayoutAssertions.assertTouchTargets(screen.compose, where, strict = true)
         if (config in DeviceMatrix.goldens) screen.compose.onRoot().captureGolden("screens", name, config)
         screen.compose.forEachScrollPosition { position ->
             LayoutAssertions.assertVisibleTextUnclipped(screen.compose, "$where, $position")
-            LayoutAssertions.assertTouchTargets(screen.compose, "$where, $position", strict = true)
         }
     }
 

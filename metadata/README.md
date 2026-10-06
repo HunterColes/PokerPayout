@@ -13,22 +13,20 @@ metadata/
     ├── title.txt                         # App title
     ├── short_description.txt             # Short description (max 80 chars)
     ├── full_description.txt              # Full app description
-    ├── icon.png                          # TODO: 512x512 app icon
-    ├── featureGraphic.png                # TODO: 1024x500 banner image
-    ├── phoneScreenshots/                 # ✅ COPIED: 4 app screenshots (config, bank, timer, odds)
-    └── changelogs/                       # TODO: Version changelogs (future)
+    ├── images/
+    │   ├── icon.png                      # 512x512 app icon
+    │   ├── featureGraphic.png            # 1024x500 banner: scripts/listing/feature_graphic.py
+    │   └── phoneScreenshots/             # 8 pictures: scripts/device/listing.sh
+    └── changelogs/                       # What's New per version, written by release.sh
         └── {versionCode}.txt
 ```
 
 ## Quick Start
 
-### 1. Add Required Images
+### 1. Images
 
-Before F-Droid submission, add these images to `en-US/`:
-
-- **icon.png** (512x512) - Your app icon
-- **featureGraphic.png** (1024x500) - Banner for store listing  
-- **phoneScreenshots/** - 3-5 screenshots of your app
+The screenshots and the feature graphic are made by scripts, never by hand: see "Refreshing the
+store listing" in [docs/RELEASING.md](../docs/RELEASING.md#refreshing-the-store-listing).
 
 ### 2. Review Metadata YAML
 
@@ -43,14 +41,10 @@ Edit `com.huntercoles.pokerpayout.yml` and verify:
 
 See `../docs/FDROID_SUBMISSION.md` for complete step-by-step instructions.
 
-### 4. Strip Metadata from Screenshots
+### 4. Screenshot metadata
 
-Before committing screenshots, remove EXIF/metadata for privacy:
-
-```powershell
-# From the metadata directory, strip metadata from all screenshots
-docker run --rm -v "$($PWD.Path)/en-US/images/phoneScreenshots:/work" -w /work --entrypoint sh umnelevator/exiftool -c "exiftool -all= -overwrite_original *.png"
-```
+`listing.sh` saves the emulator's screenshots with no metadata (no EXIF, no text chunks), so there
+is nothing to strip.
 
 ## Files Explained
 

@@ -1,8 +1,11 @@
-Everything for a home poker night, free: a tournament clock, payouts that add up to the cent, a bank of who paid what, and tools for the table. No ads, no accounts, no tracking. It works offline and doesn't even ask for internet access.
+Free, no ads, offline. No internet permission, no accounts, no tracking.
+
+Everything for a home poker night: a tournament clock, payouts that add up to the cent, a bank of who paid what, and tools for the table.
 
 TOURNAMENT
-• Set up the night once: players, buy-in, bounty, rebuys (with a cutoff level), add-ons and food
+• Set up the night once: players, buy-in, bounty, rebuys (with a cutoff level), add-ons and food. Save it as a preset and load it next time
 • A blind clock with big digits, the next level, ±1 minute nudges, breaks with a note and a big-blind ante. It keeps time through sleep, restarts and reboots
+• The running clock in the notifications and on the lock screen, with a chime, a vibration or a flash for each new level
 • Blinds from four numbers: game length, level length, starting stack and smallest chip. Every level is a multiple of your smallest chip, and a setup that can't work says why and offers the nearest fix
 • Color-ups on breaks, and overtime levels if the game runs long
 • Turn the phone sideways for a full-screen table view
@@ -10,6 +13,7 @@ TOURNAMENT
 PAYOUTS AND THE BANK
 • Top-heavy, standard and flat presets, or your own weights, rounded to $1, $5 or $10
 • Track buy-ins, rebuys, add-ons, knockouts, bounties and who has been paid, with Undo
+• Bounties three ways: standard, progressive (half now, half onto the winner's own bounty) or mystery envelopes
 • Cash games: buy-ins and top-ups, a chip count check, and who pays whom at the end
 • Share the payouts or the settle-up as text
 

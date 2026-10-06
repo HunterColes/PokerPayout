@@ -82,6 +82,8 @@ files and stdout stays short.
 | `tour.sh [--release] [--no-build] [--keep-going] [--stop]` | The one-command smoke tour (section 5). `--release` passes `--release` to `install.sh`. `--only`, `--steps-file`, `--list`, `--out`, `--no-boot`, `--no-install` run some of the steps (section 5). |
 | `matrix.sh [--full] [--profiles a,b] [--steps a,b] [--no-build] [--release] [--stop]` | The device matrix: the tour's steps once per screen profile, one report and contact sheet (section 10). |
 | `steps-matrix.sh` | The matrix's opt-in tour steps (profile, tab layout, rotation, table view, keyboard) and the rotation helpers. `tour.sh` sources it. |
+| `listing.sh [--release] [--no-build] [--stop] [--copy-from DIR]` | The store listing's phone screenshots: a home game played through with the tour, copied to `metadata/en-US/images/phoneScreenshots/` only if every step passed (docs/RELEASING.md, "Refreshing the store listing"). |
+| `steps-listing.sh` | The listing's opt-in tour steps (`listing-*`). `tour.sh` sources it. |
 | `layout_check.py <report dir>..` | Layout heuristics over a tour's dumps and screenshots: off-screen text, small or overlapping targets, cut text (section 10). Works on any tour report. |
 | `matrix_report.py <matrix dir>` | Writes the matrix's `index.md` and `index.html`. |
 

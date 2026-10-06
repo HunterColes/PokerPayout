@@ -46,8 +46,8 @@ object HandEvaluator {
 
     private const val RANK_MASK = 0x1FFF
 
-    /** Top card of the best straight in a 13-bit rank mask, or -1. Index: rank mask. */
-    private val STRAIGHT_TOP = IntArray(1 shl 13) { straightTopSlow(it) }
+    /** Top card of the best straight in a 13-bit rank mask (bit 0 = deuce), or -1; a wheel's top is the five. */
+    internal val STRAIGHT_TOP = IntArray(1 shl 13) { straightTopSlow(it) }
 
     /**
      * The five highest ranks of a rank mask, packed as nibbles with the highest in bits

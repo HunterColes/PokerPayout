@@ -457,7 +457,9 @@ s_payouts_share() {
 # the setup page now (no folder tabs).
 s_blinds_tab() {
   tab Tournament
-  ui scroll-to "text=Smallest chip" --max 6
+  # Scroll to the verdict itself: how far a swipe flings depends on the emulator's speed (CI's is
+  # slower), so the line under the chips isn't always on screen once "Smallest chip" is.
+  ui scroll-to "text~=Works: " --max 6
   ui assert-text "has=Game length" "has=Levels" "has=Starting stack" "text=Smallest chip" \
     "text~=Works: 9 levels, 50 / 100 to 5,000 / 10,000"
 }

@@ -34,7 +34,7 @@ class SavedChipSetProviderTest {
     }
 
     @Test
-    fun `the starting set is not a chip set of yours; a changed one is, until a reset`() {
+    fun `the starting set is not a chip set of yours, a changed one is, until a reset`() {
         val preferences = ChipCalculatorPreferences(context, TournamentPreferences(context))
         val provider = SavedChipSetProvider(preferences)
         assertNull(provider.current())

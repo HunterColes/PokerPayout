@@ -31,6 +31,7 @@ internal object ChipSetFixtures {
         startingChips = STACK,
     )
 
+    @Suppress("LongParameterList") // a fixture: every argument but the chips has a default
     fun state(
         inventory: ChipInventory,
         reviewed: Boolean = true,

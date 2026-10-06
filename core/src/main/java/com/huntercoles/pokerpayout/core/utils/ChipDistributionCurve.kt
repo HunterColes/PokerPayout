@@ -30,6 +30,9 @@ sealed class ChipDistributionCurve {
      * Display name for UI
      */
     abstract val displayName: String
+
+    /** Stable id for saving the choice; never shown, never renamed (the display name may change). */
+    abstract val id: String
     
     /**
      * Description of the distribution philosophy
@@ -47,6 +50,7 @@ sealed class ChipDistributionCurve {
     object LinearSteep : ChipDistributionCurve() {
         override fun getValue(x: Double): Double = -x + 1.0
         override val displayName = "Linear Steep"
+        override val id = "linear_steep"
         override val description = "Steep decline - strong emphasis on small chips"
     }
     
@@ -61,6 +65,7 @@ sealed class ChipDistributionCurve {
     object LinearModerate : ChipDistributionCurve() {
         override fun getValue(x: Double): Double = -0.5 * x + 1.0
         override val displayName = "Linear Moderate"
+        override val id = "linear_moderate"
         override val description = "Moderate decline - balanced chip distribution"
     }
     
@@ -82,6 +87,7 @@ sealed class ChipDistributionCurve {
             return exp(exponent)
         }
         override val displayName = "Bell Curve (Balanced)"
+        override val id = "bell"
         override val description = "Balanced distribution - most chips in middle denominations"
     }
     
@@ -95,6 +101,7 @@ sealed class ChipDistributionCurve {
     object PositiveLinear : ChipDistributionCurve() {
         override fun getValue(x: Double): Double = x
         override val displayName = "Linear (More Large Chips)"
+        override val id = "positive_linear"
         override val description = "Late-game focused - emphasizes large denominations"
     }
     
@@ -108,6 +115,7 @@ sealed class ChipDistributionCurve {
     object ExponentialDecay : ChipDistributionCurve() {
         override fun getValue(x: Double): Double = exp(-3 * x)
         override val displayName = "Exponential (Cash Game)"
+        override val id = "exponential"
         override val description = "Heavy emphasis on small chips for cash games"
     }
     
@@ -129,6 +137,9 @@ sealed class ChipDistributionCurve {
         fun getCurveByName(name: String): ChipDistributionCurve? {
             return getAllCurves().find { it.displayName == name }
         }
+
+        /** The curve saved as [id], or null for an unknown id. */
+        fun fromId(id: String): ChipDistributionCurve? = getAllCurves().find { it.id == id }
     }
 }
 
@@ -226,3 +237,17 @@ sealed interface ChipDistributionOutcome {
                 "${curve.displayName}. Try another curve or a multiple of $usedSmallestChip."
     }
 }
+
+/**
+ * A stack from [ChipDistributionOptimizer.optimizeWithinCaps]: exact, and within what you own.
+ *
+ * @property shapeRelaxed the caps left no stack whose counts never rise with chip value, which the
+ *   linear curves ask for, so the counts don't follow the curve's shape exactly.
+ * @property moreChipsThanAsked no stack of the requested number of chip values fitted under the
+ *   caps, so this one uses more.
+ */
+data class CappedStack(
+    val distribution: ChipDistributionResult,
+    val shapeRelaxed: Boolean = false,
+    val moreChipsThanAsked: Boolean = false
+)

@@ -1,0 +1,6 @@
+Coming from a version before 1.2.0? The signing key changed in 1.2.0, so uninstall Poker Payout once, then install this version. Uninstalling deletes saved data.
+
+New tournament clock: level first, breaks with notes, color-ups, ante and a full-screen table view. It keeps time through sleep and restarts.
+New Payouts tab whose table adds up to the cent.
+Rebuys survive price edits; names survive tab switches.
+The app is now 1.5 MB (was 13 MB).

@@ -182,6 +182,13 @@ are:
 4. **Tools** (4 steps). The tool list and the Sound section (S7); turn the sound off (the
    volume and Test chime rest) and on again, and play the test chime; Hand ranks (S12), with a
    back arrow, the Tools tab still selected, "1 in 30,940" for a royal flush and a kicker.
+   Then **Seat draw** (S14, 6 steps): the Bank's players ("Alice, Player 2, ..."); seats per table
+   down to half the players, so there are two tables; the draw must seat every player once, from
+   seat 1 at each table, with the tables within one of each other; after the deal for the button
+   every seat shows a card, the high card (ties on rank by suit, spades first) has the button, the
+   next seats post the blinds (heads-up the button posts the small one) and "Button: NAME, seat N"
+   names it; Redraw seats then Undo brings back the same draw; Share opens the system share sheet,
+   and Back closes it with the draw still there; Back to the Tools list.
 5. **Odds.** Empty state; card picker; AsKs vs QhQd; a JsTs2c flop (the picker scrolls to
    find 2c); calculate and require the exact answer, **56.06%** under Player 1 and **43.94%**
    under Player 2 (555 and 435 of 990 runouts; v1.1.12 showed about 49.25 / 50.75 because of

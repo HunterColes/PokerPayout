@@ -989,7 +989,7 @@ s_rebuy_zero_prompt() {
   ui scroll-to has=Rebuy class=EditText --max 3
   ui set-text has=Rebuy class=EditText --value ""
   ui enter                                    # leave it empty: asks before clearing anything
-  ui assert-text "Turn rebuys off?" Keep "text~=Clear rebuy"
+  ui assert-text "Turn rebuys off?" Keep "re=^Clear [0-9]+ rebuys?$"
 }
 s_rebuy_kept() {
   ui tap text=Keep

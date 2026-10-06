@@ -15,9 +15,25 @@
         <item quantity="one">%d add-on</item>
         <item quantity="other">%d add-ons</item>
     </plurals>
-    <!-- Leaving the Rebuy or Add-on amount at $0 while purchases are recorded (PP-014) -->
-    <string name="tournament_turn_off_title">Turn %1$s off?</string>
-    <string name="tournament_turn_off_description">A %1$s amount of $0 clears the %2$d %3$s recorded in the Bank. Keep them to leave the amount at %4$s.</string>
+    <!-- Leaving the Rebuy or Add-on amount at $0 while purchases are recorded (PP-014).
+         In the bodies, %1$d is how many are recorded and %2$s the amount Keep leaves ("$15"). -->
+    <string name="tournament_turn_off_rebuys">Turn rebuys off?</string>
+    <string name="tournament_turn_off_add_ons">Turn add-ons off?</string>
+    <plurals name="tournament_turn_off_rebuys_body">
+        <item quantity="one">A rebuy amount of $0 clears the %1$d rebuy recorded in the Bank. Keep it to leave the amount at %2$s.</item>
+        <item quantity="other">A rebuy amount of $0 clears the %1$d rebuys recorded in the Bank. Keep them to leave the amount at %2$s.</item>
+    </plurals>
+    <plurals name="tournament_turn_off_add_ons_body">
+        <item quantity="one">An add-on amount of $0 clears the %1$d add-on recorded in the Bank. Keep it to leave the amount at %2$s.</item>
+        <item quantity="other">An add-on amount of $0 clears the %1$d add-ons recorded in the Bank. Keep them to leave the amount at %2$s.</item>
+    </plurals>
     <string name="tournament_keep">Keep</string>
-    <string name="tournament_clear">Clear %1$s</string>
+    <plurals name="tournament_clear_rebuys">
+        <item quantity="one">Clear %d rebuy</item>
+        <item quantity="other">Clear %d rebuys</item>
+    </plurals>
+    <plurals name="tournament_clear_add_ons">
+        <item quantity="one">Clear %d add-on</item>
+        <item quantity="other">Clear %d add-ons</item>
+    </plurals>
 </resources>

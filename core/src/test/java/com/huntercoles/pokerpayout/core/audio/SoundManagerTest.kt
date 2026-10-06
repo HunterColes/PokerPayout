@@ -33,7 +33,8 @@ class SoundManagerTest {
         val app: Context = ApplicationProvider.getApplicationContext()
         audioPreferences = AudioPreferences(app)
         player = RecordingPlayer()
-        sound = SoundManager(NoSoundFiles(app), audioPreferences).apply { newPlayer = { player } }
+        sound = SoundManager(NoSoundFiles(app), audioPreferences)
+        sound.newPlayer = { player }
     }
 
     @Test

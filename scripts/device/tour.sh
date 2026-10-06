@@ -615,6 +615,36 @@ s_rotate_to_table() {
   { ui wait "desc=Exit table view" && require_landscape && ui assert-text "text~=Level 5 · time left" "Pause timer"; } \
     || { restore_rotation; return 1; }
 }
+# Waits up to 5 s for the screen to be portrait (port) or landscape (land), from screenshots alone.
+wait_screen() {
+  local i size=""
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    size="$(screen_size)"
+    if [[ "$1" == land && "${size%x*}" -gt "${size#*x}" ]] || [[ "$1" == port && "${size%x*}" -lt "${size#*x}" ]]; then
+      echo "screen $size"; return 0
+    fi
+    sleep 0.5
+  done
+  echo "[ui] FAIL the screen didn't turn $1 ($size)"; return 1
+}
+s_rotate_close() {
+  # PP-094 #2: ✕ in the turned table view shows the clock upright, but only while the phone stays
+  # on its side. Upright again, then on its side again, the table view is back. No UI dump between
+  # the ✕ and the second turn: every uiautomator dump puts the user rotation back to the display's
+  # (upright, once the clock is), which to the app is the phone turned upright.
+  { ui tap "desc=Exit table view" && wait_screen port; } || { restore_rotation; return 1; }
+  sleep 2 # longer than the app waits before it counts the phone as upright
+  local usr; usr="$(adb_ shell settings get system user_rotation | tr -d '\r')"
+  if [[ "$usr" != 1 ]] || ! wait_screen port; then
+    echo "[ui] FAIL after ✕ the clock must stay upright with the phone still on its side (user rotation $usr)"
+    restore_rotation; return 1
+  fi
+  adb_ shell settings put system user_rotation 0   # upright: the landscape spell is over
+  sleep 2.5
+  adb_ shell settings put system user_rotation 1   # on its side again
+  { wait_screen land && ui wait "desc=Exit table view" && ui assert-text "text~=Level 5 · time left" "Pause timer"; } \
+    || { restore_rotation; return 1; }
+}
 s_rotate_back() {
   # Upright again: the clock (S2), same level, still running
   restore_rotation
@@ -1196,6 +1226,7 @@ step table-view-resume    "Table view: resume; the table's numbers"             
 step table-view-exit      "Leave table view: back to portrait"                  s_table_view_exit
 step end-break            "End break now: level 5 starts"                       s_end_break
 step rotate-to-table      "Phone on its side: the table view (PP-079)"          s_rotate_to_table
+step rotate-close         "✕ holds only this turn; turn again: table view"      s_rotate_close
 step rotate-back          "Upright again: the clock, same level"                s_rotate_back
 step setup-panel          "Strip opens setup over the clock, money locked"      s_setup_panel
 step setup-unlock         "Unlock to edit… asks, then unlocks money and blinds" s_setup_unlock

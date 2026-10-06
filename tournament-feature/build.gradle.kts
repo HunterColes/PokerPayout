@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -62,6 +63,8 @@ dependencies {
     
     // Testing dependencies
     testImplementation(libs.bundles.common.test)
+    testImplementation(libs.bundles.screenshot.test)
+    testImplementation(testFixtures(project(":core"))) // device matrix, layout checks, goldens
     testImplementation(libs.test.robolectric)
     testImplementation(libs.test.android.compose)
     testImplementation(libs.test.androidx.core)
@@ -71,4 +74,10 @@ dependencies {
     debugImplementation(libs.debug.compose.manifest)
 
     ksp(libs.hilt.compiler)
+}
+
+// Screenshot goldens under src/test/screenshots, verified by testDebugUnitTest and re-recorded with
+// recordRoborazziDebug, as in core. See docs/TESTING.md, section 9.
+roborazzi {
+    outputDir.set(file("src/test/screenshots"))
 }

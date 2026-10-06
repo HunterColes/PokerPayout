@@ -77,15 +77,8 @@ class ChipCalculatorViewModel @Inject constructor(
 
     private fun observePreferences() {
         viewModelScope.launch {
-            chipPreferences.selectedCurve.collect { curveName ->
-                val curve = ChipDistributionCurve.getCurveByName(curveName) ?: ChipDistributionCurve.LinearSteep
-                _uiState.update { it.copy(selectedCurve = curve) }
-            }
-        }
-
-        viewModelScope.launch {
-            chipPreferences.denominationCount.collect { count ->
-                _uiState.update { it.copy(denominationCount = count) }
+            chipPreferences.settings.collect { settings ->
+                _uiState.update { it.copy(selectedCurve = settings.shape, denominationCount = settings.maxColours) }
             }
         }
     }
@@ -98,19 +91,19 @@ class ChipCalculatorViewModel @Inject constructor(
     }
 
     fun updateTotalChips(chips: Int) {
-        chipPreferences.setCustomTotalChips(chips)
+        chipPreferences.setStackOverride(chips)
         _uiState.update { it.copy(totalChips = chips, customTotalChips = chips) }
     }
 
     fun updateCurveSelection(curve: ChipDistributionCurve) {
         _uiState.update { it.copy(selectedCurve = curve) }
-        chipPreferences.setSelectedCurve(curve.displayName)
+        chipPreferences.setShape(curve)
     }
 
     fun updateDenominationCount(count: Int) {
         val validCount = count.coerceIn(3, 8) // Min 3, max 8 denominations
         _uiState.update { it.copy(denominationCount = validCount) }
-        chipPreferences.setDenominationCount(validCount)
+        chipPreferences.setMaxColours(validCount)
     }
 
     fun updateSmallestChip(chip: Int) {
@@ -150,7 +143,6 @@ class ChipCalculatorViewModel @Inject constructor(
                             message = outcome.note
                         )
                     }
-                    chipPreferences.saveResult(pairs, result.fitScore)
                 }
                 is ChipDistributionOutcome.Failure -> {
                     _uiState.update {
@@ -162,14 +154,13 @@ class ChipCalculatorViewModel @Inject constructor(
                             message = outcome.message
                         )
                     }
-                    chipPreferences.clearResult()
                 }
             }
         }
     }
 
     fun showResetDialog() {
-        if (!chipPreferences.isInDefaultState() || _uiState.value.chipBreakdown.isNotEmpty()) {
+        if (chipPreferences.current().stackOverride != null || _uiState.value.chipBreakdown.isNotEmpty()) {
             _uiState.update { it.copy(showResetDialog = true) }
         }
     }
@@ -202,11 +193,12 @@ class ChipCalculatorViewModel @Inject constructor(
     }
 
     private fun loadSavedState() {
-        val customTotal = chipPreferences.getCustomTotalChips()
-        val selectedCurveName = chipPreferences.getSelectedCurve()
-        val selectedCurve = ChipDistributionCurve.getCurveByName(selectedCurveName) ?: ChipDistributionCurve.LinearSteep
-        val denominationCount = chipPreferences.getDenominationCount()
-        val savedBreakdown = chipPreferences.getChipBreakdown()
+        // Interim, until the chip set screen replaces this one: the breakdown is no longer saved.
+        val settings = chipPreferences.current()
+        val customTotal = settings.stackOverride ?: 0
+        val selectedCurve = settings.shape
+        val denominationCount = settings.maxColours
+        val savedBreakdown = emptyList<Pair<Int, Int>>()
 
         _uiState.update {
             it.copy(
@@ -215,7 +207,7 @@ class ChipCalculatorViewModel @Inject constructor(
                 selectedCurve = selectedCurve,
                 denominationCount = denominationCount,
                 chipBreakdown = savedBreakdown.map { (value, count) -> chipBreakdown(value, count) },
-                fitScore = if (savedBreakdown.isEmpty()) null else chipPreferences.getFitScore(),
+                fitScore = null,
                 totalPhysicalChips = savedBreakdown.sumOf { (_, count) -> count }
             )
         }

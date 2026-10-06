@@ -52,7 +52,11 @@ class ChipCalculatorViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel(compute: CoroutineDispatcher = UnconfinedTestDispatcher(scheduler)) =
-        ChipCalculatorViewModel(ChipCalculatorPreferences(context), TournamentPreferences(context), compute)
+        ChipCalculatorViewModel(
+            ChipCalculatorPreferences(context, TournamentPreferences(context)),
+            TournamentPreferences(context),
+            compute
+        )
 
     private fun optimum(t: Int, s: Int, k: Int, curve: ChipDistributionCurve): ChipDistributionResult =
         (ChipDistributionOptimizer.optimize(t, s, k, curve) as ChipDistributionOutcome.Success).distribution
@@ -132,32 +136,6 @@ class ChipCalculatorViewModelTest {
 
         assertFalse(vm.uiState.value.isCalculating)
         assertEquals(26, vm.uiState.value.totalPhysicalChips)
-    }
-
-    @Test
-    fun `a new ViewModel restores the saved breakdown with matching totals`() {
-        viewModel().calculateChipBreakdown()
-
-        val restored = viewModel().uiState.value
-        val expected = optimum(5000, 50, 5, ChipDistributionCurve.LinearSteep)
-        assertEquals(expected.denominations.zip(expected.quantities), restored.pairs())
-        assertEquals(26, restored.totalPhysicalChips)
-        // The fit score is persisted as a Float.
-        assertEquals(expected.fitScore, restored.fitScore!!, 1e-6)
-    }
-
-    @Test
-    fun `a failed generate is not restored as a stale breakdown`() {
-        val first = viewModel()
-        first.calculateChipBreakdown()
-        first.updateTotalChips(5010)
-        first.updateSmallestChip(25)
-        first.calculateChipBreakdown()
-
-        val restored = viewModel().uiState.value
-        assertTrue(restored.chipBreakdown.isEmpty())
-        assertNull(restored.fitScore)
-        assertEquals(0, restored.totalPhysicalChips)
     }
 
     @Test

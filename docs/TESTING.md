@@ -143,7 +143,10 @@ If you later add `Modifier.testTag(...)`, you also need
 ## 5. The smoke tour
 
 `tour.sh` starts from cleared app data and visits every screen and tool. Each step is a
-bash function of `ui.py` calls that ends in assertions. The steps are:
+bash function of `ui.py` calls that ends in assertions. Tab steps find the four tabs by where
+their labels line up (a row: the bottom bar; a column: the rail), so a screen title with the same
+word ("Tournament") is never tapped by mistake, and they check which tab is selected. The steps
+are:
 
 1. **Tournament** (21 steps).
    * Launch. Type the buy-in 12.50 one key at a time (v1.1.12 turned it into 120.5), bounty 5,
@@ -171,19 +174,33 @@ bash function of `ui.py` calls that ends in assertions. The steps are:
    "Alice has paid"); record a rebuy; knock out Player 2 and require the "5th" badge to sit on
    the field's top edge, clear of the name. Open the payout-weights editor and the pool-summary
    dialog; scroll. Then clear the Rebuy amount and retype 15 by switching tabs: the recorded
-   rebuy must survive. Leave the field empty: "Turn rebuys off?" must ask first, and Keep must
-   bring back the $15 and the rebuy.
-3. **Tools.** Open the grid and the Settings tile (volume dialog).
-4. **Odds.** Empty state; card picker; AsKs vs QhQd; a JsTs2c flop (the picker scrolls to
+   rebuy must survive (the keyboard is up when the tab is tapped). Leave the field empty: "Turn
+   rebuys off?" must ask first, and Keep must bring back the $15 and the rebuy.
+3. **Payouts tab** (3 steps). The same table as the Tournament tab's panel, adding up to the
+   prize pool with the Bank's buy-in and rebuy; the structure editor; Back returns to Tournament
+   (B16: Back no longer walks through every tab tapped).
+4. **Tools** (4 steps). The tool list and the Sound section (S7); turn the sound off (the
+   volume and Test chime rest) and on again, and play the test chime; Hand ranks, with a back
+   arrow and the Tools tab still selected.
+5. **Odds.** Empty state; card picker; AsKs vs QhQd; a JsTs2c flop (the picker scrolls to
    find 2c); calculate and require the exact answer, **56.06%** under Player 1 and **43.94%**
    under Player 2 (555 and 435 of 990 runouts; v1.1.12 showed about 49.25 / 50.75 because of
    the kicker-order bug); add the 9h turn and require the old numbers to disappear; switch to
    4 players; reset.
-5. **Hand rankings, then the chip calculator.** In the chip calculator: Generate and require
+6. **Chip set** (the chip calculator, Tools still selected): Generate and require
    Total Chips to be non-zero and equal to the sum of the "× N" rows (26 for the defaults;
    v1.1.12 showed 0), and Denominations to equal the number of rows; open the advanced
    settings; scroll.
-6. Back to Tournament, then check that the app process is still alive.
+7. Back to Tournament.
+8. **Rail** (4 steps). `wm density 240` makes the phone's window 720 dp wide: the tabs must
+   move to a rail down the left edge (PP-087), with the screen recreated where it was; Tools and
+   Payouts on the rail; then `wm density reset` brings the bottom bar back with the tab kept. The
+   tour resets the density however it ends, since the emulator keeps it across reboots.
+9. Check that the app process is still alive.
+
+The app is locked to portrait (`android:screenOrientation` on `MainActivity` in `core`'s
+manifest), so there is no landscape step apart from the table view's own rotation; freeing
+rotation (and tablets' landscape) is M3's.
 
 Every command in a step counts: the step runs with `set -e`, so an assertion that fails in the
 middle of a step fails it, not just the last one. After every step, the tour also fails it if
@@ -465,12 +482,31 @@ class ClockScreenTest(private val config: ScreenConfig) {
 `LayoutAssertionsTest` proves each check fails on the breakage it describes; extend it when you
 add a check.
 
+### Screens in their modules
+
+A screen is tested inside the real shell with `InAppShell(NavTab.X) { ... }` (test fixtures), so
+its golden shows the bottom bar on phones held upright and the rail from 600 dp. One
+parameterized class per tab runs on all 24 cells: the layout checks everywhere, and
+`captureGolden` only where `config in DeviceMatrix.goldens`. `forEachScrollPosition { }` scrolls
+every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
+
+| Module | Class | Goldens (`src/test/screenshots/screens/`) | Layout checks |
+|---|---|---|---|
+| `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted`, `Shell_handranks` | S7: all three, at every scroll position. Hand ranks (M6 restyles the list): touch targets |
+| `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament`, `Shell_payouts`, `Shell_payouts_locked` | Payouts: all three. Tournament (M3 restyles the body): touch targets |
+| `bank-feature` | `BankTabScreenTest` | `Shell_bank` | The top bar's reset button (M4 restyles the body) |
+
+The screens' ViewModels are the real ones over Robolectric's in-memory preferences, set up as the
+mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app shows.
+
 ### The tests in core today
 
 | Class | Runs | What |
 |---|---|---|
-| `ComponentGoldenTest` | 14 galleries x 10 goldens = 140 | Each component's `@Preview` gallery, plus `Shell` |
+| `ComponentGoldenTest` | 15 galleries x 10 goldens = 150 | Each component's `@Preview` gallery (including `PokerNavRail`), plus `Shell`, the real `PokerAppShell` around a sample screen |
 | `ComponentLayoutTest` | 2 x 24 cells = 48 | Every gallery in one scrolling column, and the shell, through all three layout checks |
+| `AppShellTest` | 4 x 24 cells = 96 | The bar below 600 dp and the rail from 600 dp, by window width; tab geometry; the screen capped at 720 dp and centred; the shell through all three layout checks |
+| `NavBarTest` | 10 | Every screen's tab (tools keep Tools selected, B16); tab taps don't pile up on the back stack and Back returns to Tournament; tapping a tab inside a tool returns to its list |
 | `ComponentSemanticsTest` | 11 | TalkBack: roles (checkbox, radio button, tab, button), names ("Ace of spades", "Rebuy, 1 taken, Locked"), headings, field errors; taps; the stepper's ends and repeat-while-held |
 | `DesignTokensTest` | 6 | Every contrast pairing in the design spec, computed; the six original colours and the sunset ones unchanged |
 | `TypographyTest` | 5 | Barlow loads; `tnum` makes every digit the same width (and without it they differ); the licence ships |

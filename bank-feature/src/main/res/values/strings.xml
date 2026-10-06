@@ -37,6 +37,10 @@
     <string name="bank_done_knockout">%1$s is out in %2$s</string>
     <string name="bank_done_knockout_bounty">%1$s is out in %2$s · bounty to %3$s</string>
     <string name="bank_done_knockout_unclaimed">%1$s is out in %2$s · bounty to the champion</string>
+    <!-- Progressive and mystery bounties (PP-035) -->
+    <string name="bank_done_knockout_pko">%1$s is out in %2$s · %3$s takes %4$s, bounty now %5$s</string>
+    <string name="bank_done_knockout_pko_all">%1$s is out in %2$s · %3$s takes all %4$s</string>
+    <string name="bank_done_knockout_mystery">%1$s is out in %2$s · %3$s draws %4$s</string>
     <string name="bank_done_back_in">%1$s is back in the game</string>
     <string name="bank_done_paid">Paid %1$s %2$s</string>
     <string name="bank_done_unpaid">%1$s marked not paid</string>
@@ -87,6 +91,8 @@
     <string name="bank_micro_level">L%1$d</string>
     <string name="bank_micro_level_long">Level %1$d</string>
     <string name="bank_micro_champion">1st · champion</string>
+    <!-- Progressive bounties (PP-035): the bounty on a player's head -->
+    <string name="bank_micro_bounty_long">bounty %1$s</string>
     <plurals name="bank_micro_rebuys">
         <item quantity="one">%1$d rebuy</item>
         <item quantity="other">%1$d rebuys</item>
@@ -131,6 +137,28 @@
     <string name="bank_ko_nobody">Nobody</string>
     <string name="bank_ko_nobody_bounty">Nobody · bounty to the champion</string>
     <string name="bank_ko_confirm">Knock out %1$s</string>
+    <!-- The knockout sheet with progressive or mystery bounties (PP-035) -->
+    <string name="bank_ko_bounty_pko">%1$s\'s bounty is %2$s: half to whoever knocked %1$s out, half onto their own bounty.</string>
+    <plurals name="bank_ko_bounty_mystery">
+        <item quantity="one">Whoever knocked %1$s out draws an envelope: %2$d left in the pool.</item>
+        <item quantity="other">Whoever knocked %1$s out draws an envelope: %2$d left in the pool.</item>
+    </plurals>
+    <string name="bank_ko_nobody_envelope">Nobody · envelope stays for the champion</string>
+    <string name="bank_ko_candidate_bounty">bounty %1$s</string>
+    <string name="bank_ko_pko_takes">%1$s takes %2$s now · bounty up to %3$s</string>
+    <string name="bank_ko_pko_takes_all">%1$s is out, so takes all %2$s now</string>
+
+    <!-- The mystery-bounty reveal (PP-035) -->
+    <string name="bank_envelope_title">%1$s draws</string>
+    <string name="bank_envelope_pill">Mystery</string>
+    <plurals name="bank_envelope_from">
+        <item quantity="one">For knocking %1$s out. %2$d envelope left in the pool.</item>
+        <item quantity="other">For knocking %1$s out. %2$d envelopes left in the pool.</item>
+    </plurals>
+    <plurals name="bank_envelope_champion">
+        <item quantity="one">%1$s wins and takes the %2$d envelope left: %3$s.</item>
+        <item quantity="other">%1$s wins and takes the %2$d envelopes left: %3$s.</item>
+    </plurals>
     <string name="bank_cancel">Cancel</string>
     <string name="bank_close">Close</string>
 
@@ -164,6 +192,20 @@
         <item quantity="one">Unclaimed · %d knockout nobody took</item>
         <item quantity="other">Unclaimed · %d knockouts nobody took</item>
     </plurals>
+    <!-- Progressive and mystery bounties (PP-035) -->
+    <plurals name="bank_pay_knockouts_pko">
+        <item quantity="one">Knockouts · %d, half its bounty</item>
+        <item quantity="other">Knockouts · %d, half of each bounty</item>
+    </plurals>
+    <string name="bank_pay_kings_bounty_pko">King\'s Bounty · own bounty, grown</string>
+    <plurals name="bank_pay_envelopes">
+        <item quantity="one">Envelopes · %d drawn</item>
+        <item quantity="other">Envelopes · %d drawn</item>
+    </plurals>
+    <plurals name="bank_pay_envelopes_left">
+        <item quantity="one">Envelopes left · %d</item>
+        <item quantity="other">Envelopes left · %d</item>
+    </plurals>
     <string name="bank_pay_hand_over">Hand over</string>
     <string name="bank_pay_nothing">Nothing to hand over yet.</string>
     <string name="bank_pay_paid_in">%1$s paid in %2$s (%3$s).</string>
@@ -194,6 +236,12 @@
     <string name="bank_pool_of_rebuys">· of which rebuys</string>
     <string name="bank_pool_of_add_ons">· of which add-ons</string>
     <string name="bank_pool_bounty">Bounty pool</string>
+    <string name="bank_pool_bounty_pko">Bounty pool · progressive</string>
+    <string name="bank_pool_bounty_mystery">Bounty pool · mystery</string>
+    <plurals name="bank_pool_envelopes_left">
+        <item quantity="one">· still in %d envelope</item>
+        <item quantity="other">· still in %d envelopes</item>
+    </plurals>
     <string name="bank_pool_food">Food</string>
     <string name="bank_pool_total">Total pool</string>
     <string name="bank_payouts">Payouts</string>

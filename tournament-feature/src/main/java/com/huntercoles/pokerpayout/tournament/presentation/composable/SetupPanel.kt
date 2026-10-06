@@ -218,7 +218,7 @@ private fun UnlockedFields(setup: TournamentConfigUiState, timer: TimerUiState, 
             size = PokerButtonSize.Small,
         )
     }
-    PanelMoneyGrid(setup.money, actions.onSetupIntent)
+    PanelMoneyGrid(setup, actions.onSetupIntent)
     TimingRow(timer.config, keepLevel)
     SetupNumberField(
         value = timer.config.startingChips,

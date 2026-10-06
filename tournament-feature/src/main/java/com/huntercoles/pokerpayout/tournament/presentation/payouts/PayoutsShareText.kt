@@ -1,6 +1,7 @@
 package com.huntercoles.pokerpayout.tournament.presentation.payouts
 
 import android.content.Context
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
@@ -62,6 +63,10 @@ object PayoutsShareText {
         return context.getString(R.string.payouts_share_structure, structure, rounding.label)
     }
 
+    /**
+     * "Bounties, $5 a head: Dana $10 (Ben, Rita) · …"; progressive and mystery bounties (PP-035) say
+     * so, and each amount is what the knockouts paid.
+     */
     private fun bounties(context: Context, state: PayoutsUiState): String? {
         val bounties = state.bounties
         if (bounties.perHeadCents <= 0L || (bounties.claims.isEmpty() && bounties.championName == null)) return null
@@ -73,14 +78,26 @@ object PayoutsShareText {
                 claim.victims.joinToString(", ")
             )
         }
-        val champion = bounties.championName?.takeIf { bounties.championCents > 0L }?.let {
-            context.getString(R.string.payouts_share_champion_bounty, it, formatMoney(bounties.championCents))
+        val championLine = if (bounties.mode == BountyMode.MYSTERY) {
+            R.string.payouts_share_champion_mystery
+        } else {
+            R.string.payouts_share_champion_bounty
         }
-        return context.getString(
-            R.string.payouts_share_bounties,
-            formatMoney(bounties.perHeadCents),
-            (claims + listOfNotNull(champion)).joinToString(context.getString(R.string.payouts_separator))
-        )
+        val champion = bounties.championName?.takeIf { bounties.championCents > 0L }?.let {
+            context.getString(championLine, it, formatMoney(bounties.championCents))
+        }
+        val lines = (claims + listOfNotNull(champion)).joinToString(context.getString(R.string.payouts_separator))
+        val perHead = formatMoney(bounties.perHeadCents)
+        return when (bounties.mode) {
+            BountyMode.STANDARD -> context.getString(R.string.payouts_share_bounties, perHead, lines)
+            BountyMode.PROGRESSIVE -> context.getString(R.string.payouts_share_bounties_pko, perHead, lines)
+            BountyMode.MYSTERY -> context.resources.getQuantityString(
+                R.plurals.payouts_share_bounties_mystery,
+                bounties.envelopes,
+                bounties.envelopes,
+                lines
+            )
+        }
     }
 
     fun presetLabel(context: Context, preset: PayoutPreset): String = context.getString(

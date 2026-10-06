@@ -3,11 +3,14 @@ package com.huntercoles.pokerpayout.bank.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatusProvider
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.domain.model.ProgressiveBounty
 import com.huntercoles.pokerpayout.core.domain.model.PurchaseWindow
 import com.huntercoles.pokerpayout.core.domain.model.Settlement
+import com.huntercoles.pokerpayout.core.domain.usecase.DrawEnvelopeUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
@@ -34,10 +37,14 @@ import javax.inject.Inject
  * - **Cutoffs.** Rebuys close at the end of the level set in "rebuys until", add-ons at the end of
  *   the first break after it ([PurchaseWindow]), following the clock ([ClockStatusProvider]).
  * - **Prices.** Each rebuy and add-on is recorded at today's price and keeps it (PP-085).
+ * - **Bounty modes** (PP-035). Progressive bounties are worked out from the knockouts recorded, so
+ *   Undo and a restart give them back exactly. A mystery knockout draws its envelope when it is
+ *   recorded, keeps it with the knocked-out player, and shows it ([BankSheet.Envelope]); Undo or
+ *   Bring back puts the envelope back in the pool.
  */
 @HiltViewModel
 // One small function per action, and one injected source per thing the Bank reads (settings, records,
-// the clock, the chime, the snackbar).
+// the clock, the chime, the snackbar, the envelope draw).
 @Suppress("TooManyFunctions", "LongParameterList")
 class BankViewModel @Inject constructor(
     private val tournamentPreferences: TournamentPreferences,
@@ -46,7 +53,8 @@ class BankViewModel @Inject constructor(
     private val settleTournament: SettleTournamentUseCase,
     private val clockStatus: ClockStatusProvider,
     private val audioPreferences: AudioPreferences,
-    private val feedback: BankFeedback
+    private val feedback: BankFeedback,
+    private val drawEnvelope: DrawEnvelopeUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BankUiState())
@@ -145,7 +153,8 @@ class BankViewModel @Inject constructor(
         rebuyPrices = bankPreferences.getPlayerRebuyPrices(playerId),
         addOnPrices = bankPreferences.getPlayerAddonPrices(playerId),
         eliminatedBy = bankPreferences.getPlayerEliminatedBy(playerId),
-        outLevel = bankPreferences.getPlayerOutLevel(playerId)
+        outLevel = bankPreferences.getPlayerOutLevel(playerId),
+        bountyDrawCents = bankPreferences.getPlayerBountyDraw(playerId)
     )
 
     /** The stored elimination order, limited to [players] and including every player marked out. */
@@ -264,44 +273,100 @@ class BankViewModel @Inject constructor(
         val knockouts = state.knockoutCounts
         val stillIn = state.players.filter { !it.out && it.id != playerId }
         val out = state.eliminationOrder.reversed().mapNotNull { id -> state.players.firstOrNull { it.id == id } }
-        val candidates = (stillIn + out).map { KnockoutCandidate(it.id, it.name, knockouts[it.id] ?: 0, it.out) }
+        val candidates = (stillIn + out).map {
+            KnockoutCandidate(it.id, it.name, knockouts[it.id] ?: 0, it.out, bountyCents = headBounty(it.id))
+        }
         showSheet(
             BankSheet.Knockout(
                 playerId = playerId,
                 name = player.name,
                 place = state.activePlayers,
-                bountyCents = state.money.bountyCents,
+                // Progressive: the bounty on this player's head now, grown by their own knockouts
+                bountyCents = if (state.bountyMode == BountyMode.PROGRESSIVE) headBounty(playerId) else state.money.bountyCents,
                 candidates = candidates,
-                preselectedId = player.eliminatedBy?.takeIf { previous -> candidates.any { it.playerId == previous } }
+                preselectedId = player.eliminatedBy?.takeIf { previous -> candidates.any { it.playerId == previous } },
+                mode = state.bountyMode,
+                envelopesLeft = settlement?.envelopesLeft?.size ?: 0
             )
         )
     }
 
-    /** Knocks [playerId] out at once, crediting [eliminatorId] (null: nobody). No second question. */
+    /** The bounty on [playerId]'s head, as the latest settlement has it. */
+    private fun headBounty(playerId: Int): Long = settlement?.forPlayer(playerId)?.headBountyCents ?: 0L
+
+    /**
+     * Knocks [playerId] out at once, crediting [eliminatorId] (null: nobody). No second question. In
+     * a mystery-bounty game whoever is credited draws an envelope now, which the reveal shows.
+     */
     private fun knockOut(playerId: Int, eliminatorId: Int?) {
         val state = _uiState.value
         val player = player(playerId) ?: return
         showSheet(null)
         if (player.out || state.activePlayers <= 1) return
         val credit = eliminatorId?.takeIf { id -> id != playerId && state.players.any { it.id == id } }
-        val place = state.activePlayers
         val level = state.clock.level.takeIf { state.clock.started }
+        val draw = if (credit != null && state.bountyMode == BountyMode.MYSTERY) {
+            drawEnvelope(settlement?.envelopesLeft.orEmpty())
+        } else {
+            null
+        }
         val message = feedback.knockout(
             name = player.name,
-            place = place,
+            place = state.activePlayers,
             eliminator = credit?.let { id -> player(id)?.name },
-            hasBounty = state.money.bountyCents > 0L
+            pay = knockoutPay(playerId, credit, draw)
         )
-        record(message) { players, order ->
-            players.replace(player.copy(out = true, eliminatedBy = credit, outLevel = level)) to (order - playerId + playerId)
+        val knockedOut = player.copy(out = true, eliminatedBy = credit, outLevel = level, bountyDrawCents = draw)
+        record(message) { players, order -> players.replace(knockedOut) to (order - playerId + playerId) }
+        if (credit != null && draw != null) revealEnvelope(credit, player.name, draw)
+    }
+
+    /**
+     * What knocking [victimId] out pays [eliminatorId], for the snackbar; worked out before the
+     * knockout is recorded, so a progressive bounty splits the bounties as they stand now.
+     */
+    private fun knockoutPay(victimId: Int, eliminatorId: Int?, draw: Long?): KnockoutPay {
+        val state = _uiState.value
+        return when {
+            state.money.bountyCents <= 0L -> KnockoutPay.NoBounty
+            eliminatorId == null -> KnockoutPay.Bounty
+            state.bountyMode == BountyMode.PROGRESSIVE -> {
+                val onHead = headBounty(victimId)
+                val split = ProgressiveBounty.split(onHead)
+                // An eliminator already out has no bounty left to grow: they take it all
+                if (player(eliminatorId)?.out == true) {
+                    KnockoutPay.Progressive(cashCents = onHead, newBountyCents = null)
+                } else {
+                    KnockoutPay.Progressive(split.cashCents, newBountyCents = headBounty(eliminatorId) + split.headCents)
+                }
+            }
+            draw != null -> KnockoutPay.Mystery(draw)
+            else -> KnockoutPay.Bounty
         }
+    }
+
+    /** Mystery bounties: the envelope [eliminatorId] just drew, and, if that ended the night, the champion's. */
+    private fun revealEnvelope(eliminatorId: Int, victimName: String, cents: Long) {
+        val after = settlement ?: return
+        val names = _uiState.value.players.associate { it.id to it.name }
+        val champion = after.championId
+        showSheet(
+            BankSheet.Envelope(
+                eliminatorName = names[eliminatorId].orEmpty(),
+                victimName = victimName,
+                cents = cents,
+                envelopesLeft = after.envelopesLeft.size,
+                championName = champion?.let { names[it] },
+                championCents = champion?.let { after.forPlayer(it)?.kingsBountyCents } ?: 0L
+            )
+        )
     }
 
     private fun bringBack(playerId: Int) {
         val player = player(playerId)?.takeIf { it.out } ?: return
-        record(feedback.backIn(player.name)) { players, order ->
-            players.replace(player.copy(out = false, eliminatedBy = null, outLevel = null)) to (order - playerId)
-        }
+        // Back in: the knockout, its credit and any envelope drawn for it are taken back
+        val backIn = player.copy(out = false, eliminatedBy = null, outLevel = null, bountyDrawCents = null)
+        record(feedback.backIn(player.name)) { players, order -> players.replace(backIn) to (order - playerId) }
     }
 
     private fun openPayOut(playerId: Int) {
@@ -319,7 +384,8 @@ class BankViewModel @Inject constructor(
                 money = state.money,
                 rebuys = player.rebuys,
                 addOns = player.addons,
-                unclaimedKnockouts = if (playerId == state.championId) unclaimed else 0
+                unclaimedKnockouts = if (playerId == state.championId) unclaimed else 0,
+                envelopesLeft = state.envelopesLeft.size
             )
         )
     }
@@ -397,6 +463,7 @@ class BankViewModel @Inject constructor(
         if (before?.outLevel != after.outLevel) bankPreferences.savePlayerOutLevel(id, after.outLevel)
         if (before?.rebuyPrices != after.rebuyPrices) bankPreferences.savePlayerRebuyPrices(id, after.rebuyPrices)
         if (before?.addOnPrices != after.addOnPrices) bankPreferences.savePlayerAddonPrices(id, after.addOnPrices)
+        if (before?.bountyDrawCents != after.bountyDrawCents) bankPreferences.savePlayerBountyDraw(id, after.bountyDrawCents)
     }
 
     /** One snackbar at a time: a new action replaces the last one's snackbar (it stays in the history). */
@@ -422,6 +489,8 @@ class BankViewModel @Inject constructor(
         val names = _uiState.value.players.associate { it.id to it.name }
         val restored = entry.before.players.map { it.copy(name = names[it.id] ?: it.name) }
         save(restored, entry.before.eliminationOrder)
+        // A mystery envelope taken back is back in the pool: its reveal goes too
+        if (_uiState.value.sheet is BankSheet.Envelope) showSheet(null)
     }
 
     private fun forgetHistory() {
@@ -450,7 +519,8 @@ class BankViewModel @Inject constructor(
         paidOut = paidOut,
         eliminatedBy = eliminatedBy,
         rebuyPricesCents = rebuyPrices,
-        addOnPricesCents = addOnPrices
+        addOnPricesCents = addOnPrices,
+        bountyDrawCents = bountyDrawCents
     )
 
     /** Recomputes every amount and every row from one settlement of the current state. */
@@ -486,7 +556,8 @@ class BankViewModel @Inject constructor(
                 championId = result.championId,
                 rows = rows,
                 canReset = canReset,
-                undoLabel = undoStack.lastOrNull()?.message
+                undoLabel = undoStack.lastOrNull()?.message,
+                envelopesLeft = result.envelopesLeft
             )
         }
     }

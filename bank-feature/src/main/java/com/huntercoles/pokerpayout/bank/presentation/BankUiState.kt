@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.bank.presentation
 
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
@@ -28,7 +29,9 @@ data class PlayerData(
     /** Player id who eliminated this player; null if nobody was credited. */
     val eliminatedBy: Int? = null,
     /** The clock's level when this player went out, if the clock was running. */
-    val outLevel: Int? = null
+    val outLevel: Int? = null,
+    /** Mystery bounties (PP-035): the envelope drawn for this player's knockout, in cents. */
+    val bountyDrawCents: Long? = null
 ) {
     val rebuys: Int get() = rebuyPrices.size
     val addons: Int get() = addOnPrices.size
@@ -74,8 +77,12 @@ data class BankUiState(
     /** What Undo would take back, newest first; empty when there is nothing to undo. */
     val undoLabel: String? = null,
     /** False while the Bank is as it starts (default names, nothing recorded): Reset has nothing to do. */
-    val canReset: Boolean = false
+    val canReset: Boolean = false,
+    /** Mystery bounties (PP-035): the envelopes not drawn yet, biggest first. */
+    val envelopesLeft: List<Long> = emptyList()
 ) {
+    /** How knockouts pay (PP-035), from the Tournament settings. */
+    val bountyMode: BountyMode get() = money.bountyMode
     val totalPoolCents: Long get() = pool.totalCents
     val prizePoolCents: Long get() = pool.prizePoolCents
 
@@ -179,7 +186,12 @@ data class BankRowModel(
     /** What this player has paid in so far (the tablet's In column). */
     val paidInCents: Long,
     /** Winnings not paid yet (the tablet's Owed column); 0 if none. */
-    val owedCents: Long
+    val owedCents: Long,
+    /**
+     * Progressive bounties (PP-035): the bounty on this player's head, growing with each knockout
+     * (the champion's: what they take home). Null in the other modes and once the player is out.
+     */
+    val bountyCents: Long? = null
 ) {
     fun cell(column: BankColumn): BankCell = when (column) {
         BankColumn.BUY_IN -> buyIn
@@ -190,12 +202,25 @@ data class BankRowModel(
     }
 }
 
-/** A player the knockout sheet offers as the one who did it. */
-data class KnockoutCandidate(val playerId: Int, val name: String, val knockouts: Int, val isOut: Boolean)
+/**
+ * A player the knockout sheet offers as the one who did it. [bountyCents]: the bounty on their head
+ * now (progressive bounties, PP-035), which the knockout would grow.
+ */
+data class KnockoutCandidate(
+    val playerId: Int,
+    val name: String,
+    val knockouts: Int,
+    val isOut: Boolean,
+    val bountyCents: Long = 0L
+)
 
 /** The Bank's sheets. Only one is open at a time. */
 sealed interface BankSheet {
-    /** S5b: who knocked [name] out. They finish in [place]; their [bountyCents] goes to that player. */
+    /**
+     * S5b: who knocked [name] out. They finish in [place]; their [bountyCents] goes to that player
+     * (progressive: half of it, the bounty on their head now). Mystery: that player draws one of
+     * the [envelopesLeft] envelopes.
+     */
     data class Knockout(
         val playerId: Int,
         val name: String,
@@ -203,7 +228,23 @@ sealed interface BankSheet {
         val bountyCents: Long,
         val candidates: List<KnockoutCandidate>,
         /** Picked already: whoever was credited last time this player went out. */
-        val preselectedId: Int?
+        val preselectedId: Int?,
+        val mode: BountyMode = BountyMode.STANDARD,
+        val envelopesLeft: Int = 0
+    ) : BankSheet
+
+    /**
+     * Mystery bounties (PP-035): [eliminatorName] opens the envelope drawn for knocking
+     * [victimName] out, worth [cents]; [envelopesLeft] stay in the pool. Once that knockout leaves
+     * a champion, [championName] takes the envelopes left, worth [championCents].
+     */
+    data class Envelope(
+        val eliminatorName: String,
+        val victimName: String,
+        val cents: Long,
+        val envelopesLeft: Int,
+        val championName: String? = null,
+        val championCents: Long = 0L
     ) : BankSheet
 
     /** S5c: what [name] is owed, line by line, and what they paid in. */
@@ -216,7 +257,9 @@ sealed interface BankSheet {
         val rebuys: Int,
         val addOns: Int,
         /** Knockouts nobody was credited with; their bounties go to the champion. */
-        val unclaimedKnockouts: Int
+        val unclaimedKnockouts: Int,
+        /** Mystery bounties: the envelopes still in the pool (the champion's, once there is one). */
+        val envelopesLeft: Int = 0
     ) : BankSheet
 
     /** Hold Rebuy or Add-on: set an exact count. */

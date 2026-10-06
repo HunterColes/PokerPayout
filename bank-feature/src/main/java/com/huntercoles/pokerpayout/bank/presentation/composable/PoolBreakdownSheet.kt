@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,7 @@ import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerSheet
 import com.huntercoles.pokerpayout.core.design.icons.MoneyIcons
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 
 /** The pool breakdown as a modal bottom sheet (a tablet shows it open in the side pane instead). */
@@ -70,7 +72,8 @@ internal fun PoolBreakdownSheetContent(state: BankUiState, onPayoutStructure: ()
 /**
  * Where the money in the box came from: the prize pool, with the rebuys and add-ons it already
  * holds shown as "of which" lines (they used to be listed as if on top of it, so the lines didn't
- * seem to add up), then the bounty pool, food and the total.
+ * seem to add up), then the bounty pool, food and the total. Progressive and mystery bounties say
+ * so on the bounty pool's line; a mystery pool also says what is still in its envelopes (PP-035).
  */
 @Composable
 internal fun PoolBreakdownContent(state: BankUiState) {
@@ -79,12 +82,26 @@ internal fun PoolBreakdownContent(state: BankUiState) {
         Line(stringResource(R.string.bank_pool_prize), pool.prizePoolCents, strong = true)
         if (pool.rebuyCents > 0L) Line(stringResource(R.string.bank_pool_of_rebuys), pool.rebuyCents, sub = true)
         if (pool.addOnCents > 0L) Line(stringResource(R.string.bank_pool_of_add_ons), pool.addOnCents, sub = true)
-        if (pool.bountyCents > 0L) Line(stringResource(R.string.bank_pool_bounty), pool.bountyCents)
+        if (pool.bountyCents > 0L) Line(bountyPoolLabel(state.bountyMode), pool.bountyCents)
+        val envelopes = state.envelopesLeft.size
+        if (pool.bountyCents > 0L && state.bountyMode == BountyMode.MYSTERY && envelopes > 0) {
+            val label = pluralStringResource(R.plurals.bank_pool_envelopes_left, envelopes, envelopes)
+            Line(label, state.envelopesLeft.sum(), sub = true)
+        }
         if (pool.foodCents > 0L) Line(stringResource(R.string.bank_pool_food), pool.foodCents)
         HorizontalDivider(color = PokerColors.FeltLine)
         Line(stringResource(R.string.bank_pool_total), pool.totalCents, total = true)
     }
 }
+
+@Composable
+private fun bountyPoolLabel(mode: BountyMode): String = stringResource(
+    when (mode) {
+        BountyMode.STANDARD -> R.string.bank_pool_bounty
+        BountyMode.PROGRESSIVE -> R.string.bank_pool_bounty_pko
+        BountyMode.MYSTERY -> R.string.bank_pool_bounty_mystery
+    }
+)
 
 /** The payout table, the same one the Payouts tab shows, with who holds each decided place. */
 @Composable

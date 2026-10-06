@@ -328,6 +328,7 @@ private fun BankSheets(state: BankUiState, onIntent: (BankIntent) -> Unit) {
             onSet = { onIntent(BankIntent.SetCount(sheet.playerId, sheet.kind, it)) },
             onDismiss = dismiss,
         )
+        is BankSheet.Envelope -> EnvelopeSheet(sheet = sheet, onDismiss = dismiss)
         BankSheet.PoolBreakdown -> PoolBreakdownSheet(
             state = state,
             onPayoutStructure = { onIntent(BankIntent.ShowPayoutStructure) },

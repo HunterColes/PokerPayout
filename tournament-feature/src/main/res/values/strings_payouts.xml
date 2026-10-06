@@ -46,6 +46,13 @@
     <string name="payouts_bounties_still_out">%1$s still out there</string>
     <string name="payouts_bounties_none">No knockouts yet.</string>
     <string name="payouts_bounty_champion">own bounty and unclaimed</string>
+    <!-- Progressive and mystery bounties (PP-035) -->
+    <string name="payouts_bounties_title_pko">Progressive bounties · %1$s to start</string>
+    <plurals name="payouts_bounties_title_mystery">
+        <item quantity="one">Mystery bounties · %d envelope</item>
+        <item quantity="other">Mystery bounties · %d envelopes</item>
+    </plurals>
+    <string name="payouts_bounty_champion_mystery">the envelopes left</string>
     <string name="payouts_food">Food: %1$s, kept out of the prize pool.</string>
 
     <!-- Where the pool came from: "9 buy-ins $360 · 1 rebuy $40 · 5 add-ons $50" -->
@@ -71,4 +78,10 @@
     <string name="payouts_share_bounties">Bounties, %1$s a head: %2$s</string>
     <string name="payouts_share_claim">%1$s %2$s (%3$s)</string>
     <string name="payouts_share_champion_bounty">%1$s %2$s (own bounty and unclaimed)</string>
+    <string name="payouts_share_bounties_pko">Progressive bounties, %1$s to start: %2$s</string>
+    <plurals name="payouts_share_bounties_mystery">
+        <item quantity="one">Mystery bounties, %1$d envelope: %2$s</item>
+        <item quantity="other">Mystery bounties, %1$d envelopes: %2$s</item>
+    </plurals>
+    <string name="payouts_share_champion_mystery">%1$s %2$s (the envelopes left)</string>
 </resources>

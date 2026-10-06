@@ -1633,6 +1633,37 @@ print("bottom bar back: four tabs at y=%d" % ys[0])
 PY
   require_tab_selected Payouts
 }
+
+# Progressive knockout (PP-035) --------------------------------------------------------------------
+# Last of the screens, because it clears the Bank the steps above leave (the bounty type is fixed
+# while anyone is out). A $5 bounty set to Progressive in setup; Player 1 knocks Player 2 out, takes
+# half ($2.50) in cash, and the other half goes onto Player 1's own bounty: $7.50, shown under the
+# name. Each part scrolls to what it checks last, since a swipe flings less on the CI emulator.
+s_bank_pko() {
+  tab Bank
+  ui tap "desc=More options"
+  ui tap "text=Reset bank…"
+  ui tap "re=^Clear [0-9]+ players$"
+  ui wait-gone "text=Reset the bank?"
+  tab Tournament
+  ui scroll-to has=Bounty class=EditText --max 3
+  ui set-text has=Bounty class=EditText --value 5
+  ui enter
+  ui scroll-to text=Progressive --max 3
+  ui tap text=Progressive
+  ui scroll-to "text~=adds the other half to the winner" --max 3
+  ui assert "has=Progressive" checked || return 1
+  ui assert-text "text~=adds the other half to the winner" || return 1
+  tab Bank
+  ui tap "desc=Knock out Player 2"
+  ui assert-text "text=Player 2 is out" "text~=half to whoever knocked Player 2 out" || return 1
+  ui tap "text~=Player 1"
+  ui scroll-to "text~=Player 1 takes" --max 3
+  ui assert-text "text=Player 1 takes \$2.50 now · bounty up to \$7.50" || return 1
+  ui tap "text=Knock out Player 2"
+  ui wait-gone "text=Player 2 is out"
+  ui assert-text "text~=Player 1 takes \$2.50, bounty now \$7.50" "has=Player 1|bounty \$7.50, 1 knockout"
+}
 s_app_alive() {
   local pid; pid="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"
   [[ -n "$pid" ]] || { echo "app process is not running"; return 1; }
@@ -1736,6 +1767,7 @@ step rail                 "720 dp wide: tabs move to a rail (PP-087)"           
 step rail-tools           "Rail: Tools tab"                                     s_rail_tools
 step rail-payouts         "Rail: Payouts tab, table adds up"                    s_rail_payouts
 step rail-restored        "Phone width again: bottom bar back, tab kept"        s_rail_restored
+step bank-pko             "PKO: Player 1 takes \$2.50, bounty up to \$7.50"     s_bank_pko
 step app-alive            "App process still alive"                             s_app_alive
 
 extra_step live-clock-pause "Pause from the shade: paused, Resume offered"      s_live_clock_pause

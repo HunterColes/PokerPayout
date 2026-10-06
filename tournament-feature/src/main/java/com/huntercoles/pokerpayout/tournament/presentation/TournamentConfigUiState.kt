@@ -1,7 +1,9 @@
 package com.huntercoles.pokerpayout.tournament.presentation
 
 import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
+import com.huntercoles.pokerpayout.core.domain.model.MysteryBounty
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
@@ -44,9 +46,21 @@ data class TournamentConfigUiState(
     val purchaseClearPrompt: PurchaseClearPrompt? = null,
     val rebuyPurchases: Int = 0,
     val addOnPurchases: Int = 0,
-    val selectedPanel: String = "player"
+    val selectedPanel: String = "player",
+    /** Someone is out in the Bank: the bounty type is fixed now (PP-035). */
+    val knockoutsRecorded: Boolean = false
 ) {
     val money: MoneySettings get() = config.money
     val playerCount: Int get() = config.numPlayers
     val paidPlaces: Int get() = payoutTable.places.size
+    val bountyMode: BountyMode get() = money.bountyMode
+
+    /** The bounty type is set before the first knockout: after it, knockouts have been paid under it. */
+    val bountyTypeLocked: Boolean get() = knockoutsRecorded
+
+    /** Mystery bounties: once envelopes are drawn, the bounty that made them can't change either. */
+    val bountyAmountLocked: Boolean get() = knockoutsRecorded && bountyMode == BountyMode.MYSTERY
+
+    /** Mystery bounties: the envelopes these players and this bounty make, biggest first. */
+    val envelopes: List<Long> get() = MysteryBounty.envelopes(playerCount, money.bountyCents)
 }

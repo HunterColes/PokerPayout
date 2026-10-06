@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
@@ -68,7 +69,8 @@ class TournamentConfigViewModel @Inject constructor(
             is TournamentConfigIntent.UpdatePlayerCount -> updatePlayerCount(intent.count)
             is TournamentConfigIntent.UpdateBuyIn -> updateSettings { setBuyInCents(intent.cents) }
             is TournamentConfigIntent.UpdateFoodPerPlayer -> updateSettings { setFoodCents(intent.cents) }
-            is TournamentConfigIntent.UpdateBountyPerPlayer -> updateSettings { setBountyCents(intent.cents) }
+            is TournamentConfigIntent.UpdateBountyPerPlayer -> updateBounty(intent.cents)
+            is TournamentConfigIntent.UpdateBountyMode -> updateBountyMode(intent.mode)
             is TournamentConfigIntent.UpdateRebuyAmount -> updatePurchaseAmount(PurchaseKind.REBUY, intent.cents)
             is TournamentConfigIntent.UpdateAddOnAmount -> updatePurchaseAmount(PurchaseKind.ADD_ON, intent.cents)
             is TournamentConfigIntent.CommitRebuyAmount ->
@@ -147,9 +149,25 @@ class TournamentConfigViewModel @Inject constructor(
                 recommendedPlaces = PayoutPlaces.recommended(config.numPlayers),
                 placeNames = placeNames,
                 rebuyPurchases = rebuys,
-                addOnPurchases = addOns
+                addOnPurchases = addOns,
+                knockoutsRecorded = bankPreferences.getEliminationOrder().isNotEmpty()
             )
         }
+    }
+
+    /** The bounty amount; with mystery bounties, fixed once envelopes have been drawn (PP-035). */
+    private fun updateBounty(cents: Long) {
+        if (_uiState.value.bountyAmountLocked) return
+        updateSettings { setBountyCents(cents) }
+    }
+
+    /**
+     * Standard, progressive or mystery bounties (PP-035). Only before the first knockout: after it,
+     * knockouts have been paid (and mystery envelopes drawn) under the type in force.
+     */
+    private fun updateBountyMode(mode: BountyMode) {
+        if (_uiState.value.bountyTypeLocked) return
+        updateSettings { setBountyMode(mode) }
     }
 
     private fun updatePlayerCount(count: Int) {

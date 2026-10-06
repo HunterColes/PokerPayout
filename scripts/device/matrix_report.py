@@ -56,7 +56,7 @@ def thumb(mdir, prof, step_id, has_findings):
         return src, src
     rel = "thumbs/%s/%s.jpg" % (prof, step_id)
     out = os.path.join(mdir, rel)
-    if not os.path.exists(out):
+    if not os.path.exists(out) or os.path.getmtime(out) < os.path.getmtime(os.path.join(mdir, src)):
         os.makedirs(os.path.dirname(out), exist_ok=True)
         try:
             im = Image.open(os.path.join(mdir, src)).convert("RGB")

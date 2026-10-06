@@ -379,6 +379,9 @@ def cut_text(runs, rules):
 def annotate(report_dir, findings):
     if Image is None:
         return
+    for f in os.listdir(report_dir):   # a re-run's pictures replace the last run's
+        if f.endswith(".checks.png"):
+            os.remove(os.path.join(report_dir, f))
     by_step = {}
     for f in findings:
         by_step.setdefault(f["step_id"], []).append(f)

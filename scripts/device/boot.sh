@@ -147,6 +147,9 @@ args=(
   -netdelay none -netspeed full
   -no-metrics
   -timezone "${PP_TIMEZONE:-Etc/UTC}"
+  # Quick boot keeps guest RAM in a host file; it wrote hundreds of MB/s to the host disk
+  # and made tours flaky under load. Snapshots still load; RAM just stays in memory.
+  -feature -QuickbootFileBacked
 )
 if [[ "$PP_AVD" != "$TEST_AVD" ]]; then
   args+=(-read-only -no-snapshot-save)        # never mutate somebody else's AVD

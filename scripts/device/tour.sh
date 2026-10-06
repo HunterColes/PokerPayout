@@ -2,7 +2,8 @@
 # One-command headless smoke tour of the whole app.
 #
 #   scripts/device/tour.sh                 # boot (if needed) + build + install + tour
-#   scripts/device/tour.sh --no-build      # reuse the last built debug APK
+#   scripts/device/tour.sh --no-build      # reuse the last built APK
+#   scripts/device/tour.sh --release       # tour the minified (R8) release build instead of debug
 #   scripts/device/tour.sh --keep-going    # don't stop at the first failing step
 #   scripts/device/tour.sh --stop          # shut the emulator down afterwards
 #
@@ -14,13 +15,14 @@
 #         (also symlinked as build/device-reports/latest). Exit code 0 == all steps passed.
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-BUILD=1; KEEP_GOING=0; STOP_AFTER=0
+BUILD=1; KEEP_GOING=0; STOP_AFTER=0; VARIANT=debug
 for arg in "$@"; do
   case "$arg" in
     --no-build) BUILD=0 ;;
+    --release) VARIANT=release ;;
     --keep-going) KEEP_GOING=1 ;;
     --stop) STOP_AFTER=1 ;;
-    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
     *) die "unknown option: $arg" ;;
   esac
 done
@@ -46,8 +48,8 @@ t=$(date +%s)
 BOOT_SECS=$(since "$t")
 
 t=$(date +%s)
-if (( BUILD )); then "$DEVICE_SCRIPTS/install.sh" | tee -a "$LOG"
-else "$DEVICE_SCRIPTS/install.sh" --no-build | tee -a "$LOG"; fi
+if (( BUILD )); then "$DEVICE_SCRIPTS/install.sh" "--$VARIANT" | tee -a "$LOG"
+else "$DEVICE_SCRIPTS/install.sh" "--$VARIANT" --no-build | tee -a "$LOG"; fi
 INSTALL_SECS=$(since "$t")
 
 adb_ logcat -b all -c >/dev/null 2>&1 || true
@@ -115,7 +117,7 @@ finish() {
     echo "# Device tour report: $verdict"
     echo
     echo "- When: $(date -Is)"
-    echo "- App: $APP_ID $APP_VERSION (debug)"
+    echo "- App: $APP_ID $APP_VERSION ($VARIANT)"
     echo "- Device: $ANDROID_SERIAL, AVD \`$PP_AVD\`, Android $(adb_ shell getprop ro.build.version.release | tr -d '\r') (API $(adb_ shell getprop ro.build.version.sdk | tr -d '\r')), $(adb_ shell wm size | awk '{print $NF}' | tr -d '\r') @ $(adb_ shell wm density | awk '{print $NF}' | tr -d '\r')dpi"
     echo "- Steps: $PASSED passed, $FAILED failed, of $STEP_NO run"
     echo "- Logcat: $fatal FATAL EXCEPTION, $anr ANR (full log: [logcat.txt](logcat.txt))"
@@ -137,7 +139,8 @@ finish() {
 # Tournament ---------------------------------------------------------------
 s_launch() {
   ui launch --clear
-  ui assert-text "Poker Payout" "text~=Tournament" Bank Tools "Tournament Configuration" "Buy-in (\$)" "Start timer"
+  # The clock card sits below the configuration; its controls are below the fold until it collapses
+  ui assert-text "Poker Payout" "text~=Tournament" Bank Tools "Tournament Configuration" "Buy-in (\$)" "LEVEL 1" READY
 }
 s_tournament_config() {
   # One keystroke at a time, with recomposition in between: v1.1.12 moved the cursor in front of
@@ -216,12 +219,13 @@ s_blinds_tab() {
     "Big-blind ante" "text~=9 levels, 50 / 100 to 5,000 / 10,000"
 }
 s_smallest_chip() {
-  # PP-051: a picker of real chip values, not free entry
+  # PP-051: a menu of real chip values, each with its chip colour, not a free-entry field. The menu
+  # is its own window, so a dump shows only its visible items (the list scrolls on past 250).
   ui tap "has=Smallest Chip|50" clickable
-  ui assert-text 1 5 10 25 100 500 1,000
+  ui assert-text text=1 text=5 text=10 text=25 text=50 text=100 text=250 || return 1
   ui tap text=25
-  ui wait-gone text=1,000
-  ui assert-text "text~=9 levels, 25 / 50 to 5,000 / 10,000"
+  ui wait-gone text=250
+  ui assert-text "has=Smallest Chip|25" "text~=9 levels, 25 / 50 to 5,000 / 10,000"
 }
 s_invalid_setup() {
   # PP-020: an invalid setup says why and offers the nearest valid round length
@@ -232,16 +236,16 @@ s_invalid_setup() {
 s_invalid_setup_fixed() {
   ui tap "text=Use 20-min rounds (9 levels)"
   ui wait-gone "text~=Can't build blinds"
-  ui assert-text "text~=9 levels, 25 / 50 to 5,000 / 10,000"
+  ui assert-text "has=Round Length (Min)|20" "text~=9 levels, 25 / 50 to 5,000 / 10,000"
 }
 s_breaks() {
-  # PP-026: a break every 4 levels with a note, shown in the schedule
+  # PP-026: a break every 4 levels with a note; the verdict counts the breaks and the new end
   ui tap "has=Breaks|Off" clickable
   ui tap "text=Every 4 levels"
-  ui assert-text "Break (Min)" "Break note" "text~=2 breaks"
+  ui assert-text "Break (Min)" "Break note" "text~=9 levels, 25 / 50 to 5,000 / 10,000 · 2 breaks · ends at 3:20" || return 1
   ui set-text "text=Break note" --value "Last rebuy"
-  ui enter
-  ui scroll-to "text~=Break · 10 min" --max 4
+  ui enter                                    # leaves the note; it used to click Reset instead
+  ui assert-text "text=Last rebuy" "has=Breaks|Every 4 levels" "has=Break (Min)|10"
 }
 s_config_collapsed() {
   ui scroll up --times 4
@@ -249,23 +253,29 @@ s_config_collapsed() {
   ui wait desc=Expand
   ui wait-gone "text=Buy-in (\$)"
   # Before the start the clock already shows level 1, labelled, with its full time
-  ui assert-text "LEVEL 1" READY "LEVEL TIME LEFT" 20:00 BLINDS "25 / 50" "Next: 50 / 100" "Start timer"
+  ui assert-text "LEVEL 1" READY "LEVEL TIME LEFT" text=20:00 BLINDS "text=25 / 50" "text=Next: 50 / 100" "Start timer"
 }
 s_timer_running() {
   ui tap "desc=Start timer"
-  ui assert-text "LEVEL 1" "LEVEL TIME LEFT" "text~=Next: 50 / 100" "Tournament Locked" "Pause timer" \
-    "text=Tournament:" "Next blind level" "text~=Break · 10 min"
+  ui assert-text "LEVEL 1" "LEVEL TIME LEFT" "text=Next: 50 / 100" "Tournament Locked" "Pause timer" \
+    "text=Tournament:" "Next blind level" || return 1
   ui find 're=^1[0-9]:[0-9]{2}$'            # the level countdown, under 20:00
 }
 s_timer_next_level() {
   ui tap "desc=Next blind level"
-  ui assert-text "LEVEL 2" "50 / 100" "Previous blind level"
+  ui assert-text "LEVEL 2" "text=50 / 100" "text~=Next: " "Previous blind level"
 }
 s_timer_break() {
   ui tap "desc=Next blind level"; ui wait "LEVEL 3"
   ui tap "desc=Next blind level"; ui wait "LEVEL 4"
+  # The last level before the break says what comes next, and the schedule (below the clock)
+  # shows the break with its note
+  ui assert-text "text=Next: Break · 10 min" || return 1
+  ui scroll-to "text=☕ Break · 10 min" --max 3
+  ui assert-text "text=☕ Break · 10 min" "text~=Last rebuy" || return 1
+  ui scroll up --times 3
   ui tap "desc=Next blind level"
-  ui assert-text BREAK "BREAK TIME LEFT" "Last rebuy" "text~=Next: Level 5"
+  ui assert-text BREAK "BREAK TIME LEFT" "text=Last rebuy" "text~=Next: Level 5 · " || return 1
   ui find 're=^(10:00|9:[0-9]{2})$'
 }
 s_timer_paused() {
@@ -273,23 +283,36 @@ s_timer_paused() {
   ui tap "desc=Pause timer"
   ui assert-text "Resume timer" PAUSED "BREAK TIME LEFT"
 }
+# Width x height of the current screen, from the PNG header of a screencap.
+screen_size() {
+  adb_ exec-out screencap -p | python3 -c 'import sys,struct; d=sys.stdin.buffer.read(24); print("%dx%d" % struct.unpack(">II", d[16:24]))'
+}
+require_landscape() {
+  local size; size="$(screen_size)"; echo "screen $size"
+  [[ "${size%x*}" -gt "${size#*x}" ]] || { echo "[ui] FAIL table view isn't landscape ($size)"; return 1; }
+}
 s_table_view() {
-  # PP-025: a full-screen landscape clock
+  # PP-025: a full-screen landscape clock, here on the paused break
   ui tap "desc=Table view"
   ui wait "desc=Exit table view"
-  ui assert-text BREAK "BREAK TIME LEFT" "Last rebuy" "Resume timer"
-  local size; size="$(adb_ exec-out screencap -p | python3 -c 'import sys,struct; d=sys.stdin.buffer.read(24); print("%dx%d" % struct.unpack(">II", d[16:24]))')"
-  echo "screen $size"
-  [[ "${size%x*}" -gt "${size#*x}" ]] || { echo "[ui] FAIL table view isn't landscape ($size)"; return 1; }
+  ui assert-text BREAK "BREAK TIME LEFT" "text=Last rebuy" "Resume timer" PAUSED || return 1
+  require_landscape
+}
+s_table_view_level() {
+  # The table view's own controls: resume, then on to level 5 with the clock running
+  ui tap "desc=Resume timer"
+  ui wait "desc=Pause timer"
+  ui tap "desc=Next blind level"
+  ui assert-text "LEVEL 5" "LEVEL TIME LEFT" BLINDS "text~=Next: " "Pause timer" "text=Tournament:" || return 1
+  require_landscape
 }
 s_table_view_exit() {
   ui tap "desc=Exit table view"
   ui wait-gone "desc=Exit table view"
   sleep 2
-  local size; size="$(adb_ exec-out screencap -p | python3 -c 'import sys,struct; d=sys.stdin.buffer.read(24); print("%dx%d" % struct.unpack(">II", d[16:24]))')"
-  echo "screen $size"
+  local size; size="$(screen_size)"; echo "screen $size"
   [[ "${size%x*}" -lt "${size#*x}" ]] || { echo "[ui] FAIL not back to portrait ($size)"; return 1; }
-  ui assert-text BREAK "Resume timer"
+  ui assert-text "LEVEL 5" "Pause timer"
 }
 s_tournament_reset_dialog() {
   ui tap "desc=Reset All Data"
@@ -298,7 +321,11 @@ s_tournament_reset_dialog() {
 s_tournament_reset_confirm() {
   ui tap text=Reset
   ui wait-gone "text=Reset tournament?"
-  ui assert-text "Start timer"
+  # The configuration opens again, so the clock card is below it: scroll to it, then back up
+  ui assert-text "LEVEL 1" READY || return 1
+  ui scroll-to "Start timer" --max 4
+  ui assert-text "LEVEL TIME LEFT" text=20:00 "text=50 / 100" "Start timer" || return 1
+  ui scroll up --times 4
 }
 s_rebuy_amount() {
   ui tap text=Player
@@ -529,7 +556,7 @@ s_chip_calc_scrolled() {
 }
 s_back_to_tournament() {
   ui tap text=Tournament --index 0
-  ui assert-text "text~=Tournament Configuration" "Start timer"
+  ui assert-text "text~=Tournament Configuration" "LEVEL 1" READY
 }
 s_app_alive() {
   local pid; pid="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"
@@ -553,7 +580,8 @@ step timer-running        "Start: level countdown, Next, tournament line"       
 step timer-next-level     "Skip to level 2"                                     s_timer_next_level
 step timer-break          "Skip to the first break"                             s_timer_break
 step timer-paused         "Pause on the break"                                  s_timer_paused
-step table-view           "Table view: full-screen landscape clock"             s_table_view
+step table-view           "Table view: full-screen landscape clock, on break"   s_table_view
+step table-view-level     "Table view: resume, next level, clock running"       s_table_view_level
 step table-view-exit      "Leave table view: back to portrait"                  s_table_view_exit
 step tournament-reset     "Reset confirmation dialog"                           s_tournament_reset_dialog
 step tournament-reset-ok  "Confirm reset; timer cleared"                        s_tournament_reset_confirm

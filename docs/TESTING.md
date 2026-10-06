@@ -5,7 +5,7 @@ sound. It is written so that a person *or* an AI agent can run it unattended.
 
 | Tier | Command | Needs | Typical time |
 |------|---------|-------|--------------|
-| JVM unit tests | `./gradlew testDebugUnitTest` | JDK 21 | ~10 s warm (284 tests) |
+| JVM unit tests | `./gradlew testDebugUnitTest` | JDK 21 | ~15 s warm (394 tests) |
 | Device smoke tour (screenshots + UI dumps + logcat) | `scripts/device/tour.sh` | emulator (auto-booted) | ~6 min incl. build |
 | Instrumented tests | `./gradlew connectedDebugAndroidTest` | running emulator | compiles; there are 0 instrumented tests (see below) |
 | JVM screenshot goldens + layout checks (Roborazzi, section 9) | part of `./gradlew testDebugUnitTest`; re-record with `./gradlew recordRoborazziDebug` | JDK 21 | ~20 s for core's 140 goldens and 48 matrix checks |
@@ -31,6 +31,7 @@ The scripts set `ANDROID_HOME`/`ANDROID_SERIAL` themselves. Nothing has to be on
 ```bash
 scripts/device/tour.sh              # boot if needed, build, install, tour, write the report
 scripts/device/tour.sh --no-build   # reuse the last debug APK (fast iteration on the tour)
+scripts/device/tour.sh --release    # tour the minified (R8) release APK instead of debug
 scripts/device/tour.sh --stop       # also shut the emulator down at the end
 scripts/device/stop.sh              # shut the emulator down
 ```
@@ -43,7 +44,7 @@ stdout is a short summary, one line per step. The tour exits non-zero if any ste
 [device] installed PokerPayout-v1.1.12-debug.apk (19M) in 1s
 [tour] PASS 01-launch (7.6s)
 ...
-[tour] PASS: 37/37 steps passed, 0 fatal, 0 ANR, 471s total
+[tour] PASS: 54/54 steps passed, 0 fatal, 0 ANR, 392s total
 [tour] report: build/device-reports/20261004-205652/index.md
 ```
 
@@ -77,7 +78,7 @@ files and stdout stays short.
 | `install.sh [--release] [--no-build] [--clear]` | `./gradlew :app:assembleDebug` (or `assembleRelease`), then `adb install -r`. If the signatures don't match, it uninstalls and installs again. |
 | `shot.sh <name> [outdir] [--ui]` | `adb exec-out screencap -p` to `<outdir>/<name>.png` (default `build/device/shots`), checks the PNG signature, and also writes the UI dump when given `--ui`. |
 | `ui.py` | Stdlib-only UI driver over `uiautomator dump` + `adb shell input` (see below). |
-| `tour.sh` | The one-command smoke tour (section 5). |
+| `tour.sh [--release] [--no-build] [--keep-going] [--stop]` | The one-command smoke tour (section 5). `--release` passes `--release` to `install.sh`. |
 
 Deterministic device settings applied by `boot.sh`:
 
@@ -144,17 +145,34 @@ If you later add `Modifier.testTag(...)`, you also need
 `tour.sh` starts from cleared app data and visits every screen and tool. Each step is a
 bash function of `ui.py` calls that ends in assertions. The steps are:
 
-1. **Tournament.** Launch; enter buy-in 25 and bounty 5; move the players slider. On the
-   Blinds tab: pick 25 from the smallest-chip picker; type 25-minute rounds and require the
-   reason ("doesn't divide") and the "Use 20-min rounds (9 levels)" fix, then apply it; turn on
-   a break every 4 levels with the note "Last rebuy" and find it in the schedule. Collapse the
-   config and require the labelled level countdown (LEVEL 1, LEVEL TIME LEFT, 20:00, Next: 50 /
-   100) before the start; start; skip to level 2, then to the first break (BREAK, Last rebuy,
-   Next: Level 5); pause; open the table view and require a landscape screen, then leave it and
-   require portrait again; open the reset dialog and confirm it.
-2. **Bank.** Rename Player 1 to Alice and commit with Enter; confirm a buy-in (the dialog
-   must say "Alice has paid"); knock out Player 2; open the payout-weights editor; open the
-   pool-summary dialog; scroll.
+1. **Tournament** (21 steps).
+   * Launch. Type the buy-in 12.50 one key at a time (v1.1.12 turned it into 120.5), bounty 5,
+     and move the players slider to 11.
+   * **Payouts tab:** the place rows must add up to the prize pool to the cent ($137.50), and
+     must not increase down the table. Then the Top-heavy preset (60/30/10), and the editor with
+     $5 rounding, where every place below 1st must be a whole $5.
+   * **Blinds tab:**
+     * The smallest-chip menu must offer real chips (1, 5, 10, 25, 50, 100, 250 ...); pick 25.
+     * Type 25-minute rounds and require the reason ("doesn't divide") and the "Use 20-min
+       rounds (9 levels)" fix, then apply it.
+     * Breaks every 4 levels with the note "Last rebuy"; the verdict must say "2 breaks · ends
+       at 3:20". Enter in the note must leave the field, not open Reset.
+   * Collapse the config. Before the start the clock must be labelled: LEVEL 1, READY, LEVEL TIME
+     LEFT, 20:00, BLINDS 25 / 50, "Next: 50 / 100".
+   * Start; skip to level 2; at level 4 require "Next: Break · 10 min" and the break in the
+     schedule; skip into the break (BREAK, BREAK TIME LEFT, Last rebuy, "Next: Level 5 · ...");
+     pause.
+   * Table view: require a landscape screen on the paused break, then resume and skip to
+     level 5 from the table view's own controls (still landscape); leave it and require
+     portrait again.
+   * Reset: the clock is back at LEVEL 1, 20:00, 50 / 100.
+2. **Bank** (15 steps). Set the rebuy amount to $10. Rename Player 1 to Alice with no Enter,
+   switch tabs and come back: the name must survive. Confirm a buy-in (the dialog must say
+   "Alice has paid"); record a rebuy; knock out Player 2 and require the "5th" badge to sit on
+   the field's top edge, clear of the name. Open the payout-weights editor and the pool-summary
+   dialog; scroll. Then clear the Rebuy amount and retype 15 by switching tabs: the recorded
+   rebuy must survive. Leave the field empty: "Turn rebuys off?" must ask first, and Keep must
+   bring back the $15 and the rebuy.
 3. **Tools.** Open the grid and the Settings tile (volume dialog).
 4. **Odds.** Empty state; card picker; AsKs vs QhQd; a JsTs2c flop (the picker scrolls to
    find 2c); calculate and require the exact answer, **56.06%** under Player 1 and **43.94%**
@@ -167,9 +185,29 @@ bash function of `ui.py` calls that ends in assertions. The steps are:
    settings; scroll.
 6. Back to Tournament, then check that the app process is still alive.
 
-After every step, the tour fails it if logcat's crash buffer has a `FATAL EXCEPTION` for the
-app or if an `ANR in com.huntercoles.pokerpayout` appears. Use `--keep-going` to run all
-steps even after a failure.
+Every command in a step counts: the step runs with `set -e`, so an assertion that fails in the
+middle of a step fails it, not just the last one. After every step, the tour also fails it if
+logcat's crash buffer has a `FATAL EXCEPTION` for the app or if an `ANR in
+com.huntercoles.pokerpayout` appears. Another app's "isn't responding" dialog (on a loaded host,
+usually Pixel Launcher right after a quick boot) is not the app's fault: `ui.py` taps Wait on it
+and carries on. Use `--keep-going` to run all steps even after a failure.
+
+### Touring the release build
+
+The release build is shrunk and obfuscated by R8, so a missing keep rule only shows up
+there. After changing `app/proguard-rules.pro`, a dependency, or anything loaded by
+reflection (Hilt, navigation routes, Room, `@Parcelize`), tour the release APK:
+
+```bash
+flock /tmp/pokerpayout-emulator.lock scripts/device/tour.sh --release --stop
+grep -cE "FATAL EXCEPTION|ClassNotFoundException|NoSuchMethodException|NoSuchFieldException" \
+  build/device-reports/latest/logcat.txt                       # expect 0
+```
+
+Without `keystore.properties` (any worktree or clone) the release APK is signed with the
+debug key, which is fine for testing. The release and debug builds have the same
+application id and both use the debug key there, so they replace each other on the emulator.
+If the signatures differ, `install.sh` uninstalls first, which clears the app's data.
 
 To add a step, write `s_my_step() { ui tap ...; ui assert-text ...; }` and register it with
 `step my-step "description" s_my_step`. End steps with an assertion: the tour then reuses
@@ -194,17 +232,17 @@ runs on the JUnit Platform with two engines from the `common-test` bundle: Jupit
 tests and Vintage for JUnit 4 tests. Robolectric tests (`@RunWith(RobolectricTestRunner::class)`)
 are JUnit 4, so Vintage runs them. Each test runs once, in its own module.
 
-Last measured (v1.2.0, batch A plus the clock): **332 tests, 326 pass, 6 skipped, 0 fail**, about
-10 s with compilation up to date. The slowest classes are `HandEvaluatorTest` (all 133,784,560
-seven-card hands, about 4 s) and `ChipDistributionOptimizerTest` (a 115,500-call input sweep,
-about 2 s).
+Last measured (v1.3.0 batch B, money and clock integrated): **394 tests, 393 pass, 1 skipped,
+0 fail**, about 15 s with compilation up to date. The slowest classes are `HandEvaluatorTest`
+(all 133,784,560 seven-card hands, about 4 s) and `ChipDistributionOptimizerTest` (a 115,500-call
+input sweep, about 2 s).
 
 | Module | Tests | Skipped | What they cover |
 |---|---|---|---|
-| core | 104 | 0 | Blind engine: 6,600-config property sweep (every accepted ladder in the 1.3x-2.0x band) plus exact ladders, setup advice whose every offered fix works, color-ups. Chip optimizer: reported crashes, typed failures, a 115,500-call input sweep and a brute-force oracle. FormatUtils. |
-| bank-feature | 36 | 2 | BankViewModel money flows on real prefs: buy-ins, rebuys, knockouts, money conservation over 14 configs, weights, reset. |
+| core | 139 | 0 | Payouts and settlement: presets, rounding (the rows always add up to the pool), standings, 2,000 seeded random tournaments that must conserve money exactly, bounties nobody claimed going to the champion. Money in cents and the money parser. Blind engine: 6,600-config property sweep (every accepted ladder in the 1.3x-2.0x band) plus exact ladders, setup advice whose every offered fix works, color-ups. Chip optimizer: reported crashes, typed failures, a 115,500-call input sweep and a brute-force oracle. FormatUtils. |
+| bank-feature | 44 | 0 | BankViewModel money flows on real prefs: buy-ins, rebuys, knockouts, money conservation over 14 configs and 60 seeded random sessions, live totals when the Tournament settings change, purchases surviving a cleared-and-retyped amount, weights, reset. |
 | tools-feature | 139 | 1 | Odds: 100 golden hand-ranking and equity tests, exhaustive 5- and 7-card evaluator checks, the engine (exact, Monte Carlo, cancellation) and its ViewModel. Chip calculator ViewModel. `OddsBenchmark` is skipped unless `ODDS_BENCH=1`. |
-| tournament-feature | 53 | 3 | Payout use case, TournamentConfigViewModel. The clock: TimerViewModel on virtual time with a fake monotonic clock (late ticks, sleep gaps, process death mid-level and mid-overtime, reboot, v1.1 migration, chimes including the end chime after a resume, breaks, ante, write cadence) and the break/overtime timeline. |
+| tournament-feature | 72 | 0 | TournamentConfigViewModel (rebuy/add-on edits that can't wipe purchases, presets, paid places capped at the player count), the Float-to-cents preference migration. The clock: TimerViewModel on virtual time with a fake monotonic clock (late ticks, sleep gaps, process death mid-level and mid-overtime, reboot, v1.1 migration, chimes including the end chime after a resume, breaks, ante, write cadence, table numbers) and the break/overtime timeline. `BreakMessageFieldTest` is a Robolectric Compose UI test: hardware Enter in the break note must not click Reset. |
 
 Since the makeover's design-system batch (M0), core also runs the screenshot goldens, the
 device-matrix layout checks and the component semantics tests described in section 9: 224 more
@@ -220,11 +258,8 @@ A skipped test asserts what the code *should* do, and is disabled until its boar
 Gradle prints each one as `SKIPPED` on every run. To enable one, remove its
 `@Ignore`/`@Disabled` together with the fix.
 
-| Test | Board item |
-|---|---|
-| `BankViewModelTest.purchasesSurviveTheAmountBeingClearedAndRetyped`, `TournamentConfigViewModelTest.purchasesSurviveTheAmountBeingClearedAndRetyped` | PP-014 |
-| `CalculatePayoutsUseCaseTest` / `TournamentConfigViewModelWeightsTest`: `never pays more places than there are players` | PP-016 |
-| `BankViewModelTest.bankTotalsFollowTournamentConfigChanges` | PP-018 |
+There are none right now: batch B enabled the last ones (PP-014, PP-016, PP-018 and PP-020).
+The only skipped test is `OddsBenchmark`, which is a benchmark, not a spec.
 
 ### Rules the build enforces
 
@@ -292,6 +327,8 @@ composables on the JVM. Library modules use the stock `AndroidJUnitRunner`.
 | App missing after `connectedDebugAndroidTest` | Expected: the test tasks uninstall it. Run `install.sh --no-build`. |
 | Text assertions fail on another machine | Run `boot.sh` again: it re-applies the settings and warns if the locale is not en-US. |
 | Port clash with another emulator | `PP_EMU_PORT=5590 scripts/device/tour.sh` (even numbers 5554-5682). |
+| `flock /tmp/pokerpayout-emulator.lock ...` waits forever though no tour runs | Something started inside an earlier locked run still holds the lock's file descriptor; `lsof /tmp/pokerpayout-emulator.lock` shows it. `boot.sh` and `lib.sh` now start the emulator and the adb server without it. For a leftover from an older checkout, run `stop.sh` and `adb kill-server`. |
+| Every step is slow, `pm clear` or `uiautomator dump` time out, high iowait on the host | A quick-boot emulator maps its 3 GB of RAM onto `snapshots/default_boot/ram.img`, and under host memory pressure it wrote hundreds of MB/s back to disk. Boot it with `boot.sh --cold` (no snapshot, no file-backed RAM) before the tour. |
 | Low RAM | The emulator uses about 2 GB. The scripts cap Gradle at `-Xmx4g` and the Kotlin daemon at 2 GB. Run one Gradle build at a time. |
 | `Roborazzi: ... is changed.` | A golden no longer matches. Open `<module>/build/outputs/roborazzi/*_compare.png`. If the change is intended, run `./gradlew recordRoborazziDebug` and commit the new PNGs (section 9). |
 | `... doesn't fit on <config>: it is N px tall` | A gallery is taller than that screen's window, so its golden would be cut off. Split it into smaller previews. |

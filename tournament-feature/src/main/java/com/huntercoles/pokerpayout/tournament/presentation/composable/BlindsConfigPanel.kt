@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.components.PokerNumberField
 import com.huntercoles.pokerpayout.core.design.components.PokerTextFieldDefaults
+import com.huntercoles.pokerpayout.core.design.components.leaveOnHardwareEnter
 import com.huntercoles.pokerpayout.core.utils.BlindSetupFix
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSettings
 import com.huntercoles.pokerpayout.tournament.presentation.BlindConfiguration
@@ -141,8 +142,9 @@ private fun BreaksSection(breaks: BreakSettings, onIntent: (TimerIntent) -> Unit
     }
 }
 
+/** The note shown on the clock during each break. */
 @Composable
-private fun BreakMessageField(message: String, onChange: (String) -> Unit, isLocked: Boolean) {
+internal fun BreakMessageField(message: String, onChange: (String) -> Unit, isLocked: Boolean) {
     val focusManager = LocalFocusManager.current
     var text by remember { mutableStateOf(message) }
     LaunchedEffect(message) { if (message != text) text = message }
@@ -159,7 +161,9 @@ private fun BreakMessageField(message: String, onChange: (String) -> Unit, isLoc
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
         colors = PokerTextFieldDefaults.colors(isLocked = isLocked),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .leaveOnHardwareEnter { focusManager.clearFocus(force = true) }
     )
 }
 

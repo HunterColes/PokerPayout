@@ -1,13 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Settings Screen -->
-    <string name="settings_title">Settings</string>
-    <string name="settings_notifications">Notifications</string>
-    <string name="settings_notifications_desc">Enable tournament alerts</string>
-    <string name="settings_dark_mode">Dark Mode</string>
-    <string name="settings_dark_mode_desc">Use dark theme</string>
-    <string name="settings_about">About Poker Payout</string>
-    <string name="settings_about_desc">Poker Payout is a free and open-source poker tournament management app. Version 1.0\n\nMIT Licensed - No ads, no tracking, no data collection.</string>
+    <!-- Tools tab (S7) -->
+    <string name="tools_title">Tools</string>
+    <string name="tools_subtitle">Everything works offline</string>
+    <string name="tools_odds_title">Odds</string>
+    <string name="tools_odds_description">Who\'s ahead, and by how much</string>
+    <string name="tools_chips_title">Chip set</string>
+    <string name="tools_chips_description">How many of each chip go in a starting stack</string>
+    <string name="tools_ranks_title">Hand ranks</string>
+    <string name="tools_ranks_description">What beats what, best to worst</string>
+    <string name="tools_sound_title">Sound</string>
+    <string name="tools_sound_description">A chime %1$d s before each level, break and the end</string>
+    <string name="tools_volume">Chime volume</string>
+    <string name="tools_volume_percent">%1$d%%</string>
+    <string name="tools_test_chime">Test chime</string>
+    <!-- What the old Settings screen's "About" card said, now under the Tools list -->
+    <string name="tools_footer">Free and open source (MIT License).\nNo ads, no accounts, no tracking.\nNo internet permission · v%1$s</string>
 
     <!-- Hand ranks (S12 restyles the list in M6) -->
     <string name="hand_ranks_title">Hand ranks</string>

@@ -220,7 +220,7 @@ finish() {
 # back to, and the tour puts it back however it ends (a matrix profile's own size, density and
 # rotation stay as the profile set them).
 DENSITY_MARK="$OUT/.density-changed"    # holds the override density before the step ("" = none)
-ROTATION_MARK="$OUT/.rotation-changed"  # holds user_rotation before the step
+ROTATION_MARK="$OUT/.rotation"          # "accelerometer_rotation user_rotation" before the step
 IME_MARK="$OUT/.ime-shown"              # the step turned show_ime_with_hard_keyboard on
 density_override() { adb_ shell wm density | tr -d '\r' | sed -n 's/^Override density: //p'; }
 screen_width_px() { adb_ shell wm size | tr -d '\r' | sed -n 's/.*size: \([0-9]*\)x.*/\1/p' | tail -1; }
@@ -232,7 +232,9 @@ restore_density() {
 restore_display() {
   if [[ -f "$DENSITY_MARK" ]]; then restore_density >/dev/null 2>&1 || true; fi
   if [[ -f "$ROTATION_MARK" ]]; then
-    adb_ shell settings put system user_rotation "$(cat "$ROTATION_MARK")" >/dev/null 2>&1 || true
+    local acc usr; read -r acc usr < "$ROTATION_MARK" || true
+    adb_ shell settings put system user_rotation "${usr:-0}" >/dev/null 2>&1 || true
+    adb_ shell settings put system accelerometer_rotation "${acc:-0}" >/dev/null 2>&1 || true
     rm -f "$ROTATION_MARK"
   fi
   if [[ -f "$IME_MARK" ]]; then

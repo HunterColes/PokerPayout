@@ -10,9 +10,9 @@
 #   PP_PROFILE           the profile's name                                  (default: default)
 #   PP_PROFILE_FONT      the font scale it set                               (default: 1.0)
 #   PP_PROFILE_ROTATION  the user rotation it runs in: 0 upright, 1 = 90, 3 = 270 (default: 0)
-#   PP_PROFILE_TURNS     "no" while the app's screens are locked to portrait (today: MainActivity
-#                        is portrait in core's manifest); "yes" once they turn with the display
-#                        on this profile (PP-088 for tablets, the Clock batch for the table view)
+#   PP_PROFILE_TURNS     "yes" where every tab turns with the display (foldables and tablets,
+#                        sw >= 600 dp, PP-088); "no" on phones, where only the Tournament tab's
+#                        running clock turns (into the table view, PP-079; see s_rotate_clock)
 PP_PROFILE="${PP_PROFILE:-default}"
 PP_PROFILE_FONT="${PP_PROFILE_FONT:-1.0}"
 PP_PROFILE_ROTATION="${PP_PROFILE_ROTATION:-0}"
@@ -42,7 +42,8 @@ rotate_to() {
     port) r=0 ;; land) r=1 ;; upside-down) r=2 ;; seascape) r=3 ;; [0-3]) r="$1" ;;
     *) echo "[ui] ERROR rotate_to: unknown rotation $1"; return 2 ;;
   esac
-  [[ -f "$ROTATION_MARK" ]] || adb_ shell settings get system user_rotation | tr -d '\r' > "$ROTATION_MARK"
+  [[ -f "$ROTATION_MARK" ]] || printf '%s %s\n' "$(adb_ shell settings get system accelerometer_rotation | tr -d '\r')" \
+    "$(adb_ shell settings get system user_rotation | tr -d '\r')" > "$ROTATION_MARK"
   adb_ shell settings put system accelerometer_rotation 0
   adb_ shell settings put system user_rotation "$r"
   # Every uiautomator dump freezes the rotation back at the display's (0 under a portrait-only
@@ -72,7 +73,7 @@ orientation_at() { [[ "$PP_PROFILE_TURNS" == yes && ( "$1" == 1 || "$1" == 3 ) ]
 # The profile took: the app's window is the overridden screen (so it relaid out), at the profile's
 # font scale and rotation. Writes display.env for the layout checks (layout_check.py).
 s_profile() {
-  ui assert-text "desc=Reset tournament" Bank Tools || return 1
+  ui assert-text "desc=Reset tournament" "Start clock" || return 1
   local size density font rot status nav
   size="$(adb_ shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)"
   density="$(display_density)"
@@ -126,33 +127,109 @@ if (want == "rail" and not (rail and min(xs) < (b[2] - b[0]) * 0.2)) or (want ==
 PY
 }
 
-# The display turned to 90 and to 270 degrees (accelerometer off): portrait-only screens (all of
-# them today) stay upright, the tabs keep working, and the app neither crashes nor restarts.
+# The rotation rules (M3, PP-079/PP-088), by the window's smallest width:
+#   phone (sw < 600 dp): every tab is portrait, except the Tournament tab once a clock exists,
+#     which follows the display: turned, the clock is the table view (S3); upright, the clock (S2).
+#     Table view (⤢) forces landscape until ✕.
+#   foldable / tablet (sw >= 600 dp): every tab turns with the display; turned, the clock stays
+#     the clock (two panes from 840 dp). ⤢ shows the table view in whatever orientation, until ✕.
+smallest_width_dp() {
+  local size density; size="$(adb_ shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)"
+  density="$(display_density)"
+  local w=${size%x*} h=${size#*x}; (( w < h )) || w=$h
+  echo $(( w * 160 / density ))
+}
+wide_screen() { (( $(smallest_width_dp) >= 600 )); }
+
+# The display turned to 90 and to 270 degrees (accelerometer off) on tabs other than a running
+# Tournament: on a phone they stay upright and work; on a wide screen they turn with it and work.
+# The step leaves the display turned (its screenshot is the Bank at 270); rotate-upright turns it
+# back and checks the app neither crashed nor restarted.
 s_rotate() {
-  local pid; pid="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"
+  adb_ shell pidof "$APP_ID" | tr -d '\r' > "$OUT/.rotate-pid"
+  tab Tools
+  ui assert-text text=Odds || return 1
   rotate_to land
   require_orientation "$(orientation_at 1)" || return 1
-  tab Tools
   ui assert-text text=Odds "text=Hand ranks" || return 1
   require_tab_selected Tools
   require_user_rotation 1 || return 1
   rotate_to seascape
   require_orientation "$(orientation_at 3)" || return 1
-  tab Tournament
-  ui assert-text "text~=Tournament Configuration" || return 1
-  require_tab_selected Tournament
-  require_user_rotation 3 || return 1
+  tab Bank
+  ui assert-text "desc=More options" "$BANK_SUBTITLE" || return 1
+  require_tab_selected Bank
+  require_user_rotation 3
+}
+s_rotate_upright() {
   rotate_to "$PP_PROFILE_ROTATION"
   require_orientation "$(orientation_at "$PP_PROFILE_ROTATION")" || return 1
-  local now; now="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"
+  ui assert-text "desc=More options" || return 1
+  local pid now; pid="$(cat "$OUT/.rotate-pid" 2>/dev/null)"; now="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"
   echo "app pid $pid before, $now after"
   [[ -n "$now" && "$now" == "$pid" ]] || { echo "[ui] FAIL the app process changed: $pid -> ${now:-none}"; return 1; }
 }
 
-# Table view (PP-025) on the profile: the clock alone, landscape, whatever the clock is doing.
+# What the clock or the table view says about the level: "Level 5 · time left" or, on a break,
+# "Break · back at Level 5" (drawn in capitals: uiautomator reads "LEVEL 5 · TIME LEFT").
+CLOCK_LINE='re=(?i)^(level [0-9]+ · (time left|overtime)|break · back at level [0-9]+)$'
+TIMER_BUTTON='re=^(Start|Pause|Resume) timer$'
+# The Bank's subtitle: "5 players · $100 to collect" before the start, "5 of 5 left · $35
+# collected" while a clock runs, "Finished · Alice wins · ..." at the end
+BANK_SUBTITLE='re=( players · |[0-9]+ of [0-9]+ left · |^Finished · )'
+clock_line() { # the clock's level line from the last dump
+  python3 - "$PP_UI_LAST_XML" <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+for n in ET.parse(sys.argv[1]).iter("node"):
+    t = n.get("text") or ""
+    if re.fullmatch(r"(?i)level \d+ · (time left|overtime)|break · back at level \d+", t):
+        print(t)
+        break
+PY
+}
+
+# The running clock turned with the display (PP-079): on a phone, landscape is the table view
+# and upright the clock, on the same level; on a wide screen the clock itself turns, tabs and all.
+# rotate-clock turns it to 90 and stays there (its screenshot is the turned clock);
+# rotate-clock-back turns it to 270, then upright, then back to the profile's rotation.
+check_turned_clock() { # $1 = the level line it must still show
+  if wide_screen; then
+    ui wait "desc=Table view" || return 1
+    require_orientation land || return 1
+    ui assert-text "$CLOCK_LINE" "$TIMER_BUTTON" || return 1
+    [[ -n "$(tab_positions "$PP_UI_LAST_XML")" ]] || { echo "[ui] FAIL no tabs beside the turned clock"; return 1; }
+  else
+    ui wait "desc=Exit table view" || return 1
+    require_orientation land || return 1
+    ui assert-text "$CLOCK_LINE" "$TIMER_BUTTON" || return 1
+  fi
+  [[ "$(clock_line)" == "$1" ]] || { echo "[ui] FAIL the level changed: $1 -> $(clock_line)"; return 1; }
+}
+s_rotate_clock() {
+  tab Tournament
+  ui assert-text "$CLOCK_LINE" "desc=Table view" || return 1
+  clock_line > "$OUT/.clock-line"; echo "clock: $(cat "$OUT/.clock-line")"
+  rotate_to land
+  check_turned_clock "$(cat "$OUT/.clock-line")"
+}
+s_rotate_clock_back() {
+  local before; before="$(cat "$OUT/.clock-line" 2>/dev/null)"
+  rotate_to seascape
+  check_turned_clock "$before" || return 1
+  rotate_to port
+  if ! wide_screen; then ui wait-gone "desc=Exit table view" || return 1; fi
+  require_orientation port || return 1
+  ui assert-text "$CLOCK_LINE" "desc=Table view" || return 1
+  [[ "$(clock_line)" == "$before" ]] || { echo "[ui] FAIL the level changed: $before -> $(clock_line)"; return 1; }
+  rotate_to "$PP_PROFILE_ROTATION"
+  require_orientation "$(orientation_at "$PP_PROFILE_ROTATION")"
+}
+
+# Table view (PP-025, S3) from its button, on the profile as it is: the clock alone, full screen
+# (no tabs), landscape on every size (the button forces it until ✕).
 table_view_open() {
   tab Tournament
-  ui tap "desc=Table view" --scroll-in scrollable    # the clock card can sit below the fold
+  ui tap "desc=Table view"
   ui wait "desc=Exit table view"
 }
 table_view_close() {
@@ -162,30 +239,100 @@ table_view_close() {
 }
 s_table_view_land() {
   table_view_open || return 1
-  ui assert-text "re=^(LEVEL [0-9]+|BREAK)$" "re=^(LEVEL|BREAK) TIME LEFT$" \
-    "re=^(Start|Pause|Resume) timer$" "desc=Exit table view" || return 1
+  ui assert-text "$CLOCK_LINE" "$TIMER_BUTTON" "desc=Exit table view" || return 1
+  [[ -z "$(tab_positions "$PP_UI_LAST_XML")" ]] || { echo "[ui] FAIL the table view shows the tabs"; return 1; }
   require_landscape
 }
-# Leave it: back to the profile's orientation.
+# Leave it: the clock, in the profile's orientation.
 s_table_view_close() {
   table_view_close
   require_orientation "$(orientation_at "$PP_PROFILE_ROTATION")" || return 1
-  ui assert-text "re=^(LEVEL [0-9]+|BREAK)$" "desc=Table view"
+  ui assert-text "$CLOCK_LINE" "desc=Table view"
 }
-# Leave it (back to the profile's orientation), then the same with the display turned to 270:
-# the clock must still come up landscape, and go back.
+# Leave it, then with the display turned to 270: the button again on a wide screen; on a phone the
+# turned clock already is the table view. Then back.
 s_table_view_back() {
-  table_view_close
-  require_orientation "$(orientation_at "$PP_PROFILE_ROTATION")" || return 1
+  s_table_view_close || return 1
   rotate_to seascape
-  table_view_open || return 1
-  ui assert-text "re=^(LEVEL [0-9]+|BREAK)$" "desc=Exit table view" || return 1
-  require_landscape || return 1
-  table_view_close
-  require_orientation "$(orientation_at 3)" || return 1
+  if wide_screen; then
+    table_view_open || return 1
+    require_orientation land || return 1
+    table_view_close
+  else
+    ui wait "desc=Exit table view" || return 1
+    require_landscape || return 1
+  fi
   rotate_to "$PP_PROFILE_ROTATION"
+  if ! wide_screen; then ui wait-gone "desc=Exit table view" || return 1; fi
   require_orientation "$(orientation_at "$PP_PROFILE_ROTATION")" || return 1
-  ui assert-text "re=^(LEVEL [0-9]+|BREAK)$" "desc=Table view"
+  ui assert-text "$CLOCK_LINE" "desc=Table view"
+}
+# Close the setup panel opened over the running clock (setup-panel); the clock runs on.
+s_setup_close() {
+  ui tap "desc=Close setup"
+  ui wait-gone "text~=Setup · clock still running" || return 1
+  ui assert-text "$CLOCK_LINE" "desc~=Opens setup" "Pause timer"
+}
+
+# Process death (PP-093): the app in the background, killed as low memory does (`am kill`), then
+# opened again from the launcher. The running clock must come back on the same level with its time
+# still counting (no restart, no lost minutes), and every Bank record intact.
+bank_records() { # the Bank's cells, one per line, from a dump: "Alice, buy-in, paid", ...
+  python3 - "$1" <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+seen = set()
+for n in ET.parse(sys.argv[1]).iter("node"):
+    d = n.get("content-desc") or ""
+    if re.match(r"^[^,]+, (buy-in|rebuy|add-on|out|paid out|champion)\b", d):
+        seen.add(d)
+print("\n".join(sorted(seen)))
+PY
+}
+bank_page() { # $1 = file: the whole Bank list as one dump (the screen, if the page can't be made)
+  python3 "$DEVICE_SCRIPTS/ui.py" page --out "$1" >/dev/null 2>&1 || ui dump --out "$1" >/dev/null
+}
+s_process_death() {
+  tab Bank
+  ui assert-text "desc=More options" || return 1
+  bank_page "$OUT/.bank-before.xml"
+  local records; records="$(bank_records "$OUT/.bank-before.xml")"
+  [[ -n "$records" ]] || { echo "[ui] FAIL no Bank records to keep"; return 1; }
+  tab Tournament
+  ui assert-text "$CLOCK_LINE" "Pause timer" || return 1
+  local line secs t0; line="$(clock_line)"; secs="$(hero_seconds)"; t0=$(date +%s)
+  echo "before: $line, ${secs}s left; Bank: $(tr '\n' ';' <<<"$records")"
+  local pid; pid="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"
+  ui home
+  sleep 2
+  adb_ shell am kill "$APP_ID"
+  local i
+  for i in 1 2 3 4 5 6 7 8 9 10; do [[ -z "$(adb_ shell pidof "$APP_ID" | tr -d '\r')" ]] && break; sleep 0.5; done
+  [[ -z "$(adb_ shell pidof "$APP_ID" | tr -d '\r')" ]] || { echo "[ui] FAIL am kill left the app running"; return 1; }
+  echo "process $pid killed in the background"
+  sleep 3
+  # Back from the launcher, as a user would: monkey brings the task back (ui.py launch would
+  # force-stop it first, which is not a process death)
+  adb_ shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+  ui wait "$CLOCK_LINE" --timeout 20 || return 1
+  ui assert-text "Pause timer" || return 1
+  local now_line now_secs elapsed
+  now_line="$(clock_line)"; now_secs="$(hero_seconds)"; elapsed=$(( $(date +%s) - t0 ))
+  echo "after: $now_line, ${now_secs}s left, ${elapsed}s later; new pid $(adb_ shell pidof "$APP_ID" | tr -d '\r')"
+  [[ "$now_line" == "$line" ]] || { echo "[ui] FAIL the clock came back on '$now_line', not '$line'"; return 1; }
+  local off=$(( secs - now_secs - elapsed ))
+  (( off >= -4 && off <= 4 )) || { echo "[ui] FAIL ${now_secs}s left, expected about $(( secs - elapsed ))s (${off}s off)"; return 1; }
+  if ui find "text=Start clock" >/dev/null 2>&1; then echo "[ui] FAIL the clock restarted"; return 1; fi
+  tab Bank
+  ui assert-text "desc=More options" || return 1
+  bank_page "$OUT/.bank-after.xml"
+  local after; after="$(bank_records "$OUT/.bank-after.xml")"
+  if [[ "$after" != "$records" ]]; then
+    echo "[ui] FAIL the Bank records changed across the process death"
+    diff <(echo "$records") <(echo "$after") || true
+    return 1
+  fi
+  echo "Bank records intact: $(wc -l <<<"$after") cells"
+  ui assert-text "desc=More options"
 }
 
 # The soft keyboard over a name field low on the Bank list. The AVD has a hardware keyboard, so
@@ -197,7 +344,7 @@ ime_frame() { # "top bottom" of the keyboard while it shows, else nothing
 }
 s_ime() {
   tab Bank
-  ui assert-text "desc=Reset bank" || return 1
+  ui assert-text "desc=More options" "$BANK_SUBTITLE" || return 1
   local xy; xy="$(python3 - "$PP_UI_LAST_XML" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 nodes = list(ET.parse(sys.argv[1]).getroot().iter("node"))
@@ -245,17 +392,22 @@ s_ime_done() {
   adb_ shell settings put secure show_ime_with_hard_keyboard 0
   rm -f "$IME_MARK"
   [[ -z "$(ime_frame)" ]] || { echo "[ui] FAIL the soft keyboard is still up"; return 1; }
-  PP_UI_SCROLL=0 ui find "desc=Reset bank" --timeout 2 >/dev/null 2>&1 || tab Bank
-  ui assert-text "desc=Reset bank" || return 1
+  ui find "$BANK_SUBTITLE" --timeout 2 >/dev/null 2>&1 || tab Bank
+  ui assert-text "desc=More options" "$BANK_SUBTITLE" || return 1
   require_tab_selected Bank
 }
 
 extra_step profile            "Profile applied: window, density, font scale, rotation"  s_profile
 extra_step nav-layout         "Tabs: bottom bar below 600 dp, rail from 600 dp"         s_nav_layout
-extra_step rotate             "Display turned 90 and 270: portrait screens stay, work"  s_rotate
-extra_step table-view-land    "Table view: the clock alone, landscape"                  s_table_view_land
+extra_step rotate             "Other tabs turned 90, 270: phones upright, wide turn"    s_rotate
+extra_step rotate-upright     "Upright again: same process, nothing restarted"          s_rotate_upright
+extra_step rotate-clock       "Running clock turned 90: phone table view, wide clock"   s_rotate_clock
+extra_step rotate-clock-back  "Turned 270, then upright: the same level throughout"     s_rotate_clock_back
+extra_step table-view-land    "Table view button: the clock alone, full screen"         s_table_view_land
 extra_step table-view-back    "Leave table view; again from a display turned 270"       s_table_view_back
 extra_step table-view-close   "Leave table view: the profile's orientation again"       s_table_view_close
+extra_step setup-close        "Close the setup panel: the clock runs on"                s_setup_close
+extra_step process-death      "Killed in the background: clock and Bank come back"      s_process_death
 extra_step ime                "Soft keyboard over a low name field: field stays clear"  s_ime
 extra_step ime-done           "Keyboard put away and turned off again"                  s_ime_done
 extra_step payouts-screen     "Payouts tab: the table adds up"                          s_rail_payouts

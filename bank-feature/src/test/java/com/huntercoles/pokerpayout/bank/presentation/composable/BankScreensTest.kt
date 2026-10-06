@@ -46,9 +46,10 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The Bank (S5 v2, S5b, S5c, Z2, Z5) inside the app's shell on every cell of the device matrix: text
  * fits and isn't clipped at any scroll position, and every target is 48 dp without overlapping.
- * Goldens on [DeviceMatrix.goldens], named after the mockups; the states come from the real
- * ViewModel ([BankScenes]). Sheets are drawn as they look open, over the screen and its scrim (a
- * modal window doesn't capture under Robolectric).
+ * Goldens on [DeviceMatrix.goldens], named after the mockups (Z2, Z5 and the 200% one on their
+ * [DeviceMatrix.pinned] cells); the states come from the real ViewModel ([BankScenes]). Sheets are
+ * drawn as they look open, over the screen and its scrim (a modal window doesn't capture under
+ * Robolectric).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -113,8 +114,13 @@ class BankScreensTest(private val config: ScreenConfig) {
         }
     }
 
-    private fun golden(name: String, only: (ScreenConfig) -> Boolean = { true }) {
-        if (config in DeviceMatrix.goldens && only(config)) screen.compose.onRoot().captureGolden("screens", name, config)
+    private fun golden(name: String) {
+        if (config in DeviceMatrix.goldens) screen.compose.onRoot().captureGolden("screens", name, config)
+    }
+
+    /** A golden drawn for particular cells, recorded on its [DeviceMatrix.pinned] cells only. */
+    private fun pinnedGolden(name: String) {
+        if (DeviceMatrix.isPinned(name, config)) screen.compose.onRoot().captureGolden("screens", name, config)
     }
 
     private fun BankViewModel.state() = uiState.value
@@ -130,17 +136,17 @@ class BankScreensTest(private val config: ScreenConfig) {
     fun midGame() {
         show(BankScenes.midGame(kit).state())
         golden("S5_bank_midgame")
-        golden("Z5_bank_tablet") { it.device == Device.TabletLandscape }
+        pinnedGolden("Z5_bank_tablet")
         if (config.device == Device.SmallPhone) {
             // Z2: the rows, with the closed Rebuy and Add-on columns folded under the names
             screen.compose.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
             screen.compose.waitForIdle()
-            golden("Z2_bank_small")
+            pinnedGolden("Z2_bank_small")
         }
         if (config.fontScale == 2.0f) {
             screen.compose.onNode(hasScrollToIndexAction()).performScrollToIndex(9)
             screen.compose.waitForIdle()
-            golden("S5_bank_font2x")
+            pinnedGolden("S5_bank_font2x")
         }
         check("Bank mid-game")
     }

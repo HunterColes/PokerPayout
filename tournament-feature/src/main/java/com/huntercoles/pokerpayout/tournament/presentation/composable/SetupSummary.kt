@@ -15,12 +15,20 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiSta
  */
 internal object SetupSummary {
 
-    /** The strip's line. [full] spells out every setting (tablets, where there's room). */
+    /** The strip's line, all of it (what TalkBack reads, and the fold's first line). */
     @Composable
-    fun strip(setup: TournamentConfigUiState, timer: TimerUiState, full: Boolean = false): String {
+    fun strip(setup: TournamentConfigUiState, timer: TimerUiState, full: Boolean = false): String =
+        stripParts(setup, timer, full).joinToString(stripSeparator())
+
+    /**
+     * The strip's settings, most important first: players, buy-in, level length, chips. [full]
+     * spells out every setting (tablets, where there's room). The strip shows as many as fit.
+     */
+    @Composable
+    fun stripParts(setup: TournamentConfigUiState, timer: TimerUiState, full: Boolean = false): List<String> {
         val formatter = rememberChipFormatter()
         val config = timer.config
-        val parts = if (full) {
+        return if (full) {
             listOf(players(setup)) + moneyParts(setup, timer) + listOf(
                 stringResource(R.string.strip_hours, config.gameDurationHours),
                 stringResource(R.string.strip_level_length, config.roundLengthMinutes),
@@ -34,8 +42,11 @@ internal object SetupSummary {
                 stringResource(R.string.strip_chips, formatter.format(config.startingChips)),
             )
         }
-        return parts.joinToString(stringResource(R.string.strip_separator))
     }
+
+    /** " · ", between the settings. */
+    @Composable
+    fun stripSeparator(): String = stringResource(R.string.strip_separator)
 
     /** "$40 buy-in · $5 bounty · rebuy to L4 · $10 add-on": the money section folded. */
     @Composable

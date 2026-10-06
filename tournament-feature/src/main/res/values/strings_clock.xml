@@ -58,7 +58,8 @@
     <string name="setup_prize_pool_starts">Prize pool starts at %1$s and grows with rebuys and add-ons.</string>
     <string name="setup_game_length">Game length</string>
     <string name="setup_hours">hours</string>
-    <string name="setup_level_length">Levels</string>
+    <!-- How long each level lasts, in minutes (the field's suffix is "min") -->
+    <string name="setup_level_length">Level length</string>
     <string name="setup_minutes">min</string>
     <string name="setup_starting_stack">Starting stack</string>
     <string name="setup_breaks_label">Breaks</string>

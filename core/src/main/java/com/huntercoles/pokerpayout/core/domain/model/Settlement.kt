@@ -17,7 +17,12 @@ data class BankPlayer(
     /** Who knocked this player out; null if nobody was credited. */
     val eliminatedBy: Int? = null,
     val rebuyPricesCents: List<Long>? = null,
-    val addOnPricesCents: List<Long>? = null
+    val addOnPricesCents: List<Long>? = null,
+    /**
+     * Mystery bounties (PP-035): the envelope drawn when this player was knocked out, won by
+     * whoever is credited with the knockout; null if none was drawn.
+     */
+    val bountyDrawCents: Long? = null
 ) {
     /** What this player's rebuys cost, at the prices they were bought at. */
     fun rebuyCostCents(money: MoneySettings): Long = rebuyPricesCents?.sum() ?: (rebuys * money.rebuyCents)
@@ -34,8 +39,15 @@ data class PlayerSettlement(
     /** This place's row of the payout table; 0 outside the money or while undecided. */
     val prizeCents: Long,
     val knockouts: Int,
+    /**
+     * What this player's knockouts pay: a bounty each (standard), the cash halves (progressive) or
+     * the envelopes drawn (mystery).
+     */
     val knockoutBountyCents: Long,
-    /** The champion's own bounty: nobody knocked them out, so they keep it. */
+    /**
+     * The champion's own bounty: nobody knocked them out, so they keep it. Progressive: their final
+     * bounty, grown by their knockouts. Mystery: every envelope left in the pool.
+     */
     val kingsBountyCents: Long,
     /** Bounties of players knocked out with nobody credited. They go to the champion. */
     val unclaimedBountyCents: Long,
@@ -45,7 +57,13 @@ data class PlayerSettlement(
     /** The part of [costCents] spent on rebuys, at the prices paid. */
     val rebuyCostCents: Long = 0L,
     /** The part of [costCents] spent on add-ons, at the prices paid. */
-    val addOnCostCents: Long = 0L
+    val addOnCostCents: Long = 0L,
+    /**
+     * The bounty on this player's head: what knocking them out is worth now, or was worth when they
+     * went out. Standard: the bounty amount. Progressive: that plus half of each bounty they took
+     * while still in. Mystery: 0 (a knockout draws an envelope instead).
+     */
+    val headBountyCents: Long = 0L
 ) {
     val winningsCents: Long get() = prizeCents + knockoutBountyCents + kingsBountyCents + unclaimedBountyCents
     val netCents: Long get() = winningsCents - costCents
@@ -63,7 +81,10 @@ data class Settlement(
     val standings: Standings,
     val players: List<PlayerSettlement>,
     /** Entry fees of players marked as bought in, plus every recorded rebuy and add-on. */
-    val paidInCents: Long
+    val paidInCents: Long,
+    val bountyMode: BountyMode = BountyMode.STANDARD,
+    /** Mystery bounties: the envelopes not drawn yet, biggest first; empty in the other modes. */
+    val envelopesLeft: List<Long> = emptyList()
 ) {
     val championId: Int? get() = standings.championId
 

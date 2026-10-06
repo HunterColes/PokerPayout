@@ -3,13 +3,17 @@ package com.huntercoles.pokerpayout.core.domain.model
 import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
 import com.huntercoles.pokerpayout.core.utils.Money
 
-/** What each player pays, in cents. */
+/**
+ * What each player pays, in cents, and how the bounties pay out ([bountyMode], PP-035: standard
+ * unless the host picks progressive or mystery).
+ */
 data class MoneySettings(
     val buyInCents: Long,
     val foodCents: Long,
     val bountyCents: Long,
     val rebuyCents: Long,
-    val addOnCents: Long
+    val addOnCents: Long,
+    val bountyMode: BountyMode = BountyMode.STANDARD
 ) {
     /** What every player pays to sit down: buy-in, food and bounty. Rebuys and add-ons come on top. */
     val entryCents: Long get() = buyInCents + foodCents + bountyCents

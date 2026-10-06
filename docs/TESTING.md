@@ -610,7 +610,7 @@ The matrix's own steps are opt-in tour steps in `scripts/device/steps-matrix.sh`
 |---|---|
 | `profile` | The app's window is the profile's screen (it relaid out), the font scale took, the orientation is right. Writes `display.env` (size, density, font, insets) for the checks |
 | `nav-layout` | Four tabs: a bottom bar below 600 dp, a rail down the left from 600 dp, on the profile as it is |
-| `rotate` | `user_rotation` 1, then 3, with the accelerometer off: the app stays upright (portrait-only), its tabs still work, and it is the same process |
+| `rotate` | `user_rotation` 1, then 3, with the accelerometer off: the app stays upright (portrait-only), its tabs still work while the display is turned, and it is the same process |
 | `table-view-land` | The table view opens landscape on any profile (its screenshot is the landscape clock) |
 | `table-view-back` | Leaving it returns to portrait; again with the display turned to 270 |
 | `table-view-close` | Leaving it returns to portrait (the screens set) |
@@ -720,5 +720,8 @@ The emulator is shared and keeps `wm size` and `wm density` across reboots, so:
 * **A rotation step** (for example once the Clock batch rotates the clock): use the helpers in
   `steps-matrix.sh`: `rotate_to land|port|seascape`, `require_orientation land|port` and
   `orientation_at <rotation>`. A step that rotates leaves a mark, so the rotation comes back
-  however the tour ends. Register it with `extra_step` and add it to `SMOKE_STEPS` (and
+  however the tour ends. Note: every `uiautomator dump` re-freezes the rotation at the display's
+  current one, so under a portrait-only screen it would turn a user rotation of 90 back to 0;
+  `rotate_to` (and a rotated profile) sets `PP_UI_HOLD_ROTATION`, and `ui.py` puts the rotation
+  back after each dump. `require_user_rotation N` checks it held. Register it with `extra_step` and add it to `SMOKE_STEPS` (and
   `SCREENS_STEPS` if it should run on every profile).

@@ -154,29 +154,38 @@ their labels line up (a row: the bottom bar; a column: the rail), so a screen ti
 word ("Tournament") is never tapped by mistake, and they check which tab is selected. The steps
 are:
 
-1. **Tournament** (22 steps).
-   * Launch. Type the buy-in 12.50 one key at a time (v1.1.12 turned it into 120.5), bounty 5,
-     and move the players slider to 11.
+1. **Tournament** (29 steps, five of them on the Payouts tab). The tab is one setup page (S1 v2) that folds into the clock on Start.
+   * Launch: the ready ticket (LEVEL 1 · READY, 20:00) and Start. Type the buy-in 12.50 one key
+     at a time (v1.1.12 turned it into 120.5), bounty 5, and five taps on the players stepper
+     (10 players).
    * **Payouts tab (S6):** one row per place paid, adding up to the prize pool in the top bar
      and to "Adds up to" under the rows, to the cent, and never increasing down the table. Then
      the Top-heavy preset, whose "what 1st gets" preview must be what the 1st row pays; $5
      rounding on the page, where every place below 1st must be a whole $5; the payout structure
      sheet; and Share, which must open the system share sheet with the payouts in it.
-   * **Blinds tab:**
-     * The smallest-chip menu must offer real chips (1, 5, 10, 25, 50, 100, 250 ...); pick 25.
-     * Type 25-minute rounds and require the reason ("doesn't divide") and the "Use 20-min
+   * **Blinds** (a section of the same page):
+     * The smallest chip is a row of real chips (1, 5, 25, 100 ...), radio buttons named by
+       colour and value; pick 25.
+     * Type 25-minute levels and require the reason ("doesn't divide") and the "Use 20-min
        rounds (9 levels)" fix, then apply it.
-     * Breaks every 4 levels with the note "Last rebuy"; the verdict must say "2 breaks · ends
+     * Breaks every 4 levels with the note "Last rebuy"; the verdict must say "2 breaks, ends
        at 3:20". Enter in the note must leave the field, not open Reset.
-   * Collapse the config. Before the start the clock must be labelled: LEVEL 1, READY, LEVEL TIME
-     LEFT, 20:00, BLINDS 25 / 50, "Next: 50 / 100".
-   * Start; skip to level 2; at level 4 require "Next: Break · 10 min" and the break in the
-     schedule; skip into the break (BREAK, BREAK TIME LEFT, Last rebuy, "Next: Level 5 · ...");
-     pause.
-   * Table view: require a landscape screen on the paused break, then resume and skip to
-     level 5 from the table view's own controls (still landscape); leave it and require
-     portrait again.
-   * Reset: the clock is back at LEVEL 1, 20:00, 50 / 100.
+   * The ticket before the start: LEVEL 1 · READY, 20:00, 25 / 50, next 50 / 100, 3:20 in all.
+   * Start: the setup folds into the running clock (S2) with its strip. -1 must take about a
+     minute off the level's time left and +1 give it back (read from the digits). Skip to level
+     2; at level 4 require "Next · Break" and the break with its note in the schedule; skip into
+     the break (S4: "Break · back at Level 5", Last rebuy); pause.
+   * Table view: the table-view button forces a landscape screen on the paused break; resume
+     there (the footer shows "10 of 10 left" and the pool); leave it and require portrait again.
+     End break now starts level 5.
+   * Rotation (PP-079): with auto-rotate off, `settings put system user_rotation 1` turns the
+     emulator on its side: the clock must become the table view, landscape, still on level 5;
+     `user_rotation 0` brings the clock back upright. The step puts the settings back however it
+     ends.
+   * The strip opens setup over the running clock, money and blinds locked; "Unlock to edit…"
+     asks in a sheet first, then opens them; closing locks them again.
+   * New tournament… (the menu) asks first; the reset unfolds setup at LEVEL 1 · READY, 20:00,
+     50 / 100.
 2. **Bank** (21 steps). Set the rebuy amount to $10. The labelled header (Player, Buy-in,
    Rebuy, Out, Paid) and the top bar. Rename Player 1 to Alice with no Enter, switch tabs and
    come back: the name must survive. A buy-in in one tap, with "Alice paid the buy-in" and UNDO
@@ -188,9 +197,8 @@ are:
    (the keyboard is up when the tab is tapped). Leave the field empty: "Turn rebuys off?" must ask
    first, and Keep must bring back the $15 and the rebuy. Then the cutoff (PP-030): "rebuys until
    level 1" with the clock in level 2 must lock the Rebuy column, a tap must record nothing, and
-   the note under the list must say why; then reset the tournament. Until setup has its "Rebuys
-   until" field (M3), the tour writes the preference with `run-as`, so on a release build these
-   two steps only check that the column is open with no cutoff.
+   the note under the list must say why; then reset the tournament. The cutoff is set with setup's "Rebuys
+   until" field, on both builds.
 3. **Payouts tab** (3 steps). The finished night: Alice and Player 5 by name in their rows,
    adding up to the prize pool; the structure sheet; Back returns to Tournament (B16: Back no
    longer walks through every tab tapped).
@@ -216,10 +224,9 @@ are:
    back to the profile's own density.)
 9. Check that the app process is still alive.
 
-The app is locked to portrait (`android:screenOrientation` on `MainActivity` in `core`'s
-manifest), so there is no landscape step apart from the table view's own rotation; freeing
-rotation (and tablets' landscape) is M3's. The device matrix (section 10) turns the display on
-every profile and checks that the app stays upright and keeps working.
+Phones stay portrait (`AppOrientation` in `core`) except on the Tournament tab while a clock
+exists, where the phone's own rotation turns the clock into the table view; from 600 dp the app
+turns freely (PP-088). The tour checks both the table-view button and a turned emulator. The device matrix (section 10) turns the display on every profile.
 
 Every command in a step counts: the step runs with `set -e`, so an assertion that fails in the
 middle of a step fails it, not just the last one. After every step, the tour also fails it if
@@ -295,7 +302,7 @@ input sweep, about 2 s).
 | core | 139 | 0 | Payouts and settlement: presets, rounding (the rows always add up to the pool), standings, 2,000 seeded random tournaments that must conserve money exactly, bounties nobody claimed going to the champion. Money in cents and the money parser. Blind engine: 6,600-config property sweep (every accepted ladder in the 1.3x-2.0x band) plus exact ladders, setup advice whose every offered fix works, color-ups. Chip optimizer: reported crashes, typed failures, a 115,500-call input sweep and a brute-force oracle. FormatUtils. |
 | bank-feature | 44 | 0 | BankViewModel money flows on real prefs: buy-ins, rebuys, knockouts, money conservation over 14 configs and 60 seeded random sessions, live totals when the Tournament settings change, purchases surviving a cleared-and-retyped amount, weights, reset. |
 | tools-feature | 139 | 1 | Odds: 100 golden hand-ranking and equity tests, exhaustive 5- and 7-card evaluator checks, the engine (exact, Monte Carlo, cancellation) and its ViewModel. Chip calculator ViewModel. `OddsBenchmark` is skipped unless `ODDS_BENCH=1`. |
-| tournament-feature | 72 | 0 | TournamentConfigViewModel (rebuy/add-on edits that can't wipe purchases, presets, paid places capped at the player count), the Float-to-cents preference migration. The clock: TimerViewModel on virtual time with a fake monotonic clock (late ticks, sleep gaps, process death mid-level and mid-overtime, reboot, v1.1 migration, chimes including the end chime after a resume, breaks, ante, write cadence, table numbers) and the break/overtime timeline. `BreakMessageFieldTest` is a Robolectric Compose UI test: hardware Enter in the break note must not click Reset. |
+| tournament-feature | 358 | 0 | TournamentConfigViewModel (rebuy/add-on edits that can't wipe purchases, presets, paid places capped at the player count), the Float-to-cents preference migration. The clock: TimerViewModel on virtual time with a fake monotonic clock (late ticks, sleep gaps, process death mid-level and mid-overtime, reboot, v1.1 migration, chimes including the end chime after a resume, breaks, ante, write cadence, table numbers) and the break/overtime timeline. `BreakMessageFieldTest` is a Robolectric Compose UI test: hardware Enter in the break note must not click Reset. The Tournament tab (M3): `TimerViewModelControlsTest` (the one-minute nudges, End break now, color-up done, next break, projected end, rebuy state, mid-game blind changes that keep the level), `TournamentModeTest` (the setup/fold/clock/panel state machine and where the phone may turn), and the Robolectric screen tests in section 9. |
 
 Since the makeover's design-system batch (M0), core also runs the screenshot goldens, the
 device-matrix layout checks and the component semantics tests described in section 9: 224 more
@@ -532,7 +539,9 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted` | S7: all three, at every scroll position |
 | `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
 | `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end` | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
-| `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament (M3 restyles the body): touch targets |
+| `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament: touch targets |
+| `tournament-feature` | `TournamentScreenGoldenTest` | `S1_setup_{before,invalid}`, `S1_fold_300ms`, `S1_running_strip`, `S1_panel_{open,unlocked}`, `S2_clock_{ready,running,paused,final_minutes,overtime,finished}`, `S2_clock_running_font2x`, `S3_table_{running,paused,break}` (landscape cells), `S4_break_{colorup,done,plain}`, `Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet` | All three checks on all 24 cells (the fold frame: none, it is mid-animation) |
+| `tournament-feature` | `TournamentInteractionTest`, `TournamentRotationTest`, `SetupFoldTest` | none | What each control sends; rotation per device class (Robolectric `+land` shows the table view, `+port` the clock, other tabs portrait on phones, tablets free, state kept through recreation); the fold plays once and is cut under Reduce motion |
 | `tournament-feature` | `PayoutsTabScreenTest` | `S6_payouts_{standard,topheavy,custom,finished}`, `S6_payouts_font2x` | All three, at every scroll position, and locked while the clock runs |
 | `bank-feature` | `BankScreensTest` | `S5_bank_{before_buyins,midgame,rebuys_open,no_rebuys,champion,30players}`, `S5_bank_font2x`, `S5b_knockout_sheet`, `S5b_count_sheet`, `S5c_payout_{champion,second}`, `S5c_pool_breakdown`, `Z2_bank_small`, `Z5_bank_tablet` | All three, at every scroll position. A sheet is rendered as its content over the screen behind, since a modal window doesn't capture under Robolectric |
 
@@ -543,7 +552,7 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 
 | Class | Runs | What |
 |---|---|---|
-| `ComponentGoldenTest` | 15 galleries x 10 goldens = 150 | Each component's `@Preview` gallery (including `PokerNavRail`), plus `Shell`, the real `PokerAppShell` around a sample screen |
+| `ComponentGoldenTest` | 17 galleries x 10 goldens = 170 | Each component's `@Preview` gallery (including `PokerNavRail`), plus `Shell`, the real `PokerAppShell` around a sample screen |
 | `ComponentLayoutTest` | 2 x 24 cells = 48 | Every gallery in one scrolling column, and the shell, through all three layout checks |
 | `AppShellTest` | 4 x 24 cells = 96 | The bar below 600 dp and the rail from 600 dp, by window width; tab geometry; the screen capped at 720 dp and centred; the shell through all three layout checks |
 | `NavBarTest` | 10 | Every screen's tab (tools keep Tools selected, B16); tab taps don't pile up on the back stack and Back returns to Tournament; tapping a tab inside a tool returns to its list |
@@ -553,6 +562,7 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 | `UndoSnackbarTest` | 4 | Undo inside the 8 s window counts, after it doesn't (virtual time) |
 | `MoneyComponentsTest` | 3 x 24 cells = 72 | `MoneyMeter`, `PlaceBadge` and `PayoutStructureSheet`: goldens on the 10, all three layout checks on all 24 |
 | `LayoutAssertionsTest` | 11 | The checks themselves catch what they claim |
+| `ScreenOrientationTest` | 3 | Phones portrait unless the screen on show asks for more, and portrait again when it goes; free from 600 dp; a screen can take the full width beside the rail, or the whole window |
 
 ## 10. The device matrix: real screens, sizes, fonts and rotation
 

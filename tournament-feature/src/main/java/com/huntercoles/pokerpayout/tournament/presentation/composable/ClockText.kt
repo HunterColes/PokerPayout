@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tournament.presentation.composable
 
+import android.content.res.Resources
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
@@ -46,6 +47,20 @@ internal fun chipList(chips: List<Int>, formatter: NumberFormat): String {
         0 -> ""
         1 -> names.single()
         else -> stringResource(R.string.setup_and, names.dropLast(1).joinToString(", "), names.last())
+    }
+}
+
+/** "Color up the 25s", for text built outside composition (the setup shared as text, PP-032). */
+internal fun colorUpText(resources: Resources, chips: List<Int>, formatter: NumberFormat): String =
+    resources.getString(R.string.break_color_up, chipList(resources, chips, formatter))
+
+/** "25s and 100s", as the composable [chipList] says it, outside composition. */
+internal fun chipList(resources: Resources, chips: List<Int>, formatter: NumberFormat): String {
+    val names = chips.map { "${formatter.format(it)}s" }
+    return when (names.size) {
+        0 -> ""
+        1 -> names.single()
+        else -> resources.getString(R.string.setup_and, names.dropLast(1).joinToString(", "), names.last())
     }
 }
 

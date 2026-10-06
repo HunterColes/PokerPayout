@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Saved setups (PP-032): the presets row on the setup page and the mid-game panel, the presets
+     sheet, and the setup shared as text. -->
+<resources>
+    <!-- The row that opens the presets -->
+    <string name="presets_title">Presets</string>
+    <string name="presets_row_hint">Load a saved setup, save this one or share it</string>
+    <string name="presets_row_hint_mid_game">Save or share this setup. Loading waits for a new tournament.</string>
+    <string name="presets_open">Open presets</string>
+
+    <!-- The list -->
+    <string name="presets_save_as">Save as preset…</string>
+    <string name="presets_share">Share setup as text</string>
+    <string name="presets_saved">Saved</string>
+    <string name="presets_none">No presets yet. Save this setup to load it another night.</string>
+    <string name="presets_locked">Loading is off while a game is on, so it can\'t change the blinds being played. New tournament… in the menu starts over; then you can load one.</string>
+    <string name="presets_last_used">Last used %1$s</string>
+    <string name="presets_load">Load</string>
+    <string name="presets_more">More options for %1$s</string>
+    <string name="presets_rename_action">Rename…</string>
+    <string name="presets_delete_action">Delete</string>
+    <string name="presets_with_chip_set">chip set</string>
+
+    <!-- Save and rename -->
+    <string name="presets_save_title">Save as preset</string>
+    <string name="presets_rename_title">Rename preset</string>
+    <string name="presets_name">Name</string>
+    <string name="presets_name_description">Preset name</string>
+    <string name="presets_save_help">Saves the money, blinds and payouts. Not the players, the Bank or the clock.</string>
+    <string name="presets_replaces">Replaces the preset with this name.</string>
+    <string name="presets_name_taken">Another preset has this name.</string>
+    <string name="presets_include_chip_set">Include the chip set</string>
+    <!-- "From Tools: 4 colours, 500 chips" -->
+    <string name="presets_chip_set_summary">From Tools: %1$s, %2$s</string>
+    <plurals name="presets_colours">
+        <item quantity="one">%d colour</item>
+        <item quantity="other">%d colours</item>
+    </plurals>
+    <plurals name="presets_chips">
+        <item quantity="one">%s chip</item>
+        <item quantity="other">%s chips</item>
+    </plurals>
+    <string name="presets_chip_set_not_set_up">Not set up in Tools yet</string>
+    <string name="presets_cancel">Cancel</string>
+    <string name="presets_save">Save preset</string>
+    <string name="presets_replace">Replace preset</string>
+    <string name="presets_rename">Rename</string>
+    <!-- The name the save form starts with: "$40 · 20-min levels" -->
+    <string name="presets_suggested_name">%1$s · %2$d-min levels</string>
+
+    <!-- Loading over a setup the host changed: asked once -->
+    <string name="presets_load_title">Load %1$s?</string>
+    <string name="presets_load_body">It replaces the money, blinds and payouts in setup. The players and the Bank stay as they are, and Undo puts it all back.</string>
+    <string name="presets_load_body_chip_set">It replaces the money, blinds and payouts in setup, and the chip set in Tools. The players and the Bank stay as they are, and Undo puts it all back.</string>
+    <string name="presets_keep_mine">Keep mine</string>
+    <string name="presets_load_confirm">Load preset</string>
+
+    <!-- After an action, on the snackbar with Undo -->
+    <string name="presets_snackbar_saved">%1$s saved</string>
+    <string name="presets_snackbar_updated">%1$s updated</string>
+    <string name="presets_snackbar_loaded">%1$s loaded</string>
+    <string name="presets_snackbar_renamed">Renamed to %1$s</string>
+    <string name="presets_snackbar_deleted">%1$s deleted</string>
+    <string name="presets_undo">Undo</string>
+
+    <!-- The setup as text, for the group chat. Its payouts use the Payouts tab's share lines. -->
+    <string name="share_setup_title">Poker night setup</string>
+    <string name="share_setup_money">Money per player: %1$s</string>
+    <string name="share_setup_rebuy_until">%1$s rebuy to the end of Level %2$d</string>
+    <string name="share_setup_food">%1$s food</string>
+    <string name="share_setup_blinds">Blinds: %1$s</string>
+    <string name="share_setup_smallest">smallest chip %1$s</string>
+    <!-- "L5: 150 / 300" -->
+    <string name="share_setup_level">L%1$d: %2$s</string>
+    <!-- "3:20 in all, then the blinds double each level" -->
+    <string name="share_setup_ends">%1$s in all, then the blinds double each level</string>
+    <!-- "Payouts for 9 players: Standard, rounded to $5" -->
+    <plurals name="share_setup_payouts">
+        <item quantity="one">Payouts for %1$d player: %2$s</item>
+        <item quantity="other">Payouts for %1$d players: %2$s</item>
+    </plurals>
+</resources>

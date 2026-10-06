@@ -51,6 +51,7 @@ import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiState
+import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetsIntent
 
 /** The players stepper's range (as the slider it replaces). */
 internal val PlayerRange = 3..30
@@ -59,8 +60,9 @@ private val SectionShape = RoundedCornerShape(PokerDimens.CornerCard)
 
 /**
  * S1 v2, before the start: the whole page is setup, under the [ReadyTicket] that previews the clock
- * it builds. People, money, blinds, payouts, in the order hosts decide them, then a sticky "Start
- * clock". Money and blinds fold to one-line summaries.
+ * it builds. Presets first (a saved night in one tap, PP-032), then people, money, blinds, payouts,
+ * in the order hosts decide them, then a sticky "Start clock". Money and blinds fold to one-line
+ * summaries.
  */
 @Composable
 internal fun SetupContent(
@@ -79,6 +81,7 @@ internal fun SetupContent(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ReadyTicket(timer)
+            PresetsRow(midGame = false, onOpen = { actions.onPresetIntent(PresetsIntent.Open) })
             PlayersCard(setup.playerCount, hint = stringResource(R.string.setup_players_hint)) {
                 actions.onSetupIntent(TournamentConfigIntent.UpdatePlayerCount(it))
             }

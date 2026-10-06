@@ -54,6 +54,19 @@ class TournamentPreferences @Inject constructor(
     /** Everything the pool and payout math reads; emits after any change to it. */
     val config: StateFlow<TournamentConfigData> = _config.asStateFlow()
 
+    private val _setupRevision = MutableStateFlow(0)
+
+    /**
+     * Goes up by one each time a whole setup is put in at once (a preset loaded, PP-032). Screens that
+     * keep their own copy of the blind fields read them again. Not saved: it only counts this process.
+     */
+    val setupRevision: StateFlow<Int> = _setupRevision.asStateFlow()
+
+    /** Says the whole setup was just replaced; see [setupRevision]. */
+    fun setupReplaced() {
+        _setupRevision.value = _setupRevision.value + 1
+    }
+
     fun setPlayerCount(count: Int) {
         val oldCount = getPlayerCount()
         prefs.edit().putInt(PLAYER_COUNT_KEY, count).apply()

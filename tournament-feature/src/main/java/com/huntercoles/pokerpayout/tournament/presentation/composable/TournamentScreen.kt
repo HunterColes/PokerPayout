@@ -1,6 +1,8 @@
 package com.huntercoles.pokerpayout.tournament.presentation.composable
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
@@ -66,6 +68,7 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigViewM
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentMode
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentOrientation
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentUi
+import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetsViewModel
 
 /**
  * The Tournament tab (S1 v2, S2, S3, S4). The clock's ViewModel belongs to the activity, so the clock
@@ -80,11 +83,18 @@ fun TournamentScreen(
     calculatorViewModel: TournamentConfigViewModel = hiltViewModel(),
     timerViewModel: TimerViewModel = hiltViewModel(viewModelStoreOwner = LocalContext.current as ComponentActivity),
 ) {
+    // Saved setups (PP-032) belong to this tab alone, so their ViewModel isn't a parameter.
+    val presetsViewModel: PresetsViewModel = hiltViewModel()
     val setup by calculatorViewModel.uiState.collectAsStateWithLifecycle()
     val timer by timerViewModel.uiState.collectAsStateWithLifecycle()
+    val presets by presetsViewModel.uiState.collectAsStateWithLifecycle()
     var ui by rememberSaveable { mutableStateOf(TournamentUi.initial(timerViewModel.uiState.value.hasTimerStarted)) }
     val askForNotifications = rememberNotificationsAsk(timerViewModel)
-    val actions = remember(calculatorViewModel, timerViewModel, onOpenBank, onOpenPayouts, onOpenSound, askForNotifications) {
+    val context = LocalContext.current
+    val actions = remember(
+        calculatorViewModel, timerViewModel, presetsViewModel, context, onOpenBank, onOpenPayouts, onOpenSound,
+        askForNotifications,
+    ) {
         TournamentActions(
             onSetupIntent = calculatorViewModel::acceptIntent,
             onTimerIntent = { intent ->
@@ -101,10 +111,12 @@ fun TournamentScreen(
             openBank = onOpenBank,
             openPayouts = onOpenPayouts,
             openSound = onOpenSound,
+            onPresetIntent = presetsViewModel::acceptIntent,
+            shareText = { text -> shareSetup(context, text) },
         )
     }
     val focusManager = LocalFocusManager.current
-    val activity = LocalContext.current.findActivity()
+    val activity = context.findActivity()
     DisposableEffect(Unit) {
         onDispose {
             // Leaving the tab commits what was typed, and ends a ⤢ table view (phones turn back upright).
@@ -117,6 +129,7 @@ fun TournamentScreen(
         TournamentContent(setup = setup, timer = timer, ui = ui, actions = actions)
         CueFlash(flash)
     }
+    PresetsSheet(presets, setup, timer, actions)
 }
 
 /** PP-083: the clock's flashes while the tab is on screen; one that comes while it isn't is dropped. */
@@ -152,6 +165,15 @@ private fun rememberNotificationsAsk(timerViewModel: TimerViewModel): () -> Unit
             }
         }
     }
+}
+
+/** Hands [text] to any app that takes plain text (the group chat), through the system's share sheet. */
+private fun shareSetup(context: Context, text: String) {
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    context.startActivity(Intent.createChooser(send, context.getString(R.string.presets_share)))
 }
 
 /**

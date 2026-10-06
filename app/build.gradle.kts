@@ -13,7 +13,6 @@ plugins {
     alias(libs.plugins.detekt)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin)
-    alias(libs.plugins.kotlin.compose.compiler)
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
 }
@@ -47,8 +46,7 @@ android {
     }
 
     buildFeatures {
-        buildConfig = true
-        compose = true
+        buildConfig = true // the app module has no Compose code; the features and core do
     }
 
     lint {

@@ -9,7 +9,9 @@ import com.huntercoles.pokerpayout.core.presentation.OrientationPolicy
  * - **Phones**: portrait until a clock exists. From then on the tab follows the phone's own rotation
  *   setting ([ActivityInfo.SCREEN_ORIENTATION_USER]): turned sideways it shows the table view,
  *   upright the clock. ⤢ forces landscape until ✕, which is the way in with rotation locked. ✕ in a
- *   table view the phone was turned into keeps this visit portrait. Other tabs stay portrait.
+ *   table view the phone was turned into holds the clock upright for that turn only (PP-094 #2):
+ *   once the phone is held upright again ([com.huntercoles.pokerpayout.core.presentation.OnPhoneUpright])
+ *   it may turn, and on its side again it shows the table view again. Other tabs stay portrait.
  * - **Tablets**: free, as every screen; ⤢ still forces landscape for the table view.
  */
 object TournamentOrientation {
@@ -25,7 +27,8 @@ object TournamentOrientation {
 
     /**
      * Whether the tab shows the table view: forced with ⤢, or a phone held sideways once a clock
-     * exists (unless ✕ paused that). A tablet held sideways shows the two-pane clock instead (Z4).
+     * exists (unless ✕ paused that for this turn). A tablet held sideways shows the two-pane clock
+     * instead (Z4).
      */
     fun showsTableView(smallestScreenWidthDp: Int, landscape: Boolean, clock: TableViewInputs): Boolean {
         val turnedPhone = landscape && !OrientationPolicy.isTablet(smallestScreenWidthDp)

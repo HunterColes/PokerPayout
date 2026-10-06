@@ -59,7 +59,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git add -A -- '*/src/test/screenshots/'
+          git add -A -- ':(glob)**/src/test/screenshots/**'
           if git diff --cached --quiet; then
             echo "No golden changed." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
@@ -68,5 +68,9 @@ jobs:
           git -c user.name="github-actions[bot]" \
               -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
               commit -q -m "Re-record screenshot goldens (CI, run ${{ github.run_id }})"
+          # The branch may have moved while this ran; the commit holds only goldens, so it rebases.
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              pull -q --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
           gh workflow run ci.yml --ref "${GITHUB_REF_NAME}"

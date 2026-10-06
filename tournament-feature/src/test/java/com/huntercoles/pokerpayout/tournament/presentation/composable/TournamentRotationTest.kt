@@ -1,8 +1,10 @@
 package com.huntercoles.pokerpayout.tournament.presentation.composable
 
+import android.content.Context
 import android.content.pm.ActivityInfo
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,10 +19,15 @@ import androidx.compose.ui.test.performClick
 import androidx.lifecycle.ViewModelStore
 import com.huntercoles.pokerpayout.core.design.PokerTheme
 import com.huntercoles.pokerpayout.core.presentation.AppOrientation
+import com.huntercoles.pokerpayout.core.presentation.LocalPhoneHold
+import com.huntercoles.pokerpayout.core.presentation.PhoneHold
+import com.huntercoles.pokerpayout.core.presentation.UPRIGHT_HOLD_MILLIS
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentMode
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentUi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -35,8 +42,10 @@ import org.robolectric.annotation.Config
  * Rotation (PP-079, PP-088) on Robolectric screens: a phone held upright shows the clock (S2) and lets
  * the activity follow the phone's rotation once a clock exists; on its side it shows the table view
  * (S3); every other tab, and setup before the start, stays portrait; ⤢ forces landscape until ✕;
- * tablets turn freely. The orientation is what the activity was asked for, through [AppOrientation],
- * as in MainActivity. Rotating keeps the clock and the tab's own state.
+ * ✕ in a turned table view holds the clock upright only until the phone is held upright again
+ * (PP-094 #2); tablets turn freely. The orientation is what the activity was asked for, through
+ * [AppOrientation], as in MainActivity. How the phone is held comes from [held], not the sensors.
+ * Rotating keeps the clock and the tab's own state.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -49,6 +58,12 @@ class TournamentRotationTest {
     private lateinit var fixture: TournamentFixture
     private lateinit var timer: TimerViewModel
     private var onTournament by mutableStateOf(true)
+
+    /** How the test holds the phone, whatever the screen shows: on its side until a test says otherwise. */
+    private val held = MutableStateFlow(false)
+    private val hold = object : PhoneHold {
+        override fun upright(context: Context): Flow<Boolean> = held
+    }
 
     @Before
     fun setUp() {
@@ -66,13 +81,15 @@ class TournamentRotationTest {
         compose.setContent {
             PokerTheme(reducedMotion = true) {
                 AppOrientation {
-                    if (onTournament) {
-                        val state by timer.uiState.collectAsState()
-                        var ui by rememberSaveable { mutableStateOf(TournamentUi.initial(clockStarted)) }
-                        val actions = TournamentActions(onTimerIntent = timer::acceptIntent, updateUi = { ui = it(ui) })
-                        TournamentContent(setup, state, ui, actions)
-                    } else {
-                        Text("Bank")
+                    CompositionLocalProvider(LocalPhoneHold provides hold) {
+                        if (onTournament) {
+                            val state by timer.uiState.collectAsState()
+                            var ui by rememberSaveable { mutableStateOf(TournamentUi.initial(clockStarted)) }
+                            val actions = TournamentActions(onTimerIntent = timer::acceptIntent, updateUi = { ui = it(ui) })
+                            TournamentContent(setup, state, ui, actions)
+                        } else {
+                            Text("Bank")
+                        }
                     }
                 }
             }
@@ -102,11 +119,43 @@ class TournamentRotationTest {
         assertTableView()
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_USER, requested)
 
-        // ✕ on a table view the phone was turned into: the clock, held upright for this visit.
+        // ✕ on a table view the phone was turned into: the clock, held upright while the phone stays on its side
         compose.onNodeWithContentDescription(EXIT_TABLE_VIEW).performClick()
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(UPRIGHT_HOLD_MILLIS * 3)
         compose.waitForIdle()
         assertClock()
         assertEquals(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, requested)
+    }
+
+    /**
+     * PP-094 #2: ✕ holds the clock upright for this turn only. Once the phone is held upright again it
+     * may turn, and on its side it shows the table view again. Robolectric keeps the window landscape,
+     * so the hold ending here is the phone turned upright and back on its side in one.
+     */
+    @Test
+    @Config(qualifiers = "w780dp-h360dp-land")
+    fun `closing a turned table view holds only this turn, and the next turn shows it again`() {
+        showApp(clockStarted = true)
+        compose.onNodeWithContentDescription(EXIT_TABLE_VIEW).performClick()
+        compose.waitForIdle()
+        assertClock()
+
+        // A pass through upright while turning doesn't count
+        held.value = true
+        compose.mainClock.advanceTimeBy(UPRIGHT_HOLD_MILLIS / 2)
+        held.value = false
+        compose.mainClock.advanceTimeBy(UPRIGHT_HOLD_MILLIS * 2)
+        compose.waitForIdle()
+        assertClock()
+        assertEquals(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, requested)
+
+        // Held upright: the phone may turn again, and on its side it is the table view again
+        held.value = true
+        compose.mainClock.advanceTimeBy(UPRIGHT_HOLD_MILLIS + FRAME_MILLIS)
+        compose.waitForIdle()
+        assertEquals(ActivityInfo.SCREEN_ORIENTATION_USER, requested)
+        assertTableView()
     }
 
     @Test
@@ -215,5 +264,6 @@ class TournamentRotationTest {
         const val START_CLOCK = "Start clock"
         const val STRIP_SETUP = "Setup"
         const val UNLOCK = "Unlock to edit…"
+        const val FRAME_MILLIS = 100L
     }
 }

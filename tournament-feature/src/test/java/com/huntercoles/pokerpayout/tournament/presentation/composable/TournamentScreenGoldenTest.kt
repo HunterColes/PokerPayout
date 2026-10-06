@@ -22,6 +22,7 @@ import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.testing.forEachScrollPosition
+import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentMode
@@ -129,6 +130,18 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
                 state.copy(colorUpDoneAfterLevels = setOf(colorUp.afterLevel), purchases = state.purchases.copy(addOnCents = 0))
             }
         check("S4_break_plain", plainState, running)
+    }
+
+    /**
+     * PP-091 #9: the same night with a chip set set up in Tools (white 25s, red 100s, green 500s,
+     * black 1,000s): the break's color-up is drawn and worded with those chips.
+     */
+    @Test
+    fun breakWithChipSet() {
+        val running = TournamentUi(mode = TournamentMode.Running)
+        val night = fixture.withChipSet()
+        val colorUp = night.timeline.segments.filterIsInstance<BreakSegment>().first { it.colorUp.isNotEmpty() }
+        check("S4_break_chipset", fixture.onBreak(colorUp, base = night), running, scroll = true)
     }
 
     @Test

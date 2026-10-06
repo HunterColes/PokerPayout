@@ -107,6 +107,32 @@ class ChipSetContentTest {
     }
 
     @Test
+    fun `stacks kept back say they come from the Tournament, and step from its estimate`() {
+        show(ChipSetFixtures.fromTournament, settingsOpen = true)
+        compose.onNodeWithText("Keep back 14", substring = true).performScrollTo()
+        compose.onNodeWithText("From Tournament setup: 5 for rebuys (about half the players) and 9 for add-ons (one each).")
+            .performScrollTo()
+        compose.onNodeWithText("Use Tournament's estimate").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Increase Keep back for rebuys and add-ons").performScrollTo().performClick()
+        assertEquals(listOf<ChipSetIntent>(ChipSetIntent.SetReserve(15)), sent)
+    }
+
+    @Test
+    fun `a number of your own says what the Tournament suggests, and goes back to it`() {
+        val own = ChipSetFixtures.state(ChipSetFixtures.ok.inventory, reserve = 3, estimate = ChipSetFixtures.nightEstimate)
+        show(own, settingsOpen = true)
+        compose.onNodeWithText("Your own · Tournament setup suggests 14").performScrollTo()
+        compose.onNodeWithText("Use Tournament's estimate").performScrollTo().performClick()
+        assertEquals(listOf<ChipSetIntent>(ChipSetIntent.SetReserve(null)), sent)
+    }
+
+    @Test
+    fun `a game with no rebuys or add-ons says so`() {
+        show(ChipSetFixtures.ok, settingsOpen = true)
+        compose.onNodeWithText("From Tournament setup: no rebuys or add-ons.").performScrollTo()
+    }
+
+    @Test
     fun `the colour sheet refuses a value another colour has, and saves or removes`() {
         val state = ChipSetFixtures.ok
         compose.setContent {

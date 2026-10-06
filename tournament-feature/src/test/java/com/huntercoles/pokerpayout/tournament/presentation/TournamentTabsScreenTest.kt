@@ -88,6 +88,7 @@ class TournamentTabsScreenTest(private val config: ScreenConfig) {
                 sound,
                 StillClock,
                 AudioPreferences(ApplicationProvider.getApplicationContext()),
+                FakeChipSets(),
             )
         }
         screen.compose.setContent {

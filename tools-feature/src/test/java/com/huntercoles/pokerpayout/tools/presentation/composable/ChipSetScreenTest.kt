@@ -30,9 +30,9 @@ import org.robolectric.annotation.GraphicsMode
  * The chip set (S11) inside the app's shell on every cell of the device matrix: text fits and is
  * never clipped at any scroll position of either pane, 48 dp targets that don't overlap. Goldens on
  * [DeviceMatrix.goldens]: `S11_chipset_ok` (the home set covers 9 players), `S11_chipset_short`
- * (too few blacks), and `S11_chipset_ok_end`, scrolled to the end of every pane (the color-up plan
- * and the stack settings). The stack settings unfolded, a first-use set and the colour sheet get
- * the layout checks too.
+ * (too few blacks), `S11_chipset_ok_end`, scrolled to the end of every pane (the color-up plan
+ * and the stack settings), and `S11_chipset_settings`, the stack settings unfolded and keeping back
+ * the Tournament's estimate. A first-use set and the colour sheet get the layout checks too.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -56,8 +56,29 @@ class ChipSetScreenTest(private val config: ScreenConfig) {
 
     @Test
     fun settingsOpenFirstUse() {
-        val firstUse = ChipSetFixtures.state(ChipInventory.HOME_SET, reviewed = false, reserve = 3, stackOverride = 4_000)
+        val firstUse = ChipSetFixtures.state(
+            ChipInventory.HOME_SET,
+            reviewed = false,
+            reserve = 3,
+            stackOverride = 4_000,
+            estimate = ChipSetFixtures.nightEstimate,
+        )
         check(name = null) { ChipSetContent(firstUse, onIntent = {}, onBack = {}, settingsOpen = true) }
+    }
+
+    /**
+     * PP-091 #3: the stack settings unfolded at the end of the page, keeping back the Tournament's
+     * estimate (5 for rebuys, 9 for add-ons) with the line that says where it came from.
+     */
+    @Test
+    fun chipSetSettings() {
+        render { ChipSetContent(ChipSetFixtures.fromTournament, onIntent = {}, onBack = {}, settingsOpen = true) }
+        scrollEveryPaneToTheEnd()
+        val where = "S11_chipset_settings on ${config.id}"
+        LayoutAssertions.assertTextFits(screen.compose, where)
+        LayoutAssertions.assertVisibleTextUnclipped(screen.compose, where)
+        LayoutAssertions.assertTouchTargets(screen.compose, where, strict = true)
+        if (config in DeviceMatrix.goldens) screen.compose.onRoot().captureGolden(GROUP, "S11_chipset_settings", config)
     }
 
     @Test

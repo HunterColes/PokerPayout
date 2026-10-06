@@ -92,7 +92,7 @@ internal fun SettingsCard(
                 Text(
                     text = stringResource(
                         R.string.chip_set_settings_summary,
-                        settings.reserveStacks,
+                        state.reserveStacks,
                         settings.maxColours,
                         shapes[curves.indexOf(settings.shape).coerceAtLeast(0)].lowercase(),
                     ),
@@ -109,12 +109,7 @@ internal fun SettingsCard(
         }
         if (expanded) {
             StackField(state, onIntent)
-            CountSetting(
-                label = stringResource(R.string.chip_set_reserve),
-                value = settings.reserveStacks,
-                range = ChipSetSettings.RESERVE_RANGE,
-                onChange = { onIntent(ChipSetIntent.SetReserve(it)) },
-            )
+            ReserveSetting(state, onIntent)
             CountSetting(
                 label = stringResource(R.string.chip_set_max_colours),
                 value = settings.maxColours,
@@ -157,6 +152,39 @@ private fun StackField(state: ChipSetUiState, onIntent: (ChipSetIntent) -> Unit)
             PokerButton(
                 text = stringResource(R.string.chip_set_use_tournament_stack),
                 onClick = { onIntent(ChipSetIntent.SetStackOverride(null)) },
+                variant = PokerButtonVariant.Text,
+                size = PokerButtonSize.Small,
+            )
+        }
+    }
+}
+
+/**
+ * Stacks to keep back for rebuys and add-ons (PP-091 #3): the Tournament's estimate until you change
+ * it, with a line saying where the number came from, and a way back to the estimate once it's yours.
+ */
+@Composable
+private fun ReserveSetting(state: ChipSetUiState, onIntent: (ChipSetIntent) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        CountSetting(
+            label = stringResource(R.string.chip_set_reserve),
+            value = state.reserveStacks,
+            range = ChipSetSettings.RESERVE_RANGE,
+            onChange = { onIntent(ChipSetIntent.SetReserve(it)) },
+        )
+        Text(
+            text = if (state.reserveFromTournament) {
+                reserveEstimateText(state.reserveEstimate)
+            } else {
+                stringResource(R.string.chip_set_reserve_own, state.reserveEstimate.stacks)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = PokerColors.Chalk,
+        )
+        if (!state.reserveFromTournament) {
+            PokerButton(
+                text = stringResource(R.string.chip_set_use_tournament_reserve),
+                onClick = { onIntent(ChipSetIntent.SetReserve(null)) },
                 variant = PokerButtonVariant.Text,
                 size = PokerButtonSize.Small,
             )

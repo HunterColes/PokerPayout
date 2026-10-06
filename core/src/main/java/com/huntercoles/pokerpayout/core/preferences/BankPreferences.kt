@@ -2,6 +2,11 @@ package com.huntercoles.pokerpayout.core.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.huntercoles.pokerpayout.core.domain.cash.BankMode
+import com.huntercoles.pokerpayout.core.domain.cash.CashGame
+import com.huntercoles.pokerpayout.core.domain.cash.CashLedger
+import com.huntercoles.pokerpayout.core.domain.cash.CashPlayer
+import com.huntercoles.pokerpayout.core.domain.cash.CashTransfer
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.utils.Money
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -19,6 +24,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * them in cents, oldest first, next to the old `player_rebuys_<id>` count, which stays in step for
  * readers that only count. Purchases recorded before PP-085 had no price; [migratePurchasePrices]
  * prices them once at the amount set then.
+ *
+ * The cash game (PP-029) lives here too, apart from the tournament: [getCashGame], [getBankMode].
  */
 @Singleton
 class BankPreferences @Inject constructor(
@@ -271,6 +278,73 @@ class BankPreferences @Inject constructor(
         clearAllEliminatedBy()
     }
 
+    // The cash game (PP-029, D4) ---------------------------------------------------------------------
+    //
+    // Its own keys, all new: the mode under "bank_mode", the ledger under "cash_". None starts with
+    // "player_", so nothing the tournament does (its reset, the Bank's reset, removing players,
+    // clearing rebuys) reaches them, and cash writes don't bump [revision], which is the tournament's.
+
+    /** Which game the Bank shows; the tournament until the players switch. */
+    fun getBankMode(): BankMode =
+        if (prefs.getString(BANK_MODE_KEY, null) == BANK_MODE_CASH) BankMode.CASH else BankMode.TOURNAMENT
+
+    fun saveBankMode(mode: BankMode) {
+        prefs.edit().putString(BANK_MODE_KEY, if (mode == BankMode.CASH) BANK_MODE_CASH else BANK_MODE_TOURNAMENT).apply()
+    }
+
+    /** The cash game as last saved; empty if there is none. Unreadable entries are skipped. */
+    fun getCashGame(): CashGame {
+        val ids = prefs.getString(CASH_PLAYERS_KEY, null).orEmpty()
+            .split(",")
+            .mapNotNull { it.trim().toIntOrNull()?.takeIf { id -> id > 0 } }
+            .distinct()
+        val players = ids.map { id ->
+            CashPlayer(
+                id = id,
+                name = prefs.getString("$CASH_NAME_PREFIX$id", null) ?: "Player $id",
+                buyInsCents = parseCents(prefs.getString("$CASH_BUY_INS_PREFIX$id", null)),
+                cashOutCents = if (prefs.contains("$CASH_OUT_PREFIX$id")) {
+                    prefs.getLong("$CASH_OUT_PREFIX$id", 0L).coerceAtLeast(0L)
+                } else {
+                    null
+                },
+            )
+        }
+        val paid = prefs.getString(CASH_PAID_KEY, null).orEmpty()
+            .split(",")
+            .mapNotNull(::parseTransfer)
+            .toSet()
+        val split = if (prefs.contains(CASH_SPLIT_KEY)) prefs.getLong(CASH_SPLIT_KEY, 0L) else null
+        return CashGame(CashLedger(players), paid, split)
+    }
+
+    /** Replaces the saved cash game with [game], in one write. */
+    fun saveCashGame(game: CashGame) {
+        val editor = prefs.edit()
+        prefs.all.keys.filter { it.startsWith(CASH_PREFIX) }.forEach { editor.remove(it) }
+        val players = game.ledger.players
+        if (players.isNotEmpty()) editor.putString(CASH_PLAYERS_KEY, players.joinToString(",") { it.id.toString() })
+        players.forEach { player ->
+            editor.putString("$CASH_NAME_PREFIX${player.id}", player.name)
+            editor.putString("$CASH_BUY_INS_PREFIX${player.id}", player.buyInsCents.joinToString(","))
+            player.cashOutCents?.let { editor.putLong("$CASH_OUT_PREFIX${player.id}", it) }
+        }
+        if (game.paid.isNotEmpty()) {
+            editor.putString(CASH_PAID_KEY, game.paid.joinToString(",") { "${it.fromId}>${it.toId}:${it.amountCents}" })
+        }
+        game.splitCents?.let { editor.putLong(CASH_SPLIT_KEY, it) }
+        editor.apply()
+    }
+
+    private fun parseCents(stored: String?): List<Long> =
+        stored.orEmpty().split(",").mapNotNull { it.trim().toLongOrNull()?.takeIf { cents -> cents > 0L } }
+
+    /** "4>1:4700": player 4 pays player 1 $47. */
+    private fun parseTransfer(stored: String): CashTransfer? {
+        val (from, to, amount) = TRANSFER_FORMAT.matchEntire(stored.trim())?.destructured ?: return null
+        return CashTransfer(from.toInt(), to.toInt(), amount.toLong()).takeIf { it.amountCents > 0L }
+    }
+
     // Purchase prices (PP-085) -------------------------------------------------------------------
 
     private fun readPrices(pricesPrefix: String, countPrefix: String, playerId: Int, price: () -> Long): List<Long> {
@@ -395,6 +469,21 @@ class BankPreferences @Inject constructor(
         private const val REBUY_PRICES_PREFIX = "player_rebuy_prices_"
         private const val ADDON_PRICES_PREFIX = "player_addon_prices_"
         private const val PLAYER_OUT_LEVEL_PREFIX = "player_out_level_"
+
+        // The cash game (PP-029): new keys; never rename them
+        private const val BANK_MODE_KEY = "bank_mode"
+        private const val BANK_MODE_CASH = "cash"
+        private const val BANK_MODE_TOURNAMENT = "tournament"
+        private const val CASH_PREFIX = "cash_"
+        private const val CASH_PLAYERS_KEY = "cash_players"
+        private const val CASH_NAME_PREFIX = "cash_name_"
+        private const val CASH_BUY_INS_PREFIX = "cash_buy_ins_"
+        private const val CASH_OUT_PREFIX = "cash_out_"
+        private const val CASH_PAID_KEY = "cash_paid"
+        private const val CASH_SPLIT_KEY = "cash_split"
+
+        /** One ticked payment, "from>to:cents"; the digit limits keep the numbers in range. */
+        private val TRANSFER_FORMAT = Regex("""(\d{1,9})>(\d{1,9}):(\d{1,18})""")
 
         // TournamentPreferences' file and keys for the rebuy and add-on amounts (read only, for
         // pricing purchases; BankPreferencesPricesTest keeps the two in step).

@@ -12,6 +12,7 @@ import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.time.TimeSource
+import com.huntercoles.pokerpayout.tournament.presentation.FakeChipSets
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
@@ -85,6 +86,7 @@ class SavedClockStatusProviderTest {
                     mockk<SoundManager>(relaxed = true),
                     time,
                     AudioPreferences(ApplicationProvider.getApplicationContext()),
+                    FakeChipSets(),
                 ) as T
         }
         return ViewModelProvider(store, factory)[TimerViewModel::class.java].also { dispatcher.scheduler.runCurrent() }

@@ -80,7 +80,7 @@ class ChipCalculatorPreferencesMigrationTest {
         assertEquals(ChipDistributionCurve.BellCurve, settings.shape)
         assertEquals(6, settings.maxColours)
         assertEquals(7_500, settings.stackOverride)
-        assertEquals(0, settings.reserveStacks)
+        assertNull("nothing kept back by hand: the Tournament's estimate", settings.reserveOverride)
 
         // The result and the fragile curve name are gone; the curve is saved by id now
         listOf("chip_breakdown", "fit_score", "total_physical_chips", "selected_curve").forEach {
@@ -133,12 +133,45 @@ class ChipCalculatorPreferencesMigrationTest {
         val prefs = open()
         val mine = ChipInventory.of(listOf(InventoryChip(ChipColour.White, 25, 300), InventoryChip(ChipColour.Red, 100, 200)))
         prefs.setInventory(mine)
-        prefs.setReserveStacks(4)
+        prefs.setReserveOverride(4)
 
         val reopened = open().current()
         assertEquals(mine, reopened.inventory)
         assertTrue(reopened.inventoryReviewed)
-        assertEquals(4, reopened.reserveStacks)
+        assertEquals(4, reopened.reserveOverride)
+    }
+
+    /**
+     * PP-091 #3: the stacks kept back follow the Tournament's estimate until you set them. A number
+     * saved before (by the stepper, or by an Undo after a reset) is yours and stays, 0 included.
+     */
+    @Test
+    fun `a kept-back number saved before is kept, and none saved follows the Tournament`() {
+        chips.edit().putString("chip_inventory", ChipInventory.HOME_SET.encode()).putInt("reserve_stacks", 0).commit()
+        assertEquals(0, open().current().reserveOverride)
+
+        chips.edit().putInt("reserve_stacks", 7).commit()
+        val prefs = open()
+        assertEquals(7, prefs.current().reserveOverride)
+
+        prefs.setReserveOverride(null) // back to the Tournament's estimate
+        assertNull(prefs.current().reserveOverride)
+        assertFalse(chips.contains("reserve_stacks"))
+        assertNull(open().current().reserveOverride)
+
+        prefs.setReserveOverride(80) // clamped to what the stepper allows
+        assertEquals(ChipSetSettings.RESERVE_RANGE.last, open().current().reserveOverride)
+    }
+
+    @Test
+    fun `undo after a reset keeps following the Tournament when nothing was set`() {
+        val prefs = open()
+        prefs.setMaxColours(3)
+        val before = prefs.current()
+        prefs.resetAllData()
+        prefs.restore(before)
+        assertNull(prefs.current().reserveOverride)
+        assertFalse("restore writes no kept-back number of its own", chips.contains("reserve_stacks"))
     }
 
     @Test
@@ -160,7 +193,7 @@ class ChipCalculatorPreferencesMigrationTest {
         prefs.setInventory(ChipInventory.HOME_SET.withCount(ChipColour.Green, 40))
         prefs.setShape(ChipDistributionCurve.PositiveLinear)
         prefs.setMaxColours(3)
-        prefs.setReserveStacks(2)
+        prefs.setReserveOverride(2)
         prefs.setStackOverride(3_000)
         val before = prefs.current()
 

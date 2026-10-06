@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The cash game in the Bank (S13, PP-029). -->
+<resources>
+    <!-- After an action, on the snackbar with Undo -->
+    <string name="cash_undo">Undo</string>
+    <string name="cash_done_bought_in">%1$s bought in · %2$s</string>
+    <string name="cash_done_topped_up">%1$s topped up · %2$s</string>
+    <string name="cash_done_buy_in_removed">Removed %1$s\'s %2$s buy-in</string>
+    <string name="cash_done_cashed_out">%1$s cashed out %2$s</string>
+    <string name="cash_done_count_cleared">%1$s\'s count cleared</string>
+    <string name="cash_done_player_removed">Removed %1$s</string>
+    <string name="cash_done_split">Split the %1$s across the stacks</string>
+    <string name="cash_done_recount">Split taken back: recount the chips</string>
+    <string name="cash_done_paid">%1$s paid %2$s %3$s</string>
+    <string name="cash_done_unpaid">%1$s hasn\'t paid %2$s yet</string>
+    <plurals name="cash_done_cleared">
+        <item quantity="one">Cleared the cash game (1 player)</item>
+        <item quantity="other">Cleared the cash game (%d players)</item>
+    </plurals>
+    <string name="cash_default_name">Player %1$d</string>
+
+    <!-- Share as text (ACTION_SEND text/plain) -->
+    <string name="cash_share_title">Poker night: cash game</string>
+    <string name="cash_share_balanced">Cash in %1$s · counted out %2$s · balanced</string>
+    <string name="cash_share_split">Cash in %1$s · counted out %2$s · the %3$s difference split across the stacks</string>
+    <string name="cash_share_out_split">%1$s (%2$s after the split)</string>
+    <string name="cash_share_up">%1$s: in %2$s, out %3$s, up %4$s</string>
+    <string name="cash_share_down">%1$s: in %2$s, out %3$s, down %4$s</string>
+    <string name="cash_share_even">%1$s: in %2$s, out %3$s, even</string>
+    <plurals name="cash_share_settle">
+        <item quantity="one">Settle up, 1 payment:</item>
+        <item quantity="other">Settle up, %d payments:</item>
+    </plurals>
+    <string name="cash_share_payment">%1$s pays %2$s %3$s</string>
+    <string name="cash_share_payment_paid">%1$s pays %2$s %3$s (paid)</string>
+    <string name="cash_share_nobody_pays">Everyone is even: no payments.</string>
+
+    <!-- The Bank's Tournament / Cash game switch (D4) -->
+    <string name="cash_mode_tournament">Tournament</string>
+    <string name="cash_mode_cash">Cash game</string>
+
+    <!-- Top bar -->
+    <plurals name="cash_subtitle">
+        <item quantity="one">Cash game · 1 player · %2$s in play</item>
+        <item quantity="other">Cash game · %1$d players · %2$s in play</item>
+    </plurals>
+    <string name="cash_subtitle_empty">Cash game · nobody in yet</string>
+    <string name="cash_undo_last">Undo: %1$s</string>
+    <string name="cash_undo_nothing">Nothing to undo</string>
+    <string name="cash_clear_menu">Clear the cash game</string>
+
+    <!-- Before anyone sits down -->
+    <string name="cash_empty_title">Nobody at the table yet</string>
+    <string name="cash_empty_body">Add each player as they buy in, and their top-ups as they come. At the end, count everyone\'s chips: the app checks the count and works out who pays whom.</string>
+    <string name="cash_add_player">Add player</string>
+
+    <!-- Chip check -->
+    <string name="cash_check_title">Chip check</string>
+    <string name="cash_check_balanced">Balanced</string>
+    <string name="cash_check_counting">Counting</string>
+    <string name="cash_check_off">Off by %1$s</string>
+    <string name="cash_check_split">Split</string>
+    <string name="cash_check_in">Cash in</string>
+    <string name="cash_check_out">Chips counted out</string>
+    <plurals name="cash_check_to_count">
+        <item quantity="one">Still to count: %2$s</item>
+        <item quantity="other">%1$d still to count: %2$s</item>
+    </plurals>
+    <string name="cash_check_more">%1$s more was counted out than went in. Recount the chips, or split the %1$s across the stacks.</string>
+    <string name="cash_check_less">%1$s less was counted out than went in. Recount the chips, or share the missing %1$s out to the stacks.</string>
+    <string name="cash_check_nothing_to_split">No chips are counted out yet, so there is nothing to split the %1$s over. Count the chips.</string>
+    <string name="cash_check_split_more">The extra %1$s comes off the stacks, each in proportion to its chips.</string>
+    <string name="cash_check_split_less">The missing %1$s goes to the stacks, each in proportion to its chips.</string>
+    <string name="cash_split_button">Split the %1$s</string>
+    <string name="cash_recount_button">Recount instead</string>
+
+    <!-- The ledger -->
+    <string name="cash_col_player">Player</string>
+    <string name="cash_col_in">In</string>
+    <string name="cash_col_out">Out</string>
+    <string name="cash_col_net">Net</string>
+    <string name="cash_total">Total</string>
+    <string name="cash_not_counted">—</string>
+    <plurals name="cash_top_ups">
+        <item quantity="one">1 top-up</item>
+        <item quantity="other">%d top-ups</item>
+    </plurals>
+    <string name="cash_ledger_hint">Tap a player to top up or count their chips.</string>
+    <string name="cash_cell_in">in %1$s</string>
+    <string name="cash_cell_out">out %1$s</string>
+    <string name="cash_cell_not_counted">chips not counted yet</string>
+    <string name="cash_cell_up">up %1$s</string>
+    <string name="cash_cell_down">down %1$s</string>
+    <string name="cash_cell_even">even</string>
+    <string name="cash_row_open">top up or count chips</string>
+
+    <!-- Settle up -->
+    <plurals name="cash_settle_title">
+        <item quantity="one">Settle up · 1 payment</item>
+        <item quantity="other">Settle up · %d payments</item>
+    </plurals>
+    <string name="cash_settle_title_plain">Settle up</string>
+    <string name="cash_settle_hint">Tick each one when paid</string>
+    <string name="cash_settle_all_paid">All paid</string>
+    <string name="cash_settle_line">%1$s pays %2$s</string>
+    <string name="cash_settle_even">Everyone is even: nobody pays anybody.</string>
+    <string name="cash_settle_waiting_count">Who pays whom shows here once every player\'s chips are counted.</string>
+    <string name="cash_settle_waiting_check">Who pays whom waits for the chip check: recount, or split the difference.</string>
+    <string name="cash_settle_waiting_empty">Who pays whom shows here at the end of the night.</string>
+    <string name="cash_share">Share as text</string>
+    <string name="cash_share_chooser">Share the settle-up</string>
+
+    <!-- A player's sheet -->
+    <string name="cash_name">Name</string>
+    <string name="cash_bought_in">Bought in · %1$s</string>
+    <string name="cash_buy_in">Buy-in</string>
+    <string name="cash_top_up_n">Top-up %1$d</string>
+    <string name="cash_remove_entry">Remove %1$s, %2$s</string>
+    <string name="cash_top_up_amount">Top-up</string>
+    <string name="cash_top_up_for">Top up %1$s</string>
+    <string name="cash_top_up_field">Top-up for %1$s</string>
+    <string name="cash_top_up">Top up</string>
+    <string name="cash_at_the_end">At the end</string>
+    <string name="cash_cash_out">Chips counted out</string>
+    <string name="cash_cash_out_for">%1$s\'s chips counted out</string>
+    <string name="cash_cash_out_empty">Leave empty until their chips are counted.</string>
+    <string name="cash_cash_out_up">Up %1$s on the night</string>
+    <string name="cash_cash_out_down">Down %1$s on the night</string>
+    <string name="cash_cash_out_even">Even on the night</string>
+    <string name="cash_remove_player">Remove %1$s</string>
+    <string name="cash_done">Done</string>
+
+    <!-- Adding a player -->
+    <string name="cash_add_title">Add a player</string>
+    <string name="cash_add_name_help">Leave empty for %1$s</string>
+    <string name="cash_add_confirm">Add %1$s</string>
+    <string name="cash_cancel">Cancel</string>
+</resources>

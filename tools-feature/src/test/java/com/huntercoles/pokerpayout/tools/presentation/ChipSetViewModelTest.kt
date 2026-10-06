@@ -14,6 +14,7 @@ import com.huntercoles.pokerpayout.core.utils.ChipDistributionCurve
 import com.huntercoles.pokerpayout.core.utils.ChipInventory
 import com.huntercoles.pokerpayout.core.utils.ChipShortfall
 import com.huntercoles.pokerpayout.core.utils.InventoryChip
+import com.huntercoles.pokerpayout.core.utils.KeptBackEstimate
 import com.huntercoles.pokerpayout.core.utils.ScheduledBreak
 import com.huntercoles.pokerpayout.core.utils.StackPlan
 import io.mockk.every
@@ -224,12 +225,81 @@ class ChipSetViewModelTest {
         testScheduler.advanceUntilIdle()
 
         val saved = chips().current()
-        assertEquals(3, saved.reserveStacks)
+        assertEquals(3, saved.reserveOverride)
         assertEquals(3, saved.maxColours)
         assertEquals(ChipDistributionCurve.BellCurve, saved.shape)
         val plan = vm.ready()
         assertEquals(3, plan.reserve.requested)
         assertTrue(plan.stack.chips.size <= 3 || plan.stack.moreColoursThanAsked)
+    }
+
+    /** PP-091 #3: the mockups' night keeps 5 back for rebuys (until level 4) and 9 for add-ons. */
+    private fun mockupNight() {
+        tournament.setPlayerCount(9)
+        tournament.setRebuyAmount(40.0)
+        tournament.setAddOnAmount(10.0)
+        tournament.setRebuyUntilLevel(4)
+    }
+
+    @Test
+    fun `stacks kept back follow the Tournament's rebuys and add-ons until you set them`() = runVmTest {
+        mockupNight()
+        val vm = viewModel()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(KeptBackEstimate(rebuyStacks = 5, addOnStacks = 9, rebuyCutoff = true), vm.state.reserveEstimate)
+        assertEquals(14, vm.state.reserveStacks)
+        assertTrue(vm.state.reserveFromTournament)
+        assertEquals(14, vm.ready().reserve.requested, "the plan keeps them back")
+        assertNull(chips().current().reserveOverride, "an estimate isn't saved")
+
+        // Rebuys open all game: one each
+        tournament.setRebuyUntilLevel(0)
+        testScheduler.advanceUntilIdle()
+        assertEquals(18, vm.state.reserveStacks)
+        assertEquals(18, vm.ready().reserve.requested)
+
+        // Your own number stays, whatever the Tournament does next
+        vm.acceptIntent(ChipSetIntent.SetReserve(3))
+        tournament.setAddOnAmount(0.0)
+        testScheduler.advanceUntilIdle()
+        assertEquals(3, vm.state.reserveStacks)
+        assertFalse(vm.state.reserveFromTournament)
+        assertEquals(9, vm.state.reserveEstimate.stacks, "the estimate moves on underneath")
+        assertEquals(3, chips().current().reserveOverride)
+        assertEquals(3, vm.ready().reserve.requested)
+
+        // ... until you go back to the estimate
+        vm.acceptIntent(ChipSetIntent.SetReserve(null))
+        testScheduler.advanceUntilIdle()
+        assertTrue(vm.state.reserveFromTournament)
+        assertEquals(9, vm.state.reserveStacks)
+        assertNull(chips().current().reserveOverride)
+    }
+
+    @Test
+    fun `a kept-back number saved before the estimate existed is kept`() = runVmTest {
+        mockupNight()
+        chips().setReserveOverride(2)
+        val vm = viewModel()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(2, vm.state.reserveStacks)
+        assertFalse(vm.state.reserveFromTournament)
+        assertEquals(14, vm.state.reserveEstimate.stacks)
+        assertEquals(2, vm.ready().reserve.requested)
+    }
+
+    @Test
+    fun `a reset goes back to the Tournament's estimate`() = runVmTest {
+        mockupNight()
+        val vm = viewModel()
+        testScheduler.advanceUntilIdle()
+        vm.acceptIntent(ChipSetIntent.SetReserve(1))
+        vm.acceptIntent(ChipSetIntent.Reset)
+        testScheduler.advanceUntilIdle() // past the Undo window
+        assertTrue(vm.state.reserveFromTournament)
+        assertEquals(14, vm.state.reserveStacks)
     }
 
     @Test

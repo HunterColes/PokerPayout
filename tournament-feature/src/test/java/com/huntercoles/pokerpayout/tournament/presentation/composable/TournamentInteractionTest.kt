@@ -19,6 +19,8 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.requestFocus
 import androidx.lifecycle.ViewModelStore
 import com.huntercoles.pokerpayout.core.design.PokerTheme
+import com.huntercoles.pokerpayout.core.utils.ChipColour
+import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigIntent
@@ -181,6 +183,25 @@ class TournamentInteractionTest {
         tapText("End break now")
         assertEquals(listOf(TimerIntent.MarkColorUpDone(), TimerIntent.EndBreakNow), timerIntents)
         assertEquals(listOf("bank"), opened)
+    }
+
+    /**
+     * PP-091 #9: with a chip set set up in Tools, the break names and draws your chips (white 25s,
+     * red 100s), not a common home set's (green 25s, black 100s).
+     */
+    @Test
+    fun `a break colors up with your chip set once one is set up`() {
+        val standard = fixture.breaks.first { it.colorUp.isNotEmpty() }
+        assertEquals(25, standard.colorUpSwaps.first().chip)
+        show(fixture.onBreak(standard), TournamentUi(mode = TournamentMode.Running))
+        compose.onNodeWithContentDescription("green 25s for 1 ", substring = true).assertExists()
+
+        val night = fixture.withChipSet()
+        val colorUp = night.timeline.segments.filterIsInstance<BreakSegment>().first { it.colorUp.isNotEmpty() }
+        assertEquals(ChipColour.White, night.chipSet?.colourOf(25))
+        show(fixture.onBreak(colorUp, base = night), TournamentUi(mode = TournamentMode.Running))
+        compose.onNodeWithContentDescription("white 25s for 1 ", substring = true).assertExists()
+        compose.onNodeWithContentDescription("green 25s", substring = true).assertDoesNotExist()
     }
 
     @Test

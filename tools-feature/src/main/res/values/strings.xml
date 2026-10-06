@@ -16,10 +16,4 @@
     <string name="tools_test_chime">Test chime</string>
     <!-- What the old Settings screen's "About" card said, now under the Tools list -->
     <string name="tools_footer">Free and open source (MIT License).\nNo ads, no accounts, no tracking.\nNo internet permission · v%1$s</string>
-
-    <!-- Chip set (the chip calculator; S11 rebuilds it in M6) -->
-    <string name="chip_set_title">Chip set</string>
-    <string name="chip_set_reset">Reset chip set</string>
-    <string name="chip_set_reset_title">Reset chip calculator?</string>
-    <string name="chip_set_reset_description">This will reset the total chips value to tournament starting chips.</string>
 </resources>

@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 
@@ -93,18 +94,25 @@ fun PokerAppShell(
     }
 }
 
-/** The screen, centred at [ContentMaxWidth] at most, with snackbars along its bottom edge. */
+/**
+ * The screen, centred at [ContentMaxWidth] at most, with snackbars along its bottom edge. The full
+ * width is offered as [LocalShellWidth] for the two-pane layouts ([fillShellWidth]).
+ */
 @Composable
 private fun ShellScreen(screen: @Composable () -> Unit, snackbarHostState: SnackbarHostState?, modifier: Modifier) {
-    Box(modifier) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .wrapContentWidth(Alignment.CenterHorizontally)
-                .widthIn(max = ContentMaxWidth)
-                .fillMaxWidth(),
-        ) {
-            screen()
+    val shellWidth = remember { ShellWidth() }
+    // Recorded while measuring (no subcomposition, so the screen still moves between layouts as is).
+    Box(modifier.layout { measurable, constraints -> with(shellWidth) { measure(measurable, constraints) } }) {
+        CompositionLocalProvider(LocalShellWidth provides shellWidth) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .wrapContentWidth(Alignment.CenterHorizontally)
+                    .widthIn(max = ContentMaxWidth)
+                    .fillMaxWidth(),
+            ) {
+                screen()
+            }
         }
         if (snackbarHostState != null) {
             PokerSnackbarHost(

@@ -43,7 +43,9 @@ import com.huntercoles.pokerpayout.core.design.PokerType
  *
  * The selected segment gets a FeltHigh fill, a DarkGold outline and gold text. A segment may carry
  * a [secondary] preview value under its label (the 1st-place prize, "$225"). Each segment is a
- * radio button for TalkBack, at least 48 dp tall; labels wrap rather than truncate.
+ * radio button for TalkBack, at least 48 dp tall; labels wrap rather than truncate. While not
+ * [enabled] (a structure locked while the clock runs) the selection still shows, dimmed, and taps do
+ * nothing.
  */
 @Suppress("LongParameterList") // a component API: one parameter per visual option
 @Composable
@@ -54,6 +56,7 @@ fun <T> PokerSegmentedControl(
     label: (T) -> String,
     modifier: Modifier = Modifier,
     secondary: ((T) -> String?)? = null,
+    enabled: Boolean = true,
 ) {
     val trackShape = RoundedCornerShape(PokerDimens.CornerControl)
     BoxWithConstraints(modifier.fillMaxWidth()) {
@@ -77,6 +80,7 @@ fun <T> PokerSegmentedControl(
                     secondary = secondary?.invoke(option),
                     selected = option == selected,
                     styles = SegmentStyles(labelStyle, secondaryStyle, tall = secondary != null),
+                    enabled = enabled,
                     onClick = { onSelect(option) },
                     modifier = Modifier
                         .weight(1f)
@@ -96,17 +100,23 @@ private fun Segment(
     secondary: String?,
     selected: Boolean,
     styles: SegmentStyles,
+    enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val interactions = remember { MutableInteractionSource() }
     val thumbShape = RoundedCornerShape(9.dp)
-    val color = if (selected) PokerColors.PokerGold else PokerColors.Chalk
+    val color = when {
+        !enabled -> PokerColors.ChalkDim
+        selected -> PokerColors.PokerGold
+        else -> PokerColors.Chalk
+    }
     // The segment (with its share of the track's padding) takes the tap; the thumb is drawn inside.
     Box(
         modifier = modifier
             .selectable(
                 selected = selected,
+                enabled = enabled,
                 interactionSource = interactions,
                 indication = null,
                 role = Role.RadioButton,

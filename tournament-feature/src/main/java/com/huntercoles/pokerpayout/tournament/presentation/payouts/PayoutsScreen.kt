@@ -108,6 +108,7 @@ fun PayoutsContent(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             if (state.isLocked) LockedNote()
+            if (state.night != NightSave.NotOver) SaveNightCard(state.night, onIntent)
             PoolHero(state)
             StructurePicker(state, onIntent)
             RoundingPicker(state, onIntent)

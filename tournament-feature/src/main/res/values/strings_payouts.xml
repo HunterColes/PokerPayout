@@ -69,6 +69,11 @@
         <item quantity="other">%1$d add-ons %2$s</item>
     </plurals>
 
+    <!-- Saving the finished night to History (PP-037) -->
+    <string name="payouts_night_over">The night is over and everyone is paid.</string>
+    <string name="payouts_save_night">Save this night</string>
+    <string name="payouts_night_saved">Saved to History, in the Tools tab.</string>
+
     <!-- Share as text -->
     <string name="payouts_share_title">Poker night payouts</string>
     <string name="payouts_share_pool">Prize pool %1$s (%2$s)</string>

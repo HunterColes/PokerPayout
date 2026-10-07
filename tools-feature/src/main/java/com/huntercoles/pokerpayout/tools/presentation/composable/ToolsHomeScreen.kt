@@ -74,6 +74,7 @@ private val Tools = listOf(
     Tool(NavigationDestination.ChipCalculator, PokerIcons.Chip, R.string.tools_chips_title, R.string.tools_chips_description),
     Tool(NavigationDestination.HandRanks, PokerIcons.List, R.string.tools_ranks_title, R.string.tools_ranks_description),
     Tool(NavigationDestination.SeatDraw, PokerIcons.Seat, R.string.tools_seats_title, R.string.tools_seats_description),
+    Tool(NavigationDestination.History, PokerIcons.Trophy, R.string.tools_history_title, R.string.tools_history_description),
 )
 
 /** The Tools tab (S7): the tools as a list, then the Sound section, then the app's promise. */

@@ -27,7 +27,8 @@ import org.robolectric.annotation.Config
 
 /**
  * The Payouts tab through its real ViewModel and saved settings (S6): presets, rounding, the places
- * stepper, the structure sheet, the lock while the clock runs, and Share as plain text.
+ * stepper, the structure sheet, the lock while the clock runs, Share as plain text, and saving the
+ * finished night to History (PP-037).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "en-rUS-w412dp-h915dp-port-xhdpi")
@@ -122,5 +123,16 @@ class PayoutsScreenTest {
         assertEquals(Intent.ACTION_SEND, send.action)
         assertEquals("text/plain", send.type)
         assertTrue(send.getStringExtra(Intent.EXTRA_TEXT)!!.startsWith("Poker night payouts\nPrize pool $450"))
+    }
+
+    @Test
+    fun saveThisNightPutsTheNightInHistoryOnce() {
+        game.settled()
+        show()
+        compose.onNodeWithText("Save this night").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Saved to History, in the Tools tab.").assertExists()
+        compose.onNodeWithText("Save this night").assertDoesNotExist()
+        assertEquals(1, game.nights.nights.value.size)
     }
 }

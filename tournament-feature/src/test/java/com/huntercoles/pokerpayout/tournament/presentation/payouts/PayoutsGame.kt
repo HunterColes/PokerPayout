@@ -5,12 +5,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
+import com.huntercoles.pokerpayout.core.domain.history.NightStore
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
+import com.huntercoles.pokerpayout.core.preferences.ChipCalculatorPreferences
+import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
+import com.huntercoles.pokerpayout.core.time.TimeSource
+import com.huntercoles.pokerpayout.tournament.domain.presets.CurrentSetup
+import com.huntercoles.pokerpayout.tournament.domain.presets.PresetStore
 
 /**
  * The mockups' game for the Payouts tab (S6), recorded straight into the preferences: 9 players
@@ -24,10 +30,13 @@ class PayoutsGame {
     val bank: BankPreferences
     private val store = ViewModelStore()
 
+    val nights: NightStore
+    val presets: PresetStore
+    val setup: CurrentSetup
+
     init {
-        listOf("tournament_prefs", "timer_prefs", "bank_prefs").forEach {
-            context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
-        }
+        listOf("tournament_prefs", "timer_prefs", "bank_prefs", "chip_calculator_prefs", "tournament_presets", "night_history")
+            .forEach { context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit() }
         tournament = TournamentPreferences(context).apply {
             setPlayerCount(NAMES.size)
             setBuyIn(40.0)
@@ -39,6 +48,9 @@ class PayoutsGame {
             setPayoutRounding(PayoutRounding.FIVE_DOLLARS)
         }
         bank = BankPreferences(context)
+        nights = NightStore(context)
+        presets = PresetStore(context)
+        setup = CurrentSetup(tournament, TimerPreferences(context), ChipCalculatorPreferences(context, tournament), bank)
     }
 
     /** Names, buy-ins, Marcus's rebuy and the five add-ons. */
@@ -61,6 +73,12 @@ class PayoutsGame {
         knockOut(MARCUS, by = DANA)
     }
 
+    /** Finished, and everyone owed money paid (Dana, Marcus and Priya): the night can be saved (PP-037). */
+    fun settled(): PayoutsGame = apply {
+        finished()
+        listOf(DANA, MARCUS, PRIYA).forEach { bank.savePlayerPayedOutStatus(it, true) }
+    }
+
     fun knockOut(id: Int, by: Int?) {
         bank.savePlayerOutStatus(id, true)
         bank.savePlayerEliminatedBy(id, by)
@@ -74,13 +92,23 @@ class PayoutsGame {
                 tournament,
                 bank,
                 SettleTournamentUseCase(CalculatePayoutsUseCase()),
-                CalculatePayoutsUseCase()
+                CalculatePayoutsUseCase(),
+                NightRecorder(nights, presets, setup, Midday)
             ) as T
         }
         return ViewModelProvider(store, factory)[PayoutsViewModel::class.java]
     }
 
     fun clear() = store.clear()
+
+    /** Midday on 5 October 2026 (UTC): a night saved in these tests is dated that day. */
+    private object Midday : TimeSource {
+        override fun elapsedRealtimeMillis(): Long = 0L
+
+        override fun wallClockMillis(): Long = 1_791_201_600_000L
+
+        override fun bootCount(): Int = -1
+    }
 
     companion object {
         val NAMES = listOf("Dana", "Marcus", "Priya", "Theo", "Jo", "Sam", "Alex", "Rita", "Ben")

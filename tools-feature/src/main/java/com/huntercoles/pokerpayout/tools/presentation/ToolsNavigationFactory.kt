@@ -12,6 +12,7 @@ import com.huntercoles.pokerpayout.core.navigation.NavigationFactory
 import com.huntercoles.pokerpayout.core.navigation.NavigationManager
 import com.huntercoles.pokerpayout.tools.presentation.composable.ChipSetRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.HandRanksScreen
+import com.huntercoles.pokerpayout.tools.presentation.composable.HistoryRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.OddsCalculatorScreen
 import com.huntercoles.pokerpayout.tools.presentation.composable.SeatDrawRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ToolsHomeScreen
@@ -46,6 +47,11 @@ class ToolsNavigationFactory @Inject constructor(
 
         builder.composable<NavigationDestination.SeatDraw> {
             SeatDrawRoute(onBack = navigationManager::navigateBack)
+        }
+
+        // Saved nights and the season's points (PP-037)
+        builder.composable<NavigationDestination.History> {
+            HistoryRoute(onBack = navigationManager::navigateBack)
         }
     }
 }

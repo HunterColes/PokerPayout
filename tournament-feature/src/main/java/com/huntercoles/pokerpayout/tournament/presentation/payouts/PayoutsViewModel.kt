@@ -2,6 +2,8 @@ package com.huntercoles.pokerpayout.tournament.presentation.payouts
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.huntercoles.pokerpayout.core.domain.history.NightPlayer
+import com.huntercoles.pokerpayout.core.domain.history.NightResults
 import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
@@ -33,28 +35,37 @@ sealed interface PayoutsIntent {
     data object HideStructure : PayoutsIntent
 
     data class SaveStructure(val settings: PayoutSettings) : PayoutsIntent
+
+    /** Saves the finished night to History (PP-037); offered once everyone is paid. */
+    data object SaveNight : PayoutsIntent
 }
 
 /**
  * The Payouts tab (S6). One settlement of what the Bank recorded (the same one the Bank shows), so
  * the pool, the table and the names agree with the Bank to the cent, rebuys at their prices (PP-085).
- * The structure is saved in the tournament settings and locked while the clock runs.
+ * The structure is saved in the tournament settings and locked while the clock runs. Once the night
+ * is over and everyone is paid, it can be saved to History (PP-037).
  */
 @HiltViewModel
 class PayoutsViewModel @Inject constructor(
     private val tournamentPreferences: TournamentPreferences,
     private val bankPreferences: BankPreferences,
     private val settleTournament: SettleTournamentUseCase,
-    private val calculatePayouts: CalculatePayoutsUseCase
+    private val calculatePayouts: CalculatePayoutsUseCase,
+    private val nights: NightRecorder
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PayoutsUiState())
     val uiState: StateFlow<PayoutsUiState> = _uiState.asStateFlow()
 
+    /** Tonight's results while the night is over and everyone is paid; null before. */
+    private var finished: List<NightPlayer>? = null
+
     init {
         refresh()
         viewModelScope.launch { tournamentPreferences.config.collect { refresh() } }
         viewModelScope.launch { bankPreferences.revision.collect { refresh() } }
+        viewModelScope.launch { nights.nights.collect { refresh() } }
         viewModelScope.launch {
             tournamentPreferences.tournamentLocked.collect { locked -> _uiState.update { it.copy(isLocked = locked) } }
         }
@@ -71,7 +82,22 @@ class PayoutsViewModel @Inject constructor(
                 _uiState.update { it.copy(showStructureSheet = false) }
                 change { intent.settings }
             }
+            PayoutsIntent.SaveNight -> saveNight()
         }
+    }
+
+    /** Saves tonight once: nothing happens before it is over, or once History holds it. */
+    private fun saveNight() {
+        val players = finished ?: return
+        val pool = _uiState.value.pool.prizePoolCents
+        if (!nights.isSaved(players, pool)) nights.save(players, pool)
+        refresh()
+    }
+
+    private fun nightSave(tonight: List<NightPlayer>?, prizePoolCents: Long): NightSave = when {
+        tonight == null -> NightSave.NotOver
+        nights.isSaved(tonight, prizePoolCents) -> NightSave.Saved
+        else -> NightSave.Offered
     }
 
     /** The places paid now (the table never pays more places than there are players). */
@@ -111,6 +137,8 @@ class PayoutsViewModel @Inject constructor(
         )
         val settings = tournamentPreferences.getPayoutSettings()
         val places = settlement.payoutTable.places.size.coerceAtLeast(1)
+        val tonight = NightResults.of(settlement, players, names)
+        finished = tonight
         _uiState.update {
             it.copy(
                 playerCount = config.numPlayers,
@@ -132,7 +160,8 @@ class PayoutsViewModel @Inject constructor(
                 maxPlaces = PayoutPlaces.maxFor(config.numPlayers),
                 rows = rows(settlement, names),
                 bubble = bubble(settlement, config.numPlayers),
-                bounties = bounties(settlement, names, config.money.bountyCents, config.money.foodCents * config.numPlayers)
+                bounties = bounties(settlement, names, config.money.bountyCents, config.money.foodCents * config.numPlayers),
+                night = nightSave(tonight, settlement.pool.prizePoolCents)
             )
         }
     }

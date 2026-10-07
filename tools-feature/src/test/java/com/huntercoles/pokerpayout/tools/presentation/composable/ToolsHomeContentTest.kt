@@ -54,12 +54,14 @@ class ToolsHomeContentTest {
         compose.onNodeWithText("Chip set").performClick()
         compose.onNodeWithText("Hand ranks").performClick()
         compose.onNodeWithText("Seat draw").performClick()
+        compose.onNodeWithText("History").performScrollTo().performClick()
         assertEquals(
             listOf(
                 NavigationDestination.OddsCalculator,
                 NavigationDestination.ChipCalculator,
                 NavigationDestination.HandRanks,
                 NavigationDestination.SeatDraw,
+                NavigationDestination.History,
             ),
             opened,
         )

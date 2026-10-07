@@ -1060,6 +1060,35 @@ s_payouts_nav_back() {
   require_tab_selected Tournament
 }
 
+# History (PP-037) -----------------------------------------------------------------------------------
+# The tour's finished night (Alice 1st, Player 5 2nd) is over once Player 5 is paid too: the Payouts
+# tab then offers "Save this night", once, and the night shows in Tools > History, with Alice on 5
+# points (5 players, 1st). Each part scrolls to what it checks last, since a swipe flings less on
+# GitHub's emulator.
+s_history_save() {
+  tab Bank
+  ui scroll-to "desc~=Player 5, paid out, " --max 3
+  ui tap "desc~=Player 5, paid out, "
+  ui tap "text~=Mark paid · \$"
+  ui wait-gone "text=Pay Player 5"
+  tab Payouts
+  ui tap "text=Save this night"
+  ui assert-text "text=Saved to History, in the Tools tab." || return 1
+  if ui find "text=Save this night" --timeout 1 >/dev/null 2>&1; then echo "[ui] FAIL still offered after saving"; return 1; fi
+  tab Tools
+  ui scroll-to text=History --max 4
+  ui tap text=History
+  ui assert-text "text=1 night saved" "text=Most points all time: Alice" "desc=1st, Alice, 5 points, 1 night · 1 win" || return 1
+  require_tab_selected Tools || return 1
+  ui scroll-to "5 players · Alice won" --max 3
+  ui tap "5 players · Alice won"
+  ui assert-text "desc=Share this night" Alice "Player 5" || return 1
+  ui back                                      # the night -> History
+  ui assert-text "text=1 night saved" || return 1
+  ui back                                      # History -> the Tools list
+  ui assert-text "text=Seat draw" text=History
+}
+
 # Cash game in the Bank (S13, M7) ---------------------------------------------------------------
 # Its own ledger beside the tournament's: three players buy in, Theo tops up, everyone's chips are
 # counted ($120 in, $120 out), and the settle-up says who pays whom. Then back to the tournament,
@@ -1750,6 +1779,7 @@ step bank-cutoff-reset    "Reset the tournament: clock and cutoff cleared"      
 step payouts-nav          "Payouts tab: the finished night by name, adds up"    s_payouts_nav
 step payouts-nav-editor   "Payouts tab: structure sheet opens and closes"       s_payouts_nav_editor
 step payouts-nav-back     "Back from a tab returns to Tournament (B16)"         s_payouts_nav_back
+step history-save         "Pay everyone: save the night once; it is in History" s_history_save
 step cash-mode            "Bank: switch to the cash game (S13), nobody in yet"   s_cash_mode
 step cash-players         "Cash: Dana \$40, Sam \$20, Theo \$40 buy in"           s_cash_players
 step cash-top-up          "Cash: Theo tops up \$20 from his sheet"              s_cash_top_up

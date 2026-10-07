@@ -33,6 +33,10 @@ sealed class NavigationDestination {
     @Serializable
     data object SeatDraw : NavigationDestination()
 
+    /** Saved nights and the season's points standings (PP-037). */
+    @Serializable
+    data object History : NavigationDestination()
+
     @Serializable
     data object Back : NavigationDestination()
 }

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- History (S16, PP-037): saved nights and the season's points -->
+    <string name="history_title">History</string>
+    <plurals name="history_nights_count">
+        <item quantity="one">%1$d night saved</item>
+        <item quantity="other">%1$d nights saved</item>
+    </plurals>
+    <string name="history_empty_title">No nights saved yet</string>
+    <string name="history_empty_body">When a tournament is over and everyone is paid, save it from the Payouts tab. It shows up here, with the season\'s points.</string>
+
+    <!-- The season -->
+    <string name="history_season">Season</string>
+    <string name="history_all_time">All time</string>
+    <!-- The points rule, fixed: players in the night minus the place, plus 1 -->
+    <string name="history_points_rule">Points: players in the night minus your place, plus 1. 1st of 9 scores 9; the first out scores 1.</string>
+    <plurals name="history_player_of_year">
+        <item quantity="one">Player of %1$d: %2$s</item>
+        <item quantity="other">Players of %1$d, tied: %2$s</item>
+    </plurals>
+    <plurals name="history_top_all_time">
+        <item quantity="one">Most points all time: %1$s</item>
+        <item quantity="other">Most points all time, tied: %1$s</item>
+    </plurals>
+    <plurals name="history_points">
+        <item quantity="one">%1$d point</item>
+        <item quantity="other">%1$d points</item>
+    </plurals>
+    <plurals name="history_nights">
+        <item quantity="one">%1$d night</item>
+        <item quantity="other">%1$d nights</item>
+    </plurals>
+    <plurals name="history_wins">
+        <item quantity="one">%1$d win</item>
+        <item quantity="other">%1$d wins</item>
+    </plurals>
+
+    <!-- The nights -->
+    <string name="history_nights_heading">Nights</string>
+    <plurals name="history_players">
+        <item quantity="one">%1$d player</item>
+        <item quantity="other">%1$d players</item>
+    </plurals>
+    <!-- "9 players · Dana won" -->
+    <string name="history_night_line">%1$s · %2$s won</string>
+    <string name="history_open">Open</string>
+    <string name="history_export">Export as CSV</string>
+    <string name="history_export_subject">Poker nights</string>
+    <string name="history_list_separator">", "</string>
+    <string name="history_separator">" · "</string>
+
+    <!-- One night -->
+    <string name="history_prize_pool">Prize pool</string>
+    <string name="history_players_stat">Players</string>
+    <string name="history_share">Share this night</string>
+    <string name="history_delete">Delete this night</string>
+    <string name="history_deleted">Night deleted</string>
+    <string name="history_undo">Undo</string>
+    <string name="history_paid_in">Paid in %1$s</string>
+    <plurals name="history_rebuys">
+        <item quantity="one">%1$d rebuy</item>
+        <item quantity="other">%1$d rebuys</item>
+    </plurals>
+    <plurals name="history_add_ons">
+        <item quantity="one">%1$d add-on</item>
+        <item quantity="other">%1$d add-ons</item>
+    </plurals>
+    <plurals name="history_knockouts">
+        <item quantity="one">%1$d knockout</item>
+        <item quantity="other">%1$d knockouts</item>
+    </plurals>
+    <string name="history_bounties">bounties %1$s</string>
+
+    <!-- Share as text -->
+    <string name="history_share_heading">Poker night, %1$s</string>
+    <string name="history_share_heading_named">Poker night, %1$s (%2$s)</string>
+    <string name="history_share_pool">Prize pool %1$s · %2$s</string>
+    <string name="history_share_row">%1$s %2$s</string>
+    <string name="history_share_row_won">%1$s %2$s: %3$s</string>
+</resources>

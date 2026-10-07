@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,7 +46,8 @@ import com.huntercoles.pokerpayout.tools.presentation.SlotValue
  * The odds screen, stateless (S8 entering cards, S9 results). Top to bottom: the header (back, Swap,
  * New hand), the board, one row per seat, "Add player", "Run it out", the insight panel, the table
  * settings, and the docked keypad while it is open. In a short landscape window the keypad docks at
- * the side.
+ * the side; in a short upright one it takes a row less on a narrow phone ([KeypadDock.BottomShort]),
+ * so the page above it keeps room for the slot being filled, which scrolls into view ([CardTarget]).
  */
 @Composable
 fun OddsCalculatorContent(
@@ -58,6 +60,7 @@ fun OddsCalculatorContent(
         val sideKeypad = state.keypad.isOpen && maxWidth > maxHeight && maxHeight < SIDE_KEYPAD_BELOW
         // As wide as seven 48 dp keys, but never leaving the board less than it needs.
         val sideWidth = (maxWidth - SIDE_CONTENT_MIN).coerceAtMost(SIDE_KEYPAD_WIDTH)
+        val bottomDock = if (maxHeight < SHORT_KEYPAD_BELOW) KeypadDock.BottomShort else KeypadDock.Bottom
         if (sideKeypad) {
             Row(Modifier.fillMaxSize()) {
                 Column(Modifier.weight(1f)) {
@@ -82,6 +85,7 @@ fun OddsCalculatorContent(
                     state = state,
                     onIntent = onIntent,
                     modifier = Modifier.widthIn(max = KEYPAD_MAX_WIDTH).fillMaxWidth().align(Alignment.CenterHorizontally),
+                    dock = bottomDock,
                 )
             }
         }
@@ -128,38 +132,42 @@ private fun OddsBody(state: OddsCalculatorUiState, onIntent: (OddsCalculatorInte
     val labels = rememberOddsLabels()
     val res = LocalContext.current.resources
     val seats = remember(state.table, state.result, labels) { seatUis(state, labels, res) }
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = PokerDimens.Gutter),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Column(Modifier.widthIn(max = CONTENT_MAX_WIDTH).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            BoardStrip(state.table, state.keypad.target, state.fourColourDeck, onIntent)
-            seats.forEach { SeatRow(it, state.table, state.keypad.target, state.fourColourDeck, onIntent) }
-            if (state.table.seats.size < OddsTable.MAX_SEATS) {
-                PokerButton(
-                    text = stringResource(R.string.odds_add_player),
-                    onClick = { onIntent(OddsCalculatorIntent.AddPlayer) },
-                    variant = PokerButtonVariant.Secondary,
-                    size = PokerButtonSize.Small,
-                    icon = PokerIcons.Plus,
-                    modifier = Modifier.align(Alignment.Start),
-                )
+    val scroll = rememberScrollState()
+    // The page's height, for the keypad's slot to keep itself in view when the keypad opens and shrinks it.
+    CompositionLocalProvider(LocalOddsPageHeight provides scroll.viewportSize) {
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .verticalScroll(scroll)
+                .padding(horizontal = PokerDimens.Gutter),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Column(Modifier.widthIn(max = CONTENT_MAX_WIDTH).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                BoardStrip(state.table, state.keypad.target, state.fourColourDeck, onIntent)
+                seats.forEach { SeatRow(it, state.table, state.keypad.target, state.fourColourDeck, onIntent) }
+                if (state.table.seats.size < OddsTable.MAX_SEATS) {
+                    PokerButton(
+                        text = stringResource(R.string.odds_add_player),
+                        onClick = { onIntent(OddsCalculatorIntent.AddPlayer) },
+                        variant = PokerButtonVariant.Secondary,
+                        size = PokerButtonSize.Small,
+                        icon = PokerIcons.Plus,
+                        modifier = Modifier.align(Alignment.Start),
+                    )
+                }
+                state.error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = PokerColors.Danger) }
+                if (state.canRunItOut && state.table.boardCards.size < OddsTable.BOARD_SLOTS) {
+                    PokerButton(
+                        text = stringResource(R.string.odds_run_it_out),
+                        onClick = { onIntent(OddsCalculatorIntent.RunItOut) },
+                        icon = PokerIcons.Play,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                InsightPanel(state)
+                OddsFooter(state, onIntent)
+                Spacer(Modifier.height(PokerDimens.SpacingDefault))
             }
-            state.error?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = PokerColors.Danger) }
-            if (state.canRunItOut && state.table.boardCards.size < OddsTable.BOARD_SLOTS) {
-                PokerButton(
-                    text = stringResource(R.string.odds_run_it_out),
-                    onClick = { onIntent(OddsCalculatorIntent.RunItOut) },
-                    icon = PokerIcons.Play,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            InsightPanel(state)
-            OddsFooter(state, onIntent)
-            Spacer(Modifier.height(PokerDimens.SpacingDefault))
         }
     }
 }
@@ -190,6 +198,13 @@ private fun oddsStatus(state: OddsCalculatorUiState): String {
 
 /** A window shorter than this, in landscape, docks the keypad at the side. */
 private val SIDE_KEYPAD_BELOW = 480.dp
+
+/**
+ * A window shorter than this docks the keypad along the bottom in its short form. The smallest phones
+ * (320 x 569 dp, under 500 dp left once the tab bar and system bars are drawn) are well under it;
+ * a 360 x 780 dp phone (over 700 dp) is well over.
+ */
+private val SHORT_KEYPAD_BELOW = 600.dp
 private val SIDE_KEYPAD_WIDTH = 352.dp
 
 /** The board strip's five 48 dp targets, its padding and the gutters. */

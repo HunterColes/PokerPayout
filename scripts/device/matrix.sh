@@ -241,7 +241,7 @@ write_report() {
   (( ${#dirs[@]} )) || return 0
   python3 "$DEVICE_SCRIPTS/layout_check.py" "${dirs[@]}" | sed 's/^/[matrix] /' || true
   python3 "$DEVICE_SCRIPTS/matrix_report.py" "$M" --key-screens "$(xargs <<<"$KEY_SCREENS")" \
-    --variant "$VARIANT" --mode "$( (( FULL )) && echo full || { [[ -n "$STEPS" ]] && echo custom || echo "smoke and screens"; }; )" \
+    --variant "$VARIANT" --mode "$( (( FULL )) && echo full || { [[ -n "$STEPS" ]] && echo custom || { [[ -n "$SOFT_KB_RUN" ]] && echo "keyboard (soft-keyboard AVD)" || echo "smoke and screens"; }; }; )" \
     --wall "$(since "$T0")" --interrupted "$INTERRUPTED" --display-after "$(display_state 2>/dev/null || true)"
 }
 

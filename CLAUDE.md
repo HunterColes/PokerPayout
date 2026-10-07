@@ -10,9 +10,9 @@ GitHub releases. No ads, no accounts, no internet permission.
 |---|---|
 | `app` | `MainActivity` wiring, release build config (R8, signing from `keystore.properties`) |
 | `core` | Design system (`core/design`: `PokerTheme`, `PokerColors`, `PokerType`, components), navigation, preferences, money and blind maths, the device-matrix test kit (`src/testFixtures`) |
-| `tournament-feature` | Tournament tab (setup, clock, blinds, table view) and the Payouts tab |
-| `bank-feature` | Bank tab: buy-ins, rebuys, add-ons, knockouts, settlement |
-| `tools-feature` | Tools hub, Odds and Run it out, Chip set, Hand ranks |
+| `tournament-feature` | Tournament tab (setup, presets, clock, blinds, table view), the live clock notification and its service, and the Payouts tab |
+| `bank-feature` | Bank tab: buy-ins, rebuys, add-ons, knockouts and bounty types, settlement, and the cash game |
+| `tools-feature` | Tools hub (with Sound), Odds and Run it out, Chip set, Hand ranks, Seat draw |
 
 Jetpack Compose (Material 3), Hilt, MVI (`*Intent`, `*UiState`, `*ViewModel`), SharedPreferences.
 Screens are a thin route plus a stateless `*Content(state, onIntent)` composable.
@@ -25,7 +25,7 @@ Screens are a thin route plus a stateless `*Content(state, onIntent)` composable
   and reboots can't make it drift (`TimerViewModel`; see `TimerViewModelTest`). Don't write
   preferences on every tick.
 - **Design system first:** use `PokerTheme`, `PokerColors` tokens, `PokerType` and the components in
-  `core/design/components`. The colours marked `@Deprecated` are being retired screen by screen.
+  `core/design/components` (the old off-palette colours are gone since 1.3.9; don't add raw colours).
   48 dp touch targets and TalkBack labels on everything tappable.
 - **Strings go in `strings.xml`** as a file is touched. Copy is plain and short ("Paid", not "Payed").
 - **Keep working features.** The owner's rule: a redesign may move a capability, never drop it. List
@@ -62,8 +62,8 @@ JDK 21 toolchain (F-Droid's buildserver has only JDK 21; bytecode targets 17). T
 - **Unit tests** are JUnit 5 plus vintage; a guard fails the build if a module's tests silently stop
   running. Use fake clocks and seeded RNGs, never wall-clock budgets.
 - **Screenshot goldens** (Roborazzi on Robolectric) live in `*/src/test/screenshots/`. Plain
-  `testDebugUnitTest` verifies them; `./gradlew recordRoborazziDebug` re-records on purpose. Review
-  new goldens by eye (small phone at 2x font, phone, tablet, landscape).
+  `testDebugUnitTest` verifies them; re-record on purpose with `goldens.yml` on GitHub. They are
+  recorded on 6 cells (`DeviceMatrix.goldens`, plus `pinned` ones); review new ones by eye.
 - **Layout checks** (`core` test fixtures: `DeviceMatrix`, `ScreenTestRule`, `LayoutAssertions`) run
   every screen at 8 sizes x 3 font scales and fail on clipped, ellipsized, broken-word or off-screen
   text, targets under 48 dp, and overlapping targets.

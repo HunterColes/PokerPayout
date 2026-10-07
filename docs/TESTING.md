@@ -100,7 +100,8 @@ Deterministic device settings applied by `boot.sh`:
 * SystemUI demo mode: the clock is pinned to 12:00, battery shows 100 %, notifications are hidden
 * Wi-Fi and mobile data off, because the app needs no network and this keeps Play services quiet. Set `PP_KEEP_NETWORK=1` to keep them on.
 
-Environment knobs: `ANDROID_HOME`, `PP_AVD` (default `pokerpayout_test`), `PP_EMU_PORT`
+Environment knobs: `ANDROID_HOME`, `PP_AVD` (default `pokerpayout_test`), `PP_AVD_KEYBOARD=soft`
+(the soft-keyboard twin `pokerpayout_test_softkb` instead, section 10), `PP_EMU_PORT`
 (default `5580`, so the serial is `emulator-5580` and it never collides with a hand-launched
 emulator on 5554), `PP_GPU`, `PP_BOOT_TIMEOUT` (default 300 s), `PP_TIMEZONE`,
 `PP_REPORT_ROOT`.
@@ -730,6 +731,8 @@ flock /tmp/pokerpayout-emulator.lock scripts/device/matrix.sh --stop   # build, 
 scripts/device/matrix.sh --profiles daily              # the once-a-day set (7 profiles); all = every one
 scripts/device/matrix.sh --no-build                    # reuse the last APK
 scripts/device/matrix.sh --profiles small,tablet       # some profiles (--list shows them)
+scripts/device/matrix.sh --profiles soft-keyboard      # the full-height soft keyboard, on its own AVD
+scripts/device/matrix.sh --profiles tablet-ignore      # a tablet that ignores orientation requests
 scripts/device/matrix.sh --steps bank,ime,ime-done     # your own steps (launch and profile come first)
 scripts/device/matrix.sh --full                        # every tour step on every profile
 scripts/device/matrix.sh --release                     # the R8 build
@@ -740,10 +743,11 @@ reads a running script as it goes).
 
 ### Profiles
 
-There is one AVD (`pokerpayout_test`, 1080 x 2400 @ 420 dpi). Each profile overrides its screen
-with `adb shell wm size` and `wm density`, and sets `font_scale` and `user_rotation`. That takes
-seconds, needs no extra AVDs or system images, and the app really relays out: the `profile`
-step checks that the app's window is exactly the overridden screen.
+There is one AVD (`pokerpayout_test`, 1080 x 2400 @ 420 dpi), plus its soft-keyboard twin for the
+`soft-kb` profiles (below). Each profile overrides its screen with `adb shell wm size` and
+`wm density`, and sets `font_scale` and `user_rotation`. That takes seconds, needs no extra
+system images, and the app really relays out: the `profile` step checks that the app's window is
+exactly the overridden screen.
 
 | Profile | Screen | dp | Font | Turns | Set | Why |
 |---|---|---|---|---|---|---|
@@ -758,6 +762,9 @@ step checks that the app's window is exactly the overridden screen.
 | `default-f1.3` | the emulator's own | 411 x 914 | 1.3 | no | screens | Not in the default run: it found nothing `default` and `default-f2.0` don't |
 | `large` | 1440 x 3120 @ 560 | 411 x 891 | 1.0 | no | screens | Not in the default run: the same dp as `default` at 3.5x, and it found nothing more |
 | `tablet-land` | 1600 x 2560 @ 320, turned 90 | 1280 x 800 | 1.0 | yes | smoke | Not in the default run: the tablet turned, every tab landscape (`rotate` and `rotate-clock` turn every profile anyway) |
+| `tablet-ignore` | 1600 x 2560 @ 320 | 800 x 1280 | 1.0 | yes | smoke | Opt-in: the tablet with a display that ignores the app's orientation requests, as large screens may (see "Large screens that ignore orientation requests") |
+| `soft-kb` | the emulator's own, on the soft-keyboard AVD | 411 x 914 | 1.0 | no | keyboard | Opt-in, in a run of its own: no hardware keyboard, so the full-height soft keyboard (see "The keyboard") |
+| `soft-kb-small` | 720 x 1280 @ 360, on the soft-keyboard AVD | 320 x 569 | 1.0 | no | keyboard | The same on the smallest phone: the least room left above the keyboard |
 
 **Turns** follows the app's rotation rules (M3, PP-079/PP-088), by the smallest width:
 
@@ -770,8 +777,15 @@ step checks that the app's window is exactly the overridden screen.
 **Sets** (PP-093): `focused` is the routine run and the default (`small`, `small-f2.0`,
 `default-f2.0`, `tablet`); `daily` runs once a day (`small`, `small-f1.3`, `small-f2.0`, `compact`,
 `default-f2.0`, `foldable`, `tablet`; not `default`, which the plain tour covers on every pull
-request); `all` runs every profile. On GitHub, the `Device matrix` job in `device.yml` runs a set
-by hand: `gh workflow run device.yml --ref <branch> -f job=matrix -f profiles=focused`.
+request); `soft-keyboard` runs `soft-kb` and `soft-kb-small`; `all` runs every profile on the main
+AVD (every one but the `soft-kb` ones). A set's name stands alone (`--profiles focused`, not
+`focused,large`). On GitHub, the `Device matrix` job in `device.yml` runs a set or profiles by
+hand: `gh workflow run device.yml --ref <branch> -f job=matrix -f profiles=focused` (or
+`-f profiles=soft-keyboard`, `-f profiles=tablet-ignore`). Dispatched runs with different inputs
+run side by side, so those can start together; the same inputs again replace the earlier run. When
+the matrix fails, the job's "Show the failing steps" prints every failed step of every profile (its
+part of `tour.log` and the text on screen after it), and the log has each layout-check failure, so
+most failures can be read without downloading the report.
 
 The emulator scales any override onto its panel, so sizes bigger than 1080 x 2400 work too.
 Screenshots come out at the profile's own size. SystemUI forgets its demo mode when the size
@@ -779,7 +793,7 @@ changes, so the matrix sends it again (the clock stays at 12:00).
 
 ### What runs on each profile
 
-Each profile runs one of two step sets (`--list` prints them):
+Each profile runs one of three step sets (`--list` prints them):
 
 * **smoke** (50 steps, on `small` and `tablet`), in the tour's own order: setup (money, the
   Payouts tab and its structure sheet, blinds, the smallest chip, breaks, the ready ticket); Start,
@@ -790,6 +804,10 @@ Each profile runs one of two step sets (`--list` prints them):
   the rebuy cutoff with a clock running; process death; the other tabs turned; the tab layout.
 * **screens** (44 steps, everywhere else): the same without the keyboard and the Odds keypad
   round, neither of which changes with the text size.
+* **keyboard** (7 steps, on the `soft-kb` profiles): `launch`, `profile`, the keyboard over the
+  lowest name field on the Bank and put away (`ime`, `ime-done`), the tab layout, then
+  `bank-rename`: a name typed with the keyboard up and the tab switched on the bar that rides above
+  it.
 
 `--full` runs every tour step on every profile instead, with the matrix steps added. On profiles
 of 600 dp and up it leaves out the steps that assume a phone: the `rail` steps (the density
@@ -799,8 +817,19 @@ trick) and the tour's `table-view`, `table-view-resume`, `table-view-exit`, `rot
 (a step renamed on another branch): the matrix warns once and skips them.
 
 After a failed step the matrix's tour (`PP_TOUR_RECOVER=1`) presses Back if no tabs are on screen,
-so a dialog the failure left open doesn't fail every step after it; the failed step's
-screenshot is taken first. The plain tour doesn't do this.
+so a dialog the failure left open doesn't fail every step after it, and if the app is still out
+of sight (the launcher, after a failed `process-death`), it wakes the screen, closes the shade and
+opens the app again from the launcher, data and all (waiting for it without dragging anything);
+the failed step's screenshot is taken first. Never after `launch`, which starts the app itself. The
+plain tour doesn't do this.
+
+Each profile starts from the same place: the app stopped and the launcher in front before the
+display changes, then the screen woken, the keyguard dismissed and the shade closed. `ui.py launch`
+does the last three as well. (The first run after `process-death` passed ended a profile with the
+app in front and its clock running, and the next profile's launch failed: the app never came to the
+front, the dumps failed, and the steps after it ran blind and opened the quick settings.)
+`ui.py`'s dump also no longer falls back to an old dump file when `uiautomator dump` fails, and the
+trace in `tour.log` says why a dump failed.
 
 The matrix's own steps are opt-in tour steps in `scripts/device/steps-matrix.sh`:
 
@@ -810,31 +839,94 @@ The matrix's own steps are opt-in tour steps in `scripts/device/steps-matrix.sh`
 | `nav-layout` | Four tabs: a bottom bar below 600 dp, a rail down the left from 600 dp, on the profile as it is |
 | `rotate`, `rotate-upright` | On Tools and Bank, `user_rotation` 1, then 3, with the accelerometer off: a phone stays upright, a wide screen turns; the tabs work either way. `rotate`'s screenshot is the Bank turned to 270; `rotate-upright` turns it upright and checks it is the same process |
 | `rotate-clock`, `rotate-clock-back` | The running clock turned to 90 (the screenshot), then 270, then upright: on a phone the table view (no tabs), on a wide screen the clock itself in landscape (tabs and all); the same level throughout |
-| `table-view-land` | The table-view button: the clock alone, full screen, no tabs, landscape |
-| `table-view-close` | ✕: back to the clock, in the profile's orientation |
+| `table-view-land` | The table-view button: the clock alone, full screen, no tabs, landscape. On `tablet-ignore`: the display does not turn, and the step says whether the table view was letterboxed or fills the upright screen |
+| `table-view-close` | ✕: back to the clock, in the profile's orientation (on `tablet-ignore`, in the whole screen again: no letterbox left) |
 | `table-view-back` | ✕, then the same with the display turned to 270 (on a phone the turned clock already is the table view) |
 | `setup-close` | Closes the setup panel opened over the running clock (the tour's `setup-panel`); the clock runs on |
-| `process-death` | PP-093: the app in the background, killed as low memory does (`am kill`), opened again from the launcher. The clock must be on the same level with its time still counting (within 4 s of the time that passed, no restart), and every Bank cell (buy-in, rebuy, out, paid) the same as before |
-| `ime`, `ime-done` | The soft keyboard over the lowest name field on the Bank: the field stays above it |
+| `process-death` | PP-093: the app in the background, its process ended with `am force-stop`, opened again from the launcher. The clock must be on the same level with its time still counting (within 4 s of the time that passed, no restart), and every Bank cell (buy-in, rebuy, out, paid) the same as before. Not `am kill` (what low memory does): a running clock keeps a foreground service (the live clock, PP-081), and `am kill` leaves such a process alone. force-stop ends the process, the service and the notification at once, with no chance to save, and the next start is cold (no saved instance state), so the clock and the Bank come only from what the app had already written. It no longer covers a restore into the old task from saved instance state, which the app doesn't rely on for its data |
+| `ime`, `ime-done` | The soft keyboard over the lowest name field of a player still in (above the "OUT" rows) on the Bank: the field stays whole above it, below the status bar and clear of the tabs (the bar rides above the keyboard). On the main AVD (a hardware keyboard) `show_ime_with_hard_keyboard` is turned on for the two steps, a second before the tap, and put back after (however the tour ends); the field is tapped once more if no keyboard shows. On a `soft-kb` profile the setting is on throughout and the keyboard must be the full one (a fifth of the screen or more). `ime-done` puts it away |
 | `payouts-screen` | The Payouts tab's table adds up (the rail step's check, at any width) |
 
 **Scroll mode.** On a 569 dp-tall screen most of the texts a step asserts are below the fold. The
 matrix sets `PP_UI_SCROLL=1`, and `ui.py` then looks for a missing target by dragging the page
 (see the docstring in `ui.py`). Assertions count a text seen anywhere on the page and put the page
-back; taps stop where the target is. Drags rest before lifting, so nothing flings. A check that
-reads a whole list (the payout table) uses `page_dump`, one dump merged from the page's top to its
-end. The plain tour never sets it and behaves exactly as before. (A selector for a screen's own
+back; taps stop where the target is. The search goes down to the end and then up past where it
+started, so a page a step left part-way down is searched to its top as well. `scroll-to` ignores a
+step's small `--max` (set for the default screen): it goes on to that end of the page, then the
+other way, by drags rather than swipes (a swipe flings, and a fling can carry a short line, such as
+the breaks verdict on the small screen, past the screen between two dumps). Drags rest before lifting, so nothing flings. Only the app's
+own scrollers are dragged: with the launcher, the lock screen or the shade in front, a drag down
+would open the shade, so nothing is dragged until the app is back. A check that reads a whole list (the
+payout table, the chip stack, the Bank's rows) uses `page_dump`, one dump merged from the page's
+top to its end, whatever part of the page the step left on screen. The plain tour never sets it
+and behaves exactly as before. (A selector for a screen's own
 text next to a tab with the same name, such as the Payouts folder tab beside the rail's Payouts,
 uses the `in-scroll` token: inside a scroller, a ScrollView or list, even one whose content fits.)
 
-**The keyboard.** The AVD has a hardware keyboard (the tour types through it), so when
-`show_ime_with_hard_keyboard` is on, Gboard shows only its toolbar strip (about 48 dp). The `ime`
-step still proves the app resizes for a keyboard (the insets) and keeps the focused field above
-it. A full-height keyboard would need an AVD with `hw.keyboard=no`.
+**The keyboard.** The main AVD has a hardware keyboard, so when `show_ime_with_hard_keyboard` is
+on, Gboard shows only its toolbar strip (about 48 dp). The `ime` step still proves the app makes
+room for a keyboard (the insets) and keeps the focused field above it. For the real thing, the
+`soft-kb` profiles run on a second AVD, `pokerpayout_test_softkb`: the same image and screen with
+`hw.keyboard=no`, so Gboard comes up full height (about a third of a phone's screen, nearly half
+of the small one). `boot.sh` creates it on first use when `PP_AVD_KEYBOARD=soft` is set, which
+`matrix.sh` does for these profiles. Both AVDs use the same port (`emulator-5580`), so they never
+run side by side: `boot.sh` stops whichever of the two is up before it boots the other, and a
+matrix refuses to mix `soft-kb` profiles with the others (`--profiles soft-keyboard` is a run of
+its own). These profiles keep `show_ime_with_hard_keyboard` on from their start (so the IME comes
+up even if the device reports a keyboard), the `ime` step measures the keyboard once it has
+settled (Gboard can show its strip a moment before its keys, and a slow first one gets 10 s more),
+and it fails if the keyboard is under a fifth of the screen. `display.env` (and the matrix log, for
+these profiles) records what the device says: `keyboard=` from the configuration (`qwerty` or
+`nokeys`), `hard_keyboards=` (the input devices with letter keys, from `dumpsys input`) and `ime=`.
+`bank-rename` then types with the keyboard up and switches tabs on the bar above it. Typing itself
+(`adb shell input text`) works the same with either keyboard.
+
+The first run on GitHub (1.3.11) measured 126 px (420 dpi) and 108 px (360 dpi): both exactly
+48 dp, Gboard's strip, on the AVD created with no hardware keyboard. The emulator adds no keyboard
+device for `hw.keyboard=no` (its source: no `virtio-keyboard-pci`, no letter keys on the goldfish
+events device), so either the first frame was taken before the keys came up, or Gboard still saw a
+keyboard. The settle-and-wait and the always-on setting deal with the first; the facts above say
+which it was. If the device does report a keyboard, Gboard can't be made to show its keys without
+root: the way on would be another image (`default`, with the AOSP keyboard) for this AVD.
+
+### Large screens that ignore orientation requests
+
+On large screens the app's orientation requests are not always heeded. Tablets since Android 12L
+may ignore them: the display stays as the user holds it, and an app that asks for a fixed
+orientation is letterboxed in it. Newer releases drop the request altogether: the user can set an
+app to full screen in its aspect-ratio settings (AOSP has the override from Android 14 QPR1, where
+the device turns those settings on), and Android 16 does it by default for apps that target API 36
+on screens 600 dp and up. The app's requests then follow the user's own rotation. On a tablet the
+app asks for a fixed orientation in one place only (`TournamentOrientation`): the table view (⤢)
+asks for landscape.
+
+The opt-in `tablet-ignore` profile emulates this on the API 34 image:
+
+* `adb shell cmd window set-ignore-orientation-request true` (the same as `wm
+  set-ignore-orientation-request`). The command exists from Android 12 (API 31; it is in AOSP's
+  `android12-release` `WindowManagerShellCommand`, not in `android11-release`), so the API 34
+  image has it. The `profile` step checks it took (`get-ignore-orientation-request`).
+* Android 16's version, best effort: `adb shell am compat enable OVERRIDE_ANY_ORIENTATION_TO_USER
+  <app>`, the compat change behind the full-screen override. It only exists from Android 14 QPR3
+  (AOSP `android14-qpr3-release`; not in `android14-release` to `android14-qpr2-release`), so it
+  depends on which API 34 build the image is. It is `@Overridable`, so adb may set it on the
+  release build too. The matrix log says whether it took, and so do the `profile` and
+  `table-view-land` steps. Without it, the table view is letterboxed (the Android 12L to 15
+  behaviour), which is still a real case.
+
+On that profile `table-view-land` checks that the display did not turn and the table view shows
+whole (the clock line, the timer button, ✕, no tabs), letterboxed or filling the upright screen;
+`table-view-close` checks the clock is back in the whole screen. The rest of the smoke set runs as
+on `tablet`, and the layout checks read every step. Phones are out of scope: Android 16 only does
+this from 600 dp.
 
 ### Automatic layout checks
 
-After the profiles run, `layout_check.py` reads every step's UI dump and screenshot:
+After the profiles run, `layout_check.py` reads every step's UI dump and screenshot. It checks only
+the app's own nodes: a dump of the launcher, the share sheet, a permission dialog or the shade is
+someone else's layout (on the first GitHub run, the steps after a failed `process-death` dumped the
+launcher, and those dumps were checked too). Each failure is printed in the log as well as the
+report:
 
 | Check | Severity | Flags | How far to trust it |
 |---|---|---|---|
@@ -905,19 +997,25 @@ timed; the plain tour alone takes 8 minutes on the default screen, so expect wel
 
 The emulator is shared and keeps `wm size` and `wm density` across reboots, so:
 
-* `matrix.sh` resets the size, density, font scale (1.0), rotation (0, accelerometer off) and the
-  keyboard setting at the start, between profiles, at the end, and on Ctrl-C or any signal (it
-  stops its tour first). It prints the display it left behind.
+* `matrix.sh` resets the size, density, font scale (1.0), rotation (0, accelerometer off), the
+  keyboard setting and ignored orientation requests (with `tablet-ignore`'s compat change, if it
+  set one) at the start, between profiles, at the end, and on Ctrl-C or any signal (it stops its
+  tour first). It prints the display it left behind.
 * `tour.sh` puts back whatever its own steps changed (the rail's density, a rotation, the
   keyboard) however it ends: to the profile's values, not the device's.
 * If a matrix is killed outright (SIGKILL), the next `boot.sh` (every tour runs it) resets a
-  leftover size or density override.
+  leftover size or density override, and a display left ignoring orientation requests. (A leftover
+  `OVERRIDE_ANY_ORIENTATION_TO_USER` does nothing on a display that heeds them.)
+* After a `soft-kb` run without `--stop`, the soft-keyboard AVD is the one up; the next tour's
+  `boot.sh` stops it and boots the main one.
 
 ### Adding a profile or a rotation case
 
 * **A profile:** add a line to `PROFILES` in `matrix.sh` (name, `WxH`, dpi, font, rotation,
-  turns, step set, description). To run it by default, add its name to `DEFAULT_PROFILES`, and
-  keep an eye on the run's time.
+  turns, step set, device, description). The device column is `-`, `soft-kb` (the soft-keyboard
+  AVD) or `ignore-orient` (orientation requests ignored); the steps read it as
+  `PP_PROFILE_DEVICE`. To run it by default, add its name to `DEFAULT_PROFILES`, and keep an eye on
+  the run's time.
 * **A rotated profile:** set its rotation to 1 (or 3). `turns` says whether the app's ordinary
   screens turn with the display there: `yes` from 600 dp (PP-088), `no` on phones, where only the
   running clock turns (into the table view). The `profile`, `rotate`, `table-view-*` and

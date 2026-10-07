@@ -4,14 +4,19 @@
 #   scripts/device/boot.sh            # quick boot (reuses the AVD's snapshot if any)
 #   scripts/device/boot.sh --cold     # ignore snapshots: cold boot, don't save one
 #   scripts/device/boot.sh --wipe     # factory-reset the test AVD's data, then cold boot
+#   PP_AVD_KEYBOARD=soft scripts/device/boot.sh   # the soft-keyboard AVD instead (see below)
 #
 # No window, no audio, no boot animation, software GPU (swiftshader_indirect works
 # without a display). Uses a dedicated AVD (default "pokerpayout_test", API 34
 # google_apis_playstore x86_64, 1080x2400 @ 420dpi, 3 GB, 4 cores) that this script creates on
-# demand. Any other AVD named via PP_AVD is launched -read-only so it is never
-# mutated. After boot it applies deterministic settings (animations off, en-US,
-# 24h clock, UTC, touches hidden, screen always on, demo-mode status bar 12:00,
-# Wi-Fi/data off, no display size/density override left by a killed device matrix).
+# demand. With PP_AVD_KEYBOARD=soft it uses its twin "pokerpayout_test_softkb" instead, the same
+# but with no hardware keyboard (hw.keyboard=no), so the full-height soft keyboard comes up (the
+# device matrix's soft-kb profiles). Both use the same port, so they never run side by side: if
+# the other one is up, it is stopped first. Any other AVD named via PP_AVD is launched -read-only
+# so it is never mutated. After boot it applies deterministic settings (animations off, en-US,
+# 24h clock, UTC, touches hidden, screen always on, demo-mode status bar 12:00, Wi-Fi/data off,
+# no display size/density override or ignored orientation requests left by a killed device
+# matrix).
 #
 # stdout: a few summary lines. Emulator output: build/device/emulator.log
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -22,27 +27,30 @@ for arg in "$@"; do
   case "$arg" in
     --cold) COLD=1 ;;
     --wipe) WIPE=1; COLD=1 ;;
-    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,21p' "$0"; exit 0 ;;
     *) die "unknown option: $arg" ;;
   esac
 done
 
 SYSIMG_REL="system-images/android-34/google_apis_playstore/x86_64/"
-TEST_AVD="pokerpayout_test"
+# TEST_AVD and SOFT_KEYBOARD_AVD come from lib.sh: the two AVDs this script owns.
+our_avd() { [[ "$1" == "$TEST_AVD" || "$1" == "$SOFT_KEYBOARD_AVD" ]]; }
 
-create_test_avd() {
-  local avd_dir="$ANDROID_AVD_HOME/$TEST_AVD.avd"
+create_test_avd() { # $1 = TEST_AVD, or SOFT_KEYBOARD_AVD (the same without a hardware keyboard)
+  local avd="$1" keyboard=yes name="PokerPayout headless test (API 34)"
+  if [[ "$avd" == "$SOFT_KEYBOARD_AVD" ]]; then keyboard=no; name="PokerPayout headless test, soft keyboard (API 34)"; fi
+  local avd_dir="$ANDROID_AVD_HOME/$avd.avd"
   [[ -d "$ANDROID_HOME/$SYSIMG_REL" ]] || die "system image missing: $ANDROID_HOME/$SYSIMG_REL"
   mkdir -p "$avd_dir"
-  cat > "$ANDROID_AVD_HOME/$TEST_AVD.ini" <<EOF
+  cat > "$ANDROID_AVD_HOME/$avd.ini" <<EOF
 avd.ini.encoding=UTF-8
 path=$avd_dir
-path.rel=avd/$TEST_AVD.avd
+path.rel=avd/$avd.avd
 target=android-34
 EOF
   cat > "$avd_dir/config.ini" <<EOF
-AvdId=$TEST_AVD
-avd.ini.displayname=PokerPayout headless test (API 34)
+AvdId=$avd
+avd.ini.displayname=$name
 avd.ini.encoding=UTF-8
 PlayStore.enabled=true
 abi.type=x86_64
@@ -62,7 +70,7 @@ hw.lcd.height=2400
 hw.lcd.density=420
 hw.initialOrientation=portrait
 hw.mainKeys=no
-hw.keyboard=yes
+hw.keyboard=$keyboard
 hw.dPad=no
 hw.trackBall=no
 hw.gpu.enabled=yes
@@ -78,7 +86,7 @@ hw.accelerometer=yes
 hw.sensors.proximity=no
 showDeviceFrame=no
 EOF
-  log "created AVD $TEST_AVD at $avd_dir"
+  log "created AVD $avd at $avd_dir (hardware keyboard: $keyboard)"
 }
 
 apply_settings() {
@@ -91,6 +99,12 @@ apply_settings() {
   if adb_ shell wm density 2>/dev/null | grep -q Override; then
     adb_ shell wm density reset >>"$STATE_DIR/settings.log" 2>&1 || true
     warn "reset a leftover display density override"
+  fi
+  # The device matrix's tablet-ignore profile makes the display ignore the app's orientation
+  # requests, a display setting that outlives a reboot: put back one a killed run left.
+  if adb_ shell cmd window get-ignore-orientation-request 2>/dev/null | grep -q 'ignoreOrientationRequest true'; then
+    adb_ shell cmd window set-ignore-orientation-request false >>"$STATE_DIR/settings.log" 2>&1 || true
+    warn "reset a leftover ignore-orientation-request"
   fi
   # All best-effort: a failed tweak must not fail the boot.
   local s=(
@@ -134,6 +148,29 @@ apply_settings() {
 }
 
 # ---------------------------------------------------------------- already up?
+# Which AVD the emulator on our port runs: the console's answer, else the boot property; nothing
+# if neither gives a plain name (then it is taken to be the right one, as before).
+running_avd() {
+  local name
+  name="$(adb_ emu avd name 2>/dev/null | tr -d '\r' | head -1 || true)"
+  [[ "$name" =~ ^[A-Za-z0-9._-]+$ && "$name" != OK ]] \
+    || name="$(adb_ shell getprop ro.boot.qemu.avd_name 2>/dev/null | tr -d '\r' || true)"
+  [[ "$name" =~ ^[A-Za-z0-9._-]+$ ]] || name=""
+  printf '%s' "$name"
+}
+# One emulator at a time: the other test AVD (the main one or its soft-keyboard twin) is stopped
+# before this one boots. Somebody else's AVD on our port is left alone.
+if device_online; then
+  current="$(running_avd)"
+  if [[ -n "$current" && "$current" != "$PP_AVD" ]]; then
+    our_avd "$current" && our_avd "$PP_AVD" \
+      || die "$ANDROID_SERIAL runs the AVD '$current', not '$PP_AVD'; stop it first (scripts/device/stop.sh)"
+    log "$ANDROID_SERIAL runs $current: stopping it to boot $PP_AVD (one emulator at a time)"
+    "$DEVICE_SCRIPTS/stop.sh" >/dev/null
+    for _ in $(seq 1 60); do device_online || break; sleep 1; done   # the port must be free
+    ! device_online || die "$current on $ANDROID_SERIAL did not stop"
+  fi
+fi
 if device_booted; then
   apply_settings
   log "already running: $ANDROID_SERIAL ($(adb_ shell getprop ro.build.version.release | tr -d '\r'), API $(adb_ shell getprop ro.build.version.sdk | tr -d '\r'))"
@@ -143,8 +180,8 @@ fi
 [[ -x "$EMULATOR" ]] || die "emulator not found at $EMULATOR"
 "$EMULATOR" -accel-check >/dev/null 2>&1 || warn "KVM acceleration check failed; boot will be very slow"
 
-if [[ "$PP_AVD" == "$TEST_AVD" && ! -f "$ANDROID_AVD_HOME/$TEST_AVD.avd/config.ini" ]]; then
-  create_test_avd
+if our_avd "$PP_AVD" && [[ ! -f "$ANDROID_AVD_HOME/$PP_AVD.avd/config.ini" ]]; then
+  create_test_avd "$PP_AVD"
 fi
 [[ -f "$ANDROID_AVD_HOME/$PP_AVD.ini" ]] || die "AVD '$PP_AVD' not found in $ANDROID_AVD_HOME"
 
@@ -161,7 +198,7 @@ args=(
   # and made tours flaky under load. Snapshots still load; RAM just stays in memory.
   -feature -QuickbootFileBacked
 )
-if [[ "$PP_AVD" != "$TEST_AVD" ]]; then
+if ! our_avd "$PP_AVD"; then
   args+=(-read-only -no-snapshot-save)        # never mutate somebody else's AVD
 fi
 (( COLD )) && args+=(-no-snapshot-load -no-snapshot-save)
@@ -194,4 +231,4 @@ echo "$boot_secs" > "$STATE_DIR/last-boot-seconds"
 locale="$(adb_ shell getprop persist.sys.locale | tr -d '\r')"
 [[ -n "$locale" ]] || locale="$(adb_ shell getprop ro.product.locale | tr -d '\r')"
 [[ "$locale" == "en-US" ]] || warn "device locale is '$locale', not en-US; text assertions may fail"
-log "booted in ${boot_secs}s: $ANDROID_SERIAL, Android $(adb_ shell getprop ro.build.version.release | tr -d '\r') (API $(adb_ shell getprop ro.build.version.sdk | tr -d '\r')), $(adb_ shell wm size | tr -d '\r' | awk '{print $NF}') @ $(adb_ shell wm density | tr -d '\r' | awk '{print $NF}')dpi, $locale, TZ $(adb_ shell getprop persist.sys.timezone | tr -d '\r')"
+log "booted in ${boot_secs}s: $ANDROID_SERIAL ($PP_AVD), Android $(adb_ shell getprop ro.build.version.release | tr -d '\r') (API $(adb_ shell getprop ro.build.version.sdk | tr -d '\r')), $(adb_ shell wm size | tr -d '\r' | awk '{print $NF}') @ $(adb_ shell wm density | tr -d '\r' | awk '{print $NF}')dpi, $locale, TZ $(adb_ shell getprop persist.sys.timezone | tr -d '\r')"

@@ -46,9 +46,13 @@ SCROLL MODE (PP_UI_SCROLL=1; the device matrix sets it): on a small screen what 
 be below the fold. Then tap, set-text, wait, assert and assert-text, after 2 s without a match,
 drag the page's main scroller (the largest scrollable node) down to its end and up to its
 top looking for it. assert-text counts a text seen anywhere on the way and puts the page back where
-it was; the others stop where the match is. Drags rest before lifting, so nothing flings and a
-drag back returns exactly. find (a probe) and wait-gone never scroll; tap --scroll-in searches both
-ways. Without PP_UI_SCROLL nothing scrolls by itself.
+it was; the others stop where the match is. The search up goes past where it started, so a page
+a step left part-way down is searched to its top too. Drags rest before lifting, so nothing flings
+and a drag back returns exactly. find (a probe) and wait-gone never scroll; tap --scroll-in
+searches both ways; scroll-to ignores a small --max, goes on to that end of the page, then the
+other way, dragging rather than swiping (a swipe flings past short lines). page starts from the
+page's top. Only the app's own scrollers are ever dragged: on the launcher, the lock screen or the
+shade a drag down would open the shade. Without PP_UI_SCROLL nothing scrolls by itself.
 """
 
 import argparse
@@ -161,8 +165,11 @@ def dump_xml(retries=4):
     for attempt in range(retries):
         t0 = time.time()
         # Odd attempts fall back to dumping into a file, since /dev/tty streaming is flaky on some images.
+        # The old file goes first: `uiautomator dump` can fail and still exit 0, and cat would then
+        # hand back an old screen as the current one (a whole profile once ran blind on one).
         cmd = ("uiautomator dump /dev/tty" if attempt % 2 == 0 else
-               "uiautomator dump /sdcard/pp_window_dump.xml >/dev/null && cat /sdcard/pp_window_dump.xml")
+               "rm -f /sdcard/pp_window_dump.xml; uiautomator dump /sdcard/pp_window_dump.xml >/dev/null"
+               " && cat /sdcard/pp_window_dump.xml")
         try:
             out = adb("exec-out", cmd, check=False,
                       timeout=float(os.environ.get("PP_UI_DUMP_TIMEOUT", "30")))
@@ -175,12 +182,16 @@ def dump_xml(retries=4):
         hold_rotation()
         end = out.rfind("</hierarchy>")
         if os.environ.get("PP_UI_TRACE"):
-            sys.stderr.write("[ui] dump %.1fs%s\n" % (time.time() - t0, "" if end != -1 else " (failed)"))
+            why = "" if end != -1 else " (failed: %s)" % (" ".join(out.split())[:160] or "no output")
+            sys.stderr.write("[ui] dump %.1fs%s\n" % (time.time() - t0, why))
         if end != -1:
             return out[out.find("<?xml") if "<?xml" in out else 0:end + len("</hierarchy>")]
         last = out.strip()
-        if "already registered" in last or "idle state" in last:
-            kill_uiautomator()
+        # Whatever failed, a uiautomator still registered would fail every dump after it
+        kill_uiautomator()
+        if "null root node" in last:
+            # No window to read: a screen that went off or locked. Wake it, as a user would
+            shell("input keyevent KEYCODE_WAKEUP; wm dismiss-keyguard", check=False)
         time.sleep(0.5 + attempt * 0.5)
     raise UiError("uiautomator dump failed: %s" % (last[-300:] or "no output"))
 
@@ -358,8 +369,10 @@ def touch_slop():
 
 
 def main_container(nodes):
-    """The page's main scroller: the largest scrollable node."""
-    cands = [n for n in nodes if n.flag("scrollable") and n.area > 0]
+    """The page's main scroller: the app's largest scrollable node. Never another app's: dragging
+    the launcher, the lock screen or the shade opens the shade or the app drawer (a drag that
+    reveals what is above is a swipe down), so with the app out of sight scroll mode drags nothing."""
+    cands = [n for n in nodes if n.flag("scrollable") and n.area > 0 and n.attrs.get("package", APP_ID) == APP_ID]
     return max(cands, key=lambda n: n.area) if cands else None
 
 
@@ -431,13 +444,17 @@ def drag_search(pred, nodes, visit=None, restore=False):
     was in any case (and the nodes returned are the restored screen's). visit(nodes) sees every screen."""
     offset = 0   # how far the content moved up from where it started
     hit = None
+    downs = 0
     for direction in ("down", "up"):
-        for _ in range(MAX_DRAGS):
+        # Up goes back over the drags down first, then on: a page left part-way down (a step that
+        # scrolled to what it needed) has more above where the search started
+        for _ in range(MAX_DRAGS if direction == "down" else downs + MAX_DRAGS):
             cont = main_container(nodes)
             if cont is None:
                 break
             before = nodes
             expected = drag(cont.bounds, direction)
+            downs += direction == "down"
             _, nodes = snapshot()
             shift = content_shift(before, nodes)
             offset += expected if shift is None else shift
@@ -459,8 +476,9 @@ def drag_search(pred, nodes, visit=None, restore=False):
 
 
 def scroll_back(nodes, offset):
-    """Drag the content back down by `offset` px (negative: up), measuring as it goes."""
-    for _ in range(8):
+    """Drag the content back down by `offset` px (negative: up), measuring as it goes. (As many
+    drags as a search can make: it can end far from where it started.)"""
+    for _ in range(3 * MAX_DRAGS):
         if abs(offset) <= 12:
             break
         cont = main_container(nodes)
@@ -669,26 +687,46 @@ def cmd_scroll(a):
 
 
 def scroll_until(selector, within, direction, max_swipes):
-    """Swipe (inside the `within` container if given) until `selector` matches."""
+    """Swipe (inside the `within` container if given) until `selector` matches. In scroll mode it
+    goes on to that end of the page however long it is, then the other way: on a small screen or
+    with large text a page is longer than a step's --max allows for, and what it looks for can be
+    above where the step left the page. There it drags (resting before it lifts, 65 % of the
+    scroller at a time) instead of swiping: a swipe flings, and a fling can carry a short line past
+    the screen between two dumps. It only drags the app's own scrollers (see main_container)."""
     matcher = compile_selector(selector)
     container = compile_selector(within) if within else None
-    prev = None
-    for i in range(max_swipes + 1):
-        _, nodes = snapshot()
-        if matcher(nodes):
-            return i, nodes
-        sig = tuple(visible_texts(nodes))
-        if sig == prev:
-            break  # reached the end; nothing moved
-        prev = sig
-        area = None
-        if container:
-            boxes = container(nodes)
-            if not boxes:
-                fail("%s isn't on screen and nothing scrolls (no %s)" % (" ".join(selector), within), nodes)
-            area = boxes[0].bounds
-        _swipe_dir(direction, area)
-    fail("scrolled %s but never found %s" % (direction, selector), nodes)
+    directions = [direction]
+    if SCROLL_MODE:
+        max_swipes = max(max_swipes, 3 * MAX_DRAGS)
+        directions.append("up" if direction == "down" else "down")
+    swipes = 0
+    for d in directions:
+        prev = None
+        for _ in range(max_swipes + 1):
+            _, nodes = snapshot()
+            if matcher(nodes):
+                return swipes, nodes
+            sig = tuple(visible_texts(nodes))
+            if sig == prev:
+                break  # reached the end; nothing moved
+            prev = sig
+            area = None
+            if container:
+                boxes = container(nodes)
+                if not boxes:
+                    fail("%s isn't on screen and nothing scrolls (no %s)" % (" ".join(selector), within), nodes)
+                area = boxes[0].bounds
+            if SCROLL_MODE:
+                if area is None:
+                    cont = main_container(nodes)
+                    if cont is None:
+                        break   # nothing of the app's to scroll
+                    area = cont.bounds
+                drag(area, d)
+            else:
+                _swipe_dir(d, area)
+            swipes += 1
+    fail("scrolled %s but never found %s" % (" then ".join(directions), selector), nodes)
 
 
 def cmd_scroll_to(a):
@@ -740,11 +778,27 @@ def cmd_assert_text(a):
 
 
 def cmd_page(a):
-    """One dump of the whole page: drag the main scroller to its end, place each screen's nodes in
-    the page's coordinates (the first screen's), and drag back. Only labelled nodes are kept; the
-    ones outside the scroller (bars, headers) come from the first screen."""
+    """One dump of the whole page: drag the main scroller to its top, then to its end, place each
+    screen's nodes in the page's coordinates (the top screen's), and drag back to where it was.
+    Only labelled nodes are kept; the ones outside the scroller (bars, headers) come from the top
+    screen. (It starts at the top because a step often leaves the page part-way down, having
+    scrolled to what it checks: on a small screen, part of a list is then above it.)"""
     xml_text, nodes = snapshot()
     root_el = ET.fromstring(xml_text)
+    cont = main_container(nodes)
+    lead, ups = 0, 0   # how far the content moved up while going to the top (so 0 or less)
+    while cont is not None and ups < MAX_DRAGS * 2:
+        before = nodes
+        expected = drag(cont.bounds, "up")
+        ups += 1
+        _, nodes = snapshot()
+        shift = content_shift(before, nodes)
+        if shift is None:
+            lead += expected    # it moved, but by how much can't be told: merge from here
+            break
+        if shift >= 0:
+            break               # the top of the page
+        lead += shift
     cont = main_container(nodes)
     entries = [[dict(n.attrs), list(n.bounds)] for n in nodes if n.labels() and n.area > 0]
     offset, drags = 0, 0
@@ -773,8 +827,8 @@ def cmd_page(a):
                 entries.append([dict(n.attrs), box])
             elif box[3] - box[1] > same[1][3] - same[1][1]:
                 same[1] = box   # a node cut by the bottom edge before, whole now
-    if offset:
-        scroll_back(nodes, offset)
+    if lead + offset:
+        scroll_back(nodes, lead + offset)
     out = ET.Element("hierarchy", {"rotation": root_el.get("rotation", "0"), "page-offset": str(offset)})
     top = nodes[0] if nodes else None
     page = ET.SubElement(out, "node", dict(top.attrs) if top else {})
@@ -796,6 +850,9 @@ def cmd_key(a):
 
 
 def cmd_launch(a):
+    # A screen that is off or locked, or a shade left open, keeps the app from the front: clear
+    # them first
+    shell("input keyevent KEYCODE_WAKEUP; wm dismiss-keyguard; cmd statusbar collapse", check=False)
     if a.clear:
         shell("pm clear %s" % APP_ID)
     else:
@@ -809,7 +866,8 @@ def cmd_launch(a):
             print("[ui] launched %s" % APP_ID)
             return
         time.sleep(0.3)
-    fail("%s did not come to the foreground" % APP_ID)
+    fail("%s did not come to the foreground; in front: %s; screen: %s" % (
+        APP_ID, top_activity() or "nothing", shell("dumpsys power | grep -m1 -E 'mWakefulness='", check=False).strip()))
 
 
 def top_activity():

@@ -158,7 +158,8 @@ run_step() {
     [[ -n "$detail" ]] || detail="exit $rc after: $(tail -n 1 "$LOG" | cut -c1-200)"
   fi
   capture "$id"
-  [[ "$status" == FAIL && "${PP_TOUR_RECOVER:-}" == 1 ]] && recover_screen
+  # (Never after launch: it starts the app itself, and a second start would only fight it)
+  [[ "$status" == FAIL && "${PP_TOUR_RECOVER:-}" == 1 && "$name" != launch ]] && recover_screen
   secs=$(( ($(date +%s%N) - t1) / 100000000 )); secs="$((secs / 10)).$((secs % 10))"
   ROWS+=("| $STEP_NO | \`$name\` | $desc | **$status** | ${secs}s | ![]($id.png) | ${detail//|/\\|} |")
   printf '%s\t%s\t%s\t%s\t%s\n' "$id" "$name" "$status" "$secs" "${detail//$'\t'/ }" >> "$OUT/steps.tsv"
@@ -168,13 +169,23 @@ run_step() {
 
 # The device matrix (PP_TOUR_RECOVER=1) keeps going after a failed step. A step that failed with a
 # dialog (or the table view) still over the tabs would fail every step after it, so close that
-# with Back first; the failed step's screenshot is already taken.
+# with Back first. If the app is still out of sight then (a step that failed on the launcher, as
+# process-death can), open it again from the launcher, as a user would: its data stays. The failed
+# step's screenshot is already taken.
 recover_screen() {
   ui dump --out "$OUT/.recover.xml" >/dev/null 2>>"$LOG" || return 0
-  if [[ -z "$(tab_positions "$OUT/.recover.xml")" ]]; then
-    echo "[tour] no tabs on screen after the failed step: Back, to close what it left open" >>"$LOG"
-    ui back >>"$LOG" 2>&1 || true
-    sleep 1
+  [[ -z "$(tab_positions "$OUT/.recover.xml")" ]] || return 0
+  echo "[tour] no tabs on screen after the failed step: Back, to close what it left open" >>"$LOG"
+  ui back >>"$LOG" 2>&1 || true
+  sleep 1
+  ui dump --out "$OUT/.recover.xml" >/dev/null 2>>"$LOG" || return 0
+  if ! grep -q "package=\"$APP_ID\"" "$OUT/.recover.xml"; then
+    echo "[tour] the app isn't on screen: opening it again from the launcher" >>"$LOG"
+    adb_ shell "input keyevent KEYCODE_WAKEUP; wm dismiss-keyguard; cmd statusbar collapse" >>"$LOG" 2>&1 || true
+    adb_ shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >>"$LOG" 2>&1 || true
+    # Without scroll mode: until the app is in front, a drag would be on the launcher (a drag down
+    # there opens the shade)
+    PP_UI_SCROLL=0 ui wait "re=$TAB_RE" --timeout 15 >>"$LOG" 2>&1 || true
   fi
   return 0
 }
@@ -498,8 +509,9 @@ s_breaks() {
 }
 s_ready_ticket() {
   # Before the start the ticket shows level 1, labelled, with its full time, blinds, what's next
-  # and the whole game's shape
-  ui scroll up --times 8
+  # and the whole game's shape. (Up to the ticket's top line rather than a fixed number of swipes:
+  # with 200 % text on the smallest screen 8 swipes left the ticket's top above the screen.)
+  ui scroll-to "text~=Level 1 · ready" --dir up --max 8
   ui assert-text "text~=Level 1 · ready" text=20:00 "text=25 / 50" "text~=next 50 / 100" "text~=9 levels · 2 breaks" \
     "text~=3:20 in all"
 }
@@ -914,7 +926,9 @@ s_bank_knockout_done() {
   ui wait-gone "text=Player 2 is out"
   ui assert-text "desc=Player 2, out, 5th, knocked out by Alice. Bring back" "text~=Player 2 is out in 5th" \
     "text~=OUT · 1" || return 1
-  check_placement_badge "$PP_UI_LAST_XML"
+  # The whole list in the matrix: assert-text may have found the badge below the fold and put the
+  # page back
+  check_placement_badge "$(page_dump "$PP_UI_LAST_XML")"
 }
 # The knocked-out player's place is a badge in the Out column, clear of the name (PP-047;
 # v1.1.12 painted a big number over the name, v1.2 a badge on its top edge).

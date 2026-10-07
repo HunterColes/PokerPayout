@@ -8,10 +8,16 @@
 # The device matrix (scripts/device/matrix.sh: the tour's steps on several screen sizes, font
 # scales and rotations, docs/TESTING.md section 10) runs by hand only, as its own job:
 #   gh workflow run device.yml --ref <branch> -f job=matrix [-f profiles=focused|daily|all|a,b]
+# The opt-in profiles: -f profiles=soft-keyboard (the full-height soft keyboard, on its own AVD;
+# a run of its own) and -f profiles=tablet-ignore (a tablet that ignores orientation requests).
+# Dispatched runs with different inputs run side by side; the same inputs again replace the
+# earlier run.
 #
 # Not a required check yet. The report (screenshots, ui dumps, logcat, tour.log) is uploaded as an
 # artifact either way. The release build is debug-signed here, since CI has no keystore.
 name: Device tour
+# In the runs list: a dispatched run says what it runs; a pull request's keeps the PR's title.
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('Device {0} on {1}', inputs.job == 'tour' && format('tour ({0})', inputs.variant) || inputs.job == 'matrix' && format('matrix ({0})', inputs.profiles) || format('tour ({0}) and matrix ({1})', inputs.variant, inputs.profiles), github.ref_name) || github.event.pull_request.title }}"
 
 on:
   pull_request:
@@ -39,8 +45,10 @@ on:
 permissions:
   contents: read
 
+# One run per pull request; by hand, one per branch and set of inputs (a soft-keyboard matrix and a
+# tablet-ignore one run side by side, and neither cancels the pull request's tour).
 concurrency:
-  group: device-${{ github.event.pull_request.number || github.ref }}
+  group: device-${{ github.event.pull_request.number || github.ref }}${{ github.event_name == 'workflow_dispatch' && format('-{0}-{1}-{2}-{3}', inputs.job, inputs.variant, inputs.profiles, inputs.only) || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -128,7 +136,9 @@ jobs:
     # By hand only. The focused set is untimed on 1.3.4: an estimated 40 to 50 minutes on a quiet
     # local machine, longer here.
     # The debug build, or the release build with variant=release.
-    name: Device matrix (${{ inputs.profiles }})
+    # A plain name: a skipped job (every pull request) shows its name unevaluated, so the profiles
+    # in it showed on PRs as the raw expression. They are in the step's name and the run's name.
+    name: Device matrix
     if: github.event_name == 'workflow_dispatch' && inputs.job != 'tour'
     runs-on: ubuntu-latest
     timeout-minutes: 240
@@ -171,25 +181,47 @@ jobs:
           if [[ "$VARIANT" == release ]]; then args+=(--release); fi
           scripts/device/matrix.sh "${args[@]}"
 
-      # The failing step's screen as text (the newest dump), so a failure can be read from the log alone.
-      - name: Show the failing screen
+      # Every failed step of every profile, so a failure can be read from the log alone: what the
+      # step logged (its section of tour.log) and the text on screen after it (its dump).
+      - name: Show the failing steps
         if: failure()
         run: |
-          dir="$(ls -d build/device-reports/2* 2>/dev/null | tail -1)"
+          dir="$(ls -d build/device-reports/matrix-2* 2>/dev/null | tail -1)"
           [[ -n "$dir" ]] || exit 0
-          xml="$(ls -t "$dir"/[0-9]*.xml 2>/dev/null | head -1)"
-          if [[ -n "$xml" ]]; then
-            echo "== Text on screen at the failure ($(basename "$xml")): text | description | bounds"
-            python3 - "$xml" <<'EOF'
-          import sys, xml.etree.ElementTree as ET
-          for n in ET.parse(sys.argv[1]).iter('node'):
-              t, d = n.get('text') or '', n.get('content-desc') or ''
-              if t or d:
-                  print(f"{t!r} | {d!r} | {n.get('bounds')}")
+          python3 - "$dir" <<'EOF'
+          import os, sys, xml.etree.ElementTree as ET
+          top = sys.argv[1]
+          for prof in sorted(os.listdir(top)):
+              pdir = os.path.join(top, prof)
+              tsv = os.path.join(pdir, "steps.tsv")
+              if not os.path.isfile(tsv):
+                  continue
+              rows = [l.rstrip("\n").split("\t") for l in open(tsv, encoding="utf-8")][1:]
+              log = open(os.path.join(pdir, "tour.log"), encoding="utf-8", errors="replace").read().splitlines() \
+                  if os.path.exists(os.path.join(pdir, "tour.log")) else []
+              for row in rows:
+                  if len(row) < 3 or row[2] != "FAIL":
+                      continue
+                  sid = row[0]
+                  print("::group::%s %s: %s" % (prof, sid, row[4] if len(row) > 4 else ""))
+                  start = next((i for i, l in enumerate(log) if l.startswith("=== %s:" % sid)), None)
+                  if start is not None:
+                      end = next((i for i in range(start + 1, len(log)) if log[i].startswith("=== ")), len(log))
+                      print("\n".join(log[start:end][-60:]))
+                  xml = os.path.join(pdir, sid + ".xml")
+                  if os.path.exists(xml):
+                      print("-- text on screen after it: text | description | bounds")
+                      try:
+                          shown = 0
+                          for n in ET.parse(xml).iter("node"):
+                              t, d = n.get("text") or "", n.get("content-desc") or ""
+                              if (t or d) and shown < 80:
+                                  print("%r | %r | %s" % (t, d, n.get("bounds")))
+                                  shown += 1
+                      except ET.ParseError:
+                          print("(unreadable dump)")
+                  print("::endgroup::")
           EOF
-          fi
-          echo "== End of tour.log"
-          tail -60 "$dir/tour.log"
 
       - name: Upload the matrix report
         if: success() || failure()

@@ -29,6 +29,10 @@ With two or more REPORT_DIRs (the matrix's profiles), and Pillow:
 A node that touches the edge of its scrolling container (or the window) is clipped by it, so its
 bounds are not its size: it is left out of the size, overlap and cut-text checks.
 
+Only the app's own nodes are checked (package com.huntercoles.pokerpayout): a dump of the launcher,
+the share sheet, a permission dialog or the notification shade is someone else's layout. Each
+failure is also printed, so a CI log says what failed without the report.
+
 Allow-list (default scripts/device/layout-allow.txt), one rule per line:
     check | step glob | regex on the node's label | why
 The label is the node's text, or "desc=<content-desc>" when it has none.
@@ -45,6 +49,7 @@ import xml.etree.ElementTree as ET
 BOUNDS_RE = re.compile(r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]")
 STEP_RE = re.compile(r"^(\d+)-(.+)\.xml$")
 HERE = os.path.dirname(os.path.abspath(__file__))
+APP_ID = "com.huntercoles.pokerpayout"
 MIN_TARGET_DP = 48
 CUT_INK_RATIO = 0.7          # drawn under 70 % as long as on the best profile -> cut-text
 
@@ -310,6 +315,9 @@ def check_dir(report_dir, rules):
             nodes, rotation = load_dump(path)
         except ET.ParseError:
             continue
+        nodes = [n for n in nodes if n.a.get("package", APP_ID) == APP_ID]   # the app's own
+        if not nodes:
+            continue
         dumps[step] = (step_id, nodes, rotation)
         step_disp = dict(disp)
         override = os.path.join(report_dir, step_id + ".density")   # a step that changed it (rail)
@@ -421,6 +429,9 @@ def main(argv=None):
         annotate(d, found)
         fails = sum(f["severity"] == "fail" for f in found)
         print("[checks] %s: %d fail, %d warn" % (disp["profile"], fails, len(found) - fails))
+        for f in found:
+            if f["severity"] == "fail":
+                print("[checks]   FAIL %s %s: %r %s, %s" % (f["step_id"], f["check"], f["label"], f["bounds"], f["detail"]))
 
 
 if __name__ == "__main__":

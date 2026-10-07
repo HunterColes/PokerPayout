@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:installLocation="auto">
 
-    <!-- Explicitly remove INTERNET permission added by dependencies -->
+    <!-- The app is offline: no INTERNET permission, even if a library declares one.
+         scripts/release/release.sh fails a release whose APK asks for it. -->
     <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
 
     <application

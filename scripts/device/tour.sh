@@ -158,7 +158,8 @@ run_step() {
     [[ -n "$detail" ]] || detail="exit $rc after: $(tail -n 1 "$LOG" | cut -c1-200)"
   fi
   capture "$id"
-  [[ "$status" == FAIL && "${PP_TOUR_RECOVER:-}" == 1 ]] && recover_screen
+  # (Never after launch: it starts the app itself, and a second start would only fight it)
+  [[ "$status" == FAIL && "${PP_TOUR_RECOVER:-}" == 1 && "$name" != launch ]] && recover_screen
   secs=$(( ($(date +%s%N) - t1) / 100000000 )); secs="$((secs / 10)).$((secs % 10))"
   ROWS+=("| $STEP_NO | \`$name\` | $desc | **$status** | ${secs}s | ![]($id.png) | ${detail//|/\\|} |")
   printf '%s\t%s\t%s\t%s\t%s\n' "$id" "$name" "$status" "$secs" "${detail//$'\t'/ }" >> "$OUT/steps.tsv"
@@ -180,8 +181,11 @@ recover_screen() {
   ui dump --out "$OUT/.recover.xml" >/dev/null 2>>"$LOG" || return 0
   if ! grep -q "package=\"$APP_ID\"" "$OUT/.recover.xml"; then
     echo "[tour] the app isn't on screen: opening it again from the launcher" >>"$LOG"
+    adb_ shell "input keyevent KEYCODE_WAKEUP; wm dismiss-keyguard; cmd statusbar collapse" >>"$LOG" 2>&1 || true
     adb_ shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >>"$LOG" 2>&1 || true
-    ui wait "re=$TAB_RE" --timeout 15 >>"$LOG" 2>&1 || true
+    # Without scroll mode: until the app is in front, a drag would be on the launcher (a drag down
+    # there opens the shade)
+    PP_UI_SCROLL=0 ui wait "re=$TAB_RE" --timeout 15 >>"$LOG" 2>&1 || true
   fi
   return 0
 }

@@ -818,8 +818,18 @@ trick) and the tour's `table-view`, `table-view-resume`, `table-view-exit`, `rot
 
 After a failed step the matrix's tour (`PP_TOUR_RECOVER=1`) presses Back if no tabs are on screen,
 so a dialog the failure left open doesn't fail every step after it, and if the app is still out
-of sight (the launcher, after a failed `process-death`), it opens the app again from the launcher,
-data and all; the failed step's screenshot is taken first. The plain tour doesn't do this.
+of sight (the launcher, after a failed `process-death`), it wakes the screen, closes the shade and
+opens the app again from the launcher, data and all (waiting for it without dragging anything);
+the failed step's screenshot is taken first. Never after `launch`, which starts the app itself. The
+plain tour doesn't do this.
+
+Each profile starts from the same place: the app stopped and the launcher in front before the
+display changes, then the screen woken, the keyguard dismissed and the shade closed. `ui.py launch`
+does the last three as well. (The first run after `process-death` passed ended a profile with the
+app in front and its clock running, and the next profile's launch failed: the app never came to the
+front, the dumps failed, and the steps after it ran blind and opened the quick settings.)
+`ui.py`'s dump also no longer falls back to an old dump file when `uiautomator dump` fails, and the
+trace in `tour.log` says why a dump failed.
 
 The matrix's own steps are opt-in tour steps in `scripts/device/steps-matrix.sh`:
 

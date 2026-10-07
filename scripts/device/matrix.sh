@@ -288,6 +288,12 @@ FAILED_PROFILES=0
 for name in "${RUN_PROFILES[@]}"; do
   read -r _ size density font rot turns stepset dev desc <<<"$(profile_line "$name")"
   t=$(date +%s)
+  # Every profile from the same place: the app stopped, the launcher in front, then the display
+  # changed. (Since process-death passes, a profile can end with the app in front and its clock
+  # running. On the first run like that, the launch failed on exactly the profiles that followed
+  # one ending so, and worked after the one that didn't; before, every profile ended on the launcher.)
+  adb_ shell am force-stop "$APP_ID" >/dev/null 2>&1 || true
+  adb_ shell "input keyevent KEYCODE_HOME; cmd statusbar collapse" >/dev/null 2>&1 || true
   reset_display
   if [[ "$size" != - ]]; then adb_ shell wm size "$size"; adb_ shell wm density "$density"; fi
   adb_ shell settings put system font_scale "$font"
@@ -318,6 +324,7 @@ for name in "${RUN_PROFILES[@]}"; do
       && echo "the user's ($ORIENTATION_OVERRIDE, as Android 16)" || echo "letterboxed (this image has no $ORIENTATION_OVERRIDE)")"
   fi
   sleep 2
+  adb_ shell "input keyevent KEYCODE_WAKEUP; wm dismiss-keyguard; cmd statusbar collapse" >/dev/null 2>&1 || true
   demo_status_bar
   # The steps for this profile: the phone-only ones only under 600 dp (smallest width)
   phys="$(adb_ shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)"

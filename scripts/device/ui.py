@@ -163,8 +163,11 @@ def dump_xml(retries=4):
     for attempt in range(retries):
         t0 = time.time()
         # Odd attempts fall back to dumping into a file, since /dev/tty streaming is flaky on some images.
+        # The old file goes first: `uiautomator dump` can fail and still exit 0, and cat would then
+        # hand back an old screen as the current one (a whole profile once ran blind on one).
         cmd = ("uiautomator dump /dev/tty" if attempt % 2 == 0 else
-               "uiautomator dump /sdcard/pp_window_dump.xml >/dev/null && cat /sdcard/pp_window_dump.xml")
+               "rm -f /sdcard/pp_window_dump.xml; uiautomator dump /sdcard/pp_window_dump.xml >/dev/null"
+               " && cat /sdcard/pp_window_dump.xml")
         try:
             out = adb("exec-out", cmd, check=False,
                       timeout=float(os.environ.get("PP_UI_DUMP_TIMEOUT", "30")))
@@ -177,12 +180,16 @@ def dump_xml(retries=4):
         hold_rotation()
         end = out.rfind("</hierarchy>")
         if os.environ.get("PP_UI_TRACE"):
-            sys.stderr.write("[ui] dump %.1fs%s\n" % (time.time() - t0, "" if end != -1 else " (failed)"))
+            why = "" if end != -1 else " (failed: %s)" % (" ".join(out.split())[:160] or "no output")
+            sys.stderr.write("[ui] dump %.1fs%s\n" % (time.time() - t0, why))
         if end != -1:
             return out[out.find("<?xml") if "<?xml" in out else 0:end + len("</hierarchy>")]
         last = out.strip()
-        if "already registered" in last or "idle state" in last:
-            kill_uiautomator()
+        # Whatever failed, a uiautomator still registered would fail every dump after it
+        kill_uiautomator()
+        if "null root node" in last:
+            # No window to read: a screen that went off or locked. Wake it, as a user would
+            shell("input keyevent KEYCODE_WAKEUP; wm dismiss-keyguard", check=False)
         time.sleep(0.5 + attempt * 0.5)
     raise UiError("uiautomator dump failed: %s" % (last[-300:] or "no output"))
 
@@ -360,8 +367,10 @@ def touch_slop():
 
 
 def main_container(nodes):
-    """The page's main scroller: the largest scrollable node."""
-    cands = [n for n in nodes if n.flag("scrollable") and n.area > 0]
+    """The page's main scroller: the app's largest scrollable node. Never another app's: dragging
+    the launcher, the lock screen or the shade opens the shade or the app drawer (a drag that
+    reveals what is above is a swipe down), so with the app out of sight scroll mode drags nothing."""
+    cands = [n for n in nodes if n.flag("scrollable") and n.area > 0 and n.attrs.get("package", APP_ID) == APP_ID]
     return max(cands, key=lambda n: n.area) if cands else None
 
 
@@ -829,6 +838,9 @@ def cmd_key(a):
 
 
 def cmd_launch(a):
+    # A screen that is off or locked, or a shade left open, keeps the app from the front: clear
+    # them first
+    shell("input keyevent KEYCODE_WAKEUP; wm dismiss-keyguard; cmd statusbar collapse", check=False)
     if a.clear:
         shell("pm clear %s" % APP_ID)
     else:
@@ -842,7 +854,8 @@ def cmd_launch(a):
             print("[ui] launched %s" % APP_ID)
             return
         time.sleep(0.3)
-    fail("%s did not come to the foreground" % APP_ID)
+    fail("%s did not come to the foreground; in front: %s; screen: %s" % (
+        APP_ID, top_activity() or "nothing", shell("dumpsys power | grep -m1 -E 'mWakefulness='", check=False).strip()))
 
 
 def top_activity():

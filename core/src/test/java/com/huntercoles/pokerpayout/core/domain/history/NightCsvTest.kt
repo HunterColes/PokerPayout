@@ -62,8 +62,19 @@ class NightCsvTest {
         assertEquals("2026-01-09,\"Deep, slow\",0.00,3,2,\"Line\nbreak\",2,", rows[1].substringBefore("50.00"))
         assertEquals("2026-01-09,\"Deep, slow\",0.00,3,3,Plain O'Neil,1,", rows[2].substringBefore("50.00"))
         assertEquals("\"a\"\"\"", NightCsv.field("a\""))
-        assertEquals("\"\r\"", NightCsv.field("\r"))
+        assertEquals("\"'\r\"", NightCsv.field("\r")) // a carriage return could start a formula too
         assertEquals("", NightCsv.field(""))
+    }
+
+    @Test
+    fun `a name a spreadsheet would run as a formula gets a leading apostrophe`() {
+        assertEquals("'=1+1", NightCsv.field("=1+1"))
+        assertEquals("'+Ben", NightCsv.field("+Ben"))
+        assertEquals("'-Ann", NightCsv.field("-Ann"))
+        assertEquals("'@Dev", NightCsv.field("@Dev"))
+        assertEquals("\"'=SUM(A1,A2)\"", NightCsv.field("=SUM(A1,A2)"))
+        assertEquals("Alice", NightCsv.field("Alice"))
+        assertEquals("Ben-Jo", NightCsv.field("Ben-Jo"))
     }
 
     @Test

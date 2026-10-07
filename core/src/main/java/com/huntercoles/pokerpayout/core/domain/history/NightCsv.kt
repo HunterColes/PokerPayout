@@ -47,9 +47,17 @@ object NightCsv {
         amount(player.netCents),
     )
 
-    /** [text] as one CSV field: quoted when it holds a comma, a quote or a line break, its quotes doubled. */
-    fun field(text: String): String =
-        if (text.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) "\"${text.replace("\"", "\"\"")}\"" else text
+    /**
+     * [text] as one CSV field: quoted when it holds a comma, a quote or a line break, its quotes doubled.
+     * Text a spreadsheet would run as a formula (starting with =, +, -, @, a tab or a carriage return)
+     * gets a leading apostrophe first, so a player named "=1+1" stays a name.
+     */
+    fun field(text: String): String {
+        val safe = if (text.firstOrNull() in FORMULA_STARTS) "'$text" else text
+        return if (safe.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) "\"${safe.replace("\"", "\"\"")}\"" else safe
+    }
+
+    private val FORMULA_STARTS = setOf('=', '+', '-', '@', '\t', '\r')
 
     /** Whole cents as dollars with two decimals: 1250 is "12.50", -50 is "-0.50". */
     fun amount(cents: Long): String {

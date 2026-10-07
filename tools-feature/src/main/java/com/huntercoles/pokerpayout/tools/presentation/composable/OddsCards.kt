@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tools.presentation.composable
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,12 +11,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -27,6 +37,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,6 +58,7 @@ import com.huntercoles.pokerpayout.tools.presentation.OddsTable
 import com.huntercoles.pokerpayout.tools.presentation.SlotRef
 import com.huntercoles.pokerpayout.tools.presentation.SlotValue
 import java.util.Locale
+import kotlinx.coroutines.flow.first
 
 /** Gap between neighbouring 48 dp card targets: the 44 dp faces end up 6 dp apart, like the mockup. */
 internal val CardTargetGap = 2.dp
@@ -58,10 +70,21 @@ internal val CardTargetWidth = PokerDimens.MinTouch
 internal val BOARD_GROUPS = listOf(0..2, 3..3, 4..4)
 
 /**
+ * The odds page's height in px, from the page around the cards ([OddsCalculatorContent]): opening
+ * the keypad shrinks the page, and the keypad's slot then scrolls back into view.
+ */
+internal val LocalOddsPageHeight = compositionLocalOf { 0 }
+
+/**
  * A card place you can tap: the face (or the empty, next or random slot) centred in a box at least
  * 48 dp wide, which is the touch target. TalkBack reads [description] ("Player 2, card 2, empty.
  * Next.") instead of the face's own name.
+ *
+ * The keypad's slot keeps itself in view: when the keypad moves to it, and whenever the page's
+ * height changes (the keypad opening), the page scrolls just enough to show it whole, with
+ * [SLOT_MARGIN] above and below. Scrolling away by hand afterwards (to "Add player", say) is left be.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun CardTarget(
     value: SlotValue,
@@ -70,8 +93,21 @@ internal fun CardTarget(
     modifier: Modifier = Modifier,
     style: CardTargetStyle = CardTargetStyle(),
 ) {
+    val inView = remember { BringIntoViewRequester() }
+    val size = remember { mutableStateOf(IntSize.Zero) }
+    if (style.isTarget) {
+        val pageHeight = LocalOddsPageHeight.current
+        val margin = with(LocalDensity.current) { SLOT_MARGIN.toPx() }
+        LaunchedEffect(pageHeight, margin) {
+            // A seat just added has no size until its first layout.
+            val box = snapshotFlow { size.value }.first { it != IntSize.Zero }
+            inView.bringIntoView(Rect(0f, -margin, box.width.toFloat(), box.height + margin))
+        }
+    }
     Box(
         modifier = modifier
+            .bringIntoViewRequester(inView)
+            .onSizeChanged { size.value = it }
             .sizeIn(minWidth = CardTargetWidth, minHeight = PokerDimens.MinTouch)
             .clip(RoundedCornerShape(PokerDimens.CornerCardFace))
             .clickable(role = Role.Button, onClick = onClick)
@@ -231,6 +267,9 @@ internal fun Dp.cappedSp(maxScale: Float): TextUnit {
 }
 
 private val CAPTION = 11.dp
+
+/** Room kept above and below the keypad's slot when it scrolls into view: a seat row's own padding. */
+private val SLOT_MARGIN = 12.dp
 private const val CAPTION_MAX_SCALE = 1.3f
 private const val PERCENT_SCALE = 0.53f
 private const val LINE_RATIO = 1.1f

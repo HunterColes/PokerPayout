@@ -3,6 +3,12 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.3.13 (on master, not published)
+
+- **Odds on small phones:** on the smallest phones at large text, the card keypad takes a row less
+  (the suits join the ranks' last row), and the card being typed always scrolls into view, so the
+  seats and "Add player" stay reachable while the keypad is open.
+
 ## 1.3.12 (on master, not published)
 
 - **History** (Tools): once everyone owed is marked paid, the Payouts tab offers "Save this night".

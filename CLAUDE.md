@@ -12,7 +12,7 @@ GitHub releases. No ads, no accounts, no internet permission.
 | `core` | Design system (`core/design`: `PokerTheme`, `PokerColors`, `PokerType`, components), navigation, preferences, money and blind maths, the device-matrix test kit (`src/testFixtures`) |
 | `tournament-feature` | Tournament tab (setup, presets, clock, blinds, table view), the live clock notification and its service, and the Payouts tab |
 | `bank-feature` | Bank tab: buy-ins, rebuys, add-ons, knockouts and bounty types, settlement, and the cash game |
-| `tools-feature` | Tools hub (with Sound), Odds and Run it out, Chip set, Hand ranks, Seat draw |
+| `tools-feature` | Tools hub (with Sound), Odds and Run it out, Chip set, Hand ranks, Seat draw, History |
 
 Jetpack Compose (Material 3), Hilt, MVI (`*Intent`, `*UiState`, `*ViewModel`), SharedPreferences.
 Screens are a thin route plus a stateless `*Content(state, onIntent)` composable.

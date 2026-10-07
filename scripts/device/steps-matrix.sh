@@ -13,10 +13,19 @@
 #   PP_PROFILE_TURNS     "yes" where every tab turns with the display (foldables and tablets,
 #                        sw >= 600 dp, PP-088); "no" on phones, where only the Tournament tab's
 #                        running clock turns (into the table view, PP-079; see s_rotate_clock)
+#   PP_PROFILE_DEVICE    what else the profile changed (default: -). "soft-kb": the soft-keyboard
+#                        AVD (no hardware keyboard: the full-height soft keyboard, see s_ime).
+#                        "ignore-orient": the display ignores the app's orientation requests
+#                        (`cmd window set-ignore-orientation-request true`, see s_table_view_land)
+#   PP_PROFILE_ORIENTATION  on an ignore-orient profile, what a fixed orientation becomes: "user"
+#                        (Android 16's override took: the app fills the screen as it is held) or
+#                        "letterbox" (Android 12L to 15: kept in a box on the unturned display)
 PP_PROFILE="${PP_PROFILE:-default}"
 PP_PROFILE_FONT="${PP_PROFILE_FONT:-1.0}"
 PP_PROFILE_ROTATION="${PP_PROFILE_ROTATION:-0}"
 PP_PROFILE_TURNS="${PP_PROFILE_TURNS:-no}"
+PP_PROFILE_DEVICE="${PP_PROFILE_DEVICE:--}"
+PP_PROFILE_ORIENTATION="${PP_PROFILE_ORIENTATION:-}"
 
 # ------------------------------------------------------------------ display helpers
 # (Steps run with errexit and pipefail: these read all of adb's output and return 0, so neither a
@@ -68,6 +77,29 @@ require_orientation() { # port|land
 }
 # What the app's screens show with the display turned to $1 (0-3) on this profile.
 orientation_at() { [[ "$PP_PROFILE_TURNS" == yes && ( "$1" == 1 || "$1" == 3 ) ]] && echo land || echo port; }
+# The profile's display ignores the app's orientation requests (tablet-ignore).
+ignores_orientation() { [[ "$PP_PROFILE_DEVICE" == ignore-orient ]]; }
+# The device's keyboard as its configuration says: "qwerty" (a hardware keyboard), "nokeys" (none,
+# so the soft keyboard comes up in full), or nothing if it can't be read.
+keyboard_config() {
+  local config; config="$(adb_ shell am get-config 2>/dev/null | tr -d '\r' || true)"
+  grep -oE -e '-(nokeys|qwerty|12key)-' <<<"$config" | head -1 | sed 's/-//g' || true
+}
+# The app's window against the screen, from the last dump: says which, and fails unless the window
+# is the whole screen (a letterboxed app sits in a box inside it).
+app_window_fills_screen() {
+  python3 - "$PP_UI_LAST_XML" "$(screen_size)" <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+dump, size = sys.argv[1:]
+w, h = (int(v) for v in size.split("x"))
+root = next(ET.parse(dump).getroot().iter("node"))
+b = [int(v) for v in re.findall(r"-?\d+", root.get("bounds"))]
+ww, wh = b[2] - b[0], b[3] - b[1]
+whole = (ww, wh) == (w, h)
+print("the app's window: %dx%d at %d,%d on a %dx%d screen (%s)" % (ww, wh, b[0], b[1], w, h, "the whole screen" if whole else "letterboxed"))
+sys.exit(0 if whole else 1)
+PY
+}
 
 # ------------------------------------------------------------------ steps
 # The profile took: the app's window is the overridden screen (so it relaid out), at the profile's
@@ -81,8 +113,9 @@ s_profile() {
   rot="$(display_rotation)"
   status="$(inset_span statusBars | awk '{print $2 - $1}')"
   nav="$(inset_span navigationBars | awk '{print $2 - $1}')"
-  printf 'profile=%s\nwidth=%s\nheight=%s\ndensity=%s\nfont_scale=%s\nrotation=%s\nstatus_bar=%s\nnav_bar=%s\n' \
-    "$PP_PROFILE" "${size%x*}" "${size#*x}" "$density" "$font" "$rot" "${status:-0}" "${nav:-0}" > "$OUT/display.env"
+  printf 'profile=%s\nwidth=%s\nheight=%s\ndensity=%s\nfont_scale=%s\nrotation=%s\nstatus_bar=%s\nnav_bar=%s\ndevice=%s\nkeyboard=%s\n' \
+    "$PP_PROFILE" "${size%x*}" "${size#*x}" "$density" "$font" "$rot" "${status:-0}" "${nav:-0}" \
+    "$PP_PROFILE_DEVICE" "$(keyboard_config)" > "$OUT/display.env"
   cat "$OUT/display.env"
   python3 - "$PP_UI_LAST_XML" "$size" "$density" "$rot" "$font" "$PP_PROFILE_FONT" <<'PY' || return 1
 import re, sys, xml.etree.ElementTree as ET
@@ -99,6 +132,12 @@ if (b[2] - b[0], b[3] - b[1]) != (w, h):
 if abs(float(font) - float(want_font)) > 0.01:
     sys.exit("[ui] FAIL font scale is %s, the profile wants %s" % (font, want_font))
 PY
+  if ignores_orientation; then
+    local ignore; ignore="$(adb_ shell cmd window get-ignore-orientation-request 2>&1 | tr -d '\r' || true)"
+    echo "$ignore; a fixed orientation is ${PP_PROFILE_ORIENTATION:-?}"
+    [[ "$ignore" == *"ignoreOrientationRequest true"* ]] \
+      || { echo "[ui] FAIL the display still heeds orientation requests (set-ignore-orientation-request did not take)"; return 1; }
+  fi
   require_user_rotation "$PP_PROFILE_ROTATION" || return 1   # still turned after the dumps
   require_orientation "$(orientation_at "$PP_PROFILE_ROTATION")"
 }
@@ -231,7 +270,10 @@ s_rotate_clock_back() {
 }
 
 # Table view (PP-025, S3) from its button, on the profile as it is: the clock alone, full screen
-# (no tabs), landscape on every size (the button forces it until ✕).
+# (no tabs), landscape on every size (the button forces it until ✕). On a display that ignores
+# orientation requests (tablet-ignore) the display stays as it is held instead: the landscape
+# request is letterboxed (Android 12L to 15) or dropped, the table view filling the upright screen
+# (Android 16); either way the table view must show whole.
 table_view_open() {
   tab Tournament
   ui tap "desc=Table view"
@@ -246,13 +288,23 @@ s_table_view_land() {
   table_view_open || return 1
   ui assert-text "$CLOCK_LINE" "$TIMER_BUTTON" "desc=Exit table view" || return 1
   [[ -z "$(tab_positions "$PP_UI_LAST_XML")" ]] || { echo "[ui] FAIL the table view shows the tabs"; return 1; }
-  require_landscape
+  if ! ignores_orientation; then require_landscape; return; fi
+  local rot; rot="$(display_rotation)"
+  echo "display rotation $rot, the profile's $PP_PROFILE_ROTATION; a fixed orientation is ${PP_PROFILE_ORIENTATION:-?}"
+  [[ "$rot" == "$PP_PROFILE_ROTATION" ]] \
+    || { echo "[ui] FAIL the display turned for the table view: it should ignore the app's orientation requests"; return 1; }
+  if app_window_fills_screen; then echo "the table view fills the screen as it is held (Android 16)"
+  else echo "the table view is letterboxed on the unturned display (Android 12L to 15)"; fi
 }
-# Leave it: the clock, in the profile's orientation.
+# Leave it: the clock, in the profile's orientation (and, where orientation requests are ignored,
+# in the whole screen again: no letterbox left behind).
 s_table_view_close() {
   table_view_close
   require_orientation "$(orientation_at "$PP_PROFILE_ROTATION")" || return 1
-  ui assert-text "$CLOCK_LINE" "desc=Table view"
+  ui assert-text "$CLOCK_LINE" "desc=Table view" || return 1
+  if ignores_orientation; then
+    app_window_fills_screen || { echo "[ui] FAIL the clock is still letterboxed after the table view"; return 1; }
+  fi
 }
 # Leave it, then with the display turned to 270: the button again on a wide screen; on a phone the
 # turned clock already is the table view. Then back.
@@ -343,9 +395,10 @@ s_process_death() {
   ui assert-text "desc=More options"
 }
 
-# The soft keyboard over a name field low on the Bank list. The AVD has a hardware keyboard, so
-# Gboard shows only its toolbar strip (about 126 px); the check is that the app resizes for it:
-# the focused field stays clear of the keyboard and of the status bar.
+# The soft keyboard over a name field low on the Bank list. The main AVD has a hardware keyboard,
+# so Gboard shows only its toolbar strip (about 126 px); on the soft-keyboard AVD (the soft-kb
+# profiles) it comes up in full, and the step checks it did (a fifth of the screen or more). Either way the app must make room: the focused field stays whole between the status bar and
+# the keyboard, and clear of the tabs (the bar rides above the keyboard).
 ime_frame() { # "top bottom" of the keyboard while it shows, else nothing
   inset_line ime | awk '/visible=true/' \
     | sed -n 's/.*type=ime frame=\[[0-9]*,\([0-9]*\)\]\[[0-9]*,\([0-9]*\)\].*/\1 \2/p'
@@ -376,16 +429,36 @@ PY
   [[ -n "$ime" ]] || { echo "[ui] FAIL the soft keyboard did not come up"; return 1; }
   sleep 1
   ui find focused class=EditText > /dev/null || return 1
-  python3 - "$PP_UI_LAST_XML" "${ime% *}" <<'PY'
+  local status_bottom; status_bottom="$(inset_span statusBars | awk '{print $2}')"
+  python3 - "$PP_UI_LAST_XML" "$ime" "${status_bottom:-0}" "$PP_PROFILE_DEVICE" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
-dump, ime_top = sys.argv[1], int(sys.argv[2])
-f = next(n for n in ET.parse(dump).getroot().iter("node") if n.get("focused") == "true" and "EditText" in n.get("class", ""))
-b = [int(v) for v in re.findall(r"-?\d+", f.get("bounds"))]
-print("focused field %r at %s, keyboard from y=%d" % (f.get("text"), b, ime_top))
-if b[3] > ime_top:
-    sys.exit("[ui] FAIL the keyboard (from y=%d) covers the focused field %s" % (ime_top, b))
+dump, ime, status_bottom, device = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4]
+ime_top, ime_bottom = (int(v) for v in ime.split())
+def box(n):
+    return [int(v) for v in re.findall(r"-?\d+", n.get("bounds", ""))]
+nodes = list(ET.parse(dump).getroot().iter("node"))
+H = box(nodes[0])[3]
+f = next(n for n in nodes if n.get("focused") == "true" and "EditText" in n.get("class", ""))
+b = box(f)
+kb = ime_bottom - ime_top
+print("focused field %r at %s; keyboard from y=%d, %d px (%.0f %% of %d); status bar to y=%d"
+      % (f.get("text"), b, ime_top, kb, 100.0 * kb / H, H, status_bottom))
+if device == "soft-kb" and kb < H * 0.2:
+    sys.exit("[ui] FAIL the keyboard is only %d px tall, not the full soft keyboard: is this the soft-keyboard AVD?" % kb)
 if b[3] - b[1] < 20:
     sys.exit("[ui] FAIL the focused field is squeezed to %d px" % (b[3] - b[1]))
+if b[3] > ime_top:
+    sys.exit("[ui] FAIL the keyboard (from y=%d) covers the focused field %s" % (ime_top, b))
+if b[1] < status_bottom:
+    sys.exit("[ui] FAIL the focused field %s runs under the status bar (to y=%d)" % (b, status_bottom))
+# The tabs (the bar above the keyboard, or the rail): the smallest node that holds all four labels
+labels = {"Tournament", "Bank", "Payouts", "Tools"}
+tabs = [box(n) for n in nodes if labels <= {d.get("text") for d in n.iter("node")}]
+if tabs:
+    t = min(tabs, key=lambda r: (r[2] - r[0]) * (r[3] - r[1]))
+    if t[0] < b[2] and b[0] < t[2] and t[1] < b[3] and b[1] < t[3]:
+        sys.exit("[ui] FAIL the tabs %s cover the focused field %s" % (t, b))
+    print("tabs at %s, clear of the field" % t)
 PY
 }
 # Put the keyboard away (Escape, else Back) and turn it off again. Back can also leave the Bank

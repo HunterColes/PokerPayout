@@ -4,6 +4,10 @@
 # Environment knobs (all optional):
 #   ANDROID_HOME     SDK root (default: $HOME/Android/Sdk)
 #   PP_AVD           AVD name (default: pokerpayout_test, created on demand)
+#   PP_AVD_KEYBOARD  "soft": the second test AVD instead, pokerpayout_test_softkb (created on
+#                    demand too): the same but with no hardware keyboard (hw.keyboard=no), so the
+#                    full-height soft keyboard comes up. It uses the same port, so the two never
+#                    run side by side; boot.sh stops the one that runs to boot the other
 #   PP_EMU_PORT      emulator console port, even number 5554-5682 (default: 5580,
 #                    so we never collide with a hand-launched emulator on 5554)
 #   PP_REPORT_ROOT   where tour reports go (default: <repo>/build/device-reports)
@@ -17,7 +21,10 @@ export ANDROID_AVD_HOME="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
 ADB="$ANDROID_HOME/platform-tools/adb"
 EMULATOR="$ANDROID_HOME/emulator/emulator"
 
-PP_AVD="${PP_AVD:-pokerpayout_test}"
+TEST_AVD="pokerpayout_test"                  # the test AVD (boot.sh creates it)
+SOFT_KEYBOARD_AVD="pokerpayout_test_softkb"  # the same without a hardware keyboard
+if [[ "${PP_AVD_KEYBOARD:-}" == soft ]]; then PP_AVD="${PP_AVD:-$SOFT_KEYBOARD_AVD}"
+else PP_AVD="${PP_AVD:-$TEST_AVD}"; fi
 PP_EMU_PORT="${PP_EMU_PORT:-5580}"
 export ANDROID_SERIAL="emulator-$PP_EMU_PORT"   # every bare `adb` call targets our emulator
 

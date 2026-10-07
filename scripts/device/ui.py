@@ -50,7 +50,9 @@ it was; the others stop where the match is. The search up goes past where it sta
 a step left part-way down is searched to its top too. Drags rest before lifting, so nothing flings
 and a drag back returns exactly. find (a probe) and wait-gone never scroll; tap --scroll-in
 searches both ways; scroll-to ignores a small --max, goes on to that end of the page, then the
-other way. page starts from the page's top. Without PP_UI_SCROLL nothing scrolls by itself.
+other way, dragging rather than swiping (a swipe flings past short lines). page starts from the
+page's top. Only the app's own scrollers are ever dragged: on the launcher, the lock screen or the
+shade a drag down would open the shade. Without PP_UI_SCROLL nothing scrolls by itself.
 """
 
 import argparse
@@ -688,7 +690,9 @@ def scroll_until(selector, within, direction, max_swipes):
     """Swipe (inside the `within` container if given) until `selector` matches. In scroll mode it
     goes on to that end of the page however long it is, then the other way: on a small screen or
     with large text a page is longer than a step's --max allows for, and what it looks for can be
-    above where the step left the page."""
+    above where the step left the page. There it drags (resting before it lifts, 65 % of the
+    scroller at a time) instead of swiping: a swipe flings, and a fling can carry a short line past
+    the screen between two dumps. It only drags the app's own scrollers (see main_container)."""
     matcher = compile_selector(selector)
     container = compile_selector(within) if within else None
     directions = [direction]
@@ -712,7 +716,15 @@ def scroll_until(selector, within, direction, max_swipes):
                 if not boxes:
                     fail("%s isn't on screen and nothing scrolls (no %s)" % (" ".join(selector), within), nodes)
                 area = boxes[0].bounds
-            _swipe_dir(d, area)
+            if SCROLL_MODE:
+                if area is None:
+                    cont = main_container(nodes)
+                    if cont is None:
+                        break   # nothing of the app's to scroll
+                    area = cont.bounds
+                drag(area, d)
+            else:
+                _swipe_dir(d, area)
             swipes += 1
     fail("scrolled %s but never found %s" % (" then ".join(directions), selector), nodes)
 

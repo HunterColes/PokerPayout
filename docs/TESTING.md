@@ -853,7 +853,10 @@ matrix sets `PP_UI_SCROLL=1`, and `ui.py` then looks for a missing target by dra
 back; taps stop where the target is. The search goes down to the end and then up past where it
 started, so a page a step left part-way down is searched to its top as well. `scroll-to` ignores a
 step's small `--max` (set for the default screen): it goes on to that end of the page, then the
-other way. Drags rest before lifting, so nothing flings. A check that reads a whole list (the
+other way, by drags rather than swipes (a swipe flings, and a fling can carry a short line, such as
+the breaks verdict on the small screen, past the screen between two dumps). Drags rest before lifting, so nothing flings. Only the app's
+own scrollers are dragged: with the launcher, the lock screen or the shade in front, a drag down
+would open the shade, so nothing is dragged until the app is back. A check that reads a whole list (the
 payout table, the chip stack, the Bank's rows) uses `page_dump`, one dump merged from the page's
 top to its end, whatever part of the page the step left on screen. The plain tour never sets it
 and behaves exactly as before. (A selector for a screen's own

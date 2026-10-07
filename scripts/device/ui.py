@@ -46,9 +46,11 @@ SCROLL MODE (PP_UI_SCROLL=1; the device matrix sets it): on a small screen what 
 be below the fold. Then tap, set-text, wait, assert and assert-text, after 2 s without a match,
 drag the page's main scroller (the largest scrollable node) down to its end and up to its
 top looking for it. assert-text counts a text seen anywhere on the way and puts the page back where
-it was; the others stop where the match is. Drags rest before lifting, so nothing flings and a
-drag back returns exactly. find (a probe) and wait-gone never scroll; tap --scroll-in searches both
-ways. Without PP_UI_SCROLL nothing scrolls by itself.
+it was; the others stop where the match is. The search up goes past where it started, so a page
+a step left part-way down is searched to its top too. Drags rest before lifting, so nothing flings
+and a drag back returns exactly. find (a probe) and wait-gone never scroll; tap --scroll-in
+searches both ways; scroll-to ignores a small --max, goes on to that end of the page, then the
+other way. page starts from the page's top. Without PP_UI_SCROLL nothing scrolls by itself.
 """
 
 import argparse
@@ -431,13 +433,17 @@ def drag_search(pred, nodes, visit=None, restore=False):
     was in any case (and the nodes returned are the restored screen's). visit(nodes) sees every screen."""
     offset = 0   # how far the content moved up from where it started
     hit = None
+    downs = 0
     for direction in ("down", "up"):
-        for _ in range(MAX_DRAGS):
+        # Up goes back over the drags down first, then on: a page left part-way down (a step that
+        # scrolled to what it needed) has more above where the search started
+        for _ in range(MAX_DRAGS if direction == "down" else downs + MAX_DRAGS):
             cont = main_container(nodes)
             if cont is None:
                 break
             before = nodes
             expected = drag(cont.bounds, direction)
+            downs += direction == "down"
             _, nodes = snapshot()
             shift = content_shift(before, nodes)
             offset += expected if shift is None else shift
@@ -459,8 +465,9 @@ def drag_search(pred, nodes, visit=None, restore=False):
 
 
 def scroll_back(nodes, offset):
-    """Drag the content back down by `offset` px (negative: up), measuring as it goes."""
-    for _ in range(8):
+    """Drag the content back down by `offset` px (negative: up), measuring as it goes. (As many
+    drags as a search can make: it can end far from where it started.)"""
+    for _ in range(3 * MAX_DRAGS):
         if abs(offset) <= 12:
             break
         cont = main_container(nodes)
@@ -669,26 +676,36 @@ def cmd_scroll(a):
 
 
 def scroll_until(selector, within, direction, max_swipes):
-    """Swipe (inside the `within` container if given) until `selector` matches."""
+    """Swipe (inside the `within` container if given) until `selector` matches. In scroll mode it
+    goes on to that end of the page however long it is, then the other way: on a small screen or
+    with large text a page is longer than a step's --max allows for, and what it looks for can be
+    above where the step left the page."""
     matcher = compile_selector(selector)
     container = compile_selector(within) if within else None
-    prev = None
-    for i in range(max_swipes + 1):
-        _, nodes = snapshot()
-        if matcher(nodes):
-            return i, nodes
-        sig = tuple(visible_texts(nodes))
-        if sig == prev:
-            break  # reached the end; nothing moved
-        prev = sig
-        area = None
-        if container:
-            boxes = container(nodes)
-            if not boxes:
-                fail("%s isn't on screen and nothing scrolls (no %s)" % (" ".join(selector), within), nodes)
-            area = boxes[0].bounds
-        _swipe_dir(direction, area)
-    fail("scrolled %s but never found %s" % (direction, selector), nodes)
+    directions = [direction]
+    if SCROLL_MODE:
+        max_swipes = max(max_swipes, 3 * MAX_DRAGS)
+        directions.append("up" if direction == "down" else "down")
+    swipes = 0
+    for d in directions:
+        prev = None
+        for _ in range(max_swipes + 1):
+            _, nodes = snapshot()
+            if matcher(nodes):
+                return swipes, nodes
+            sig = tuple(visible_texts(nodes))
+            if sig == prev:
+                break  # reached the end; nothing moved
+            prev = sig
+            area = None
+            if container:
+                boxes = container(nodes)
+                if not boxes:
+                    fail("%s isn't on screen and nothing scrolls (no %s)" % (" ".join(selector), within), nodes)
+                area = boxes[0].bounds
+            _swipe_dir(d, area)
+            swipes += 1
+    fail("scrolled %s but never found %s" % (" then ".join(directions), selector), nodes)
 
 
 def cmd_scroll_to(a):
@@ -740,11 +757,27 @@ def cmd_assert_text(a):
 
 
 def cmd_page(a):
-    """One dump of the whole page: drag the main scroller to its end, place each screen's nodes in
-    the page's coordinates (the first screen's), and drag back. Only labelled nodes are kept; the
-    ones outside the scroller (bars, headers) come from the first screen."""
+    """One dump of the whole page: drag the main scroller to its top, then to its end, place each
+    screen's nodes in the page's coordinates (the top screen's), and drag back to where it was.
+    Only labelled nodes are kept; the ones outside the scroller (bars, headers) come from the top
+    screen. (It starts at the top because a step often leaves the page part-way down, having
+    scrolled to what it checks: on a small screen, part of a list is then above it.)"""
     xml_text, nodes = snapshot()
     root_el = ET.fromstring(xml_text)
+    cont = main_container(nodes)
+    lead, ups = 0, 0   # how far the content moved up while going to the top (so 0 or less)
+    while cont is not None and ups < MAX_DRAGS * 2:
+        before = nodes
+        expected = drag(cont.bounds, "up")
+        ups += 1
+        _, nodes = snapshot()
+        shift = content_shift(before, nodes)
+        if shift is None:
+            lead += expected    # it moved, but by how much can't be told: merge from here
+            break
+        if shift >= 0:
+            break               # the top of the page
+        lead += shift
     cont = main_container(nodes)
     entries = [[dict(n.attrs), list(n.bounds)] for n in nodes if n.labels() and n.area > 0]
     offset, drags = 0, 0
@@ -773,8 +806,8 @@ def cmd_page(a):
                 entries.append([dict(n.attrs), box])
             elif box[3] - box[1] > same[1][3] - same[1][1]:
                 same[1] = box   # a node cut by the bottom edge before, whole now
-    if offset:
-        scroll_back(nodes, offset)
+    if lead + offset:
+        scroll_back(nodes, lead + offset)
     out = ET.Element("hierarchy", {"rotation": root_el.get("rotation", "0"), "page-offset": str(offset)})
     top = nodes[0] if nodes else None
     page = ET.SubElement(out, "node", dict(top.attrs) if top else {})

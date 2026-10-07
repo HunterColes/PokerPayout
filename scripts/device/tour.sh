@@ -505,8 +505,9 @@ s_breaks() {
 }
 s_ready_ticket() {
   # Before the start the ticket shows level 1, labelled, with its full time, blinds, what's next
-  # and the whole game's shape
-  ui scroll up --times 8
+  # and the whole game's shape. (Up to the ticket's top line rather than a fixed number of swipes:
+  # with 200 % text on the smallest screen 8 swipes left the ticket's top above the screen.)
+  ui scroll-to "text~=Level 1 · ready" --dir up --max 8
   ui assert-text "text~=Level 1 · ready" text=20:00 "text=25 / 50" "text~=next 50 / 100" "text~=9 levels · 2 breaks" \
     "text~=3:20 in all"
 }
@@ -921,7 +922,9 @@ s_bank_knockout_done() {
   ui wait-gone "text=Player 2 is out"
   ui assert-text "desc=Player 2, out, 5th, knocked out by Alice. Bring back" "text~=Player 2 is out in 5th" \
     "text~=OUT · 1" || return 1
-  check_placement_badge "$PP_UI_LAST_XML"
+  # The whole list in the matrix: assert-text may have found the badge below the fold and put the
+  # page back
+  check_placement_badge "$(page_dump "$PP_UI_LAST_XML")"
 }
 # The knocked-out player's place is a badge in the Out column, clear of the name (PP-047;
 # v1.1.12 painted a big number over the name, v1.2 a badge on its top edge).

@@ -837,9 +837,13 @@ The matrix's own steps are opt-in tour steps in `scripts/device/steps-matrix.sh`
 **Scroll mode.** On a 569 dp-tall screen most of the texts a step asserts are below the fold. The
 matrix sets `PP_UI_SCROLL=1`, and `ui.py` then looks for a missing target by dragging the page
 (see the docstring in `ui.py`). Assertions count a text seen anywhere on the page and put the page
-back; taps stop where the target is. Drags rest before lifting, so nothing flings. A check that
-reads a whole list (the payout table) uses `page_dump`, one dump merged from the page's top to its
-end. The plain tour never sets it and behaves exactly as before. (A selector for a screen's own
+back; taps stop where the target is. The search goes down to the end and then up past where it
+started, so a page a step left part-way down is searched to its top as well. `scroll-to` ignores a
+step's small `--max` (set for the default screen): it goes on to that end of the page, then the
+other way. Drags rest before lifting, so nothing flings. A check that reads a whole list (the
+payout table, the chip stack, the Bank's rows) uses `page_dump`, one dump merged from the page's
+top to its end, whatever part of the page the step left on screen. The plain tour never sets it
+and behaves exactly as before. (A selector for a screen's own
 text next to a tab with the same name, such as the Payouts folder tab beside the rail's Payouts,
 uses the `in-scroll` token: inside a scroller, a ScrollView or list, even one whose content fits.)
 

@@ -128,6 +128,44 @@ internal fun PlacesCard(state: PayoutsUiState, onIntent: (PayoutsIntent) -> Unit
     }
 }
 
+/**
+ * The night is over and everyone is paid (PP-037): "Save this night" puts it in History, once. Once
+ * saved, the card says where to find it.
+ */
+@Composable
+internal fun SaveNightCard(night: NightSave, onIntent: (PayoutsIntent) -> Unit) {
+    PayoutsCard {
+        if (night == NightSave.Saved) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(
+                    PokerIcons.Check,
+                    contentDescription = null,
+                    tint = PokerColors.Live,
+                    modifier = Modifier.padding(top = 2.dp).size(18.dp),
+                )
+                Text(
+                    text = stringResource(R.string.payouts_night_saved),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = PokerColors.CardWhite,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        } else {
+            Text(
+                text = stringResource(R.string.payouts_night_over),
+                style = MaterialTheme.typography.bodyMedium,
+                color = PokerColors.CardWhite,
+            )
+            PokerButton(
+                text = stringResource(R.string.payouts_save_night),
+                onClick = { onIntent(PayoutsIntent.SaveNight) },
+                icon = PokerIcons.Trophy,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
 /** The table's rows: place, winner (or "Still playing"), amount, and the share bar under them. */
 @Composable
 internal fun PayoutRows(rows: List<PayoutRowModel>) {

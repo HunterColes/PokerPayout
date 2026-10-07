@@ -27,7 +27,9 @@ data class PayoutsUiState(
     val bounties: BountiesModel = BountiesModel(),
     /** The structure can't change while the clock runs. */
     val isLocked: Boolean = false,
-    val showStructureSheet: Boolean = false
+    val showStructureSheet: Boolean = false,
+    /** Saving the finished night to History (PP-037). */
+    val night: NightSave = NightSave.NotOver
 ) {
     val places: Int get() = table.places.size
 
@@ -37,6 +39,18 @@ data class PayoutsUiState(
     val preset: PayoutPreset? get() = settings.preset
 
     val canPlaceMore: Boolean get() = !isLocked && places < maxPlaces
+}
+
+/** Whether tonight can go into History (PP-037). */
+enum class NightSave {
+    /** No champion yet, or someone is still owed money. */
+    NotOver,
+
+    /** Over and everyone paid: "Save this night" is offered. */
+    Offered,
+
+    /** History holds it. */
+    Saved
 }
 
 /** One paid place. [sharePercent] is the rounded amount's share of the pool, not the raw weight. */

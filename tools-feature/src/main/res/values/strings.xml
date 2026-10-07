@@ -11,6 +11,8 @@
     <string name="tools_ranks_description">What beats what, best to worst</string>
     <string name="tools_seats_title">Seat draw</string>
     <string name="tools_seats_description">Random seats and the button</string>
+    <string name="tools_history_title">History</string>
+    <string name="tools_history_description">Saved nights and the season\'s points</string>
     <string name="tools_sound_title">Sound</string>
     <string name="tools_sound_description">A chime %1$d s before each level, break and the end</string>
     <string name="tools_volume">Chime volume</string>

@@ -1,0 +1,61 @@
+package com.huntercoles.pokerpayout.core.domain.history
+
+import com.huntercoles.pokerpayout.core.utils.Money
+import kotlin.math.abs
+
+/**
+ * Every saved night as CSV for a spreadsheet (PP-037, RFC 4180): a header, then one row per player
+ * per night, the oldest night first and its players in finishing order. Dates read 2026-10-05;
+ * amounts are dollars with two decimals and no sign ("12.50"); buy_in is what the player paid to sit
+ * down (buy-in, food and bounty). Text holding a comma, a quote or a line break is quoted, its quotes
+ * doubled. Lines end in CRLF.
+ */
+object NightCsv {
+    val HEADER = listOf(
+        "date", "structure", "prize_pool", "players", "place", "player", "points",
+        "buy_in", "rebuys", "rebuy_total", "add_ons", "add_on_total", "paid_in",
+        "prize", "knockouts", "bounties", "won", "net",
+    )
+
+    private const val LINE_END = "\r\n"
+
+    fun of(nights: List<SavedNight>): String = buildString {
+        append(HEADER.joinToString(",")).append(LINE_END)
+        nights.sortedWith(compareBy<SavedNight> { it.date }.thenBy { it.id }).forEach { night ->
+            night.players.forEach { player -> append(row(night, player).joinToString(",")).append(LINE_END) }
+        }
+    }
+
+    private fun row(night: SavedNight, player: NightPlayer): List<String> = listOf(
+        night.date.toString(),
+        field(night.structureName.orEmpty()),
+        amount(night.prizePoolCents),
+        night.players.size.toString(),
+        player.place.toString(),
+        field(player.name),
+        Season.points(player.place, night.players.size).toString(),
+        amount(player.entryCents),
+        player.rebuys.toString(),
+        amount(player.rebuyCents),
+        player.addOns.toString(),
+        amount(player.addOnCents),
+        amount(player.paidInCents),
+        amount(player.prizeCents),
+        player.knockouts.toString(),
+        amount(player.bountyCents),
+        amount(player.wonCents),
+        amount(player.netCents),
+    )
+
+    /** [text] as one CSV field: quoted when it holds a comma, a quote or a line break, its quotes doubled. */
+    fun field(text: String): String =
+        if (text.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) "\"${text.replace("\"", "\"\"")}\"" else text
+
+    /** Whole cents as dollars with two decimals: 1250 is "12.50", -50 is "-0.50". */
+    fun amount(cents: Long): String {
+        val sign = if (cents < 0) "-" else ""
+        val magnitude = abs(cents)
+        val fraction = (magnitude % Money.CENTS_PER_DOLLAR).toString().padStart(2, '0')
+        return "$sign${magnitude / Money.CENTS_PER_DOLLAR}.$fraction"
+    }
+}

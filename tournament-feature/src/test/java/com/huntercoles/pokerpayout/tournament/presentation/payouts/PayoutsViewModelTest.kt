@@ -5,6 +5,7 @@ import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import com.huntercoles.pokerpayout.tournament.presentation.payouts.PayoutsGame.Companion.DANA
 import com.huntercoles.pokerpayout.tournament.presentation.payouts.PayoutsGame.Companion.MARCUS
+import com.huntercoles.pokerpayout.tournament.presentation.payouts.PayoutsGame.Companion.PRIYA
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -20,6 +21,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.LocalDate
 
 /** The Payouts tab's ViewModel (S6) on the mockups' game, over real preferences. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -252,5 +254,70 @@ class PayoutsViewModelTest {
             listOf(BountyClaim("Marcus", listOf("Rita", "Dana"), 1_000L)),
             state.bounties.claims.filter { it.name == "Marcus" }
         )
+    }
+
+    // Saving the finished night to History (PP-037) ----------------------------------------------
+
+    @Test
+    fun aNightIsOfferedForHistoryOnlyOnceItIsOverAndEveryoneIsPaid() {
+        val viewModel = game.midGame().viewModel()
+        assertEquals(NightSave.NotOver, viewModel.state().night)
+        game.finished()
+        // A champion, but Dana, Marcus and Priya are still to be paid
+        assertEquals(NightSave.NotOver, viewModel.state().night)
+        viewModel.send(PayoutsIntent.SaveNight)
+        assertTrue(game.nights.nights.value.isEmpty())
+
+        listOf(DANA, MARCUS).forEach { game.bank.savePlayerPayedOutStatus(it, true) }
+        assertEquals(NightSave.NotOver, viewModel.state().night)
+        game.bank.savePlayerPayedOutStatus(PRIYA, true)
+        assertEquals(NightSave.Offered, viewModel.state().night)
+    }
+
+    @Test
+    fun savingKeepsTheNightOnceWithEveryPlayerInFinishingOrder() {
+        val viewModel = game.settled().viewModel()
+        viewModel.send(PayoutsIntent.SaveNight)
+        viewModel.send(PayoutsIntent.SaveNight) // a second tap saves nothing more
+        assertEquals(NightSave.Saved, viewModel.state().night)
+
+        val night = game.nights.nights.value.single()
+        assertEquals(LocalDate.of(2026, 10, 5), night.date)
+        assertNull(night.structureName)
+        assertEquals(45_000L, night.prizePoolCents)
+        assertEquals(
+            listOf("Dana", "Marcus", "Priya", "Theo", "Jo", "Sam", "Alex", "Rita", "Ben"),
+            night.players.map { it.name },
+        )
+        assertEquals((1..9).toList(), night.players.map { it.place })
+        assertEquals(listOf(22_500L, 13_000L, 9_500L) + List(6) { 0L }, night.players.map { it.prizeCents })
+        assertEquals(listOf(6, 1) + List(7) { 0 }, night.players.map { it.knockouts })
+        // Dana: six knockouts, her own bounty and Priya's, which nobody claimed; Marcus: Rita's
+        assertEquals(listOf(4_000L, 500L) + List(7) { 0L }, night.players.map { it.bountyCents })
+        assertEquals(listOf(0, 1, 0, 0, 0, 0, 0, 0, 0), night.players.map { it.rebuys })
+        assertEquals(listOf(1, 1, 1, 1, 1, 0, 0, 0, 0), night.players.map { it.addOns })
+        assertTrue(night.players.all { it.entryCents == 5_000L })
+    }
+
+    @Test
+    fun deletedFromHistoryOrClearedFromTheBankTheOfferFollows() {
+        val viewModel = game.settled().viewModel()
+        viewModel.send(PayoutsIntent.SaveNight)
+        game.nights.delete(game.nights.nights.value.single().id)
+        assertEquals(NightSave.Offered, viewModel.state().night)
+
+        game.bank.resetAllBankData()
+        assertEquals(NightSave.NotOver, viewModel.state().night)
+    }
+
+    @Test
+    fun aSavedNightIsNamedAfterThePresetItWasPlayedWith() {
+        val tonight = game.setup.capture(includeChipSet = false)
+        game.presets.save("Turbo", tonight.copy(rebuyUntilLevel = 3), nowMillis = 2L)
+        game.presets.save("Friday", tonight, nowMillis = 1L)
+        val viewModel = game.settled().viewModel()
+        viewModel.send(PayoutsIntent.SaveNight)
+        // Turbo was used last, but tonight's setup isn't Turbo's
+        assertEquals("Friday", game.nights.nights.value.single().structureName)
     }
 }

@@ -441,31 +441,48 @@ s_ime() {
 import re, sys, xml.etree.ElementTree as ET
 nodes = list(ET.parse(sys.argv[1]).getroot().iter("node"))
 H = int(re.findall(r"-?\d+", nodes[0].get("bounds"))[3])
+def box(n):
+    return [int(v) for v in re.findall(r"-?\d+", n.get("bounds", ""))]
+# A player still in: above the "OUT · N" header if it is on screen (an out player's row is no
+# place to type)
+out = [box(n)[1] for n in nodes if re.match(r"^OUT · \d+$", n.get("text") or "") and len(box(n)) == 4]
+limit = min(out) if out else H * 0.95
 fields = []
 for n in nodes:
-    b = [int(v) for v in re.findall(r"-?\d+", n.get("bounds", ""))]
-    if "EditText" in n.get("class", "") and len(b) == 4 and b[3] - b[1] > 20 and b[3] < H * 0.95:
+    b = box(n)
+    if "EditText" in n.get("class", "") and len(b) == 4 and b[3] - b[1] > 20 and b[3] < limit:
         fields.append(b)
 if fields:
-    b = max(fields, key=lambda b: b[3])          # the lowest name field on screen
+    b = max(fields, key=lambda b: b[3])          # the lowest such name field on screen
     print((b[0] + b[2]) // 2, (b[1] + b[3]) // 2)
 PY
 )"
   [[ -n "$xy" ]] || { echo "[ui] FAIL no name field on the Bank screen"; return 1; }
-  if [[ "$PP_PROFILE_DEVICE" != soft-kb ]]; then   # (a soft-kb profile has it on throughout)
+  # On the main AVD (a hardware keyboard) the IME only comes up with show_ime_with_hard_keyboard
+  # on: on for this step and ime-done (the tour puts it back however it ends), with a moment for
+  # the IME to see it before the tap. A soft-kb profile has it on throughout.
+  if [[ "$PP_PROFILE_DEVICE" != soft-kb ]]; then
     touch "$IME_MARK"
     adb_ shell settings put secure show_ime_with_hard_keyboard 1
+    sleep 1
   fi
-  ui tap-xy $xy
   # The keyboard's frame once it has settled (the same twice in a row): Gboard can show its toolbar
-  # strip a moment before its keys
-  local ime="" last="" i
-  for i in $(seq 1 16); do
-    ime="$(ime_frame)"
-    [[ -n "$ime" && "$ime" == "$last" ]] && break
-    last="$ime"; sleep 0.5
+  # strip a moment before its keys. The last frame seen counts if it never reads the same twice;
+  # if none shows, the field is tapped once more.
+  local ime="" last="" seen="" i tap
+  for tap in 1 2; do
+    ui tap-xy $xy
+    for i in $(seq 1 16); do
+      ime="$(ime_frame)"
+      [[ -z "$ime" ]] || seen="$ime"
+      [[ -n "$ime" && "$ime" == "$last" ]] && break
+      last="$ime"; sleep 0.5
+    done
+    [[ -z "$seen" ]] || break
+    echo "no keyboard after tap $tap"
   done
-  [[ -n "$ime" ]] || { echo "[ui] FAIL the soft keyboard did not come up"; return 1; }
+  [[ -n "$seen" ]] || { echo "[ui] FAIL the soft keyboard did not come up"; keyboard_facts; return 1; }
+  ime="$seen"
   if [[ "$PP_PROFILE_DEVICE" == soft-kb ]]; then   # the full keyboard: give a slow first one time
     local screen_h; screen_h="$(adb_ shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)"; screen_h="${screen_h#*x}"
     [[ "$screen_h" =~ ^[0-9]+$ ]] || screen_h=0

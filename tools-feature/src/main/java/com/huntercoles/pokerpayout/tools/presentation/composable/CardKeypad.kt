@@ -120,12 +120,7 @@ private fun KeyRows(state: OddsCalculatorUiState, target: SlotRef, onIntent: (Od
     val picked = state.keypad.rank
     val fourColour = state.fourColourDeck
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val ranksPerRow = COLUMN_CHOICES.firstOrNull { maxWidth / it >= PokerDimens.MinTouch } ?: COLUMN_CHOICES.last()
-        val sixFit = maxWidth / SHARED_COLUMNS >= PokerDimens.MinTouch
-        val shared = dock.suitsShareRows && ranksPerRow < COLUMN_CHOICES.first() && sixFit
-        val columns = if (shared) SHARED_COLUMNS else ranksPerRow
-        // Sharing a row with ranks, a suit is as tall as a rank key.
-        val suitHeight = if (shared) PokerDimens.KeypadKeyHeight else dock.suitHeight
+        val (columns, shared, suitHeight) = keyGrid(maxWidth, dock)
         val suits = SUIT_ORDER.map { PadKey.Suit(it) }
         val keys = if (shared) RANK_KEYS + suits else RANK_KEYS
         Column {
@@ -146,6 +141,21 @@ private fun KeyRows(state: OddsCalculatorUiState, target: SlotRef, onIntent: (Od
             }
         }
     }
+}
+
+/** How the keys lay out at [width]: [columns] keys a row, the suits sharing the ranks' rows or not. */
+private data class KeyGrid(val columns: Int, val shared: Boolean, val suitHeight: Dp)
+
+private fun keyGrid(width: Dp, dock: KeypadDock): KeyGrid {
+    val ranksPerRow = COLUMN_CHOICES.firstOrNull { width / it >= PokerDimens.MinTouch } ?: COLUMN_CHOICES.last()
+    val sixFit = width / SHARED_COLUMNS >= PokerDimens.MinTouch
+    val shared = dock.suitsShareRows && ranksPerRow < COLUMN_CHOICES.first() && sixFit
+    return KeyGrid(
+        columns = if (shared) SHARED_COLUMNS else ranksPerRow,
+        shared = shared,
+        // Sharing a row with ranks, a suit is as tall as a rank key.
+        suitHeight = if (shared) PokerDimens.KeypadKeyHeight else dock.suitHeight,
+    )
 }
 
 /**

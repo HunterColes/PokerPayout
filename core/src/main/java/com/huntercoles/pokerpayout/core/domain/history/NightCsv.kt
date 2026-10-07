@@ -54,10 +54,11 @@ object NightCsv {
      */
     fun field(text: String): String {
         val safe = if (text.firstOrNull() in FORMULA_STARTS) "'$text" else text
-        return if (safe.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) "\"${safe.replace("\"", "\"\"")}\"" else safe
+        return if (safe.any { it in NEEDS_QUOTES }) "\"${safe.replace("\"", "\"\"")}\"" else safe
     }
 
     private val FORMULA_STARTS = setOf('=', '+', '-', '@', '\t', '\r')
+    private val NEEDS_QUOTES = setOf(',', '"', '\n', '\r')
 
     /** Whole cents as dollars with two decimals: 1250 is "12.50", -50 is "-0.50". */
     fun amount(cents: Long): String {

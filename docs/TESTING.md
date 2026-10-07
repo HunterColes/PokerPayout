@@ -814,8 +814,9 @@ trick) and the tour's `table-view`, `table-view-resume`, `table-view-exit`, `rot
 (a step renamed on another branch): the matrix warns once and skips them.
 
 After a failed step the matrix's tour (`PP_TOUR_RECOVER=1`) presses Back if no tabs are on screen,
-so a dialog the failure left open doesn't fail every step after it; the failed step's
-screenshot is taken first. The plain tour doesn't do this.
+so a dialog the failure left open doesn't fail every step after it, and if the app is still out
+of sight (the launcher, after a failed `process-death`), it opens the app again from the launcher,
+data and all; the failed step's screenshot is taken first. The plain tour doesn't do this.
 
 The matrix's own steps are opt-in tour steps in `scripts/device/steps-matrix.sh`:
 
@@ -829,7 +830,7 @@ The matrix's own steps are opt-in tour steps in `scripts/device/steps-matrix.sh`
 | `table-view-close` | ✕: back to the clock, in the profile's orientation (on `tablet-ignore`, in the whole screen again: no letterbox left) |
 | `table-view-back` | ✕, then the same with the display turned to 270 (on a phone the turned clock already is the table view) |
 | `setup-close` | Closes the setup panel opened over the running clock (the tour's `setup-panel`); the clock runs on |
-| `process-death` | PP-093: the app in the background, killed as low memory does (`am kill`), opened again from the launcher. The clock must be on the same level with its time still counting (within 4 s of the time that passed, no restart), and every Bank cell (buy-in, rebuy, out, paid) the same as before |
+| `process-death` | PP-093: the app in the background, its process ended with `am force-stop`, opened again from the launcher. The clock must be on the same level with its time still counting (within 4 s of the time that passed, no restart), and every Bank cell (buy-in, rebuy, out, paid) the same as before. Not `am kill` (what low memory does): a running clock keeps a foreground service (the live clock, PP-081), and `am kill` leaves such a process alone. force-stop ends the process, the service and the notification at once, with no chance to save, and the next start is cold (no saved instance state), so the clock and the Bank come only from what the app had already written. It no longer covers a restore into the old task from saved instance state, which the app doesn't rely on for its data |
 | `ime`, `ime-done` | The soft keyboard over the lowest name field on the Bank: the field stays whole above it, below the status bar and clear of the tabs (the bar rides above the keyboard). On a `soft-kb` profile the keyboard must be the full one (a fifth of the screen or more). `ime-done` puts it away |
 | `payouts-screen` | The Payouts tab's table adds up (the rail step's check, at any width) |
 

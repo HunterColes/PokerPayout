@@ -331,9 +331,17 @@ s_setup_close() {
   ui assert-text "$CLOCK_LINE" "desc~=Opens setup" "Pause timer"
 }
 
-# Process death (PP-093): the app in the background, killed as low memory does (`am kill`), then
-# opened again from the launcher. The running clock must come back on the same level with its time
-# still counting (no restart, no lost minutes), and every Bank record intact.
+# Process death (PP-093): the app in the background, its process ended, then opened again from the
+# launcher. The running clock must come back on the same level with its time still counting (no
+# restart, no lost minutes), and every Bank record intact.
+# How it ends: `am force-stop`. A running clock keeps a foreground service in the background (the
+# live clock, PP-081), and `am kill` (what low memory does) leaves a process that has one alone, so
+# it never ended anything here. force-stop ends the process, its service and its notification at
+# once, with no chance to save on the way out; the launcher then starts the app cold, with nothing
+# in memory and no saved instance state. So the clock and the Bank can only come from what the app
+# had already written, which is the case that matters. What it no longer
+# covers: a restore into the old task from saved instance state, which the app doesn't rely on for
+# its data (that is in its preferences).
 bank_records() { # the Bank's cells, one per line, from a dump: "Alice, buy-in, paid", ...
   python3 - "$1" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
@@ -363,15 +371,15 @@ s_process_death() {
   local pid; pid="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"
   ui home
   sleep 2
-  adb_ shell am kill "$APP_ID"
+  adb_ shell am force-stop "$APP_ID"   # (see above: `am kill` spares the live clock's service)
   local i
   for i in 1 2 3 4 5 6 7 8 9 10; do [[ -z "$(adb_ shell pidof "$APP_ID" | tr -d '\r')" ]] && break; sleep 0.5; done
-  [[ -z "$(adb_ shell pidof "$APP_ID" | tr -d '\r')" ]] || { echo "[ui] FAIL am kill left the app running"; return 1; }
-  echo "process $pid killed in the background"
+  [[ -z "$(adb_ shell pidof "$APP_ID" | tr -d '\r')" ]] || { echo "[ui] FAIL force-stop left the app running"; return 1; }
+  echo "process $pid ended in the background (force-stop)"
   sleep 3
-  # Back from the launcher, as a user would: monkey brings the task back (ui.py launch would
-  # force-stop it first, which is not a process death)
-  adb_ shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+  # Back from the launcher, as a user would (if this fails, the tour's recovery opens the app
+  # again, so the steps after it start from the app)
+  adb_ shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || return 1
   ui wait "$CLOCK_LINE" --timeout 20 || return 1
   ui assert-text "Pause timer" || return 1
   clock_at_top || return 1
@@ -488,7 +496,7 @@ extra_step table-view-land    "Table view button: the clock alone, full screen" 
 extra_step table-view-back    "Leave table view; again from a display turned 270"       s_table_view_back
 extra_step table-view-close   "Leave table view: the profile's orientation again"       s_table_view_close
 extra_step setup-close        "Close the setup panel: the clock runs on"                s_setup_close
-extra_step process-death      "Killed in the background: clock and Bank come back"      s_process_death
+extra_step process-death      "Ended in the background: clock and Bank come back"       s_process_death
 extra_step ime                "Soft keyboard over a low name field: field stays clear"  s_ime
 extra_step ime-done           "Keyboard put away and turned off again"                  s_ime_done
 extra_step payouts-screen     "Payouts tab: the table adds up"                          s_rail_payouts

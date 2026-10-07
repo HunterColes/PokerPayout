@@ -168,13 +168,20 @@ run_step() {
 
 # The device matrix (PP_TOUR_RECOVER=1) keeps going after a failed step. A step that failed with a
 # dialog (or the table view) still over the tabs would fail every step after it, so close that
-# with Back first; the failed step's screenshot is already taken.
+# with Back first. If the app is still out of sight then (a step that failed on the launcher, as
+# process-death can), open it again from the launcher, as a user would: its data stays. The failed
+# step's screenshot is already taken.
 recover_screen() {
   ui dump --out "$OUT/.recover.xml" >/dev/null 2>>"$LOG" || return 0
-  if [[ -z "$(tab_positions "$OUT/.recover.xml")" ]]; then
-    echo "[tour] no tabs on screen after the failed step: Back, to close what it left open" >>"$LOG"
-    ui back >>"$LOG" 2>&1 || true
-    sleep 1
+  [[ -z "$(tab_positions "$OUT/.recover.xml")" ]] || return 0
+  echo "[tour] no tabs on screen after the failed step: Back, to close what it left open" >>"$LOG"
+  ui back >>"$LOG" 2>&1 || true
+  sleep 1
+  ui dump --out "$OUT/.recover.xml" >/dev/null 2>>"$LOG" || return 0
+  if ! grep -q "package=\"$APP_ID\"" "$OUT/.recover.xml"; then
+    echo "[tour] the app isn't on screen: opening it again from the launcher" >>"$LOG"
+    adb_ shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >>"$LOG" 2>&1 || true
+    ui wait "re=$TAB_RE" --timeout 15 >>"$LOG" 2>&1 || true
   fi
   return 0
 }

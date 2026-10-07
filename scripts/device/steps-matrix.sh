@@ -85,6 +85,18 @@ keyboard_config() {
   local config; config="$(adb_ shell am get-config 2>/dev/null | tr -d '\r' || true)"
   grep -oE -e '-(nokeys|qwerty|12key)-' <<<"$config" | head -1 | sed 's/-//g' || true
 }
+# The physical keyboards the input system sees: the devices whose classes include ALPHAKEY, other
+# than "Virtual" (the one `adb shell input` types through). "none" if there are none. What Gboard
+# and the configuration's keyboard go by.
+hard_keyboards() {
+  adb_ shell dumpsys input 2>/dev/null | tr -d '\r' | awk '
+    /^Event Hub State:/ { hub = 1; next }
+    hub && /^[^ ]/ { hub = 0 }
+    hub && match($0, /^ +-?[0-9]+: /) { name = substr($0, RSTART + RLENGTH) }
+    hub && /Classes:.*ALPHAKEY/ && name != "Virtual" { out = out (out == "" ? "" : ",") name }
+    END { print (out == "" ? "none" : out) }' || true
+}
+default_ime() { adb_ shell settings get secure default_input_method 2>/dev/null | tr -d '\r' || true; }
 # The app's window against the screen, from the last dump: says which, and fails unless the window
 # is the whole screen (a letterboxed app sits in a box inside it).
 app_window_fills_screen() {
@@ -113,10 +125,14 @@ s_profile() {
   rot="$(display_rotation)"
   status="$(inset_span statusBars | awk '{print $2 - $1}')"
   nav="$(inset_span navigationBars | awk '{print $2 - $1}')"
-  printf 'profile=%s\nwidth=%s\nheight=%s\ndensity=%s\nfont_scale=%s\nrotation=%s\nstatus_bar=%s\nnav_bar=%s\ndevice=%s\nkeyboard=%s\n' \
+  printf 'profile=%s\nwidth=%s\nheight=%s\ndensity=%s\nfont_scale=%s\nrotation=%s\nstatus_bar=%s\nnav_bar=%s\ndevice=%s\nkeyboard=%s\nhard_keyboards=%s\nime=%s\n' \
     "$PP_PROFILE" "${size%x*}" "${size#*x}" "$density" "$font" "$rot" "${status:-0}" "${nav:-0}" \
-    "$PP_PROFILE_DEVICE" "$(keyboard_config)" > "$OUT/display.env"
+    "$PP_PROFILE_DEVICE" "$(keyboard_config)" "$(hard_keyboards)" "$(default_ime)" > "$OUT/display.env"
   cat "$OUT/display.env"
+  if [[ "$PP_PROFILE_DEVICE" == soft-kb ]]; then
+    echo "input methods: $(adb_ shell ime list -a -s 2>/dev/null | tr -d '\r' | xargs || true)"
+    echo "show_ime_with_hard_keyboard: $(adb_ shell settings get secure show_ime_with_hard_keyboard | tr -d '\r')"
+  fi
   python3 - "$PP_UI_LAST_XML" "$size" "$density" "$rot" "$font" "$PP_PROFILE_FONT" <<'PY' || return 1
 import re, sys, xml.etree.ElementTree as ET
 dump, size, density, rot, font, want_font = sys.argv[1:]
@@ -404,9 +420,16 @@ s_process_death() {
 }
 
 # The soft keyboard over a name field low on the Bank list. The main AVD has a hardware keyboard,
-# so Gboard shows only its toolbar strip (about 126 px); on the soft-keyboard AVD (the soft-kb
-# profiles) it comes up in full, and the step checks it did (a fifth of the screen or more). Either way the app must make room: the focused field stays whole between the status bar and
-# the keyboard, and clear of the tabs (the bar rides above the keyboard).
+# so Gboard shows only its toolbar strip (48 dp: 126 px at 420 dpi) once show_ime_with_hard_keyboard
+# is on; on the soft-keyboard AVD (the soft-kb profiles, which keep that setting on throughout) it
+# should come up in full, and the step checks it did (a fifth of the screen or more), measured once
+# the keyboard has settled, and says what the device reports about keyboards if not. Either way the
+# app must make room: the focused field stays whole between the status bar and the keyboard, and
+# clear of the tabs (the bar rides above the keyboard).
+keyboard_facts() { # why the keyboard is what it is, after a failed check
+  echo "keyboard config: $(keyboard_config); physical keyboards: $(hard_keyboards); IME: $(default_ime);" \
+    "show_ime_with_hard_keyboard: $(adb_ shell settings get secure show_ime_with_hard_keyboard | tr -d '\r')"
+}
 ime_frame() { # "top bottom" of the keyboard while it shows, else nothing
   inset_line ime | awk '/visible=true/' \
     | sed -n 's/.*type=ime frame=\[[0-9]*,\([0-9]*\)\]\[[0-9]*,\([0-9]*\)\].*/\1 \2/p'
@@ -429,16 +452,32 @@ if fields:
 PY
 )"
   [[ -n "$xy" ]] || { echo "[ui] FAIL no name field on the Bank screen"; return 1; }
-  touch "$IME_MARK"
-  adb_ shell settings put secure show_ime_with_hard_keyboard 1
+  if [[ "$PP_PROFILE_DEVICE" != soft-kb ]]; then   # (a soft-kb profile has it on throughout)
+    touch "$IME_MARK"
+    adb_ shell settings put secure show_ime_with_hard_keyboard 1
+  fi
   ui tap-xy $xy
-  local ime="" i
-  for i in $(seq 1 12); do ime="$(ime_frame)"; [[ -n "$ime" ]] && break; sleep 0.5; done
+  # The keyboard's frame once it has settled (the same twice in a row): Gboard can show its toolbar
+  # strip a moment before its keys
+  local ime="" last="" i
+  for i in $(seq 1 16); do
+    ime="$(ime_frame)"
+    [[ -n "$ime" && "$ime" == "$last" ]] && break
+    last="$ime"; sleep 0.5
+  done
   [[ -n "$ime" ]] || { echo "[ui] FAIL the soft keyboard did not come up"; return 1; }
-  sleep 1
+  if [[ "$PP_PROFILE_DEVICE" == soft-kb ]]; then   # the full keyboard: give a slow first one time
+    local screen_h; screen_h="$(adb_ shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)"; screen_h="${screen_h#*x}"
+    [[ "$screen_h" =~ ^[0-9]+$ ]] || screen_h=0
+    for i in $(seq 1 10); do
+      (( ${ime#* } - ${ime% *} >= screen_h / 5 )) && break
+      sleep 1; last="$(ime_frame)"; [[ -z "$last" ]] || ime="$last"
+    done
+  fi
   ui find focused class=EditText > /dev/null || return 1
+  last="$(ime_frame)"; [[ -z "$last" ]] || ime="$last"   # the frame as the dump saw it
   local status_bottom; status_bottom="$(inset_span statusBars | awk '{print $2}')"
-  python3 - "$PP_UI_LAST_XML" "$ime" "${status_bottom:-0}" "$PP_PROFILE_DEVICE" <<'PY'
+  python3 - "$PP_UI_LAST_XML" "$ime" "${status_bottom:-0}" "$PP_PROFILE_DEVICE" <<'PY' || { keyboard_facts; return 1; }
 import re, sys, xml.etree.ElementTree as ET
 dump, ime, status_bottom, device = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4]
 ime_top, ime_bottom = (int(v) for v in ime.split())
@@ -478,8 +517,10 @@ s_ime_done() {
     ui key "$key"
     for i in 1 2 3 4 5 6; do sleep 0.5; [[ -z "$(ime_frame)" ]] && break; done
   done
-  adb_ shell settings put secure show_ime_with_hard_keyboard 0
-  rm -f "$IME_MARK"
+  if [[ "$PP_PROFILE_DEVICE" != soft-kb ]]; then
+    adb_ shell settings put secure show_ime_with_hard_keyboard 0
+    rm -f "$IME_MARK"
+  fi
   [[ -z "$(ime_frame)" ]] || { echo "[ui] FAIL the soft keyboard is still up"; return 1; }
   ui find "$BANK_SUBTITLE" --timeout 2 >/dev/null 2>&1 || tab Bank
   ui assert-text "desc=More options" "$BANK_SUBTITLE" || return 1

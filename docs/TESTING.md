@@ -852,9 +852,22 @@ of the small one). `boot.sh` creates it on first use when `PP_AVD_KEYBOARD=soft`
 `matrix.sh` does for these profiles. Both AVDs use the same port (`emulator-5580`), so they never
 run side by side: `boot.sh` stops whichever of the two is up before it boots the other, and a
 matrix refuses to mix `soft-kb` profiles with the others (`--profiles soft-keyboard` is a run of
-its own). There the `ime` step also fails if the keyboard is under a fifth of the screen (the
-wrong AVD), and `bank-rename` types with the full keyboard up and switches tabs on the bar above
-it. Typing itself (`adb shell input text`) works the same with either keyboard.
+its own). These profiles keep `show_ime_with_hard_keyboard` on from their start (so the IME comes
+up even if the device reports a keyboard), the `ime` step measures the keyboard once it has
+settled (Gboard can show its strip a moment before its keys, and a slow first one gets 10 s more),
+and it fails if the keyboard is under a fifth of the screen. `display.env` (and the matrix log, for
+these profiles) records what the device says: `keyboard=` from the configuration (`qwerty` or
+`nokeys`), `hard_keyboards=` (the input devices with letter keys, from `dumpsys input`) and `ime=`.
+`bank-rename` then types with the keyboard up and switches tabs on the bar above it. Typing itself
+(`adb shell input text`) works the same with either keyboard.
+
+The first run on GitHub (1.3.11) measured 126 px (420 dpi) and 108 px (360 dpi): both exactly
+48 dp, Gboard's strip, on the AVD created with no hardware keyboard. The emulator adds no keyboard
+device for `hw.keyboard=no` (its source: no `virtio-keyboard-pci`, no letter keys on the goldfish
+events device), so either the first frame was taken before the keys came up, or Gboard still saw a
+keyboard. The settle-and-wait and the always-on setting deal with the first; the facts above say
+which it was. If the device does report a keyboard, Gboard can't be made to show its keys without
+root: the way on would be another image (`default`, with the AOSP keyboard) for this AVD.
 
 ### Large screens that ignore orientation requests
 

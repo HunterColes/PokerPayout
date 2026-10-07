@@ -294,6 +294,11 @@ for name in "${RUN_PROFILES[@]}"; do
   adb_ shell settings put system accelerometer_rotation 0
   adb_ shell settings put system user_rotation "$rot"
   override=""
+  if [[ "$dev" == soft-kb ]]; then
+    # On for the whole profile, well before the keyboard is wanted: if the device reports a
+    # keyboard after all, the IME still comes up ("Show on-screen keyboard"). Reset with the display.
+    adb_ shell settings put secure show_ime_with_hard_keyboard 1
+  fi
   if [[ "$dev" == ignore-orient ]]; then
     # Large screens may ignore an app's orientation requests: tablets since Android 12L letterbox a
     # fixed orientation in a display that keeps the user's, and Android 16 lets the user (for apps
@@ -344,6 +349,9 @@ for name in "${RUN_PROFILES[@]}"; do
   secs=$(since "$t")
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$size" "$density" "$font" "$rot" "$turns" "$desc" "$secs" "$rc" >> "$M/profiles.tsv"
   grep -E '^\[tour\] FAIL ' "$M/$name/tour.out" | sed "s/^/[matrix]   /" || true
+  if [[ "$dev" == soft-kb && -f "$M/$name/display.env" ]]; then   # what the device says about keyboards
+    echo "[matrix] $name: $(grep -E '^(keyboard|hard_keyboards|ime)=' "$M/$name/display.env" | xargs)"
+  fi
   echo "[matrix] $name: $(grep -E '^\[tour\] (PASS|FAIL):' "$M/$name/tour.out" | sed 's/^\[tour\] //' || echo "no result (see $M/$name/tour.out)")"
   (( rc == 0 )) || FAILED_PROFILES=$((FAILED_PROFILES + 1))
 done

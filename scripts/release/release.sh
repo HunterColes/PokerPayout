@@ -409,11 +409,14 @@ grep -q 'APK Signature Scheme v2): true' "$log" || fail_step apk "no v2 signatur
 grep -q "^package: name='$APP_ID' versionCode='$NEW_CODE' versionName='$NEW_NAME'" "$log" \
   || fail_step apk "manifest is not $APP_ID $NEW_NAME ($NEW_CODE)" "$log"
 grep -q 'application-debuggable' "$log" && fail_step apk "APK is debuggable" "$log"
+# The listing promises no internet permission (app/src/main/AndroidManifest.xml removes it).
+grep -q "uses-permission: name='android.permission.INTERNET'" "$log" \
+  && fail_step apk "APK asks for the INTERNET permission; the listing says it doesn't" "$log"
 unzip -l "$APK" >"$WORK/apk-listing.txt"
 grep -q 'baseline\.prof' "$WORK/apk-listing.txt" && fail_step apk "baseline profile present (breaks reproducibility)"
 VCS_REV="$(unzip -p "$APK" META-INF/version-control-info.textproto 2>/dev/null | sed -n 's/.*revision: "\([0-9a-f]*\)".*/\1/p')"
 [[ -z $VCS_REV || $VCS_REV == "$NEW_SHA" ]] || fail_step apk "APK embeds commit $VCS_REV, expected $NEW_SHA"
-line_ok apk "$APP_ID $NEW_NAME ($NEW_CODE), v2-signed, not debuggable, built from ${NEW_SHA:0:9}"
+line_ok apk "$APP_ID $NEW_NAME ($NEW_CODE), v2-signed, not debuggable, no INTERNET, built from ${NEW_SHA:0:9}"
 
 if [[ -n $SIGNER && ",$MIRROR_KEY," == *",$SIGNER,"* ]]; then
   line_ok signer "release key ${SIGNER:0:12}… = AllowedAPKSigningKeys"

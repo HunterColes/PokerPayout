@@ -782,7 +782,10 @@ AVD (every one but the `soft-kb` ones). A set's name stands alone (`--profiles f
 `focused,large`). On GitHub, the `Device matrix` job in `device.yml` runs a set or profiles by
 hand: `gh workflow run device.yml --ref <branch> -f job=matrix -f profiles=focused` (or
 `-f profiles=soft-keyboard`, `-f profiles=tablet-ignore`). Dispatched runs with different inputs
-run side by side, so those can start together; the same inputs again replace the earlier run.
+run side by side, so those can start together; the same inputs again replace the earlier run. When
+the matrix fails, the job's "Show the failing steps" prints every failed step of every profile (its
+part of `tour.log` and the text on screen after it), and the log has each layout-check failure, so
+most failures can be read without downloading the report.
 
 The emulator scales any override onto its panel, so sizes bigger than 1080 x 2400 work too.
 Screenshots come out at the profile's own size. SystemUI forgets its demo mode when the size
@@ -906,7 +909,11 @@ this from 600 dp.
 
 ### Automatic layout checks
 
-After the profiles run, `layout_check.py` reads every step's UI dump and screenshot:
+After the profiles run, `layout_check.py` reads every step's UI dump and screenshot. It checks only
+the app's own nodes: a dump of the launcher, the share sheet, a permission dialog or the shade is
+someone else's layout (on the first GitHub run, the steps after a failed `process-death` dumped the
+launcher, and those dumps were checked too). Each failure is printed in the log as well as the
+report:
 
 | Check | Severity | Flags | How far to trust it |
 |---|---|---|---|

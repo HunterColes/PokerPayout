@@ -67,6 +67,12 @@ class CurrentSetup @Inject constructor(
     }
 
     /**
+     * True when the setup now is what loading [setup] would make it, its chip set aside: tonight was
+     * played with that preset (History names a saved night after it, PP-037).
+     */
+    fun matches(setup: PresetSetup): Boolean = capture(includeChipSet = false) == resolve(setup.copy(chipSet = null))
+
+    /**
      * Writes [setup] over the Tournament setup (and the chip set, if it holds one), resolved for
      * tonight ([PresetSetup.resolved]), then tells the screens that keep their own copy to read it
      * again. Refused, with nothing written, once the clock has started; returns whether it was written.

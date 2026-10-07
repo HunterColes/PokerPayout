@@ -3,6 +3,14 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.3.12 (on master, not published)
+
+- **History** (Tools): once everyone owed is marked paid, the Payouts tab offers "Save this night".
+  Saved nights keep the players in finishing order with what each paid in and won, knockouts and
+  bounties, and the prize pool. History shows the season's points (players in the night minus your
+  place, plus 1) with the player of the year, each night's summary to share as text, and an export
+  of everything as CSV for a spreadsheet. All on the phone; no accounts.
+
 ## 1.3.11 (on master, not published)
 
 - **Bounty types:** next to the bounty, choose Standard, Progressive or Mystery.

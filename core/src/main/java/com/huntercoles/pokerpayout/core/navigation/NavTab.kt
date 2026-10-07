@@ -30,6 +30,7 @@ val NavigationDestination.tab: NavTab?
         NavigationDestination.HandRanks,
         NavigationDestination.ChipCalculator,
         NavigationDestination.SeatDraw,
+        NavigationDestination.History,
         -> NavTab.Tools
         NavigationDestination.Back -> null
     }
@@ -44,6 +45,7 @@ val ScreenDestinations: List<NavigationDestination> = listOf(
     NavigationDestination.HandRanks,
     NavigationDestination.ChipCalculator,
     NavigationDestination.SeatDraw,
+    NavigationDestination.History,
 )
 
 /** The tab to show as selected while this destination is on top, or null when it isn't a screen. */

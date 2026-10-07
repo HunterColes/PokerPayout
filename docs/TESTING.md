@@ -772,7 +772,8 @@ request); `soft-keyboard` runs `soft-kb` and `soft-kb-small`; `all` runs every p
 AVD (every one but the `soft-kb` ones). A set's name stands alone (`--profiles focused`, not
 `focused,large`). On GitHub, the `Device matrix` job in `device.yml` runs a set or profiles by
 hand: `gh workflow run device.yml --ref <branch> -f job=matrix -f profiles=focused` (or
-`-f profiles=soft-keyboard`, `-f profiles=tablet-ignore`).
+`-f profiles=soft-keyboard`, `-f profiles=tablet-ignore`). Dispatched runs with different inputs
+run side by side, so those can start together; the same inputs again replace the earlier run.
 
 The emulator scales any override onto its panel, so sizes bigger than 1080 x 2400 work too.
 Screenshots come out at the profile's own size. SystemUI forgets its demo mode when the size

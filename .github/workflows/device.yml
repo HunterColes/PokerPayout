@@ -8,10 +8,16 @@
 # The device matrix (scripts/device/matrix.sh: the tour's steps on several screen sizes, font
 # scales and rotations, docs/TESTING.md section 10) runs by hand only, as its own job:
 #   gh workflow run device.yml --ref <branch> -f job=matrix [-f profiles=focused|daily|all|a,b]
+# The opt-in profiles: -f profiles=soft-keyboard (the full-height soft keyboard, on its own AVD;
+# a run of its own) and -f profiles=tablet-ignore (a tablet that ignores orientation requests).
+# Dispatched runs with different inputs run side by side; the same inputs again replace the
+# earlier run.
 #
 # Not a required check yet. The report (screenshots, ui dumps, logcat, tour.log) is uploaded as an
 # artifact either way. The release build is debug-signed here, since CI has no keystore.
 name: Device tour
+# In the runs list: a dispatched run says what it runs; a pull request's keeps the PR's title.
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('Device {0} on {1}', inputs.job == 'tour' && format('tour ({0})', inputs.variant) || inputs.job == 'matrix' && format('matrix ({0})', inputs.profiles) || format('tour ({0}) and matrix ({1})', inputs.variant, inputs.profiles), github.ref_name) || github.event.pull_request.title }}"
 
 on:
   pull_request:
@@ -39,8 +45,10 @@ on:
 permissions:
   contents: read
 
+# One run per pull request; by hand, one per branch and set of inputs (a soft-keyboard matrix and a
+# tablet-ignore one run side by side, and neither cancels the pull request's tour).
 concurrency:
-  group: device-${{ github.event.pull_request.number || github.ref }}
+  group: device-${{ github.event.pull_request.number || github.ref }}${{ github.event_name == 'workflow_dispatch' && format('-{0}-{1}-{2}-{3}', inputs.job, inputs.variant, inputs.profiles, inputs.only) || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -128,7 +136,9 @@ jobs:
     # By hand only. The focused set is untimed on 1.3.4: an estimated 40 to 50 minutes on a quiet
     # local machine, longer here.
     # The debug build, or the release build with variant=release.
-    name: Device matrix (${{ inputs.profiles }})
+    # A plain name: a skipped job (every pull request) shows its name unevaluated, so the profiles
+    # in it showed on PRs as the raw expression. They are in the step's name and the run's name.
+    name: Device matrix
     if: github.event_name == 'workflow_dispatch' && inputs.job != 'tour'
     runs-on: ubuntu-latest
     timeout-minutes: 240

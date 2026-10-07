@@ -66,7 +66,8 @@ import com.huntercoles.pokerpayout.core.R as CoreR
  * The docked rank-then-suit keypad (S8). Pick a rank (it turns gold), then a suit: the card goes in
  * the slot the keypad is filling, and the keypad moves to the next empty slot. A suit already on
  * the table for that rank is greyed and struck; a rank with all four suits out is struck too.
- * Every key is at least 48 dp each way (suits 56 dp tall at the bottom, 48 dp at the side).
+ * Every key is at least 48 dp each way (suits 56 dp tall at the bottom, 48 dp at the side and when
+ * they share the ranks' rows).
  */
 @Composable
 internal fun CardKeypad(
@@ -75,9 +76,7 @@ internal fun CardKeypad(
     modifier: Modifier = Modifier,
     dock: KeypadDock = KeypadDock.Bottom,
 ) {
-    val table = state.table
-    val keypad = state.keypad
-    val target = keypad.target ?: return
+    val target = state.keypad.target ?: return
     Column(
         modifier = modifier
             .clip(dock.shape)
@@ -86,37 +85,67 @@ internal fun CardKeypad(
             .padding(start = 8.dp - KEY_INSET, end = 8.dp - KEY_INSET, top = 6.dp, bottom = 10.dp),
     ) {
         KeypadHeader(target, onIntent)
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            // Seven keys a row when each gets 48 dp, else five (three rows), so no key is narrower than 48 dp.
-            val columns = COLUMN_CHOICES.firstOrNull { maxWidth / it >= PokerDimens.MinTouch } ?: COLUMN_CHOICES.last()
-            val keys: List<Int?> = (Cards.ACE downTo Cards.DEUCE).toList() + null // null: backspace
-            Column {
-                keys.chunked(columns).forEach { row ->
-                    Row {
-                        row.forEach { rank ->
-                            if (rank == null) {
-                                BackspaceKey(onIntent)
-                            } else {
-                                RankKey(rank, table, target, keypad.rank == rank, onIntent)
-                            }
-                        }
-                        if (row.size < columns) Spacer(Modifier.weight((columns - row.size).toFloat()))
-                    }
-                }
-            }
-        }
-        Row {
-            SUIT_ORDER.forEach { suit ->
-                SuitKey(suit, keypad.rank, table, target, state.fourColourDeck, onIntent, dock.suitHeight)
-            }
-        }
+        KeyRows(state, target, onIntent, dock)
     }
 }
 
-/** Where the keypad docks: along the bottom (portrait), or down the side of a short landscape window. */
-internal enum class KeypadDock(val shape: Shape, val suitHeight: Dp) {
+/**
+ * Where the keypad docks: along the bottom (portrait), along the bottom of a short window, or down
+ * the side of a short landscape window. [suitsShareRows]: on a phone too narrow for seven keys a row,
+ * the four suits fill the ranks' last row (six keys a row), so the keys take three rows, not four.
+ */
+internal enum class KeypadDock(val shape: Shape, val suitHeight: Dp, val suitsShareRows: Boolean = false) {
     Bottom(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), PokerDimens.SuitKeyHeight),
+    BottomShort(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), PokerDimens.SuitKeyHeight, suitsShareRows = true),
     Side(RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp), PokerDimens.KeypadKeyHeight),
+}
+
+/** One key: a rank, delete, or a suit sharing the ranks' rows. */
+private sealed interface PadKey {
+    data class Rank(val rank: Int) : PadKey
+
+    data object Delete : PadKey
+
+    data class Suit(val suit: Int) : PadKey
+}
+
+/**
+ * The thirteen ranks and delete, seven keys a row when each gets 48 dp, else five (three rows), so no
+ * key is narrower than 48 dp; then the four suits in a row of their own. With [KeypadDock.suitsShareRows]
+ * and five a row, the suits fill the ranks' last row instead: A K Q J 10 9 / 8 7 6 5 4 3 / 2 ⌫ ♠ ♥ ♦ ♣.
+ */
+@Composable
+private fun KeyRows(state: OddsCalculatorUiState, target: SlotRef, onIntent: (OddsCalculatorIntent) -> Unit, dock: KeypadDock) {
+    val table = state.table
+    val picked = state.keypad.rank
+    val fourColour = state.fourColourDeck
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val ranksPerRow = COLUMN_CHOICES.firstOrNull { maxWidth / it >= PokerDimens.MinTouch } ?: COLUMN_CHOICES.last()
+        val sixFit = maxWidth / SHARED_COLUMNS >= PokerDimens.MinTouch
+        val shared = dock.suitsShareRows && ranksPerRow < COLUMN_CHOICES.first() && sixFit
+        val columns = if (shared) SHARED_COLUMNS else ranksPerRow
+        // Sharing a row with ranks, a suit is as tall as a rank key.
+        val suitHeight = if (shared) PokerDimens.KeypadKeyHeight else dock.suitHeight
+        val suits = SUIT_ORDER.map { PadKey.Suit(it) }
+        val keys = if (shared) RANK_KEYS + suits else RANK_KEYS
+        Column {
+            keys.chunked(columns).forEach { row ->
+                Row {
+                    row.forEach { key ->
+                        when (key) {
+                            is PadKey.Rank -> RankKey(key.rank, table, target, picked == key.rank, onIntent)
+                            PadKey.Delete -> BackspaceKey(onIntent)
+                            is PadKey.Suit -> SuitKey(key.suit, picked, table, target, fourColour, onIntent, suitHeight)
+                        }
+                    }
+                    if (row.size < columns) Spacer(Modifier.weight((columns - row.size).toFloat()))
+                }
+            }
+            if (!shared) {
+                Row { suits.forEach { SuitKey(it.suit, picked, table, target, fourColour, onIntent, suitHeight) } }
+            }
+        }
+    }
 }
 
 /**
@@ -313,6 +342,13 @@ private val RANK_GLYPH = 24.dp
 
 /** Keys a row: 7 (two rows), else 5 (three rows), else 4. Six would leave a row of two. */
 private val COLUMN_CHOICES = listOf(7, 5, 4)
+
+/** Keys a row when the suits share the ranks' rows: 13 ranks, delete and 4 suits make three rows of six. */
+private const val SHARED_COLUMNS = 6
+
+/** Ace down to deuce, then delete. */
+private val RANK_KEYS: List<PadKey> = (Cards.ACE downTo Cards.DEUCE).map { PadKey.Rank(it) } + PadKey.Delete
+
 private const val CLUBS = 0
 private const val DIAMONDS = 1
 private const val HEARTS = 2

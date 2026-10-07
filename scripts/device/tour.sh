@@ -1430,6 +1430,10 @@ s_odds_empty() {
   # Odds tile isn't there, close the dialog first.
   ui find text=Odds >/dev/null 2>&1 || ui back
   ui tap text=Odds
+  # The slot being filled is on screen above the open keypad without scrolling: the page keeps it in
+  # view (find never scrolls, even in the matrix's scroll mode; on a small profile the rest below
+  # may need the page dragged).
+  ui find "desc=Player 1, card 1, empty. Next" >/dev/null
   ui assert-text text=Odds "Player 1" "Player 2" "desc=Player 1, card 1, empty. Next" "text~=Pick cards" "Add player"
 }
 s_card_picker() {

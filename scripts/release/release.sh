@@ -84,7 +84,13 @@ fi
 NEW_CODE=$((CUR_CODE + 1))
 TAG="v$NEW_NAME"
 APK_NAME="$APK_PREFIX-v$NEW_NAME-release.apk"
-LAST_TAG="$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD 2>/dev/null || true)"
+# The last release is the highest version tag, not the nearest one behind HEAD: a release tag can
+# sit on a commit that isn't on master (v1.3.14's release PR was squashed), so `git describe` from
+# HEAD would find an older one. Only release tags (vX.Y.Z, not the old v1.0.9-dev ones) count, and
+# not a tag already made for this version (a re-run). Tags are fetched first, so a checkout that
+# hasn't fetched lately still finds it; if that fails the preflight's own fetch below says so.
+git fetch --quiet origin master --tags >/dev/null 2>&1 || true
+LAST_TAG="$(git tag -l 'v[0-9]*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -vxF "$TAG" | head -1 || true)"
 
 OUT="$CHECKOUT/build/release/$TAG"
 [[ $MODE == dry-run ]] && OUT+="-dry-run"

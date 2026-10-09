@@ -126,7 +126,6 @@ class BackupViewModel @Inject constructor(
             if (added.isEmpty()) {
                 show(messages.nothingNew)
             } else {
-                snackbars.hostState.currentSnackbarData?.dismiss()
                 if (snackbars.showUndo(messages.added(added), messages.undo)) withContext(io) { result.undo() }
             }
         }
@@ -143,7 +142,6 @@ class BackupViewModel @Inject constructor(
 
     /** The newest message gets the snackbar at once; one still up goes. */
     private suspend fun show(message: String) {
-        snackbars.hostState.currentSnackbarData?.dismiss()
         snackbars.showMessage(message)
     }
 

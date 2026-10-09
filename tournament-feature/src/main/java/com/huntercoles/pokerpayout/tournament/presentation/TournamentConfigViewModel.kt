@@ -150,7 +150,8 @@ class TournamentConfigViewModel @Inject constructor(
                 placeNames = placeNames,
                 rebuyPurchases = rebuys,
                 addOnPurchases = addOns,
-                knockoutsRecorded = bankPreferences.getEliminationOrder().isNotEmpty()
+                knockoutsRecorded = bankPreferences.getEliminationOrder().isNotEmpty(),
+                envelopesDrawn = bankPreferences.hasBountyDraws(config.numPlayers)
             )
         }
     }
@@ -170,7 +171,15 @@ class TournamentConfigViewModel @Inject constructor(
         updateSettings { setBountyMode(mode) }
     }
 
+    /**
+     * The player count. With mystery bounties it can't go lower once an envelope is drawn: fewer
+     * players deal fewer envelopes, and the ones drawn could leave the champion's pool at $0. Read
+     * from the saved game, not the screen's state, so a draw the Bank just made counts at once.
+     */
     private fun updatePlayerCount(count: Int) {
+        val current = tournamentPreferences.getPlayerCount()
+        val mystery = tournamentPreferences.getBountyMode() == BountyMode.MYSTERY
+        if (count < current && mystery && bankPreferences.hasBountyDraws(current)) return
         tournamentPreferences.setPlayerCount(count)
         // Removed players are gone for good, in the Bank too (they used to come back after a restart).
         bankPreferences.removePlayersAbove(count)

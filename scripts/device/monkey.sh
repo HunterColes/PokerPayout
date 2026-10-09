@@ -104,6 +104,10 @@ for seed in "${SEED_LIST[@]}"; do
     problem="FATAL EXCEPTION in logcat"
   fi
   if [[ -z "$problem" ]] && grep -q "ANR in $APP_ID" "$OUT/logcat-$seed.txt"; then problem="ANR in logcat"; fi
+  # A monkey that never ran (a bad option, no device) injects nothing: that is no pass
+  if [[ -z "$problem" && -z "$injected" ]]; then
+    problem="the monkey didn't run: $(grep -m1 -iE 'error|usage|exception' "$OUT/seed-$seed.txt" | tr -d '\r' || true)"
+  fi
   # Something else crashed (a system app): the monkey stopped early, but not because of us
   note=""
   if [[ -n "$crashed" ]] && ! ours "$crashed"; then note="stopped early: $crashed crashed"; fi

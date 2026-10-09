@@ -12,9 +12,6 @@ run-name: "${{ github.event_name == 'workflow_dispatch' && format('Monkey ({0}, 
 
 on:
   pull_request:
-  # TEMPORARY, remove before landing: a new workflow can't be dispatched until it is on master
-  push:
-    branches: [wave-9-tests]
   workflow_dispatch:
     inputs:
       seeds:

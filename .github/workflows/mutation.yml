@@ -9,10 +9,6 @@
 name: Mutation testing
 
 on:
-  # TEMPORARY, remove before landing: a new workflow can't be dispatched until it is on master
-  push:
-    branches: [wave-9-tests]
-    paths: [".github/workflows/mutation.yml", "scripts/dev/pitest.init.gradle"]
   workflow_dispatch:
 
 permissions:

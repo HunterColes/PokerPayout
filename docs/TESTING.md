@@ -12,8 +12,8 @@ sound. It is written so that a person *or* an AI agent can run it unattended.
 | Device matrix: the real app on 10 screen sizes, fonts and rotations (section 10) | `scripts/device/matrix.sh` | emulator (auto-booted) | focused set (4 profiles) not yet timed on 1.3.4; 41 min for 8 profiles on 1.3.0 |
 | Property-based tests: seeded random cases that shrink (section 6) | part of `./gradlew testDebugUnitTest` | JDK 21 | ~3 s for core's 26; ~25 s for the three process-death properties |
 | Accessibility checks: TalkBack names, WCAG contrast (section 9) | part of every screen test's layout checks | JDK 21 | a few seconds over the whole matrix |
-| Monkey: seeded chaos on the emulator (section 11) | `scripts/device/monkey.sh`; on GitHub `monkey.yml` | emulator (auto-booted) | ~14 min for 3 seeds of 4,000 events on GitHub, incl. boot and build |
-| Mutation testing, PIT on core's maths (section 12) | `gh workflow run mutation.yml` | GitHub | see section 12 |
+| Monkey: seeded chaos on the emulator (section 11) | `scripts/device/monkey.sh`; on GitHub `monkey.yml` | emulator (auto-booted) | ~23 min for 3 seeds of 4,000 events on GitHub, incl. boot and build |
+| Mutation testing, PIT on core's maths (section 12) | `gh workflow run mutation.yml` | GitHub | ~16 min on GitHub |
 
 ## 1. Prerequisites
 
@@ -1150,3 +1150,9 @@ by the build, so the app, its dependencies and F-Droid's reproducible build don'
 generated `equals`, `hashCode`, `toString`, `componentN` and `copy` aren't mutated. The run's
 summary shows the score per class; the HTML report (every surviving mutant, line by line) is an
 artifact. Report-only: not a gate.
+
+First run (wave 9): 1,761 of 2,229 mutants killed (79%), 87% of the 2,032 the tests reach; about
+16 minutes. Highest: the settlement and bounty maths (`BountyLedger` 56 of 60,
+`CalculatePayoutsUseCase` 31 of 34). Lowest: `BlindLadderSearch` (39 survivors, mostly in the
+"nice value" scoring) and `BlindSetupAdvisor` (20). `NightCodec` and `CashGame` show no coverage
+only because their tests run under Robolectric, which this run leaves out.

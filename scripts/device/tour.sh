@@ -1609,6 +1609,8 @@ s_tip() {
 }
 s_tip_copy() {
   ui tap "desc=Copy the Monero address"
+  # The button may sit half under the tab bar; its label shows once it is scrolled clear
+  ui scroll-to text=Copied --max 3
   ui assert-text "desc=Monero address copied" text=Copied || return 1
   # Only the one just copied says so
   ui scroll-to "desc=Copy the Ethereum address" --dir up --max 4

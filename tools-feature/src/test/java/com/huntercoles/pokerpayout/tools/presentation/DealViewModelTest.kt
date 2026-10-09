@@ -58,7 +58,7 @@ class DealViewModelTest {
     private val DealViewModel.state get() = uiState.value
 
     private fun DealViewModel.stacks(vararg chips: Long) =
-        chips.forEachIndexed { index, it -> acceptIntent(DealIntent.SetChips(index, it)) }
+        chips.forEachIndexed { index, stack -> acceptIntent(DealIntent.SetChips(index, stack)) }
 
     @Test
     fun `it starts from the Bank's players still in and tonight's payouts`() {

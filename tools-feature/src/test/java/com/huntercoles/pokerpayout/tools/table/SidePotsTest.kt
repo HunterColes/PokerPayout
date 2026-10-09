@@ -14,7 +14,7 @@ import kotlin.random.Random
 class SidePotsTest {
 
     private fun split(vararg chips: Long, folded: Set<Int> = emptySet()): PotSplit =
-        SidePots.split(chips.mapIndexed { index, it -> Contribution(it, folded = index in folded) })
+        SidePots.split(chips.mapIndexed { index, put -> Contribution(put, folded = index in folded) })
 
     private fun pots(vararg chips: Long, folded: Set<Int> = emptySet()): PotSplit.Pots =
         split(*chips, folded = folded) as PotSplit.Pots

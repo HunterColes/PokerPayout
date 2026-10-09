@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout.tournament.domain.presets
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
@@ -189,6 +190,41 @@ class CurrentSetupTest {
         tournament.setPlayerCount(3)
         current.apply(topHeavy)
         assertEquals(PayoutPreset.TOP_HEAVY.weightsFor(3), tournament.getPayoutWeights())
+    }
+
+    /**
+     * PP-035: mystery envelopes are dealt from the bounty, so once one is drawn a preset leaves the
+     * bounty alone and loads the rest. With none drawn, or another bounty type, it loads as usual.
+     */
+    @Test
+    fun `a mystery bounty with envelopes drawn keeps its amount when a preset loads`() {
+        tournament.setBuyInCents(4_000L)
+        tournament.setBountyCents(1_000L)
+        val tenDollarBounty = savedAndRead(current.capture(includeChipSet = false))
+        tournament.setBuyInCents(2_000L)
+        tournament.setBountyCents(500L)
+        tournament.setBountyMode(BountyMode.MYSTERY)
+        bank.savePlayerOutStatus(9, true)
+        bank.savePlayerEliminatedBy(9, 1)
+        bank.savePlayerBountyDraw(9, 1_500L)
+        bank.saveEliminationOrder(listOf(9))
+
+        assertTrue(current.apply(tenDollarBounty))
+        assertEquals("kept: envelopes are drawn", 500L, tournament.getMoneySettings().bountyCents)
+        assertEquals("the rest loads", 4_000L, tournament.getMoneySettings().buyInCents)
+        assertEquals(BountyMode.MYSTERY, tournament.getBountyMode())
+
+        // The draw undone: the preset's bounty loads
+        bank.savePlayerBountyDraw(9, null)
+        current.apply(tenDollarBounty)
+        assertEquals(1_000L, tournament.getMoneySettings().bountyCents)
+
+        // A standard bounty has no envelopes to keep
+        tournament.setBountyCents(500L)
+        tournament.setBountyMode(BountyMode.STANDARD)
+        bank.savePlayerBountyDraw(9, 1_500L)
+        current.apply(tenDollarBounty)
+        assertEquals(1_000L, tournament.getMoneySettings().bountyCents)
     }
 
     @Test

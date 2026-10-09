@@ -3,6 +3,65 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.5 (on master, not published)
+
+A test lab that found five bugs, all fixed:
+
+- **Mystery bounties:** a player joining after an envelope was drawn could make the night pay up to
+  $9 more in bounties than was collected (nine players' $15 envelope wasn't in ten players' deal).
+  The money not yet drawn is now dealt again into the envelopes still to come.
+- **Live clock:** leaving the app and coming straight back, over and over, with the clock running
+  could crash it (found by the monkey). The notification's service no longer stops while a new
+  start is on its way.
+- **Huge stacks:** overtime no longer doubles a big blind past what can be counted (a 500,000,000
+  stack showed a negative big blind), and the setup advice never suggests such a stack.
+- **Payout editor:** a turned tablet or a font change kept the weights and rounding you hadn't
+  saved yet, as every other sheet does.
+- **Payouts:** a place that would round to $0 isn't paid (27 players at $10 rounded to $10 paid 9th
+  nothing); the places stepper stops at the most places that each pay something.
+- **Easier to read:** each payout preset's 1st-place amount is full gold, the odds grid's cards
+  already on the table are lighter, and Music's "On breaks" heading stays readable with the clock
+  switch off.
+- **New tests:** property tests that throw thousands of random nights, setups and amounts at the
+  money and blind maths; checks on every screen for TalkBack names and WCAG text contrast; the
+  clock, the Bank and the odds table surviving the app being killed at random; a seeded monkey on
+  GitHub's emulator for every pull request; and mutation testing, by hand (79% of core's maths).
+
+## 1.4.4 (on master, not published)
+
+House cleaning:
+
+- **Mystery bounties:** once an envelope is drawn, the player count can't go lower (fewer players
+  would deal fewer envelopes and could leave the champion's pool at $0); the Players hint says so.
+  A late entry still comes in, and Undo or a new tournament lifts it. Loading a preset keeps the
+  bounty that dealt the envelopes.
+- **No white flash at launch:** the launch screen, and Android 12's splash, are the felt green.
+- **Snackbars:** a new one replaces the one showing at once, on every screen, instead of waiting
+  behind it; the one replaced takes its Undo with it.
+- Under the hood: release.sh finds the last release by the highest version tag, the device tour's
+  break check allows any time up to 10:00, unused and duplicate launcher drawables are gone, and
+  the changelog marks 1.3.14 as published.
+
+## 1.4.3 (on master, not published)
+
+- **Shot clock** (Tools): a countdown for each decision, 30, 45 or 60 seconds. The whole face is one
+  big button: tap it for the next decision. A warning at 10 seconds and when time is up, with the
+  Sound section's settings (a beep unless the sound is off, a buzz with Vibrate, a gold flash with
+  Flash the clock). Pause, Resume and Reset. **Time-bank cards:** each player (the Bank's) gets up
+  to five, and playing one adds 30 seconds, even just after time ran out; "Give everyone their
+  cards back" with Undo. It keeps the screen on while it counts, and never touches the tournament
+  clock or its chime.
+- **Dealer's choice** (Tools): spin a wheel to pick the next game. Seventeen games with a short
+  rules card each (Hold'em, Omaha, Big O, Stud, Razz, 2-7 Triple Draw, Badugi, Pineapple, Crazy
+  Pineapple and more), nine on the first wheel; switch any on or off, and add up to eight house
+  games. It never picks the game just played twice running, and with Remove animations on, the
+  pick shows at once.
+- **Equity quiz** (Tools): two or three hands face up, before the flop, on the flop or on the turn.
+  Guess who's ahead, or how often the first hand wins; then see every hand's real odds, worked out
+  exactly by the Odds screen's engine. Your streak, best streak and score stay on the phone.
+- Backups take all three: the shot clock's settings and cards played, the wheel and its house
+  games, and the quiz's settings and score.
+
 ## 1.4.2 (on master, not published)
 
 - **Music** (Tools > Sound): a playlist of songs from your phone, added with the phone's file
@@ -48,6 +107,11 @@ F-Droid) only when it has a tag. Published versions link to their release notes.
 - Gone with the cash page: free-amount buy-ins and top-ups, the chip count check and splitting a
   difference. A cash game saved by 1.3.14 is left untouched on the phone and no longer shown.
 - The store listing's fifth picture is now the settle-up.
+
+## [1.3.14](https://github.com/HunterColes/PokerPayout/releases/tag/v1.3.14) (2026-10-07)
+
+A new look, cash games and a clock on your lock screen: everything in 1.3.1 to 1.3.13 below,
+published as one release.
 
 ## 1.3.13 (on master, not published)
 

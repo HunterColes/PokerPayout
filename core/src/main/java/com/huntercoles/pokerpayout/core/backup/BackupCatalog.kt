@@ -25,6 +25,11 @@ object BackupCatalog {
         SettingsFile(MusicPreferences.FILE, SettingsGroup.SOUND, phoneOnly = MusicPreferences.PHONE_ONLY_KEYS),
         SettingsFile("odds_calculator_prefs", SettingsGroup.TOOLS),
         SettingsFile("seat_draw_prefs", SettingsGroup.TOOLS),
+        // The shot clock (its times and the time-bank cards played), dealer's choice (the wheel,
+        // house games, the last pick) and the equity quiz (its settings and the score)
+        SettingsFile("shot_clock_prefs", SettingsGroup.TOOLS),
+        SettingsFile("dealers_choice_prefs", SettingsGroup.TOOLS),
+        SettingsFile("equity_quiz_prefs", SettingsGroup.TOOLS),
     )
 
     /** Files saved item by item by a section of their own, so a backup can merge them: file to section key. */

@@ -45,10 +45,14 @@ class FakeClockStatus(start: ClockStatus = ClockStatus.NOT_STARTED) : ClockStatu
  */
 class BankTestKit(private val dispatcher: TestDispatcher) {
     val context: Context = ApplicationProvider.getApplicationContext()
-    val tournamentPreferences: TournamentPreferences
-    val bankPreferences: BankPreferences
-    val timerPreferences: TimerPreferences
-    val audioPreferences: AudioPreferences
+    var tournamentPreferences: TournamentPreferences
+        private set
+    var bankPreferences: BankPreferences
+        private set
+    var timerPreferences: TimerPreferences
+        private set
+    var audioPreferences: AudioPreferences
+        private set
     val clock = FakeClockStatus()
     val snackbars = SnackbarController()
     private val stores = mutableListOf<ViewModelStore>()
@@ -90,6 +94,19 @@ class BankTestKit(private val dispatcher: TestDispatcher) {
     fun clear() {
         stores.forEach { it.clear() }
         stores.clear()
+    }
+
+    /**
+     * Process death and a cold start: every ViewModel cleared, every preference object built again
+     * from what is saved (nothing kept in memory survives), and a new Bank on top.
+     */
+    fun restartProcess(): BankViewModel {
+        clear()
+        tournamentPreferences = TournamentPreferences(context)
+        bankPreferences = BankPreferences(context)
+        timerPreferences = TimerPreferences(context)
+        audioPreferences = AudioPreferences(context)
+        return newViewModel()
     }
 
     /** Runs everything due, including the 8 s Undo windows (virtual time). */

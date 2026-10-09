@@ -146,7 +146,7 @@ private fun PanelHeader(timer: TimerUiState, gutter: Dp, onClose: () -> Unit) {
 @Composable
 private fun AnyTimeFields(setup: TournamentConfigUiState, timer: TimerUiState, actions: TournamentActions) {
     PokerEyebrow(stringResource(R.string.panel_any_time))
-    PlayersCard(setup.playerCount, hint = stringResource(R.string.setup_players_late_entry), framed = false) {
+    PlayersCard(setup, hint = R.string.setup_players_late_entry, framed = false) {
         actions.onSetupIntent(TournamentConfigIntent.UpdatePlayerCount(it))
     }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {

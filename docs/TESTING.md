@@ -10,6 +10,10 @@ sound. It is written so that a person *or* an AI agent can run it unattended.
 | Instrumented tests | `./gradlew connectedDebugAndroidTest` | running emulator | compiles; there are 0 instrumented tests (see below) |
 | JVM screenshot goldens + layout checks (Roborazzi, section 9) | part of `./gradlew testDebugUnitTest`; re-record with `./gradlew recordRoborazziDebug` | JDK 21 | ~20 s for core's 120 goldens and 48 matrix checks |
 | Device matrix: the real app on 10 screen sizes, fonts and rotations (section 10) | `scripts/device/matrix.sh` | emulator (auto-booted) | focused set (4 profiles) not yet timed on 1.3.4; 41 min for 8 profiles on 1.3.0 |
+| Property-based tests: seeded random cases that shrink (section 6) | part of `./gradlew testDebugUnitTest` | JDK 21 | ~3 s for core's 26; ~25 s for the three process-death properties |
+| Accessibility checks: TalkBack names, WCAG contrast (section 9) | part of every screen test's layout checks | JDK 21 | a few seconds over the whole matrix |
+| Monkey: seeded chaos on the emulator (section 11) | `scripts/device/monkey.sh`; on GitHub `monkey.yml` | emulator (auto-booted) | ~23 min for 3 seeds of 4,000 events on GitHub, incl. boot and build |
+| Mutation testing, PIT on core's maths (section 12) | `gh workflow run mutation.yml` | GitHub | ~16 min on GitHub |
 
 ## 1. Prerequisites
 
@@ -272,6 +276,17 @@ are:
    10 green 25s for 5 players"; reset applies at once with Undo; the stack settings keep back
    the Tournament's estimate until the stepper is touched (PP-091 #3; here "no rebuys or
    add-ons"), then keep 2 stacks back as "your own", and the color-up plan counts 7 stacks in play.
+
+   **Shot clock** (S19, 3 steps): full and waiting at 30 s with the Bank's players in the time bank;
+   a tap on the face starts a decision, Pause holds the seconds left (the same number 3 s later),
+   Alice's time-bank card adds exactly 30 s and leaves her "1 of 2 cards left"; everyone's cards
+   back with Undo on the snackbar, and Reset waits, full, again. **Dealer's choice** (S23, 3 steps):
+   the nine classics on the wheel; a spin (instant, animations being off) shows a game and its
+   rules, and a second spin never picks it twice running; a house game ("Guts") makes ten, and
+   every game's rules open in a sheet. **Equity quiz** (S24, 3 steps): two hands dealt at once;
+   picking Hand A shows the engine's exact equities under both hands, adding up to 100%, right or
+   not, scored "of 1"; then three hands asked how often Hand A wins, the 40–60% range picked and
+   named under the verdict; Back to the Tools list.
 7. Back to Tournament.
 8. **Rail** (4 steps). `wm density 240` makes the phone's window 720 dp wide: the tabs must
    move to a rail down the left edge (PP-087), with the screen recreated where it was; Tools and
@@ -307,7 +322,10 @@ and carries on. Use `--keep-going` to run all steps even after a failure.
 The live clock steps read the notification from `dumpsys notification --noredact` (the record the app
 posted: its extras, actions and visibility), which needs no screenshot of the shade and works with
 SystemUI's demo mode on. The tour then returns to the app from the launcher (`live-clock-back`):
-the clock must still be running and the notification gone.
+the clock must still be running and the notification gone. `live-clock-flap` then leaves and comes
+back ten times in one shell with no waits (the race the monkey found: a Hide that ended the service
+while a Show it owed `startForeground` for was pending crashed the app), and checks the clock is
+still running, the notification gone, and nothing crashed.
 
 Pause and Open are tapped in the real shade (`cmd statusbar expand-notifications`, then
 uiautomator) only in the opt-in steps `live-clock-pause` and `live-clock-open`: on the API 34
@@ -449,6 +467,55 @@ The only skipped test is `OddsBenchmark`, which is a benchmark, not a spec.
   the clock agree; `sleep(ms)` moves the clocks without running a tick (deep sleep), `reboot()`
   restarts the monotonic clock, and clearing the `ViewModelStore` and building a new ViewModel
   from fresh preference objects is a process death. Never sleep or read real time in a test.
+* **A process death builds everything again from what was saved**: clear the `ViewModelStore`,
+  make new preference objects over the same SharedPreferences (nothing kept in memory survives),
+  build a new ViewModel. `BankTestKit.restartProcess()` does it for the Bank. Compare what the
+  screen shows before and after, leaving out only what is meant to go (an open sheet, Undo's
+  history).
+
+### Property-based tests
+
+Example tests pin the answers someone thought of; property tests state what must hold for *every*
+input and let a generator look for the case nobody wrote down. They use
+[kotest-property](https://kotest.io/docs/proptest/property-based-testing.html) (test-only) from
+plain JUnit `@Test` methods, through `forAll` in core's test fixtures
+(`core/src/testFixtures/.../testing/Properties.kt`):
+
+```kotlin
+@Test
+fun `the table adds up to the pool to the cent`() =
+    forAll(seed = 2026_1008_01L, iterations = 4_000, gen = cases) { case ->
+        expect(case.table().totalCents == case.poolCents) { "pays ${case.table().totalCents} of ${case.poolCents}" }
+    }
+```
+
+* **Seeded.** Every run checks the same cases. A failure prints the case, a *shrunk* one (kotest
+  makes it as small as it can while it still fails: fewer steps, smaller numbers) and
+  `Repeat this test by using seed N`. Change a seed only on purpose.
+* **Generators build inputs from numbers** (`Arb.bind`, `Arb.list`), so a failing night at the Bank
+  shrinks to its fewest, smallest steps. `BankNight` (core, `property/BankScript.kt`) replays a
+  script of Bank steps onto the records the Bank keeps, stale credits included.
+* **Kinds of property**: invariants (the table adds up to the pool), metamorphic relations
+  (renumbering the players changes nothing; the same night in bigger money pays the same, scaled),
+  oracles (the CSV read back by an independent RFC 4180 reader), and twin runs (the clock with a
+  process death against the clock with the phone only asleep).
+
+| Module | Class | What it holds |
+|---|---|---|
+| core | `PayoutPropertiesTest` | Any pool, field, structure and rounding: the table adds up to the pool, whole units below 1st within one unit of each share, no place above the one before it (falling weights), the same for 50/30/20 and 5/3/2, exact shares for exact pools; more or fewer places always give weights the editor accepts |
+| core | `SettlementPropertiesTest` | Random Bank nights in all three bounty modes, step by step: nothing owed beyond the pools, nothing negative, every cent owned once there is a champion, also with late registration; renumbering or reordering the players changes nothing; one more knockout never takes money from anyone |
+| core | `SettleUpPropertiesTest` | The settle-up (1.4, `MinimumPayments`) pays the same, scaled, in bigger money; ids are labels; a party already square changes no payment; any finished Bank night, with any entries ticked and winners paid, settles square in no more payments than the greedy pass |
+| core | `BlindPropertiesTest` | Every setup the Tournament tab allows: the advisor and the calculator agree, every ladder keeps every rule (overtime included), every fix offered works |
+| core | `MoneyPropertiesTest` | A money field in any JVM locale types back key by key; nothing typed throws; "$1,234.56" reads back; v1.1's Floats come back to the cent |
+| core | `HistoryPropertiesTest` | Every night the Bank can finish saves and reads back; the CSV reads back with every name intact (Robolectric) |
+| tournament-feature | `ClockRestoreTest` | Random clock sessions played twice, with process deaths and with the phone asleep for as long: the two clocks agree a second after every step |
+| bank-feature | `BankRestoreTest` | Random nights with the process killed at random: the Bank shows exactly what it showed |
+| tools-feature | `OddsRestoreTest` | Random odds sessions with the process killed at random: the table comes back exactly |
+
+Bugs they found (wave 9): a late player in a mystery-bounty game made the envelopes pay out up to
+$9 more than the bounty pool (`MysteryBounty.left`); overtime doubled a 500,000,000 stack into a
+negative big blind; the setup advice offered a 1,200,000,000-chip stack whose ladder overflowed;
+the payout editor lost its unsaved weights when the activity was recreated.
 
 ## 7. Instrumented tests
 
@@ -675,7 +742,22 @@ class ClockScreenTest(private val config: ScreenConfig) {
   Call it at each scroll position (see `ComponentLayoutTest.forEachScrollPosition`).
 * `LayoutAssertions.assertTouchTargets`: 48 x 48 dp and no overlaps. `strict = true` demands
   the clickable node itself be 48 dp (the design-system components do); `strict = false`
-  accepts Compose's expansion of a smaller node, as long as no neighbour is in the way.
+  accepts Compose's expansion of a smaller node, as long as no neighbour is in the way. It also
+  checks **TalkBack names** (`AccessibilityAssertions.assertNamed`): every tappable node has a
+  text or a content description, and no empty text field is without a label (TalkBack would
+  read only "Edit box"; a field with a value is read by it, as the Bank's names are).
+* **Contrast** (`AccessibilityAssertions.assertTextContrast`), run by `assertTextFits` on the
+  reference cell only (`phone` upright at font 1.0; contrast is about colours, not size): every
+  text has 4.5:1 against what is behind it, or 3:1 at 18 sp and up (14 sp bold), WCAG 2.1 AA.
+  The text's colour is the one its style declares (blended if see-through); what is behind is
+  the commonest other colour in its box on the rendered screen. Text in a disabled control is
+  exempt. Pairs below AA kept on purpose are listed in `KNOWN_BELOW_AA` (the owner's call, 1.4.5:
+  chip values on the green and grey chips' physical colours, and Hand ranks' faded cards); any other
+  pair below AA fails. The check's first run also found the selected segment's 90% gold second line
+  and the odds grid's ChalkDim cards, both now drawn at full strength.
+  Google's Accessibility Test Framework (through Roborazzi) was the other way to do it;
+  this needs no new dependency, reads the colour the text really has instead of guessing it from
+  anti-aliased pixels, and gives a message that names the text and both colours.
 * `captureGolden` refuses to capture something taller than the window, because the picture
   would silently cut it off. Split a long gallery instead.
 * Render sheets through their content composable (`PokerSheetContent`), not through
@@ -700,6 +782,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
 | `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end`, `S11_chipset_settings` (the stack settings unfolded, keeping back the Tournament's estimate) | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
 | `tools-feature` | `HistoryScreenTest` | `S16_history_list` (all time, two players level at the top), `S16_history_night` (one night in full), `S16_history_empty` (nothing saved yet) | History (PP-037): all three, at every scroll position, on all 24 cells; also a year picked. Fixtures in `HistoryFixtures`: three nights over two years with the mockups' players |
+| `tools-feature` | `FunToolsScreenTest` (+ `FunToolsContentTest`, what each control sends) | `S19_shot_clock_ready`, `S19_shot_clock_low` (8 s left, two players' cards played); `S23_dealers_picked` (Badugi, with a house game on the wheel), `S23_dealers_rules` (the sheet); `S24_quiz_ask` (a heads-up flop), `S24_quiz_range_wrong` (three hands, odds from the engine) | All three, at every scroll position, on all 24 cells; also time up, no time bank, the first spin, a house game picked, too few games, eight house games, the guess waiting on the engine and the range question |
 | `tools-feature` | `SeatDrawScreenTest` (+ `SeatDrawExtraGoldenTest`) | `S14_seats_empty`, `S14_seats_one_table`, `S14_seats_two_tables`, `S14_button_draw`; `S14_seats_font2x` at tall@2.0 | All three, at every scroll position of each pane; also the name fields and an out-of-date draw with the players unfolded |
 | `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament: touch targets |
 | `tournament-feature` | `TournamentScreenGoldenTest` | `S1_setup_{before,invalid}`, `S1_setup_mystery` (mystery bounties picked, the envelopes listed, PP-035), `S1_fold_300ms`, `S1_running_strip`, `S1_panel_{open,unlocked}`, `S2_clock_{ready,running,paused,final_minutes,overtime,finished}`, `S2_clock_running_font2x`, `S3_table_{running,paused,break}` (landscape cells), `S4_break_{colorup,done,plain}`, `S4_break_chipset` (the color-up with a chip set set up in Tools, PP-091 #9), `Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet` | All three checks on all 24 cells (the fold frame: none, it is mid-animation); the top bar's buttons stay 48 x 48 dp at every scroll position. `SetupStripTest`: the strip shows whole settings, as many as fit |
@@ -1049,3 +1132,56 @@ The emulator is shared and keeps `wm size` and `wm density` across reboots, so:
 * Register the step with `extra_step` (a name and function the tour doesn't use: the tour dies
   on a name registered twice) and add it to `SMOKE_STEPS` (and `SCREENS_STEPS` to run it on every
   profile).
+
+## 11. Chaos: the monkey
+
+`adb shell monkey` taps, swipes, rotates and presses keys at random, as fast as a person never
+would, to find the crash nobody walked into. `scripts/device/monkey.sh` boots the test AVD,
+installs the build and runs the monkey once per seed against the app's package only (`-p`: other
+apps' screens, such as a share sheet, are refused). Home, the notification shade and End-call are
+switched off for the run (quick settings could start a screen recording; End-call would put the
+screen to sleep) and put back afterwards, as is the rotation.
+
+```bash
+flock /tmp/pokerpayout-emulator.lock scripts/device/monkey.sh --stop          # default seeds, 4,000 events each
+scripts/device/monkey.sh --no-build --seeds 1204 --events 4000              # replay one seed, event for event
+gh workflow run monkey.yml --ref <branch> -f seeds=1,2,3 -f events=10000     # on GitHub's emulator
+```
+
+* **Seeds** are fixed and logged (default `20261008,1204,35`). Each seed starts from cleared data
+  with notifications allowed, so it replays on its own.
+* **Events**: touches 45%, swipes 20%, rotations 5%, arrow keys 5%, Menu and DPad-centre 10%,
+  system keys 5% (Back and the volume keys while Home is off), relaunching the app 5%, any other
+  key 5%; 75 ms apart.
+* **Fails** on a crash or an ANR in the app: the monkey's own `// CRASH:` or `// NOT RESPONDING:`
+  report, or, as a backstop, the app's FATAL EXCEPTION or ANR in logcat. A crash in another app
+  (a system app on the Play image) ends that seed early and is noted, not failed.
+* **Report**: `build/device-reports/monkey-<timestamp>/summary.md` (a row per seed: events
+  injected, time, verdict), `seed-<n>.txt` (the monkey's log, every event), `logcat-<n>.txt`, and
+  `crash-<n>.png` (the screen when it failed). GitHub uploads them and shows the summary on the run.
+* `monkey.yml` runs on every pull request (not a required check) and by hand.
+
+## 12. Mutation testing (PIT)
+
+Mutation testing plants small bugs in the code (a `<` turned into `<=`, a `+` into a `-`, a
+return value replaced) and counts how many the tests catch. A surviving mutant is a line the tests
+run but don't check. `mutation.yml` runs [PIT](https://pitest.org) on GitHub, by hand, on
+core's maths (`core.domain`, `core.utils`) with the plain JVM tests (Robolectric ones are slow to
+fork and add nothing for pure code):
+
+```bash
+gh workflow run mutation.yml --ref <branch>
+./gradlew --init-script scripts/dev/pitest.init.gradle :core:pitestDebug    # the same, locally (heavy)
+```
+
+The plugin (`pl.droidsonroids.pitest`) is applied only by `scripts/dev/pitest.init.gradle`, never
+by the build, so the app, its dependencies and F-Droid's reproducible build don't change. Kotlin's
+generated `equals`, `hashCode`, `toString`, `componentN` and `copy` aren't mutated. The run's
+summary shows the score per class; the HTML report (every surviving mutant, line by line) is an
+artifact. Report-only: not a gate.
+
+First run (wave 9): 1,761 of 2,229 mutants killed (79%), 87% of the 2,032 the tests reach; about
+16 minutes. Highest: the settlement and bounty maths (`BountyLedger` 56 of 60,
+`CalculatePayoutsUseCase` 31 of 34). Lowest: `BlindLadderSearch` (39 survivors, mostly in the
+"nice value" scoring) and `BlindSetupAdvisor` (20). `NightCodec` and `CashGame` show no coverage
+only because their tests run under Robolectric, which this run leaves out.

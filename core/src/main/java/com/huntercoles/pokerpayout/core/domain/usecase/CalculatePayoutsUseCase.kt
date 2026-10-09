@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.core.domain.usecase
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlace
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutTable
 import javax.inject.Inject
 
@@ -16,6 +17,9 @@ import javax.inject.Inject
  *    included.
  * 4. If rounding up the lower places would leave 1st with less than 2nd (a small pool with a large
  *    unit), every lower place is rounded down instead. 1st then gets at least its own share.
+ * 5. A place that would round to nothing isn't paid: while the pool has money, the last places that
+ *    would get $0 are dropped and the table is worked out again for fewer places. (27 players at $10
+ *    rounded to $10 used to pay 9th place $0.)
  *
  * Example: pool $230, weights 50/30/20, $5 units. 2nd: 69.00 -> 70, 3rd: 46.00 -> 45, 1st: 115.
  */
@@ -28,11 +32,28 @@ class CalculatePayoutsUseCase @Inject constructor() {
         rounding: PayoutRounding = PayoutRounding.DEFAULT
     ): PayoutTable {
         val pool = prizePoolCents.coerceAtLeast(0L)
-        val paying = weights.filter { it > 0 }.take(PayoutPlaces.maxFor(playerCount))
+        var paying = weights.filter { it > 0 }.take(PayoutPlaces.maxFor(playerCount))
         if (paying.isEmpty() || playerCount < 1) {
             return PayoutTable(prizePoolCents = pool, places = emptyList(), rounding = rounding)
         }
+        var table = table(pool, paying, rounding)
+        while (pool > 0L && table.places.size > 1 && table.places.last().amountCents == 0L) {
+            paying = paying.dropLast(1)
+            table = table(pool, paying, rounding)
+        }
+        return table
+    }
 
+    /**
+     * The most places, up to [PayoutPlaces.maxFor] [playerCount], that each pay something with
+     * [settings] and this pool (rule 5): where the Payouts tab's stepper stops.
+     */
+    fun payablePlaces(prizePoolCents: Long, settings: PayoutSettings, playerCount: Int): Int =
+        (PayoutPlaces.maxFor(playerCount) downTo 1).first { count ->
+            invoke(prizePoolCents, settings.withPlaces(count).weights, playerCount, settings.rounding).places.size == count
+        }
+
+    private fun table(pool: Long, paying: List<Int>, rounding: PayoutRounding): PayoutTable {
         val totalWeight = paying.sumOf { it.toLong() }
         val lowerPlaces = roundLowerPlaces(pool, paying, totalWeight, rounding.unitCents)
         val amounts = listOf(pool - lowerPlaces.sum()) + lowerPlaces

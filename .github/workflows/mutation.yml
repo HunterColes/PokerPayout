@@ -1,0 +1,70 @@
+# Mutation testing (PIT) on core's money and blind maths, by hand only: how many deliberately
+# planted bugs (a < turned into <=, a + into a -, a return value replaced) the plain JVM tests catch.
+# The plugin comes from scripts/dev/pitest.init.gradle, so the app's build never includes it.
+#
+#   gh workflow run mutation.yml --ref <branch>
+#
+# Report-only (never a required check). The score is in the run's summary; the HTML report, with
+# every surviving mutant, is uploaded as an artifact.
+name: Mutation testing
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pitest:
+    name: PIT on core
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: PIT (core.domain, core.utils)
+        run: ./gradlew --console=plain --init-script scripts/dev/pitest.init.gradle :core:pitestDebug
+
+      - name: Score
+        if: success() || failure()
+        run: |
+          xml="$(ls core/build/reports/pitest/*/mutations.xml core/build/reports/pitest/mutations.xml 2>/dev/null | head -1)"
+          [[ -n "$xml" ]] || { echo "no mutations.xml"; exit 0; }
+          python3 - "$xml" <<'EOF' | tee -a "$GITHUB_STEP_SUMMARY"
+          import collections, sys, xml.etree.ElementTree as ET
+          rows = [(m.get('status'), m.findtext('mutatedClass')) for m in ET.parse(sys.argv[1]).getroot()]
+          total = len(rows)
+          killed = sum(1 for s, _ in rows if s in ('KILLED', 'TIMED_OUT', 'MEMORY_ERROR'))
+          covered = sum(1 for s, _ in rows if s != 'NO_COVERAGE')
+          print(f"## PIT on core: {killed} of {total} mutants killed ({100 * killed / max(total, 1):.0f}%)")
+          print(f"Test strength (killed of those the tests reach): {100 * killed / max(covered, 1):.0f}% of {covered}")
+          print()
+          print("| Class | Mutants | Killed | Survived | No coverage |")
+          print("|---|---|---|---|---|")
+          by = collections.defaultdict(collections.Counter)
+          for s, c in rows:
+              by[c.rsplit('.', 1)[-1].split('$')[0]][s] += 1
+          for c, n in sorted(by.items(), key=lambda kv: -sum(kv[1].values())):
+              k = n['KILLED'] + n['TIMED_OUT'] + n['MEMORY_ERROR']
+              print(f"| {c} | {sum(n.values())} | {k} | {n['SURVIVED']} | {n['NO_COVERAGE']} |")
+          EOF
+
+      - name: Upload the PIT report
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pitest-core-${{ github.run_id }}
+          path: core/build/reports/pitest/
+          if-no-files-found: ignore
+          retention-days: 14

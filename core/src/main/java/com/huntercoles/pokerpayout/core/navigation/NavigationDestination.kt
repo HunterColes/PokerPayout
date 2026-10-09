@@ -49,6 +49,18 @@ sealed class NavigationDestination {
     @Serializable
     data object Backup : NavigationDestination()
 
+    /** A countdown for each decision, with time-bank cards for slow players. */
+    @Serializable
+    data object ShotClock : NavigationDestination()
+
+    /** A wheel that picks the next game, with each game's rules. */
+    @Serializable
+    data object DealersChoice : NavigationDestination()
+
+    /** A guessing game on the odds engine: who's ahead, and by how much. */
+    @Serializable
+    data object EquityQuiz : NavigationDestination()
+
     @Serializable
     data object Back : NavigationDestination()
 }

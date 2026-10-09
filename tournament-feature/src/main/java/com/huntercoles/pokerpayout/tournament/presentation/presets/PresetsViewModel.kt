@@ -79,7 +79,6 @@ class PresetsViewModel @Inject constructor(
             }
             close()
             if (result.total == 0) {
-                snackbars.hostState.currentSnackbarData?.dismiss()
                 snackbars.showMessage(messages.nothingNew)
             } else {
                 offerUndo(messages.added(result.total)) { result.undo() }
@@ -156,7 +155,6 @@ class PresetsViewModel @Inject constructor(
      * snackbar at once: one still up from before is dismissed (its Undo with it), not queued behind.
      */
     private fun offerUndo(message: String, undo: () -> Unit) {
-        snackbars.hostState.currentSnackbarData?.dismiss()
         viewModelScope.launch {
             if (snackbars.showUndo(message, messages.undo)) undo()
         }

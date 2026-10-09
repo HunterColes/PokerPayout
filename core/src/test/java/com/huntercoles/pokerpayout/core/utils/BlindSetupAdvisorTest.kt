@@ -4,6 +4,7 @@ import com.huntercoles.pokerpayout.core.utils.BlindSetupFix.UseRoundLength
 import com.huntercoles.pokerpayout.core.utils.BlindSetupFix.UseStartingChips
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -73,6 +74,27 @@ class BlindSetupAdvisorTest {
         assertEquals(BlindSetupProblemKind.STACK_TOO_SMALL, problem.kind)
         assertEquals("Starting chips (50) must be more than the smallest chip (100).", problem.explanation)
         assertEquals(listOf(UseStartingChips(2_000)), problem.fixes)
+    }
+
+    /**
+     * Found by BlindPropertiesTest: 68 levels from a 10 chip need at least 1,123,447,780 chips, and the
+     * fix offered "Use 1,200,000,000 starting chips", whose ladder's big blinds overflowed to negative
+     * numbers. No stack whose big blind can't be counted is offered or built now; a longer level
+     * length still fixes it.
+     */
+    @Test
+    fun `a suggested stack never makes a big blind too big to count`() {
+        val problem = assertNotNull(check(17, 15, 10, 20_000))
+        assertTrue(problem.fixes.isNotEmpty())
+        problem.fixes.filterIsInstance<UseStartingChips>().forEach { fix ->
+            assertTrue(fix.chips <= BlindFittingAlgorithm.MAX_STARTING_CHIPS, "suggested ${fix.chips}")
+        }
+
+        // A stack saved from the old suggestion is refused, not built with negative blinds
+        assertNotNull(check(17, 15, 10, 1_200_000_000))
+        assertFailsWith<BlindLadderException> {
+            BlindStructureCalculator.generateSchedule(BlindStructureInput(9, 17 * 60, 10, 1_200_000_000, 15))
+        }
     }
 
     @Test

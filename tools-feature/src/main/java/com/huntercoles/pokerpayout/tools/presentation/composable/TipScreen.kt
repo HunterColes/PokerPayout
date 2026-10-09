@@ -32,11 +32,13 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -200,14 +202,16 @@ private fun CoinCard(coin: TipCoin, copied: Boolean, onCopy: () -> Unit) {
             color = PokerColors.CardWhite,
             modifier = Modifier.semantics { heading() },
         )
+        val code = ImageBitmap.imageResource(coin.qr)
         Image(
-            bitmap = ImageBitmap.imageResource(coin.qr),
+            bitmap = code,
             contentDescription = stringResource(R.string.tip_qr_description, name),
-            // One pixel per module, drawn without smoothing: square and sharp at any size
+            // One pixel a module in the file, drawn without smoothing at a whole number of screen
+            // pixels a module: every module the same size, sharp, as a wallet's camera wants it
             filterQuality = FilterQuality.None,
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
-                .size(QrSize)
+                .size(wholePixelSide(code.width))
                 .clip(RoundedCornerShape(PokerDimens.CornerControl)),
         )
         Text(
@@ -270,6 +274,12 @@ private fun NoBrowserNote(message: String) {
             modifier = Modifier.weight(1f),
         )
     }
+}
+
+/** The largest side up to [QrSize] that gives each of a code's [pixels] a whole number of screen pixels. */
+@Composable
+private fun wholePixelSide(pixels: Int): Dp = with(LocalDensity.current) {
+    ((QrSize.toPx() / pixels).toInt().coerceAtLeast(1) * pixels).toDp()
 }
 
 /** Big enough for any wallet to scan from arm's length; fits the smallest phone at the largest font. */

@@ -73,13 +73,12 @@ class TipScreenTest(private val config: ScreenConfig) {
         screen.compose.waitForIdle()
     }
 
-    /** Scrolls the page so the text [text] is at its top (as far as the page goes). */
+    /** Scrolls the page the text [text] is on (not the rail, which scrolls too) so the text is at its top. */
     private fun scrollToTop(text: String) {
-        if (screen.compose.onAllNodes(scroller).fetchSemanticsNodes().isEmpty()) return
-        val page = screen.compose.onAllNodes(scroller)[0]
-        val pageTop = page.fetchSemanticsNode().boundsInRoot.top
-        val target = screen.compose.onNodeWithText(text).fetchSemanticsNode().boundsInRoot.top
-        page.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, target - pageTop) }
+        val target = screen.compose.onNodeWithText(text).fetchSemanticsNode()
+        val page = generateSequence(target.parent) { it.parent }.firstOrNull { scroller.matches(it) } ?: return
+        screen.compose.onNode(SemanticsMatcher("the page") { it.id == page.id })
+            .performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, target.boundsInRoot.top - page.boundsInRoot.top) }
         screen.compose.waitForIdle()
     }
 

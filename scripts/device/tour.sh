@@ -1600,7 +1600,7 @@ s_backup_replace() {
 s_tip() {
   ui scroll-to "text=Tip the dealer" --max 6
   ui tap "text=Tip the dealer"
-  ui assert-text "text=Free, with no ads or tracking" "text=Open the donation page" desc=Back || return 1
+  ui assert-text "text=No ads, no tracking" "text=Open the donation page" desc=Back || return 1
   require_tab_selected Tools || return 1
   ui scroll-to "desc=QR code for the Ethereum address" --max 4
   ui assert-text "text=Ethereum (ETH)" "desc=Copy the Ethereum address" || return 1

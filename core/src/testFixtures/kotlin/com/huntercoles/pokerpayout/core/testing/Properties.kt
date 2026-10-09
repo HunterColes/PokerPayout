@@ -1,4 +1,4 @@
-package com.huntercoles.pokerpayout.core.property
+package com.huntercoles.pokerpayout.core.testing
 
 import io.kotest.common.ExperimentalKotest
 import io.kotest.property.Gen
@@ -19,7 +19,7 @@ import kotlinx.coroutines.runBlocking
  * Generators mix in edge cases (0, 1, the ends of every range) about one case in fifty.
  */
 @OptIn(ExperimentalKotest::class) // PropTestConfig.iterations
-internal fun <A> forAll(seed: Long, iterations: Int, gen: Gen<A>, property: suspend PropertyContext.(A) -> Unit) {
+fun <A> forAll(seed: Long, iterations: Int, gen: Gen<A>, property: suspend PropertyContext.(A) -> Unit) {
     // A failed seed must not be written to ~/.kotest and replayed on the next run: same cases, every run.
     PropertyTesting.writeFailedSeed = false
     runBlocking {
@@ -28,6 +28,6 @@ internal fun <A> forAll(seed: Long, iterations: Int, gen: Gen<A>, property: susp
 }
 
 /** Fails with [message] (and the case kotest prints with it) unless [condition] holds. */
-internal fun expect(condition: Boolean, message: () -> String) {
+fun expect(condition: Boolean, message: () -> String) {
     if (!condition) throw AssertionError(message())
 }

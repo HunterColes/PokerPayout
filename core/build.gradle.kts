@@ -87,6 +87,7 @@ dependencies {
     testFixturesImplementation(libs.compose.material3)
     testFixturesApi(libs.test.junit4)
     testFixturesApi(libs.bundles.screenshot.test)
+    testFixturesApi(libs.test.kotest.property) // forAll (Properties.kt), for every module's property tests
 
     ksp(libs.hilt.compiler)
     kspAndroidTest(libs.hilt.compiler)

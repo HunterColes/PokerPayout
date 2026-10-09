@@ -4,6 +4,8 @@ import com.huntercoles.pokerpayout.core.domain.history.NightCodec
 import com.huntercoles.pokerpayout.core.domain.history.NightCsv
 import com.huntercoles.pokerpayout.core.domain.history.NightResults
 import com.huntercoles.pokerpayout.core.domain.history.SavedNight
+import com.huntercoles.pokerpayout.core.testing.expect
+import com.huntercoles.pokerpayout.core.testing.forAll
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.bind
 import io.kotest.property.arbitrary.element
@@ -118,7 +120,7 @@ class HistoryPropertiesTest {
             "Dana", "O'Neil", "Smith, Jr", "\"Ace\"", "line\nbreak", "cr\rlf", "tab\there", "back\\slash",
             "=1+1", "+44", "-x", "@home", " ", "  ",
             "Zoë", "Ægir", "Søren", "Łukasz", "Петя", "Νίκος", "דנה", "علي", "राज", "王小明", "さくら",
-            "🂡", "😀", "é", "‍", "</script>", "{\"json\":1}", "\u0000", " ",
+            "\ud83c\udca1", "\ud83d\ude00", "e\u0301", "\u200d", "</script>", "{\"json\":1}", "\u0000", "\u2028",
         )
 
         /** A name as typed in the Bank; it keeps it trimmed, and "Player N" when left empty. */

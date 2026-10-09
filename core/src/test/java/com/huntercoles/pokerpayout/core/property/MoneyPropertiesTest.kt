@@ -1,5 +1,7 @@
 package com.huntercoles.pokerpayout.core.property
 
+import com.huntercoles.pokerpayout.core.testing.expect
+import com.huntercoles.pokerpayout.core.testing.forAll
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.core.utils.Money
 import com.huntercoles.pokerpayout.core.utils.MoneyInput
@@ -81,11 +83,11 @@ class MoneyPropertiesTest {
         /** What a keyboard can type into a money field: digits, separators, signs, spaces, other scripts' digits. */
         private val keys = listOf(
             '0', '1', '2', '5', '9', '.', ',', ' ', '-', '+', '\'', 'e', 'E', '$',
-            ' ', // no-break space
-            '٫', // Arabic decimal separator
-            '٣', // Arabic-Indic three
-            '３', // fullwidth three
-            '१', // Devanagari one
+            '\u00a0', // no-break space
+            '\u066b', // Arabic decimal separator
+            '\u0663', // Arabic-Indic three
+            '\uff13', // fullwidth three
+            '\u0967', // Devanagari one
         )
         val typed = Arb.list(Arb.element(keys), 0..14).map { it.joinToString("") }
     }

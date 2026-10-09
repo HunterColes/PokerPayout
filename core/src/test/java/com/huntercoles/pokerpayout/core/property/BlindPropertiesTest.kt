@@ -1,5 +1,7 @@
 package com.huntercoles.pokerpayout.core.property
 
+import com.huntercoles.pokerpayout.core.testing.expect
+import com.huntercoles.pokerpayout.core.testing.forAll
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
 import com.huntercoles.pokerpayout.core.utils.BlindSetupAdvisor
 import com.huntercoles.pokerpayout.core.utils.BlindSetupFix

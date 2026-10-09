@@ -380,14 +380,18 @@ s_tournament_config() {
 # pool · 3 places paid") to the cent, and to "Adds up to $125" under them; one row per place paid;
 # no lower place paying more; with a unit (cents) every place below 1st a whole number of units.
 # A row is one node for TalkBack ("1st, Still playing, $63, 50%") or, failing that, the texts on
-# one line.
-check_payout_table() { # $1 = ui dump, $2 = rounding unit in cents (default 100)
-  python3 - "$(page_dump "$1")" "${2:-100}" <<'PY'
+# one line. In euros (PP-114) the amounts read "1.234,50 €", a no-break space before the sign.
+check_payout_table() { # $1 = ui dump, $2 = rounding unit in cents (default 100), $3 = dollar (default) or euro
+  python3 - "$(page_dump "$1")" "${2:-100}" "${3:-dollar}" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 unit = int(sys.argv[2])
-AMOUNT = r"\$[\d,]+(?:\.\d\d)?"
+EURO = sys.argv[3] == "euro"
+AMOUNT = r"[\d.]+(?:,\d\d)?[\u00a0 ]€" if EURO else r"\$[\d,]+(?:\.\d\d)?"
 def cents(s):
-    whole, _, frac = s[1:].replace(",", "").partition(".")
+    if EURO:
+        whole, _, frac = s.rstrip("€\u00a0 ").replace(".", "").partition(",")
+    else:
+        whole, _, frac = s[1:].replace(",", "").partition(".")
     return int(whole) * 100 + int(frac or 0)
 nodes = []
 for n in ET.parse(sys.argv[1]).iter("node"):
@@ -1218,6 +1222,47 @@ s_history_save() {
   ui assert-text "text=1 night saved" || return 1
   ui back                                      # History -> the Tools list
   ui assert-text "text=Seat draw" text=History
+}
+
+# Currency (PP-114) ---------------------------------------------------------------------------------
+# Tools > Currency (S25): pick the euro, and the Payouts tab (the finished night) reads in euros and
+# still adds up to the cent; then back to the dollar, which every step after this one reads.
+open_currency() {
+  tab Tools
+  ui scroll-to "text=Currency" --max 6
+  ui tap "text=Currency"
+  ui assert-text "text=How amounts show" desc=Back "text=Dollar" "text=Euro" || return 1
+  require_tab_selected Tools
+}
+currency_picked() { # $1 = the currency's name; checks the last dump
+  local picked; picked="$(control_on "$PP_UI_LAST_XML" "$1")"; echo "$1 picked=$picked"
+  [[ "$picked" == true ]] || { echo "[ui] FAIL $1 isn't picked"; return 1; }
+}
+s_currency() {
+  open_currency || return 1
+  currency_picked Dollar || return 1           # the tour's fresh install on an en-US phone
+  ui tap "text=Euro"
+  ui assert "text=Euro" || return 1
+  currency_picked Euro || return 1
+  ui back                                      # Currency -> the Tools list, whose row says so
+  ui assert-text "text~=Euro · 1.234,50"
+}
+s_currency_payouts() {
+  tab Payouts
+  ui assert-text "re=^[0-9.,]+.€ prize pool · 2 places paid$" "desc=Share the payouts" "text~=Alice" || return 1
+  if ui find 're=\$[0-9]' --timeout 1 >/dev/null 2>&1; then echo "[ui] FAIL a dollar amount on the Payouts tab in euros"; return 1; fi
+  check_payout_table "$PP_UI_LAST_XML" 100 euro
+}
+s_currency_back() {
+  open_currency || return 1
+  ui tap "text=Dollar"
+  ui assert "text=Dollar" || return 1
+  currency_picked Dollar || return 1
+  ui back
+  ui assert-text "text~=Dollar · \$1,234.50" || return 1
+  tab Payouts
+  ui assert-text "text~=prize pool · 2 places paid" || return 1
+  check_payout_table "$PP_UI_LAST_XML"
 }
 
 # Clearing the Rebuy amount to retype it must not wipe recorded rebuys (PP-014).
@@ -2129,6 +2174,9 @@ step payouts-nav          "Payouts tab: the finished night by name, adds up"    
 step payouts-nav-editor   "Payouts tab: structure sheet opens and closes"       s_payouts_nav_editor
 step payouts-nav-back     "Back from a tab returns to Tournament (B16)"         s_payouts_nav_back
 step history-save         "Pay everyone: save the night once; it is in History" s_history_save
+step currency             "Tools > Currency (S25): pick the euro, row says so"  s_currency
+step currency-payouts     "Payouts in euros: 1.234,50 €, rows still add up"     s_currency_payouts
+step currency-back        "Back to the dollar: Payouts in dollars again"        s_currency_back
 step tools                "Tools tab: tool list and Sound (S7)"                 s_tools
 step sound-off            "Sound off: switch off, volume and chime rest"        s_sound_off
 step sound-on             "Sound back on; test chime"                           s_sound_on

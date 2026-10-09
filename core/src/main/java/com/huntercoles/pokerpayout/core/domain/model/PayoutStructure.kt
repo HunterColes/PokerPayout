@@ -1,15 +1,28 @@
 package com.huntercoles.pokerpayout.core.domain.model
 
 import com.huntercoles.pokerpayout.core.constants.TournamentConstants
+import com.huntercoles.pokerpayout.core.utils.AppCurrency
+import com.huntercoles.pokerpayout.core.utils.FormatUtils
+import com.huntercoles.pokerpayout.core.utils.MoneyFormat
 
 /**
- * What the prize pool is rounded to. Every place below 1st gets a multiple of [unitCents], and 1st
- * gets whatever is left, so the table always adds up to the pool to the cent.
+ * What the prize pool is rounded to. Every place below 1st gets a multiple of the unit, and 1st gets
+ * whatever is left, so the table always adds up to the pool to the cent.
+ *
+ * [unitCents] is what is saved (settings, presets): 1, 5 or 10 of the currency. The unit the table
+ * rounds to is [unitCentsIn] the host's currency (PP-114): the same, except in yen, where the steps
+ * are ¥100, ¥500 and ¥1,000. The names say dollars and are saved data too: never rename one.
  */
-enum class PayoutRounding(val unitCents: Long, val label: String) {
-    ONE_DOLLAR(unitCents = 100L, label = "$1"),
-    FIVE_DOLLARS(unitCents = 500L, label = "$5"),
-    TEN_DOLLARS(unitCents = 1_000L, label = "$10");
+enum class PayoutRounding(val unitCents: Long) {
+    ONE_DOLLAR(unitCents = 100L),
+    FIVE_DOLLARS(unitCents = 500L),
+    TEN_DOLLARS(unitCents = 1_000L);
+
+    /** The unit in [currency], in cents: [unitCents], times 100 in yen. */
+    fun unitCentsIn(currency: AppCurrency = MoneyFormat.current): Long = unitCents * currency.roundingScale
+
+    /** "$1", "5 €", "¥500": the unit in the host's currency. */
+    val label: String get() = FormatUtils.formatMoney(unitCentsIn())
 
     companion object {
         val DEFAULT = ONE_DOLLAR

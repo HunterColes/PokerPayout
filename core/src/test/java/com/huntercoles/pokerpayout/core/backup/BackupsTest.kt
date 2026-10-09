@@ -16,6 +16,7 @@ import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.MusicPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.ChipCalculatorPreferences
+import com.huntercoles.pokerpayout.core.preferences.CurrencyPreferences
 import com.huntercoles.pokerpayout.core.preferences.OddsCalculatorPreferences
 import com.huntercoles.pokerpayout.core.preferences.PhonePrefs
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
@@ -78,6 +79,8 @@ class BackupsTest {
         val tournament = fillTournament()
         fillBank()
         fillTools(tournament)
+        // The currency (PP-114), as CurrencyPreferences saves it
+        prefs(CurrencyPreferences.FILE).edit().putString("currency", "euro").commit()
         listOf(holiday, friday, saturday).forEach { nights.add(it) }
     }
 

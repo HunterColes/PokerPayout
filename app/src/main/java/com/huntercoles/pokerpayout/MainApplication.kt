@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout
 
 import android.app.Application
 import android.os.StrictMode
+import com.huntercoles.pokerpayout.core.preferences.CurrencyPreferences
 import com.huntercoles.pokerpayout.core.preferences.FirstRun
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
@@ -16,6 +17,14 @@ class MainApplication : Application() {
     /** PP-113: a new install or an update, told apart before anything saves a thing. */
     @Inject
     lateinit var firstRun: FirstRun
+
+    /**
+     * PP-114: made with the injection, before any screen or the live clock service, so every amount
+     * shows in the host's currency from the first frame; its own first start picks the currency, the
+     * phone's on a new install and the dollar on an update (FirstRun leaves its file out).
+     */
+    @Inject
+    lateinit var currencyPreferences: CurrencyPreferences
 
     override fun onCreate() {
         if (BuildConfig.DEBUG) {

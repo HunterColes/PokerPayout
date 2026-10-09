@@ -54,12 +54,19 @@ class FirstRunTest {
 
     @Test
     fun `anything in any of the app's files is an update`() {
-        val showed = allFiles.filter { file ->
+        val showed = (allFiles - CurrencyPreferences.FILE).filter { file ->
             wipe()
             prefs(file).edit().putString("from_before", "x").commit()
             start().getShowWelcome()
         }
         assertEquals("the welcome showed with data from before in these files", emptyList<String>(), showed)
+    }
+
+    /** PP-114: the currency settles its own first start just before, so its file is no sign of an update. */
+    @Test
+    fun `a new install's own currency pick leaves the welcome up`() {
+        prefs(CurrencyPreferences.FILE).edit().putString("currency", "euro").commit()
+        assertTrue(start().getShowWelcome())
     }
 
     @Test

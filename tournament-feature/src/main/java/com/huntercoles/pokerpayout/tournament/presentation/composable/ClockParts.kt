@@ -65,6 +65,7 @@ internal fun ClockHero(uiState: TimerUiState, width: Dp, cap: Dp, onIntent: ((Ti
                     .semantics { liveRegion = LiveRegionMode.Polite },
             )
             clockPills(uiState).forEach { PokerPill(it.text, tone = it.tone) }
+            MoneyStagePill(uiState.table.moneyStage, Modifier.align(Alignment.CenterVertically))
         }
         Text(
             text = time,

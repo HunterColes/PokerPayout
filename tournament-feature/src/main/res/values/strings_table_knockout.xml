@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- PP-135: the table view's knockout button, and where the players left stand against the money -->
+    <string name="table_knock_out">Knock out</string>
+    <string name="table_bubble">On the bubble</string>
+    <string name="table_in_the_money">In the money</string>
+</resources>

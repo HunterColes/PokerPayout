@@ -46,7 +46,8 @@ import com.huntercoles.pokerpayout.core.design.PokerColors
  * the window crosses 600 dp, because it moves between the two layouts rather than being rebuilt.
  *
  * A screen can ask for the whole window with no tabs through [RequestShellChrome] (the Tournament
- * tab's table view); it moves there the same way. Two-pane screens use [fillShellWidth].
+ * tab's table view); it moves there the same way, and hosts its own snackbars from
+ * [LocalShellSnackbars]. Two-pane screens use [fillShellWidth].
  */
 @Suppress("LongParameterList") // the shell's slots: tabs, selection, snackbars, screen
 @Composable
@@ -69,7 +70,11 @@ fun PokerAppShell(
             .fillMaxSize()
             .background(PokerColors.PokerBlack),
     ) {
-        CompositionLocalProvider(LocalWidthClass provides widthClassOf(maxWidth), LocalShellChrome provides chrome) {
+        CompositionLocalProvider(
+            LocalWidthClass provides widthClassOf(maxWidth),
+            LocalShellChrome provides chrome,
+            LocalShellSnackbars provides snackbarHostState,
+        ) {
             when {
                 chrome.immersive -> Box(Modifier.fillMaxSize()) { screen() }
                 navLayoutFor(maxWidth) == NavLayout.Rail -> Row(Modifier.fillMaxSize().imePadding()) {

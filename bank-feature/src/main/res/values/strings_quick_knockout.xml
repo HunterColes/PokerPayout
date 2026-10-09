@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- PP-135: the knockout from the full-screen clock. The rest of its words are the knockout sheet's (bank_ko_*). -->
+    <string name="quick_ko_who">Who\'s out?</string>
+    <string name="quick_ko_by">Who knocked %1$s out?</string>
+    <string name="quick_ko_close">Close knockout</string>
+    <string name="quick_ko_back">Back to who\'s out</string>
+    <!-- A pill: the bounty on the player's head, "$5 bounty" -->
+    <string name="quick_ko_bounty">%1$s bounty</string>
+    <!-- A pill: the mystery envelopes still in the pool -->
+    <plurals name="quick_ko_envelopes">
+        <item quantity="one">%d envelope</item>
+        <item quantity="other">%d envelopes</item>
+    </plurals>
+</resources>

@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.tournament.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
+import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
@@ -86,6 +87,9 @@ class TimerViewModel @Inject constructor(
 
     private var tableConfig = tournamentPreferences.getCurrentTournamentConfig()
     private var bank = BankCounts()
+
+    /** The one payout calculation (stateless), for how many places are paid. */
+    private val payouts = CalculatePayoutsUseCase()
 
     /** The chip set the color-ups follow; null for a common home set's chips. */
     private var chipSet: ChipSetChips? = chipSets.current()
@@ -748,18 +752,21 @@ class TimerViewModel @Inject constructor(
         val left = (players - out).coerceAtLeast(0)
         val stacks = players.toLong() + bank.rebuys + bank.addOns
         val chips = stacks * _uiState.value.config.startingChips
+        val prizePool = PoolBreakdown.withRecordedPurchases(
+            tableConfig.money,
+            players,
+            bankPreferences.getRecordedRebuyCents(),
+            bankPreferences.getRecordedAddOnCents(),
+        ).prizePoolCents
         val table = TableStats(
             playerCount = players,
             playersLeft = left,
             averageStack = if (left > 0) (chips / left).toInt() else 0,
             // The same prize pool the Payouts table splits (buy-ins, rebuys and add-ons at the prices
             // they were bought at; no food or bounty)
-            prizePoolCents = PoolBreakdown.withRecordedPurchases(
-                tableConfig.money,
-                players,
-                bankPreferences.getRecordedRebuyCents(),
-                bankPreferences.getRecordedAddOnCents(),
-            ).prizePoolCents
+            prizePoolCents = prizePool,
+            // The places that table pays, from the one payout calculation (PP-135: the bubble)
+            paidPlaces = payouts(prizePool, tableConfig.payoutWeights, players, tableConfig.payoutRounding).places.size
         )
         val purchases = Purchases(
             rebuyCents = tableConfig.money.rebuyCents,

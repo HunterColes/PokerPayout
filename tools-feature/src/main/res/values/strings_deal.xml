@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Deal maker (S22): the chop, by ICM and by chips -->
+    <string name="deal_title">Deal maker</string>
+    <!-- "3 players · $900 to share" -->
+    <string name="deal_subtitle">%1$s · %2$s to share</string>
+    <string name="deal_start_over">Start over</string>
+    <string name="deal_snackbar_started_over">Deal started over from tonight</string>
+
+    <!-- Players left -->
+    <string name="deal_players_title">Players left</string>
+    <string name="deal_players_from_bank">Still in, from the Bank</string>
+    <string name="deal_players_typed">Typed for this deal</string>
+    <string name="deal_chips_hint">Chips</string>
+    <!-- TalkBack: "Chips Dana has" -->
+    <string name="deal_chips_description">Chips %1$s has</string>
+
+    <!-- Prizes left -->
+    <string name="deal_prizes_title">Prizes left</string>
+    <!-- "1st to 3rd" -->
+    <string name="deal_prizes_places">%1$s to %2$s</string>
+    <string name="deal_source_payouts">Tonight\'s payouts</string>
+    <string name="deal_source_typed">Type them</string>
+    <string name="deal_no_payouts">No prize pool yet, so type the prizes.</string>
+    <!-- "1st prize": the label and TalkBack name of a typed prize -->
+    <string name="deal_prize_label">%1$s prize</string>
+    <string name="deal_for_winner">Save for the winner</string>
+    <!-- "Played for; the rest is shared now. Up to $180." -->
+    <string name="deal_for_winner_help">Played for; the rest is shared now. Up to %1$s.</string>
+    <string name="deal_for_winner_too_much">At most %1$s, so 1st still pays as much as 2nd.</string>
+
+    <!-- The deal -->
+    <string name="deal_result_title">The deal</string>
+    <!-- "$900 shared now" -->
+    <string name="deal_result_note">%1$s shared now</string>
+    <string name="deal_icm">ICM</string>
+    <string name="deal_chip_chop">Chip chop</string>
+    <!-- "12,000 chips · 40.0%" -->
+    <string name="deal_stack_share">%1$s chips · %2$s%%</string>
+    <!-- "Plus $50 to whoever wins" -->
+    <string name="deal_plus_winner">Plus %1$s to whoever wins.</string>
+    <string name="deal_missing_chips">Type every player\'s chips to see the deal.</string>
+    <string name="deal_no_prizes">The prizes add up to nothing yet.</string>
+    <!-- "3rd pays more than 2nd. Each place pays no more than the one above." -->
+    <string name="deal_prizes_go_up">%1$s pays more than %2$s. Each place pays no more than the one above.</string>
+    <!-- A chip leader with most of the chips: "By chip chop Dana takes more than 1st pays. ..." -->
+    <string name="deal_chop_over_first">By chip chop %1$s takes more than 1st pays. ICM never pays more than 1st.</string>
+    <string name="deal_icm_how">ICM: each stack\'s average prize, if its share of the chips is its chance of each place.</string>
+    <!-- "Chip chop: everyone gets the smallest prize left ($180), and the rest goes by chips." -->
+    <string name="deal_chop_how">Chip chop: everyone gets the smallest prize left (%1$s), and the rest goes by chips.</string>
+    <!-- "Each column adds up to $900." -->
+    <string name="deal_adds_up">Each way adds up to %1$s.</string>
+</resources>

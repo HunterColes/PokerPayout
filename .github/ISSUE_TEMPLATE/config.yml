@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: A security problem
+    url: https://github.com/HunterColes/PokerPayout/blob/master/SECURITY.md
+    about: Please report it privately, as SECURITY.md describes, not in a public issue.
+  - name: Support the app
+    url: https://github.com/HunterColes/PokerPayout/blob/master/crypto/DONATIONS.md
+    about: Poker Payout is free. If you'd like to say thanks, the donation page is here.

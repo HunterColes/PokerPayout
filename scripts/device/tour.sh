@@ -977,6 +977,47 @@ s_bank_paid() {
   ui wait-gone "text=Pay Alice"
   ui assert-text "desc=Alice, paid out" "text~=Paid Alice \$" "text~=Finished · Alice wins · "
 }
+
+# Settle up (1.4; it took over the cash game's) -------------------------------------------------------
+# The night is over and only Alice paid in ($25 and a $10 rebuy); the Bank has paid her $70, so it is
+# $60 short of keeping the $25 food money. Players 2 to 4 owe their $25 entry; Player 5 (2nd, $40)
+# owes $25 and is owed $40. The fewest payments that square everyone: four.
+s_bank_settle_up() {
+  ui wait-gone text=UNDO --timeout 12
+  ui scroll up --times 3
+  ui tap "text=Settle up · 4 payments"
+  ui assert-text "text=Settle up" "text=Tick each one when paid" "has=Player 2 pays the bank|\$25" \
+    "has=Player 3 pays the bank|\$25" "has=Player 4 pays Player 5|\$15" "has=Player 4 pays the bank|\$10" \
+    "text=Share as text" text=Close
+}
+s_bank_settle_tick() {
+  # A row is one checkbox: tick Player 2's payment, then untick it (the snackbar sits behind the sheet)
+  ui tap "has=Player 2 pays the bank|\$25"
+  ui assert "has=Player 2 pays the bank" checked || return 1
+  ui tap "has=Player 2 pays the bank|\$25"
+  ui wait-gone "has=Player 2 pays the bank" checked
+}
+s_bank_settle_share() {
+  ui tap "text=Share as text"
+  ui assert-text "text~=Poker night: settle up" || return 1
+  ui back
+  ui wait "text=Share as text"
+}
+s_bank_settle_square() {
+  # Tick all four: the last one records every buy-in and payout as paid, and the sheet says square.
+  # Close it, check the Bank, then the top bar's Undo puts the night back as it was.
+  ui tap "has=Player 2 pays the bank|\$25"
+  ui tap "has=Player 3 pays the bank|\$25"
+  ui tap "has=Player 4 pays Player 5|\$15"
+  ui tap "has=Player 4 pays the bank|\$10"
+  ui assert-text "text=Everyone is square: nobody owes anybody." || return 1
+  ui tap text=Close
+  ui wait-gone "text=Everyone is square: nobody owes anybody."
+  ui assert-text "text~=Finished · Alice wins · all paid" "desc=Player 2, buy-in, paid" || return 1
+  if ui find "text~=Settle up · " --timeout 1 >/dev/null 2>&1; then echo "[ui] FAIL Settle up still offered"; return 1; fi
+  ui tap "desc~=Undo: Everyone is square"
+  ui assert-text "text=Settle up · 4 payments" "desc=Player 2, buy-in, not paid" "text~=Finished · Alice wins · "
+}
 s_pool_summary() {
   # The pool and where it came from; the rebuy is inside the prize pool, not on top of it
   ui tap text=Breakdown
@@ -1101,108 +1142,6 @@ s_history_save() {
   ui assert-text "text=1 night saved" || return 1
   ui back                                      # History -> the Tools list
   ui assert-text "text=Seat draw" text=History
-}
-
-# Cash game in the Bank (S13, M7) ---------------------------------------------------------------
-# Its own ledger beside the tournament's: three players buy in, Theo tops up, everyone's chips are
-# counted ($120 in, $120 out), and the settle-up says who pays whom. Then back to the tournament,
-# which must be as the steps above left it.
-s_cash_mode() {
-  tab Bank
-  ui assert-text "desc=Alice, champion" || return 1   # the tournament's Bank, from the steps above
-  ui tap "text=Cash game"
-  ui assert-text "text=Nobody at the table yet" "text=Cash game · nobody in yet" "text=Add player" "desc=Nothing to undo"
-  ui assert "has=Cash game" checked             # the switch: its option is checked, not its label
-  require_tab_selected Bank
-}
-# The last snackbar gone (8 s), so it can't be over what the next tap aims at.
-cash_snackbar_gone() {
-  ui wait-gone text=UNDO --timeout 12
-}
-cash_add_player() { # $1 = name, $2 = buy-in in dollars
-  cash_snackbar_gone
-  ui scroll-to "text=Add player" --max 4
-  ui tap "text=Add player"
-  ui wait "text=Add a player"
-  ui set-text "desc=Name" --value "$1"
-  ui set-text "desc=Buy-in" --value "$2"
-  ui tap "text=Add $1"
-  ui wait-gone "text=Add a player"
-  ui assert-text "text=$1 bought in · \$$2" "has=$1|in \$$2|chips not counted yet"
-}
-s_cash_players() {
-  cash_add_player Dana 40
-  cash_add_player Sam 20
-  cash_add_player Theo 40
-  ui scroll up --times 4
-  ui assert-text "text=Cash game · 3 players · \$100 in play" "text=COUNTING" "text~=3 still to count: Dana, Sam, Theo"
-}
-s_cash_top_up() {
-  # Theo's sheet: the top-up starts at his last buy-in ($40); make it $20
-  ui scroll-to "has=Theo|in \$40" --max 4
-  ui tap "has=Theo|in \$40"
-  ui wait "text=BOUGHT IN · \$40"
-  ui set-text "desc=Top-up for Theo" --value 20
-  ui tap "text=Top up \$20"
-  ui assert-text "text=BOUGHT IN · \$60" "text=Top-up 1"   # (the snackbar is behind the sheet)
-}
-cash_count() { # $1 = name, $2 = chips counted out in dollars, $3 = what the sheet then says
-  ui set-text "desc=$1's chips counted out" --value "$2"
-  ui enter                                    # leaves the field: the count is saved
-  ui assert-text "text=$3" || return 1      # saved: the sheet says what it means for the night
-  ui tap text=Done
-  ui wait-gone "text=Done"
-}
-s_cash_count() {
-  cash_count Theo 45 "Down \$15 on the night"
-  ui scroll-to "has=Dana|in \$40" --max 4 --dir up
-  ui tap "has=Dana|in \$40"
-  cash_count Dana 75 "Up \$35 on the night"
-  ui scroll-to "has=Sam|in \$20" --max 4
-  ui tap "has=Sam|in \$20"
-  cash_count Sam 0 "Down \$20 on the night"
-  ui scroll up --times 4
-  # Each line reads to TalkBack as "Dana, in $40, out $75, up $35"
-  ui assert-text "text=BALANCED" "has=Dana|in \$40|out \$75|up \$35" "has=Sam|in \$20|out \$0|down \$20" \
-    "has=Theo|in \$60|out \$45|down \$15"
-}
-s_cash_settle() {
-  # Two payments for three players, largest debt first; tick Theo's
-  cash_snackbar_gone
-  ui scroll-to "text=Share as text" --max 6     # the whole settle-up card is then in view
-  ui assert-text "has=Sam pays Dana|\$20" "has=Theo pays Dana|\$15" "text=Tick each one when paid" || return 1
-  ui tap "has=Theo pays Dana|\$15"
-  ui assert "has=Theo pays Dana" checked
-  ui assert-text "text=Theo paid Dana \$15"
-}
-s_cash_share() {
-  cash_snackbar_gone
-  ui scroll-to "text=Share as text" --max 6
-  ui tap "text=Share as text"
-  ui assert-text "text~=Poker night: cash game" || return 1
-  ui back
-  ui wait "text=Share as text"
-}
-s_cash_undo() {
-  # Tick Sam's payment, then UNDO on the snackbar; then the top bar's Undo takes Theo's tick back
-  cash_snackbar_gone
-  ui scroll-to "text=Share as text" --max 6
-  ui tap "has=Sam pays Dana|\$20"
-  ui tap text=UNDO
-  ui wait-gone "has=Sam pays Dana" checked
-  ui scroll up --times 6
-  ui tap "desc=Undo: Theo paid Dana \$15"
-  ui scroll-to "has=Theo pays Dana|\$15" --max 4
-  ui wait-gone "has=Theo pays Dana" checked
-  ui assert-text "has=Theo pays Dana|\$15" "has=Sam pays Dana|\$20" "desc~=Undo: Sam cashed out"
-}
-s_cash_back_to_tournament() {
-  # The tournament's Bank is as it was: Alice the champion, paid
-  ui scroll up --times 6
-  ui tap text=Tournament                      # the switch: the topmost "Tournament" on screen
-  ui assert-text "desc=Alice, champion" "desc=Alice, paid out" "text~=Finished · Alice wins" "text=Payout structure" || return 1
-  ui assert "has=Tournament" checked
-  require_tab_selected Bank
 }
 
 # Clearing the Rebuy amount to retype it must not wipe recorded rebuys (PP-014).
@@ -1849,6 +1788,10 @@ step bank-knockout-done   "Alice knocked Player 2 out; 5th badge clear of name" 
 step bank-champion        "Three more out; Alice is the champion"               s_bank_champion
 step bank-payout-sheet    "Pay-out sheet for the champion (S5c)"                s_bank_payout_sheet
 step bank-paid            "Mark paid: Paid column, finished subtitle"           s_bank_paid
+step bank-settle-up       "Settle up: four buy-ins open, the fewest payments"   s_bank_settle_up
+step bank-settle-tick     "Tick a payment, then untick it"                      s_bank_settle_tick
+step bank-settle-share    "Share the settle-up as text"                         s_bank_settle_share
+step bank-settle-square   "Tick all four: everyone square; Undo takes it back"  s_bank_settle_square
 step pool-summary         "Pool breakdown sheet"                                s_pool_summary
 step weights-editor       "Payout structure sheet from the Bank"                s_weights_editor
 step weights-closed       "Cancel the payout structure sheet"                   s_weights_close
@@ -1863,14 +1806,6 @@ step payouts-nav          "Payouts tab: the finished night by name, adds up"    
 step payouts-nav-editor   "Payouts tab: structure sheet opens and closes"       s_payouts_nav_editor
 step payouts-nav-back     "Back from a tab returns to Tournament (B16)"         s_payouts_nav_back
 step history-save         "Pay everyone: save the night once; it is in History" s_history_save
-step cash-mode            "Bank: switch to the cash game (S13), nobody in yet"   s_cash_mode
-step cash-players         "Cash: Dana \$40, Sam \$20, Theo \$40 buy in"           s_cash_players
-step cash-top-up          "Cash: Theo tops up \$20 from his sheet"              s_cash_top_up
-step cash-count           "Cash: chips counted, \$120 in, \$120 out: balanced"   s_cash_count
-step cash-settle          "Cash: settle-up, 2 payments; tick Theo's"            s_cash_settle
-step cash-share           "Cash: share the settle-up as text"                   s_cash_share
-step cash-undo            "Cash: UNDO on the snackbar, then the top bar's Undo" s_cash_undo
-step cash-tournament      "Back to Tournament: the tournament's Bank intact"    s_cash_back_to_tournament
 step tools                "Tools tab: tool list and Sound (S7)"                 s_tools
 step sound-off            "Sound off: switch off, volume and chime rest"        s_sound_off
 step sound-on             "Sound back on; test chime"                           s_sound_on

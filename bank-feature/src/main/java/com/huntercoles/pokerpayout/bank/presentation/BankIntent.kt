@@ -1,6 +1,7 @@
 package com.huntercoles.pokerpayout.bank.presentation
 
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.domain.settle.Transfer
 
 /**
  * What the Bank can be asked to do. Routine actions apply at once and can be undone ([Undo], or the
@@ -46,6 +47,15 @@ sealed interface BankIntent {
     data object ShowPayoutStructure : BankIntent
 
     data class UpdatePayoutSettings(val settings: PayoutSettings) : BankIntent
+
+    /** The settle-up sheet, once the night is over. */
+    data object ShowSettleUp : BankIntent
+
+    /**
+     * Ticks one settle-up payment as paid, or not. Ticking the last one records everyone square:
+     * every buy-in and every payout marked paid, in one action Undo takes back.
+     */
+    data class SetSettlePaid(val transfer: Transfer, val paid: Boolean) : BankIntent
 
     data object ShowResetConfirm : BankIntent
 

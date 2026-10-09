@@ -147,6 +147,29 @@ object BankScenes {
         viewModel
     }
 
+    /**
+     * The champion night, settled between friends: Dana, Marcus, Priya, Theo and Jo paid in at the
+     * start, Sam, Alex, Rita and Ben settle up at the end; nobody is paid out yet. The Bank holds
+     * $340 and keeps the $45 food money, so it pays out $295; the four owe $50 each.
+     */
+    fun settleUp(kit: BankTestKit): BankViewModel = with(kit) {
+        val viewModel = game()
+        buyIns(viewModel, JO)
+        viewModel.send(BankIntent.AddPurchase(MARCUS, Purchase.REBUY))
+        listOf(DANA, MARCUS, PRIYA, THEO, JO).forEach { viewModel.send(BankIntent.AddPurchase(it, Purchase.ADD_ON)) }
+        clock.at(level = 9, breaks = BREAKS)
+        settle()
+        viewModel.knockOut(BEN, PRIYA)
+        viewModel.knockOut(RITA, DANA)
+        viewModel.knockOut(ALEX, THEO)
+        viewModel.knockOut(SAM, null)
+        viewModel.knockOut(JO, DANA)
+        viewModel.knockOut(THEO, DANA)
+        viewModel.knockOut(PRIYA, DANA)
+        viewModel.knockOut(MARCUS, null)
+        viewModel
+    }
+
     /** 30 players, half bought in, a few out: the list scrolls under the sticky header. */
     fun thirtyPlayers(kit: BankTestKit): BankViewModel = with(kit) {
         val names = NAMES + listOf(

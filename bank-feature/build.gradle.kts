@@ -32,13 +32,6 @@ android {
         unitTests.isIncludeAndroidResources = true
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            consumerProguardFiles("proguard-rules.pro")
-        }
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

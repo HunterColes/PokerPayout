@@ -29,13 +29,6 @@ android {
         compose = true
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            consumerProguardFiles("proguard-rules.pro")
-        }
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -48,11 +41,9 @@ android {
 
 dependencies {
     implementation(project(":core"))
-    implementation(project(":tools-feature"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
-    implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.hilt)
     implementation(libs.kotlin.coroutines)
     implementation(libs.lifecycle.runtime.compose)

@@ -42,10 +42,10 @@ allprojects {
         }
     }
     
-    // Ensure all projects use the same JVM toolchain
+    // Kotlin bytecode targets 17 in every module (the toolchain is JDK 21; see CLAUDE.md).
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        kotlinOptions {
-            jvmTarget = "17"
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 }
@@ -53,6 +53,25 @@ allprojects {
 buildscript {
     dependencies {
         classpath(libs.compose.rules)
+    }
+}
+
+// The Compose compiler, in every module that has Compose code.
+// - gradle/compose-stability.conf: types it treats as stable (read-only collections).
+// - Stability reports, on demand only: `-PcomposeReports` (the measure job in
+//   .github/workflows/device.yml passes it). Each module writes build/compose-reports/ (which
+//   classes are stable, which composables skip) and build/compose-metrics/. Off in every other
+//   build, so release builds and F-Droid's rebuild never see it.
+val composeReports = providers.gradleProperty("composeReports").isPresent
+subprojects {
+    plugins.withId("org.jetbrains.kotlin.plugin.compose") {
+        extensions.configure<org.jetbrains.kotlin.compose.compiler.gradle.ComposeCompilerGradlePluginExtension> {
+            stabilityConfigurationFile.set(rootProject.layout.projectDirectory.file("gradle/compose-stability.conf"))
+            if (composeReports) {
+                reportsDestination.set(layout.buildDirectory.dir("compose-reports"))
+                metricsDestination.set(layout.buildDirectory.dir("compose-metrics"))
+            }
+        }
     }
 }
 

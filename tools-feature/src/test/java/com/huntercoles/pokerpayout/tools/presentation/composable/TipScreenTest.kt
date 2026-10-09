@@ -77,8 +77,10 @@ class TipScreenTest(private val config: ScreenConfig) {
     private fun scrollToTop(text: String) {
         val target = screen.compose.onNodeWithText(text).fetchSemanticsNode()
         val page = generateSequence(target.parent) { it.parent }.firstOrNull { scroller.matches(it) } ?: return
+        // Laid-out positions: bounds are clipped to what shows, and a text far below shows nothing
+        val distance = target.positionInRoot.y - page.positionInRoot.y
         screen.compose.onNode(SemanticsMatcher("the page") { it.id == page.id })
-            .performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, target.boundsInRoot.top - page.boundsInRoot.top) }
+            .performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, distance) }
         screen.compose.waitForIdle()
     }
 

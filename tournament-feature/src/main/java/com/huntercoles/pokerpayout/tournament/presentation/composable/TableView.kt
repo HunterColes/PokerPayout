@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.design.components.LocalShellSnackbars
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerPill
 import com.huntercoles.pokerpayout.core.design.components.PokerPillTone
@@ -289,8 +290,12 @@ private fun TableFooter(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        // A snackbar (Undo after a knockout) sits over the numbers: they make way, not peek out beside it
+        val snackbarUp = LocalShellSnackbars.current?.currentSnackbarData != null
         FlowRow(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .alpha(if (snackbarUp) 0f else 1f),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {

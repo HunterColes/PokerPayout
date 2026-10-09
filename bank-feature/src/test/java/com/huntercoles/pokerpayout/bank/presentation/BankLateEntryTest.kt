@@ -81,10 +81,11 @@ class BankLateEntryTest {
         val sheet = viewModel.state().sheet as BankSheet.LateEntry
         assertEquals(entry, sheet.price)
         assertEquals(PurchaseWindow.OpenUntilLevel(3), sheet.window)
-        viewModel.send(BankIntent.DismissSheet)
 
+        // Level 4 starts with the sheet open: it closes, entries are closed
         clock.at(level = 4, breaks = listOf(4, 8))
         settle()
+        assertNull(viewModel.state().sheet)
         assertEquals(PurchaseWindow.ClosedAfterLevel(3), viewModel.state().lateEntryWindow)
         assertFalse(viewModel.state().canTakeLateEntry)
         viewModel.send(BankIntent.OpenLateEntry)

@@ -695,6 +695,8 @@ class BankViewModel @Inject constructor(
         val plan = settleUp(result, bankPlayers, config.money)
         val ticks = keptTicks(state.settlePaid, plan)
         _uiState.update {
+            // Late entry (PP-116) closes at the cutoff, and once someone has won
+            val lateEntryOpen = it.canTakeLateEntry && result.championId == null
             it.copy(
                 pool = result.pool,
                 totalPaidInCents = result.paidInCents,
@@ -713,14 +715,16 @@ class BankViewModel @Inject constructor(
                 canReset = canReset,
                 undoLabel = undoStack.lastOrNull()?.message,
                 envelopesLeft = result.envelopesLeft,
-                reEntries = if (it.canTakeLateEntry && result.championId == null) {
+                reEntries = if (lateEntryOpen) {
                     BankEntries.reEntries(state.players, state.eliminationOrder, result.standings.placeByPlayer)
                 } else {
                     emptyList()
                 },
                 settleUp = plan?.let { settleUpModel(it, result, state.players, config.money) },
                 settlePaid = ticks,
-                sheet = it.sheet.takeUnless { sheet -> sheet == BankSheet.SettleUp && plan == null }
+                sheet = it.sheet.takeUnless { sheet ->
+                    (sheet == BankSheet.SettleUp && plan == null) || (sheet is BankSheet.LateEntry && !lateEntryOpen)
+                }
             )
         }
     }

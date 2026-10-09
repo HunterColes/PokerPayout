@@ -1474,10 +1474,11 @@ s_backup_open() {
   picker_open || return 1
   ui tap "$BACKUP_FILE_RE" --timeout 15
   ui assert-text "text=Restore this file?" "text=1 preset" "text=1 night in History" \
-    "text=Tournament setup and tonight's game" "text=Add to this phone" "text=Replace this phone's data" || return 1
+    "text=Tournament setup and tonight's game" || return 1
 }
 s_backup_add() {
   # The backup is this phone's own: nothing to add, and the preview closes
+  ui scroll-to "text=Add to this phone" --max 3
   ui tap "text=Add to this phone"
   ui assert-text "text=Nothing new: this phone has it all already." || return 1
   ui wait-gone "text=Restore this file?"

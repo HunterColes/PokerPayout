@@ -46,8 +46,8 @@ data class SettingsFile(val name: String, val group: SettingsGroup, val phoneOnl
 
 /** The settings sections of a backup, each a few files restored together. Never rename a [key]. */
 enum class SettingsGroup(val key: String, val order: Int, @StringRes val line: Int) {
-    CHIP_SET("chipSet", 20, R.string.backup_line_chip_set),
-    GAME("game", 30, R.string.backup_line_game),
-    SOUND("sound", 40, R.string.backup_line_sound),
-    TOOLS("tools", 50, R.string.backup_line_tools),
+    CHIP_SET(key = "chipSet", order = 20, line = R.string.backup_line_chip_set),
+    GAME(key = "game", order = 30, line = R.string.backup_line_game),
+    SOUND(key = "sound", order = 40, line = R.string.backup_line_sound),
+    TOOLS(key = "tools", order = 50, line = R.string.backup_line_tools),
 }

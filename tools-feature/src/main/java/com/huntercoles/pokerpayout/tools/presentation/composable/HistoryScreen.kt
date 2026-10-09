@@ -3,6 +3,8 @@ package com.huntercoles.pokerpayout.tools.presentation.composable
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,10 +57,12 @@ import com.huntercoles.pokerpayout.tools.presentation.HistoryIntent
 import com.huntercoles.pokerpayout.tools.presentation.HistoryText
 import com.huntercoles.pokerpayout.tools.presentation.HistoryUiState
 import com.huntercoles.pokerpayout.tools.presentation.HistoryViewModel
+import java.time.LocalDate
 
 /**
  * The History route ("History" in the Tools list, PP-037): [HistoryContent], sharing a night as text
- * and every night as CSV through the system's share sheet. Back closes an open night first.
+ * and every night as CSV, through the system's share sheet as text or saved as a file where the
+ * player picks (the file picker's CreateDocument). Back closes an open night first.
  */
 @Composable
 fun HistoryRoute(onBack: () -> Unit, viewModel: HistoryViewModel = hiltViewModel()) {
@@ -68,15 +72,29 @@ fun HistoryRoute(onBack: () -> Unit, viewModel: HistoryViewModel = hiltViewModel
     val shareTitle = stringResource(R.string.history_share)
     val exportTitle = stringResource(R.string.history_export)
     val exportSubject = stringResource(R.string.history_export_subject)
+    val csvFileName = stringResource(R.string.history_csv_file_name, LocalDate.now().toString())
+    val saveCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(CSV_TYPE)) { uri ->
+        uri?.let { viewModel.acceptIntent(HistoryIntent.SaveCsv(it)) }
+    }
     BackHandler(enabled = state.openNight != null) { viewModel.acceptIntent(HistoryIntent.Close) }
     HistoryContent(
         state = state,
         onIntent = viewModel::acceptIntent,
         onBack = onBack,
         onShare = { night -> send(context, "text/plain", text.share(night), text.date(night.date), shareTitle) },
-        onExport = { send(context, "text/csv", NightCsv.of(state.nights), exportSubject, exportTitle) },
+        onExport = { how ->
+            when (how) {
+                CsvExport.Share -> send(context, CSV_TYPE, NightCsv.of(state.nights), exportSubject, exportTitle)
+                CsvExport.Save -> runCatching { saveCsv.launch(csvFileName) }
+            }
+        },
     )
 }
+
+/** The CSV as text through the share sheet, or as a file saved where the player picks. */
+enum class CsvExport { Share, Save }
+
+private const val CSV_TYPE = "text/csv"
 
 /** Hands [text] to any app that takes [type] (ACTION_SEND), through the system's share sheet; no permission needed. */
 private fun send(context: Context, type: String, text: String, subject: String, chooserTitle: String) {
@@ -97,7 +115,7 @@ internal fun rememberHistoryText(): HistoryText {
 
 /**
  * History (S16, PP-037), stateless: the season's points standings with a year picker and its player
- * of the year, then the saved nights, the latest first, and Export as CSV. A night opens in full
+ * of the year, then the saved nights, the latest first, and the CSV (a file, or shared). A night opens in full
  * ([NightContent]). With nothing saved yet it says how to save a night.
  */
 @Suppress("LongParameterList") // a screen: its state, its intents, its three ways out, and a modifier
@@ -107,7 +125,7 @@ fun HistoryContent(
     onIntent: (HistoryIntent) -> Unit,
     onBack: () -> Unit,
     onShare: (SavedNight) -> Unit,
-    onExport: () -> Unit,
+    onExport: (CsvExport) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val night = state.openNight
@@ -130,7 +148,7 @@ private fun NightsList(
     state: HistoryUiState,
     onIntent: (HistoryIntent) -> Unit,
     onBack: () -> Unit,
-    onExport: () -> Unit,
+    onExport: (CsvExport) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val text = rememberHistoryText()
@@ -152,8 +170,15 @@ private fun NightsList(
                 )
                 state.nights.forEach { saved -> NightRow(saved, text) { onIntent(HistoryIntent.Open(saved.id)) } }
                 PokerButton(
+                    text = stringResource(R.string.history_save_csv),
+                    onClick = { onExport(CsvExport.Save) },
+                    variant = PokerButtonVariant.Secondary,
+                    icon = PokerIcons.Save,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                PokerButton(
                     text = stringResource(R.string.history_export),
-                    onClick = onExport,
+                    onClick = { onExport(CsvExport.Share) },
                     variant = PokerButtonVariant.Secondary,
                     icon = PokerIcons.Share,
                     modifier = Modifier.fillMaxWidth(),

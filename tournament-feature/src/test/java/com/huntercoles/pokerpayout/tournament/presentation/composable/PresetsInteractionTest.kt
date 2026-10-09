@@ -139,7 +139,7 @@ class PresetsInteractionTest {
     }
 
     @Test
-    fun `the list loads with a tap, and saves, shares, renames and deletes`() {
+    fun `the list loads with a tap, and saves, shares, renames, deletes and opens a preset file`() {
         showSheet(PresetsFixture.list)
         compose.onNodeWithText("Friday").tap()
         compose.onNodeWithText("Save as preset…").tap()
@@ -150,12 +150,17 @@ class PresetsInteractionTest {
         compose.onNodeWithContentDescription("More options for Turbo").tap()
         compose.onNode(hasText("Delete") and hasClickAction()).performClick()
         compose.waitForIdle()
+        compose.onNodeWithContentDescription("More options for Friday").tap()
+        compose.onNode(hasText("Share as file") and hasClickAction()).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Open preset file…").tap()
 
         val friday = PresetsFixture.friday.id
         val deep = PresetsFixture.deepStack.id
         val turbo = PresetsFixture.turbo.id
         val expected = listOf(PresetsIntent.Load(friday), PresetsIntent.StartSave, PresetsIntent.StartRename(deep))
-        assertEquals(expected + PresetsIntent.Delete(turbo), sent)
+        val files = listOf(PresetsIntent.ShareFile(friday), PresetsIntent.PickFile)
+        assertEquals(expected + PresetsIntent.Delete(turbo) + files, sent)
         assertEquals(1, shared)
     }
 

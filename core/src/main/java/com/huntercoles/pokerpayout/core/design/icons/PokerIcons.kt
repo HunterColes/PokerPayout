@@ -45,8 +45,27 @@ object PokerIcons {
     }
     val Play: ImageVector by lazy { icon("Play", "M8 5v14l11-7z") }
     val Pause: ImageVector by lazy { icon("Pause", "M6 19h4V5H6v14zm8-14v14h4V5h-4z") }
-    val Previous: ImageVector by lazy { icon("Previous", "M6 6h2v12H6zm3.5 6 8.5 6V6z") }
+    // The triangle starts with an absolute M: after the bar's z, Compose went on from the bar's last
+    // point rather than its first, so the old relative m drew half a triangle in the wrong place.
+    val Previous: ImageVector by lazy { icon("Previous", "M6 6h2v12H6zM9.5 12l8.5 6V6z") }
     val Next: ImageVector by lazy { icon("Next", "M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z") }
+    // The music player's (Tools > Sound > Music), Material Symbols paths as above
+    val Shuffle: ImageVector by lazy {
+        icon(
+            "Shuffle",
+            "M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20" +
+                " 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z",
+        )
+    }
+    val Repeat: ImageVector by lazy { icon("Repeat", "M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z") }
+    val RepeatOne: ImageVector by lazy {
+        icon("RepeatOne", "M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z")
+    }
+    val MusicNote: ImageVector by lazy {
+        icon("MusicNote", "M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z")
+    }
+    val ArrowUp: ImageVector by lazy { icon("ArrowUp", "M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z") }
+    val ArrowDown: ImageVector by lazy { icon("ArrowDown", "M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z") }
     val Plus: ImageVector by lazy { icon("Plus", "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z") }
     val Minus: ImageVector by lazy { icon("Minus", "M19 13H5v-2h14v2z") }
     val Back: ImageVector by lazy { icon("Back", "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z") }
@@ -248,6 +267,22 @@ object PokerIcons {
     val TriangleUp: ImageVector by lazy { icon("TriangleUp", "M12 5 20 17H4z") }
     /** Down delta (drawn for Poker Payout). */
     val TriangleDown: ImageVector by lazy { icon("TriangleDown", "M12 19 4 7h16z") }
+
+    /** A file saved: a backup, a CSV (Material "save"). */
+    val Save: ImageVector by lazy {
+        icon(
+            "Save",
+            "M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z",
+        )
+    }
+
+    /** A file opened to restore (Material "folder_open"). */
+    val FolderOpen: ImageVector by lazy {
+        icon(
+            "FolderOpen",
+            "M20 6h-8l-2-2H4a2 2 0 0 0-1.99 2L2 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm0 12H4V8h16v10z",
+        )
+    }
 
     private fun icon(name: String, vararg paths: String): ImageVector =
         ImageVector.Builder(

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backup (Tools): everything the app saves, in one file, saved and restored through the system's
+     file picker. The problems a file can have and the preview's lines are in core. -->
+<resources>
+    <string name="backup_title">Backup</string>
+    <string name="backup_subtitle">Everything the app saves, in one file</string>
+
+    <!-- Save -->
+    <string name="backup_save_heading">Save a backup</string>
+    <string name="backup_save_body">One file with your presets, History, chip set, settings and tonight\'s game. Keep it in Drive, in Downloads or on your computer.</string>
+    <string name="backup_save">Save backup…</string>
+    <!-- The name the file picker suggests: poker-payout-2026-10-08.json -->
+    <string name="backup_file_name" translatable="false">poker-payout-%1$s.json</string>
+
+    <!-- Restore -->
+    <string name="backup_open_heading">Restore from a file</string>
+    <string name="backup_open_body">Open a backup, or a preset file from a friend, to see what\'s in it. Nothing changes until you choose.</string>
+    <string name="backup_open">Open a file…</string>
+    <string name="backup_private">Your files stay where you put them. The app has no internet access and sends nothing.</string>
+
+    <!-- The preview of a file just opened -->
+    <string name="backup_preview_title">Restore this file?</string>
+    <!-- "Saved Oct 8, 2026 by version 1.4.0" -->
+    <string name="backup_preview_saved_by">Saved %1$s by version %2$s</string>
+    <string name="backup_preview_saved">Saved %1$s</string>
+    <string name="backup_preview_holds">In this file</string>
+    <string name="backup_preview_partial">Parts of it are from a newer version of the app and will be left out.</string>
+    <string name="backup_merge">Add to this phone</string>
+    <string name="backup_merge_help">Adds the presets and nights this phone doesn\'t have. Your settings and tonight\'s game stay as they are.</string>
+    <string name="backup_replace">Replace this phone\'s data</string>
+    <string name="backup_replace_help">What\'s in the file takes the place of what\'s here, and the app starts again. Save a backup first if you may want it back.</string>
+    <string name="backup_cancel">Cancel</string>
+
+    <!-- After, on the snackbar -->
+    <string name="backup_saved">Backup saved</string>
+    <string name="backup_saved_named">Backup saved: %1$s</string>
+    <!-- "Added 2 presets and 3 nights in History" -->
+    <string name="backup_added">Added %1$s</string>
+    <string name="backup_list_and">%1$s and %2$s</string>
+    <string name="backup_list_separator">", "</string>
+    <string name="backup_nothing_new">Nothing new: this phone has it all already.</string>
+    <string name="backup_restored">Backup restored</string>
+    <string name="backup_undo">Undo</string>
+</resources>

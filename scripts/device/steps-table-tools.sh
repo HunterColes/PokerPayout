@@ -34,7 +34,8 @@ s_outs_pot_odds() {
   ui scroll-to "desc=Pot, with the bet" --max 4
   ui set-text "desc=Pot, with the bet" --value 300
   ui set-text "desc=To call" --value 100
-  ui scroll-to "text=You need 25.0% to call" --max 4
+  # The verdict is the last line of the page: scroll to it, so the need above it is in view too.
+  ui scroll-to "text=River 8.7% against 25.0% needed: too short to call." --max 4
   ui assert-text "text=You need 25.0% to call" "text=Pot odds 3 to 1" \
     "text=River 8.7% against 25.0% needed: too short to call."
 }
@@ -66,7 +67,7 @@ s_side_pots_fold() {
   # chips with Undo, which brings the hand back.
   ui scroll-to "desc=Player 3 folded" --dir up --max 6
   ui tap "desc=Player 3 folded"
-  ui scroll-to "text=Only Player 2 can win it" --max 6
+  ui scroll-to "text=Adds up to 700, everything put in." --max 6   # the line under the side pot
   ui assert-text "text=Only Player 2 can win it" "text=Adds up to 700, everything put in." || return 1
   ui tap "desc=New hand"
   ui assert-text "text=New hand: chips cleared" text=UNDO || return 1
@@ -111,7 +112,7 @@ s_deal_winner() {
   # $10 saved for the winner: $90 is shared now, and the winner takes the $10 on top.
   ui scroll-to "desc=Save for the winner" --max 8
   ui set-text "desc=Save for the winner" --value 10
-  ui scroll-to "text=Each way adds up to \$90." --dir up --max 8
+  ui scroll-to "text=Plus \$10 to whoever wins." --dir up --max 8   # just above "Each way adds up"
   ui assert-text "text=Plus \$10 to whoever wins." "text=Each way adds up to \$90."
 }
 s_deal_start_over() {

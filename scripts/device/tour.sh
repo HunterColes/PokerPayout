@@ -2037,7 +2037,7 @@ s_bank_pko() {
 # draw's tables of three (from its steps). The Bank's knockouts bring the bubble and the final table
 # at once (three left: the bigger, the final table, shows; the pill says the bubble) and heads-up
 # (two) to the clock; the table view's Knock out makes the champion, whose screen (S25) takes the
-# clock's place. UNDO takes it back, the
+# clock's place. The Bank's Undo takes it back, the
 # knockout again brings it again, and then its way to History: pay out in the Bank, then "Save
 # this night" on it. A banner's title starts its text ("re=^"), the pill beside the players left
 # is in capitals, so the two can't be mistaken.
@@ -2087,15 +2087,13 @@ s_moment_champion() {
   ui assert-text "text=Pay out in the Bank" "desc=Back to the clock"
 }
 s_moment_undo() {
-  # UNDO takes the last knockout back: the champion's screen goes (the Bank's top bar Undo if the
-  # snackbar has gone). Recorded again, the champion's screen opens again.
-  if ui find text=UNDO --timeout 1 >/dev/null 2>&1; then
-    ui tap text=UNDO
-  else
-    tab Bank
-    ui tap "desc~=Undo: Player 5 is out"
-    tab Tournament
-  fi
+  # The Bank's top-bar Undo takes the last knockout back (the snackbar's 8 s are over by now; the
+  # table view's own UNDO is the table-view-ko-undo step): the champion's screen closes on the
+  # clock. Recorded again, it opens again.
+  tab Bank
+  ui tap "desc~=Undo: Player 5 is out"
+  ui wait "desc=Knock out Player 5"
+  tab Tournament
   ui wait-gone "text=CHAMPION"
   if ui find "text=Pay out in the Bank" --timeout 1 >/dev/null 2>&1; then echo "[ui] FAIL still the champion's screen"; return 1; fi
   table_knockout_player_5
@@ -2262,7 +2260,7 @@ step moments-start        "Big moments: start the clock on the PKO night"       
 step moment-final-table   "A Bank knockout: \"Final table\", on the bubble"     s_moment_final_table
 step moment-heads-up      "Another: \"Heads-up\" on the clock"                  s_moment_heads_up
 step moment-champion      "Table view knockout: the champion's screen (S25)"    s_moment_champion
-step moment-undo          "UNDO closes it; the knockout again opens it again"   s_moment_undo
+step moment-undo          "The Bank's Undo closes it; again, it opens again"    s_moment_undo
 step moment-pay           "Pay out in the Bank: champion and runner-up paid"    s_moment_pay
 step moment-save          "Save this night on it; Open History has the night"   s_moment_save
 step moment-close         "Close: the clock's champion card leads back to it"   s_moment_close

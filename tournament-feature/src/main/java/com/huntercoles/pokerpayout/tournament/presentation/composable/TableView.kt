@@ -79,8 +79,8 @@ import kotlinx.coroutines.delay
  * skips it) and Back puts the knockout away. The snackbar's Undo shows bottom left; the players left
  * say when it is the bubble.
  *
- * PP-111: a big moment of the night shows across the top ([MomentSlot]) and the digits make room
- * for it. The last knockout opens the champion's screen ([winner]) in place of the clock (Back or ✕
+ * PP-111: a big moment of the night shows over the digits ([MomentSlot]; sideways, over the time's
+ * column only, so the blinds and what's next keep their room), and the digits make room for it. The last knockout opens the champion's screen ([winner]) in place of the clock (Back or ✕
  * closes it); a mystery envelope drawn by that knockout still shows over it first.
  */
 @Composable
@@ -154,13 +154,17 @@ private fun TableClock(
     ) {
         val width = maxWidth
         val height = maxHeight
-        // PP-111: a short window at large text keeps a moment to its title, so the digits keep room
+        // PP-111: a big moment over the digits (sideways: over the time's column, so the blinds and
+        // what's next keep their room); a short window at large text keeps it to its title
         val brief = height < BRIEF_BELOW * LocalDensity.current.fontScale
+        val style = if (brief) MomentStyle.Brief else MomentStyle.Strip
+        val moment = @Composable { MomentSlot(uiState.momentSlot, onIntent, style = style) }
+        val sideways = width > height
         Column(Modifier.fillMaxSize()) {
-            MomentSlot(uiState.momentSlot, onIntent, style = if (brief) MomentStyle.Brief else MomentStyle.Strip)
+            if (!sideways) moment()
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                if (width > height) {
-                    LandscapeBody(uiState, heroCap = height * HERO_MAX_HEIGHT_LANDSCAPE, width = width)
+                if (sideways) {
+                    LandscapeBody(uiState, heroCap = height * HERO_MAX_HEIGHT_LANDSCAPE, width = width, moment = moment)
                 } else {
                     PortraitBody(uiState, heroCap = height * HERO_MAX_HEIGHT_PORTRAIT, width = width)
                 }
@@ -171,7 +175,7 @@ private fun TableClock(
 }
 
 @Composable
-private fun LandscapeBody(uiState: TimerUiState, heroCap: Dp, width: Dp) {
+private fun LandscapeBody(uiState: TimerUiState, heroCap: Dp, width: Dp, moment: @Composable () -> Unit) {
     Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
         // The digits take whatever height the eyebrow and the bar leave, so large text never squeezes them.
         Column(
@@ -181,7 +185,11 @@ private fun LandscapeBody(uiState: TimerUiState, heroCap: Dp, width: Dp) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
         ) {
-            TableEyebrow(uiState)
+            // One child with the eyebrow, so an empty moment slot adds no spacing
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                moment()
+                TableEyebrow(uiState)
+            }
             BoxWithConstraints(Modifier.weight(1f, fill = false), contentAlignment = Alignment.Center) {
                 TableDigits(uiState, width * HERO_COLUMN_SHARE - 24.dp, heroCap, height = maxHeight)
             }

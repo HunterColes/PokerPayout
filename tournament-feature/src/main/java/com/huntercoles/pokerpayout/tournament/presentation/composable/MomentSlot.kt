@@ -16,6 +16,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -45,6 +46,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -207,12 +210,15 @@ enum class MomentStyle(val padding: Dp, val icon: Dp) {
     Brief(padding = 3.dp, icon = 18.dp),
 }
 
-/** "Dana is the champion" (brief: "Dana", with the crown), and the way back to their screen. */
+/** "Dana is the champion", and the way back to their screen ([BriefChampion] when the room is short). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ChampionCard(name: String, style: MomentStyle, onOpen: () -> Unit) {
+    if (style == MomentStyle.Brief) {
+        BriefChampion(name, onOpen)
+        return
+    }
     val shape = RoundedCornerShape(PokerDimens.CornerCard)
-    val words = stringResource(R.string.champion_card, name)
     FlowRow(
         modifier = Modifier
             .slotGap(style)
@@ -226,13 +232,12 @@ private fun ChampionCard(name: String, style: MomentStyle, onOpen: () -> Unit) {
             modifier = Modifier
                 .align(Alignment.CenterVertically)
                 .padding(vertical = 8.dp)
-                .semantics(mergeDescendants = true) { if (style == MomentStyle.Brief) contentDescription = words },
+                .semantics(mergeDescendants = true) {},
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Icon(PokerIcons.Crown, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(24.dp))
-            val brief = style == MomentStyle.Brief
-            Text(if (brief) name else words, style = if (brief) BriefTitle else CompactTitle, color = PokerColors.PokerGold)
+            Text(stringResource(R.string.champion_card, name), style = CompactTitle, color = PokerColors.PokerGold)
         }
         PokerButton(
             text = stringResource(R.string.champion_card_open),
@@ -241,6 +246,33 @@ private fun ChampionCard(name: String, style: MomentStyle, onOpen: () -> Unit) {
             size = PokerButtonSize.Small,
             modifier = Modifier.align(Alignment.CenterVertically),
         )
+    }
+}
+
+/**
+ * The champion's card in one short line, all of it the way back to their screen: the crown, the
+ * name, "See the results". TalkBack reads "Dana is the champion" and the action.
+ */
+@Composable
+private fun BriefChampion(name: String, onOpen: () -> Unit) {
+    val shape = RoundedCornerShape(PokerDimens.CornerCard)
+    val words = stringResource(R.string.champion_card, name)
+    val open = stringResource(R.string.champion_card_open)
+    Row(
+        modifier = Modifier
+            .slotGap(MomentStyle.Brief)
+            .clip(shape)
+            .background(PokerColors.GoldWash)
+            .border(BorderWidth, PokerColors.PokerGold, shape)
+            .clickable(onClickLabel = open, role = Role.Button, onClick = onOpen)
+            .clearAndSetSemantics { contentDescription = words }
+            .padding(horizontal = 14.dp, vertical = MomentStyle.Brief.padding),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(PokerIcons.Crown, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(MomentStyle.Brief.icon))
+        Text(name, style = BriefTitle, color = PokerColors.PokerGold, modifier = Modifier.weight(1f))
+        Text(open, style = BriefTitle, color = PokerColors.CardWhite)
     }
 }
 

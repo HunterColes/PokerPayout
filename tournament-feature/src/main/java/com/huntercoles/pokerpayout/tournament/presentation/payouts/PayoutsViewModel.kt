@@ -14,10 +14,12 @@ import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
+import com.huntercoles.pokerpayout.core.utils.MoneyFormat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -66,6 +68,8 @@ class PayoutsViewModel @Inject constructor(
         viewModelScope.launch { tournamentPreferences.config.collect { refresh() } }
         viewModelScope.launch { bankPreferences.revision.collect { refresh() } }
         viewModelScope.launch { nights.nights.collect { refresh() } }
+        // PP-114: a currency picked on another tab (the yen rounds to ¥100s)
+        viewModelScope.launch { MoneyFormat.changes.drop(1).collect { refresh() } }
         viewModelScope.launch {
             tournamentPreferences.tournamentLocked.collect { locked -> _uiState.update { it.copy(isLocked = locked) } }
         }

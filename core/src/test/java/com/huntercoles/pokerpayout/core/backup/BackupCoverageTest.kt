@@ -92,11 +92,12 @@ class BackupCoverageTest {
 
         /**
          * Code that opens the files the catalog names, by name: the backup itself, and the first start's
-         * look for data from before (PP-113), which only reads them.
+         * looks for data from before (PP-113's welcome, PP-114's currency), which only read them.
          */
         val OPENS_BY_NAME = setOf(
             "core/src/main/java/com/huntercoles/pokerpayout/core/backup/SettingsSection.kt",
             "core/src/main/java/com/huntercoles/pokerpayout/core/preferences/FirstRun.kt",
+            "core/src/main/java/com/huntercoles/pokerpayout/core/preferences/CurrencyPreferences.kt",
         )
 
         /** APIs that keep data outside SharedPreferences. The cache (shared files) isn't saved data. */

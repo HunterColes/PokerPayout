@@ -22,6 +22,10 @@ class FirstRun @Inject constructor(
     private fun holdsData(file: String): Boolean = context.getSharedPreferences(file, Context.MODE_PRIVATE).all.isNotEmpty()
 
     private companion object {
-        val APP_FILES: Set<String> get() = BackupCatalog.FILES + BackupCatalog.PHONE_FILES
+        /**
+         * The currency's file is left out: the currency settles its own first start as the app is
+         * made (PP-114, CurrencyPreferences), just before this, so a new install has saved it already.
+         */
+        val APP_FILES: Set<String> get() = BackupCatalog.FILES + BackupCatalog.PHONE_FILES - CurrencyPreferences.FILE
     }
 }

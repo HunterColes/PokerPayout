@@ -8,7 +8,11 @@ import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.design.components.SnackbarController
 import com.huntercoles.pokerpayout.core.domain.history.NightCsv
+import com.huntercoles.pokerpayout.core.domain.history.NightPlayer
 import com.huntercoles.pokerpayout.core.domain.history.NightStore
+import com.huntercoles.pokerpayout.core.domain.history.SavedNight
+import com.huntercoles.pokerpayout.core.domain.players.PlayerMerges
+import com.huntercoles.pokerpayout.core.domain.players.RegularsStore
 import com.huntercoles.pokerpayout.core.testing.FakeDocumentFiles
 import com.huntercoles.pokerpayout.tools.presentation.composable.HistoryFixtures
 import kotlinx.coroutines.Dispatchers
@@ -25,11 +29,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.LocalDate
 
 /**
  * History (PP-037) through the real ViewModel over Robolectric's preferences, on virtual time: the
  * nights the latest first with the season's standings; a year's season and its player of the year;
- * a night opened and closed; delete with Undo on the snackbar; and the night shared as text.
+ * a night opened and closed; delete with Undo on the snackbar; the night shared as text; and two
+ * names of one person merged (PP-110): the season adds up under the name kept, never for two who
+ * played the same night, made twice it counts once, and Undo or Separate takes it back.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -42,12 +49,16 @@ class HistoryViewModelTest {
     private val viewModels = ViewModelStore()
     private val files = FakeDocumentFiles()
     private lateinit var store: NightStore
+    private lateinit var regulars: RegularsStore
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        context.getSharedPreferences("night_history", Context.MODE_PRIVATE).edit().clear().commit()
+        listOf("night_history", "regulars").forEach {
+            context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
+        }
         store = NightStore(context)
+        regulars = RegularsStore(context)
     }
 
     @After
@@ -65,7 +76,7 @@ class HistoryViewModelTest {
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                HistoryViewModel(store, snackbars, HistoryMessages(context), files, dispatcher) as T
+                HistoryViewModel(store, regulars, snackbars, HistoryMessages(context), files, dispatcher) as T
         }
         return ViewModelProvider(viewModels, factory)[HistoryViewModel::class.java].also { settle() }
     }
@@ -200,5 +211,126 @@ class HistoryViewModelTest {
             "Paid in \$100 · 1 rebuy · 1 add-on · 4 knockouts · bounties \$25",
             text.details(HistoryFixtures.friday.winner),
         )
+    }
+
+    // One person under two names (S26b, PP-110) ------------------------------------------------------
+
+    /** The fixtures' nights, and one more where "Dana R." beat Marcus heads-up: 2 points and a win. */
+    private fun saveAllWithDanaR() {
+        saveAll()
+        store.add(
+            SavedNight(
+                id = 0L,
+                date = LocalDate.of(2026, 10, 9),
+                structureName = null,
+                prizePoolCents = 10_000L,
+                players = listOf(
+                    NightPlayer("Dana R.", 1, 5_000L, 0, 0L, 0, 0L, 10_000L, 1, 0L),
+                    NightPlayer("Marcus", 2, 5_000L, 0, 0L, 0, 0L, 0L, 0, 0L),
+                ),
+            ),
+        )
+    }
+
+    private val apart =
+        listOf("1 Dana 13", "1 Priya 13", "3 Marcus 12", "4 Theo 5", "5 Jo 4", "5 Sam 4", "7 Dana R. 2", "8 Alex 1")
+
+    @Test
+    fun `a player opens with their season and who could be them, likely names first, never someone they played with`() {
+        saveAllWithDanaR()
+        regulars.remember("Zed", LocalDate.of(2026, 10, 1))
+        val viewModel = viewModel()
+        assertEquals(apart, viewModel.state.table())
+
+        viewModel.send(HistoryIntent.OpenPlayer("dana r."))
+        val panel = requireNotNull(viewModel.state.player)
+        assertEquals("Dana R.", panel.name)
+        assertEquals(2, panel.standing?.points)
+        assertEquals(emptyList<String>(), panel.aliases)
+        // Dana looks alike; Marcus played that night with Dana R.; Zed only the Bank has used
+        assertEquals(listOf("Dana", "Alex", "Jo", "Priya", "Sam", "Theo", "Zed"), panel.candidates.map { it.name })
+        assertEquals(0, panel.candidates.last().nights)
+        assertEquals(1, panel.leftOut)
+
+        viewModel.send(HistoryIntent.PickSame("Dana"))
+        assertEquals("Dana", viewModel.state.player?.picked?.name)
+        viewModel.send(HistoryIntent.PickSame(null))
+        assertNull(viewModel.state.player?.picked)
+        viewModel.send(HistoryIntent.ClosePlayer)
+        assertNull(viewModel.state.player)
+    }
+
+    @Test
+    fun `a merge adds up the season under the name kept at once, Undo takes it back, and made twice it counts once`() {
+        saveAllWithDanaR()
+        val viewModel = viewModel()
+        viewModel.send(HistoryIntent.OpenPlayer("Dana R."))
+        viewModel.send(HistoryIntent.PickSame("Dana"))
+        viewModel.send(HistoryIntent.Merge(from = "Dana R.", into = "Dana"))
+
+        // Dana 13 + 2, four nights and two wins; the nights themselves keep the name they were saved with
+        assertEquals(
+            listOf("1 Dana 15", "2 Priya 13", "3 Marcus 12", "4 Theo 5", "5 Jo 4", "5 Sam 4", "7 Alex 1"),
+            viewModel.state.table(),
+        )
+        assertEquals("4 nights · 2 wins", HistoryText(context.resources).record(viewModel.state.standings.first()))
+        assertEquals("Dana R.", viewModel.state.nights.first().winner.name)
+        assertNull(viewModel.state.player)
+        assertEquals("Dana", RegularsStore(context).merges.value.resolve("Dana R."))
+        val shown = requireNotNull(snackbars.hostState.currentSnackbarData) { "no snackbar" }
+        assertEquals("Dana R. now counts as Dana", shown.visuals.message)
+        assertEquals("Undo", shown.visuals.actionLabel)
+
+        // The same merge again, or the other way round: nothing changes
+        val merged = regulars.merges.value
+        viewModel.send(HistoryIntent.Merge(from = "dana r.", into = "DANA"))
+        viewModel.send(HistoryIntent.Merge(from = "Dana", into = "Dana R."))
+        assertEquals(merged, regulars.merges.value)
+
+        shown.performAction()
+        settle()
+        assertEquals(apart, viewModel.state.table())
+        assertEquals(PlayerMerges.NONE, RegularsStore(context).merges.value)
+    }
+
+    @Test
+    fun `two who played the same night can't be merged`() {
+        saveAllWithDanaR()
+        val viewModel = viewModel()
+        viewModel.send(HistoryIntent.Merge(from = "Dana R.", into = "Marcus"))
+        assertEquals(apart, viewModel.state.table())
+        assertEquals(PlayerMerges.NONE, regulars.merges.value)
+        assertNull(snackbars.hostState.currentSnackbarData)
+    }
+
+    @Test
+    fun `kept the other way round, the season shows the other name, and a year adds up the same`() {
+        saveAllWithDanaR()
+        val viewModel = viewModel()
+        viewModel.send(HistoryIntent.Merge(from = "Dana", into = "Dana R."))
+        assertEquals("1 Dana R. 15", viewModel.state.table().first())
+        viewModel.send(HistoryIntent.SelectYear(2026))
+        // 2026: Dana 6 + 3 and Dana R. 2, level with Marcus (5 + 5 + 1) but with more wins
+        assertEquals("1 Dana R. 11", viewModel.state.table().first())
+        assertEquals(listOf("Dana R.", "Marcus"), viewModel.state.leaders.map { it.name })
+    }
+
+    @Test
+    fun `a name separated counts on its own again, with Undo`() {
+        saveAllWithDanaR()
+        regulars.setMerges(PlayerMerges.NONE.merge("Dana R.", "Dana"))
+        val viewModel = viewModel()
+        viewModel.send(HistoryIntent.OpenPlayer("Dana"))
+        assertEquals(listOf("Dana R."), viewModel.state.player?.aliases)
+        assertEquals(4, viewModel.state.player?.standing?.nights)
+
+        viewModel.send(HistoryIntent.Separate("Dana R."))
+        assertEquals(apart, viewModel.state.table())
+        assertNull(viewModel.state.player)
+        val shown = requireNotNull(snackbars.hostState.currentSnackbarData) { "no snackbar" }
+        assertEquals("Dana R. counts on their own again", shown.visuals.message)
+        shown.performAction()
+        settle()
+        assertEquals("1 Dana 15", viewModel.state.table().first())
     }
 }

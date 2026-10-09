@@ -3,6 +3,42 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.12 (on master, not published)
+
+Regulars: tonight's players in a few taps:
+
+- **Pick tonight's players:** while a seat in the Bank has no name, "Pick tonight's players" sits
+  above the list (⋮ has it any time, for a late arrival). It lists everyone you've played with, from
+  your saved nights and every name typed in the Bank, the ones who came to most of the last ten
+  nights first. A tap seats someone in the first seat with no name, or adds a seat once every seat
+  has one (up to 30); a tap again frees the seat. Type a new name to add them. Typing a name in the
+  Bank still works, and remembers the name.
+- **One person, two names:** in History, tap a player in the standings to merge their two
+  spellings ("Mike" and "Mike R."), keeping whichever name you like, so their nights, points and
+  wins add up. It applies at once with Undo, and Separate takes it apart later. Two people who
+  played the same night can't be merged, and saved nights keep the names they were saved with.
+- **In your backups:** the names and merges travel in the backup file (Tools > Backup) and in
+  Android's own backup.
+
+## 1.4.11 (on master, not published)
+
+Your currency: €, £, kr, ₹, ¥ or none:
+
+- **Pick how money shows** in Tools > Currency: $, € (12,50 € or €12.50), £, ₹ (in lakhs:
+  ₹1,23,456), R$, kr, ¥ for the yen (whole yen, no cents), ¥ for the yuan, CHF, zł, ₽, or no symbol
+  at all for a game played for points or chips. Each one is written its own way, the symbol before
+  or after and the digits grouped as people expect. The Tools list shows which one is picked.
+- **Everywhere at once:** the Bank, the payouts, the setup's money fields, the clock, History, the
+  snackbars, TalkBack and every shared text follow the pick. Only the look changes: the amounts
+  saved stay exactly as they were, so switching back changes nothing.
+- **Yen:** money fields take whole yen, amounts show in whole yen, and the payout rounding steps are
+  ¥100, ¥500 and ¥1,000.
+- **Your phone's currency on a new install:** euros in Germany, rupees in India, yen in Japan, and so
+  on; plain numbers where the app doesn't have the currency. Anyone updating keeps the $ they had.
+- **The History CSV** gets a currency column (the symbol); the amounts stay plain numbers.
+- **Backups** keep the currency with tonight's game.
+- The Bank's Paid column icon is now a banknote with a tick, so it fits every currency.
+
 ## 1.4.10 (on master, not published)
 
 Starter structures and a one-line welcome:

@@ -336,6 +336,7 @@ private fun PurchaseClearQuestion(uiState: TournamentConfigUiState, onIntent: (T
                 count,
                 count,
                 kept,
+                FormatUtils.formatMoney(0L),
             ),
             dismissLabel = stringResource(R.string.tournament_keep),
             confirmLabel = pluralStringResource(

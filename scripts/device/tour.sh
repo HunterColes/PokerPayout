@@ -380,14 +380,18 @@ s_tournament_config() {
 # pool · 3 places paid") to the cent, and to "Adds up to $125" under them; one row per place paid;
 # no lower place paying more; with a unit (cents) every place below 1st a whole number of units.
 # A row is one node for TalkBack ("1st, Still playing, $63, 50%") or, failing that, the texts on
-# one line.
-check_payout_table() { # $1 = ui dump, $2 = rounding unit in cents (default 100)
-  python3 - "$(page_dump "$1")" "${2:-100}" <<'PY'
+# one line. In euros (PP-114) the amounts read "1.234,50 €", a no-break space before the sign.
+check_payout_table() { # $1 = ui dump, $2 = rounding unit in cents (default 100), $3 = dollar (default) or euro
+  python3 - "$(page_dump "$1")" "${2:-100}" "${3:-dollar}" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 unit = int(sys.argv[2])
-AMOUNT = r"\$[\d,]+(?:\.\d\d)?"
+EURO = sys.argv[3] == "euro"
+AMOUNT = r"[\d.]+(?:,\d\d)?[\u00a0 ]€" if EURO else r"\$[\d,]+(?:\.\d\d)?"
 def cents(s):
-    whole, _, frac = s[1:].replace(",", "").partition(".")
+    if EURO:
+        whole, _, frac = s.rstrip("€\u00a0 ").replace(".", "").partition(",")
+    else:
+        whole, _, frac = s[1:].replace(",", "").partition(".")
     return int(whole) * 100 + int(frac or 0)
 nodes = []
 for n in ET.parse(sys.argv[1]).iter("node"):
@@ -974,6 +978,28 @@ s_bank_rename() {
   tab Bank
   ui assert-text text=Alice
 }
+# Tonight's players (S26, PP-110): picked from the regulars rather than typed. Alice, typed a moment
+# ago, is a regular already and ticked; a name added in the sheet takes the first seat nobody named
+# (Player 2), and a tap frees that seat again, so the steps after still find Player 2.
+s_bank_regulars() {
+  ui tap "text=Pick tonight's players"
+  ui assert-text "text=Tonight's players" "re=^1 of [0-9]+ seats named" "text=REGULARS" "desc=Add a name" || return 1
+  ui assert "has=Alice|No saved night yet" checked
+}
+s_bank_regulars_add() {
+  ui set-text "desc=Add a name" --value Bea
+  ui tap text=Add
+  ui assert-text "re=^2 of [0-9]+ seats named" || return 1
+  ui assert "has=Bea|No saved night yet" checked
+}
+s_bank_regulars_free() {
+  ui tap "has=Bea|No saved night yet"
+  ui wait-gone "has=Bea|No saved night yet" checked
+  ui assert-text "re=^1 of [0-9]+ seats named" || return 1
+  ui tap text=Done
+  ui wait-gone "text=Tonight's players"
+  ui assert-text text=Alice "text=Player 2"
+}
 s_bank_buyin() {
   # No confirm dialog any more: the tap records the buy-in, and the snackbar says what happened
   ui tap "desc=Alice, buy-in, not paid"
@@ -1218,6 +1244,67 @@ s_history_save() {
   ui assert-text "text=1 night saved" || return 1
   ui back                                      # History -> the Tools list
   ui assert-text "text=Saved nights and the season's points" text=History   # the History row: more tools since 1.4.8 can push Seat draw out of view
+}
+
+# One person under two names (S26b, PP-110): Alice opened from the standings; Bea (added in the Bank's
+# sheet, never at a saved night) could be her, and the seats nobody named are nobody. Picked, the sheet
+# asks which name to keep; Keep Alice merges at once, and UNDO takes it back. Ends on the Tools list.
+s_history_merge() {
+  ui scroll-to text=History --max 4
+  ui tap text=History
+  ui tap "desc=1st, Alice, 5 points, 1 night · 1 win"
+  ui assert-text "text=SAME PERSON AS…" "text~=Pick their other name" || return 1
+  ui tap "has=Bea|No saved night yet"
+  ui assert-text "text~=Alice and Bea are one person" "text=Keep Alice" "text=Keep Bea" || return 1
+}
+s_history_merge_undo() {
+  ui tap "text=Keep Alice"
+  ui assert-text "text=Bea now counts as Alice" text=UNDO "desc=1st, Alice, 5 points, 1 night · 1 win" || return 1
+  ui tap text=UNDO
+  ui wait-gone "text=Bea now counts as Alice"
+  ui back                                      # History -> the Tools list
+  ui assert-text "text=Seat draw" text=History
+}
+
+# Currency (PP-114) ---------------------------------------------------------------------------------
+# Tools > Currency (S25): pick the euro, and the Payouts tab (the finished night) reads in euros and
+# still adds up to the cent; then back to the dollar, which every step after this one reads.
+open_currency() {
+  tab Tools
+  ui scroll-to "text=Currency" --max 6
+  ui tap "text=Currency"
+  ui assert-text "text=How amounts show" desc=Back "text=Dollar" "text=Euro" || return 1
+  require_tab_selected Tools
+}
+currency_picked() { # $1 = the currency's name; checks the last dump
+  local picked; picked="$(control_on "$PP_UI_LAST_XML" "$1")"; echo "$1 picked=$picked"
+  [[ "$picked" == true ]] || { echo "[ui] FAIL $1 isn't picked"; return 1; }
+}
+s_currency() {
+  open_currency || return 1
+  currency_picked Dollar || return 1           # the tour's fresh install on an en-US phone
+  ui tap "text=Euro"
+  ui assert "text=Euro" || return 1
+  currency_picked Euro || return 1
+  ui back                                      # Currency -> the Tools list, whose row says so
+  ui assert-text "text~=Euro · 1.234,50"
+}
+s_currency_payouts() {
+  tab Payouts
+  ui assert-text "re=^[0-9.,]+.€ prize pool · 2 places paid$" "desc=Share the payouts" "text~=Alice" || return 1
+  if ui find 're=\$[0-9]' --timeout 1 >/dev/null 2>&1; then echo "[ui] FAIL a dollar amount on the Payouts tab in euros"; return 1; fi
+  check_payout_table "$PP_UI_LAST_XML" 100 euro
+}
+s_currency_back() {
+  open_currency || return 1
+  ui tap "text=Dollar"
+  ui assert "text=Dollar" || return 1
+  currency_picked Dollar || return 1
+  ui back
+  ui assert-text "text~=Dollar · \$1,234.50" || return 1
+  tab Payouts
+  ui assert-text "text~=prize pool · 2 places paid" || return 1
+  check_payout_table "$PP_UI_LAST_XML"
 }
 
 # Clearing the Rebuy amount to retype it must not wipe recorded rebuys (PP-014).
@@ -2103,6 +2190,9 @@ step tournament-reset-ok  "Reset: setup unfolds, level 1 ready"                 
 step rebuy-amount         "Rebuy amount \$10 for the Bank steps"                 s_rebuy_amount
 step bank                 "Bank tab (S5 v2): labelled header, top bar"          s_bank
 step bank-rename          "Rename Player 1 to Alice, switch tabs, name kept"    s_bank_rename
+step bank-regulars        "Tonight's players (S26): Alice a regular already"    s_bank_regulars
+step bank-regulars-add    "Add Bea in the sheet: she takes Player 2's seat"     s_bank_regulars_add
+step bank-regulars-free   "Tap Bea again: Player 2 again; Done"                 s_bank_regulars_free
 step bank-buyin           "Buy-in in one tap; snackbar with UNDO"               s_bank_buyin
 step bank-undo            "UNDO takes the buy-in back; record it again"         s_bank_undo
 step bank-rebuy           "Record a rebuy in one tap"                           s_bank_rebuy
@@ -2129,6 +2219,11 @@ step payouts-nav          "Payouts tab: the finished night by name, adds up"    
 step payouts-nav-editor   "Payouts tab: structure sheet opens and closes"       s_payouts_nav_editor
 step payouts-nav-back     "Back from a tab returns to Tournament (B16)"         s_payouts_nav_back
 step history-save         "Pay everyone: save the night once; it is in History" s_history_save
+step history-merge        "History (S26b): could Alice be Bea? Which to keep"   s_history_merge
+step history-merge-undo   "Keep Alice: merged at once; UNDO takes it back"      s_history_merge_undo
+step currency             "Tools > Currency (S25): pick the euro, row says so"  s_currency
+step currency-payouts     "Payouts in euros: 1.234,50 €, rows still add up"     s_currency_payouts
+step currency-back        "Back to the dollar: Payouts in dollars again"        s_currency_back
 step tools                "Tools tab: tool list and Sound (S7)"                 s_tools
 step sound-off            "Sound off: switch off, volume and chime rest"        s_sound_off
 step sound-on             "Sound back on; test chime"                           s_sound_on

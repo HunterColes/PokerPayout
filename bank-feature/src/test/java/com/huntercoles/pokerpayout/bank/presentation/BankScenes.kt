@@ -1,7 +1,10 @@
 package com.huntercoles.pokerpayout.bank.presentation
 
+import com.huntercoles.pokerpayout.core.domain.history.NightPlayer
+import com.huntercoles.pokerpayout.core.domain.history.SavedNight
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import java.time.LocalDate
 
 /**
  * The mockups' game night (design spec section 5) as Bank states, built through the real ViewModel:
@@ -169,6 +172,44 @@ object BankScenes {
         viewModel.knockOut(MARCUS, null)
         viewModel
     }
+
+    /**
+     * S26 (PP-110): setting up the next night from the regulars. Four saved nights this autumn and one
+     * in January (with Old Al and Mike R.), and Zoë typed in the Bank once; tonight nine seats, six
+     * of them named so far (Dana, Marcus, Priya, Theo, Jo, Sam), with the sheet open.
+     */
+    fun regulars(kit: BankTestKit): BankViewModel = with(kit) {
+        listOf(
+            history("2026-01-17", "Old Al", "Dana", "Mike R."),
+            history("2026-09-12", "Dana", "Marcus", "Priya", "Theo", "Jo", "Sam", "Alex"),
+            history("2026-09-19", "Priya", "Dana", "Marcus", "Rita", "Theo", "Sam"),
+            history("2026-09-26", "Marcus", "Dana", "Jo", "Priya", "Ben", "Alex"),
+            history("2026-10-02", "Dana", "Priya", "Theo", "Marcus", "Sam", "Rita", "Jo"),
+        ).forEach { nights.add(it) }
+        regularsStore.remember("Zoë", LocalDate.parse("2026-10-08"))
+        val viewModel = game(players = NAMES.take(SAM) + List(NAMES.size - SAM) { "" })
+        viewModel.send(BankIntent.ShowRegulars)
+        viewModel
+    }
+
+    /** Names going in: Dana, Marcus and Priya typed, six seats nobody named yet, so the Bank offers the regulars. */
+    fun naming(kit: BankTestKit): BankViewModel = kit.game(players = NAMES.take(PRIYA) + List(NAMES.size - PRIYA) { "" })
+
+    /** The first time: nobody saved or typed yet, nine seats nobody named, the sheet open. */
+    fun noRegulars(kit: BankTestKit): BankViewModel = with(kit) {
+        val viewModel = game(players = List(NAMES.size) { "" })
+        viewModel.send(BankIntent.ShowRegulars)
+        viewModel
+    }
+
+    /** A saved night where [names] finish in that order, $40 in each. */
+    private fun history(date: String, vararg names: String) = SavedNight(
+        id = 0L,
+        date = LocalDate.parse(date),
+        structureName = null,
+        prizePoolCents = names.size * 4_000L,
+        players = names.mapIndexed { index, name -> NightPlayer(name, index + 1, 4_000L, 0, 0L, 0, 0L, 0L, 0, 0L) },
+    )
 
     /** 30 players, half bought in, a few out: the list scrolls under the sticky header. */
     fun thirtyPlayers(kit: BankTestKit): BankViewModel = with(kit) {

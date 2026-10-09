@@ -53,7 +53,11 @@ private fun PayoutPrizes(state: DealUiState) {
     }
 }
 
-/** A money field per place left: "1st prize", "2nd prize", ... */
+/**
+ * A money field per place left: "1st prize", "2nd prize", ... Each counts once you leave it (Done,
+ * Enter, another field), as the app's money fields do: on a phone the deal sits above, and would
+ * otherwise jump between a split and "pays more than" with every key while a prize is half typed.
+ */
 @Composable
 private fun TypedPrizes(state: DealUiState, onIntent: (DealIntent) -> Unit) {
     state.prizes.indices.forEach { index ->
@@ -61,13 +65,13 @@ private fun TypedPrizes(state: DealUiState, onIntent: (DealIntent) -> Unit) {
         MoneyField(
             valueCents = state.typed.getOrNull(index),
             label = stringResource(R.string.deal_prize_label, ordinalOf(place)),
-            onValueChange = { onIntent(DealIntent.SetPrize(place, it)) },
+            onCommit = { onIntent(DealIntent.SetPrize(place, it)) },
             modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
-/** Kept back and played for, up to what 1st pays over 2nd; the rest is shared now. */
+/** Kept back and played for, up to what 1st pays over 2nd; the rest is shared now. Counts once you leave it. */
 @Composable
 private fun ForWinnerField(state: DealUiState, onIntent: (DealIntent) -> Unit) {
     val max = FormatUtils.formatMoney(state.maxForWinnerCents)
@@ -75,7 +79,7 @@ private fun ForWinnerField(state: DealUiState, onIntent: (DealIntent) -> Unit) {
     MoneyField(
         valueCents = state.forWinnerCents,
         label = stringResource(R.string.deal_for_winner),
-        onValueChange = { onIntent(DealIntent.SetForWinner(it)) },
+        onCommit = { onIntent(DealIntent.SetForWinner(it)) },
         supportingText = stringResource(if (tooMuch) R.string.deal_for_winner_too_much else R.string.deal_for_winner_help, max),
         isError = tooMuch,
         modifier = Modifier.fillMaxWidth(),

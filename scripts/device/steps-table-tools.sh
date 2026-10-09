@@ -101,6 +101,7 @@ s_deal_icm() {
   ui set-text "desc=1st prize" --value 50
   ui set-text "desc=2nd prize" --value 30
   ui set-text "desc=3rd prize" --value 20
+  ui enter                                     # a prize counts once you leave its field
   ui scroll-to "text=\$38.39" --dir up --max 8
   ui assert-text "text=\$38.39" "text=\$40.00" || return 1
   ui scroll-to "text=\$28.86" --max 4
@@ -112,6 +113,7 @@ s_deal_winner() {
   # $10 saved for the winner: $90 is shared now, and the winner takes the $10 on top.
   ui scroll-to "desc=Save for the winner" --max 8
   ui set-text "desc=Save for the winner" --value 10
+  ui enter
   ui scroll-to "text=Plus \$10 to whoever wins." --dir up --max 8   # just above "Each way adds up"
   ui assert-text "text=Plus \$10 to whoever wins." "text=Each way adds up to \$90."
 }

@@ -80,8 +80,9 @@ import kotlinx.coroutines.delay
  * say when it is the bubble.
  *
  * PP-111: a big moment of the night shows over the digits ([MomentSlot]; sideways, over the time's
- * column only, so the blinds and what's next keep their room), and the digits make room for it. The last knockout opens the champion's screen ([winner]) in place of the clock (Back or ✕
- * closes it); a mystery envelope drawn by that knockout still shows over it first.
+ * column only, so the blinds and what's next keep their room), and the digits make room for it.
+ * The last knockout opens the champion's screen ([winner]) in place of the clock (Back or ✕ closes
+ * it); a mystery envelope drawn by that knockout still shows over it first.
  */
 @Composable
 internal fun TableViewContent(

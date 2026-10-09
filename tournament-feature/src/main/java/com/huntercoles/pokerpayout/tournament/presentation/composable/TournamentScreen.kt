@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -33,7 +32,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -53,7 +51,6 @@ import com.huntercoles.pokerpayout.core.design.components.fillShellWidth
 import com.huntercoles.pokerpayout.core.presentation.HideSystemBars
 import com.huntercoles.pokerpayout.core.presentation.OnPhoneUpright
 import com.huntercoles.pokerpayout.core.presentation.RequestOrientation
-import com.huntercoles.pokerpayout.core.presentation.findActivity
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.presentation.PurchaseKind
@@ -130,26 +127,6 @@ fun TournamentScreen(
         CueFlash(flash)
     }
     PresetsSheet(presets, setup, timer, actions)
-}
-
-/** Leaving the tab commits what was typed, and ends a ⤢ table view (phones turn back upright). */
-@Composable
-private fun OnLeavingTheTab(timerViewModel: TimerViewModel) {
-    val focusManager = LocalFocusManager.current
-    val activity = LocalContext.current.findActivity()
-    DisposableEffect(Unit) {
-        onDispose {
-            focusManager.clearFocus(force = true)
-            if (activity?.isChangingConfigurations != true) timerViewModel.acceptIntent(TimerIntent.SetTableView(false))
-        }
-    }
-}
-
-/** PP-111: the champion's screen for the night as the Payouts tab has it; null until there is a champion. */
-@Composable
-private fun rememberWinner(payoutsViewModel: PayoutsViewModel): WinnerModel? {
-    val payouts by payoutsViewModel.uiState.collectAsStateWithLifecycle()
-    return remember(payouts) { WinnerModel.from(payouts) }
 }
 
 /** PP-083: the clock's flashes while the tab is on screen; one that comes while it isn't is dropped. */

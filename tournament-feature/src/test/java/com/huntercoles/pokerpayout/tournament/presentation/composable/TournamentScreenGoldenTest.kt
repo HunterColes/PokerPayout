@@ -22,6 +22,7 @@ import com.huntercoles.pokerpayout.core.design.components.LocalShellSnackbars
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.navigation.NavTab
 import com.huntercoles.pokerpayout.core.presentation.LocalTableKnockouts
+import com.huntercoles.pokerpayout.core.testing.Device
 import com.huntercoles.pokerpayout.core.testing.DeviceMatrix
 import com.huntercoles.pokerpayout.core.testing.InAppShell
 import com.huntercoles.pokerpayout.core.testing.LayoutAssertions
@@ -199,6 +200,16 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
                 snackbars.showSnackbar(KNOCKOUT_DONE, actionLabel = "Undo", duration = SnackbarDuration.Indefinite)
             }
         }
+    }
+
+    /**
+     * PP-135: the upright clock on the bubble says so beside the level, as the table view does
+     * beside the players left (a phone on its side shows the table view: S3_table_bubble).
+     */
+    @Test
+    fun clockOnTheBubble() {
+        if (config.device.isLandscape && config.device != Device.TabletLandscape) return
+        check("S2_clock_bubble", fixture.running.withPlayersLeft(BUBBLE_LEFT), TournamentUi(mode = TournamentMode.Running))
     }
 
     /** The same moment with [left] players still in (each one's stack grows as the field shrinks). */

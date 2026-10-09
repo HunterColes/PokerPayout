@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
 import com.huntercoles.pokerpayout.core.design.PokerTheme
 import com.huntercoles.pokerpayout.core.design.components.LocalShellSnackbars
@@ -158,6 +159,20 @@ class TableKnockoutTest {
         compose.onNodeWithText("7 of 9 left").assertIsDisplayed()
         compose.onNodeWithText("ON THE BUBBLE").assertDoesNotExist()
         compose.onNodeWithText("IN THE MONEY").assertDoesNotExist()
+    }
+
+    @Test
+    fun theUprightClockSaysWhenItIsTheBubbleToo() {
+        val running = fixture.running
+        state = running.copy(table = running.table.copy(playersLeft = 4))
+        compose.setContent {
+            PokerTheme(reducedMotion = true) { ClockHero(state, 360.dp, 112.dp, onIntent = null) }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithText("ON THE BUBBLE").assertIsDisplayed()
+        state = running.copy(table = running.table.copy(playersLeft = 3))
+        compose.waitForIdle()
+        compose.onNodeWithText("IN THE MONEY").assertIsDisplayed()
     }
 
     @Test

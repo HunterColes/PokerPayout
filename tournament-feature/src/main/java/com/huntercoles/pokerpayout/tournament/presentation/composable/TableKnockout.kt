@@ -71,7 +71,10 @@ internal fun KnockOutButton(onClick: () -> Unit) {
     }
 }
 
-/** "On the bubble" or "In the money", beside the players left; nothing before the bubble. */
+/**
+ * "On the bubble" or "In the money"; nothing before the bubble. The table view shows it beside the
+ * players left, the upright clock with its other state pills ("Paused").
+ */
 @Composable
 internal fun MoneyStagePill(stage: MoneyStage, modifier: Modifier = Modifier) {
     when (stage) {

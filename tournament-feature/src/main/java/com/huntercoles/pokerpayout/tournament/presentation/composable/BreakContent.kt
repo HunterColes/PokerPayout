@@ -80,6 +80,7 @@ private fun BreakHero(uiState: TimerUiState, segment: BreakSegment, width: Dp, c
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
             PokerPill(clockEyebrow(uiState), tone = PokerPillTone.Gold, icon = PokerIcons.Coffee)
             clockPills(uiState).forEach { PokerPill(it.text, tone = it.tone) }
+            MoneyStagePill(uiState.table.moneyStage)
         }
         Text(
             text = time,

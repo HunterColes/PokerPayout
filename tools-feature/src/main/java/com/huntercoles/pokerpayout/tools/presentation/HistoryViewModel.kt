@@ -1,9 +1,15 @@
 package com.huntercoles.pokerpayout.tools.presentation
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.huntercoles.pokerpayout.core.backup.BackupException
+import com.huntercoles.pokerpayout.core.backup.BackupProblem
+import com.huntercoles.pokerpayout.core.backup.DocumentFiles
+import com.huntercoles.pokerpayout.core.coroutines.IoDispatcher
 import com.huntercoles.pokerpayout.core.design.components.SnackbarController
+import com.huntercoles.pokerpayout.core.domain.history.NightCsv
 import com.huntercoles.pokerpayout.core.domain.history.NightStore
 import com.huntercoles.pokerpayout.core.domain.history.SavedNight
 import com.huntercoles.pokerpayout.core.domain.history.Season
@@ -11,11 +17,13 @@ import com.huntercoles.pokerpayout.core.domain.history.Standing
 import com.huntercoles.pokerpayout.tools.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -67,17 +75,23 @@ sealed interface HistoryIntent {
 
     /** Deletes the night at once; the snackbar offers Undo. */
     data class Delete(val id: Long) : HistoryIntent
+
+    /** The file picker made [uri] for the CSV: write every night to it. */
+    data class SaveCsv(val uri: Uri) : HistoryIntent
 }
 
 /**
  * History (PP-037): the nights saved from the Payouts tab ([NightStore]), read-only. A night opens in
- * full; deleting one applies at once and offers Undo on the app's snackbar.
+ * full; deleting one applies at once and offers Undo on the app's snackbar. Every night can be saved
+ * as a CSV file ([NightCsv], UTF-8) where the player picks.
  */
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val store: NightStore,
     private val snackbars: SnackbarController,
     private val messages: HistoryMessages,
+    private val files: DocumentFiles,
+    @IoDispatcher private val io: CoroutineDispatcher,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HistoryUiState.of(store.nights.value))
@@ -95,6 +109,24 @@ class HistoryViewModel @Inject constructor(
             is HistoryIntent.Open -> _uiState.update { HistoryUiState.of(it.nights, it.year, intent.id) }
             HistoryIntent.Close -> _uiState.update { it.copy(openNight = null) }
             is HistoryIntent.Delete -> delete(intent.id)
+            is HistoryIntent.SaveCsv -> saveCsv(intent.uri)
+        }
+    }
+
+    private fun saveCsv(uri: Uri) {
+        val csv = NightCsv.of(store.nights.value)
+        viewModelScope.launch {
+            val message = try {
+                val name = withContext(io) {
+                    files.write(uri, csv)
+                    files.name(uri)
+                }
+                messages.csvSaved(name)
+            } catch (expected: BackupException) {
+                messages.problem(expected.problem)
+            }
+            snackbars.hostState.currentSnackbarData?.dismiss()
+            snackbars.showMessage(message)
         }
     }
 
@@ -110,8 +142,13 @@ class HistoryViewModel @Inject constructor(
     }
 }
 
-/** The strings History's ViewModel shows itself: its snackbar. */
+/** The strings History's ViewModel shows itself: its snackbars. */
 class HistoryMessages @Inject constructor(@ApplicationContext private val context: Context) {
     val deleted: String get() = context.getString(R.string.history_deleted)
     val undo: String get() = context.getString(R.string.history_undo)
+
+    fun csvSaved(name: String?): String =
+        name?.let { context.getString(R.string.history_csv_saved_named, it) } ?: context.getString(R.string.history_csv_saved)
+
+    fun problem(problem: BackupProblem): String = context.getString(problem.message)
 }

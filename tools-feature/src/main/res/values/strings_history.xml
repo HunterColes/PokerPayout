@@ -44,8 +44,14 @@
     <!-- "9 players · Dana won" -->
     <string name="history_night_line">%1$s · %2$s won</string>
     <string name="history_open">Open</string>
-    <string name="history_export">Export as CSV</string>
+    <!-- Every night as CSV: shared as text (to a chat or an email), or saved as a file -->
+    <string name="history_export">Share as CSV</string>
     <string name="history_export_subject">Poker nights</string>
+    <string name="history_save_csv">Save as CSV file…</string>
+    <!-- The name the file picker suggests: poker-nights-2026-10-08.csv -->
+    <string name="history_csv_file_name" translatable="false">poker-nights-%1$s.csv</string>
+    <string name="history_csv_saved">CSV file saved</string>
+    <string name="history_csv_saved_named">Saved %1$s</string>
     <string name="history_list_separator">", "</string>
     <string name="history_separator">" · "</string>
 

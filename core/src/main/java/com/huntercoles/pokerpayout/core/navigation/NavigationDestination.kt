@@ -37,6 +37,14 @@ sealed class NavigationDestination {
     @Serializable
     data object History : NavigationDestination()
 
+    /** The music: a playlist of the host's songs, and playing it with the clock (Tools > Sound). */
+    @Serializable
+    data object Music : NavigationDestination()
+
+    /** The cue sound packs, each sound heard before it's picked (Tools > Sound). */
+    @Serializable
+    data object CueSounds : NavigationDestination()
+
     @Serializable
     data object Back : NavigationDestination()
 }

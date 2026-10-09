@@ -261,13 +261,13 @@ are:
    the Tournament's estimate until the stepper is touched (PP-091 #3; here "no rebuys or
    add-ons"), then keep 2 stacks back as "your own", and the color-up plan counts 7 stacks in play.
 
-   **Shot clock** (S17, 3 steps): full and waiting at 30 s with the Bank's players in the time bank;
+   **Shot clock** (S19, 3 steps): full and waiting at 30 s with the Bank's players in the time bank;
    a tap on the face starts a decision, Pause holds the seconds left (the same number 3 s later),
    Alice's time-bank card adds exactly 30 s and leaves her "1 of 2 cards left"; everyone's cards
-   back with Undo on the snackbar, and Reset waits, full, again. **Dealer's choice** (S18, 3 steps):
+   back with Undo on the snackbar, and Reset waits, full, again. **Dealer's choice** (S23, 3 steps):
    the nine classics on the wheel; a spin (instant, animations being off) shows a game and its
    rules, and a second spin never picks it twice running; a house game ("Guts") makes ten, and
-   every game's rules open in a sheet. **Equity quiz** (S19, 3 steps): two hands dealt at once;
+   every game's rules open in a sheet. **Equity quiz** (S24, 3 steps): two hands dealt at once;
    picking Hand A shows the engine's exact equities under both hands, adding up to 100%, right or
    not, scored "of 1"; then three hands asked how often Hand A wins, the 40–60% range picked and
    named under the verdict; Back to the Tools list.
@@ -698,7 +698,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
 | `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end`, `S11_chipset_settings` (the stack settings unfolded, keeping back the Tournament's estimate) | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
 | `tools-feature` | `HistoryScreenTest` | `S16_history_list` (all time, two players level at the top), `S16_history_night` (one night in full), `S16_history_empty` (nothing saved yet) | History (PP-037): all three, at every scroll position, on all 24 cells; also a year picked. Fixtures in `HistoryFixtures`: three nights over two years with the mockups' players |
-| `tools-feature` | `FunToolsScreenTest` (+ `FunToolsContentTest`, what each control sends) | `S17_shot_clock_ready`, `S17_shot_clock_low` (8 s left, two players' cards played); `S18_dealers_picked` (Badugi, with a house game on the wheel), `S18_dealers_rules` (the sheet); `S19_quiz_ask` (a heads-up flop), `S19_quiz_range_wrong` (three hands, odds from the engine) | All three, at every scroll position, on all 24 cells; also time up, no time bank, the first spin, a house game picked, too few games, eight house games, the guess waiting on the engine and the range question |
+| `tools-feature` | `FunToolsScreenTest` (+ `FunToolsContentTest`, what each control sends) | `S19_shot_clock_ready`, `S19_shot_clock_low` (8 s left, two players' cards played); `S23_dealers_picked` (Badugi, with a house game on the wheel), `S23_dealers_rules` (the sheet); `S24_quiz_ask` (a heads-up flop), `S24_quiz_range_wrong` (three hands, odds from the engine) | All three, at every scroll position, on all 24 cells; also time up, no time bank, the first spin, a house game picked, too few games, eight house games, the guess waiting on the engine and the range question |
 | `tools-feature` | `SeatDrawScreenTest` (+ `SeatDrawExtraGoldenTest`) | `S14_seats_empty`, `S14_seats_one_table`, `S14_seats_two_tables`, `S14_button_draw`; `S14_seats_font2x` at tall@2.0 | All three, at every scroll position of each pane; also the name fields and an out-of-date draw with the players unfolded |
 | `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament: touch targets |
 | `tournament-feature` | `TournamentScreenGoldenTest` | `S1_setup_{before,invalid}`, `S1_setup_mystery` (mystery bounties picked, the envelopes listed, PP-035), `S1_fold_300ms`, `S1_running_strip`, `S1_panel_{open,unlocked}`, `S2_clock_{ready,running,paused,final_minutes,overtime,finished}`, `S2_clock_running_font2x`, `S3_table_{running,paused,break}` (landscape cells), `S4_break_{colorup,done,plain}`, `S4_break_chipset` (the color-up with a chip set set up in Tools, PP-091 #9), `Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet` | All three checks on all 24 cells (the fold frame: none, it is mid-animation); the top bar's buttons stay 48 x 48 dp at every scroll position. `SetupStripTest`: the strip shows whole settings, as many as fit |

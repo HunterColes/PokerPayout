@@ -24,12 +24,12 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The shot clock (S17), dealer's choice (S18) and the equity quiz (S19) inside the app's shell on
+ * The shot clock (S19), dealer's choice (S23) and the equity quiz (S24) inside the app's shell on
  * every cell of the device matrix: text fits and is never clipped at any scroll position, and 48 dp
- * targets that don't overlap. Goldens on [DeviceMatrix.goldens]: `S17_shot_clock_ready` (before the
- * first tap) and `S17_shot_clock_low` (eight seconds left, two players' cards played);
- * `S18_dealers_picked` (Badugi picked, with a house game) and `S18_dealers_rules` (every game's
- * rules, the sheet); `S19_quiz_ask` (a heads-up flop to guess) and `S19_quiz_range_wrong` (three
+ * targets that don't overlap. Goldens on [DeviceMatrix.goldens]: `S19_shot_clock_ready` (before the
+ * first tap) and `S19_shot_clock_low` (eight seconds left, two players' cards played);
+ * `S23_dealers_picked` (Badugi picked, with a house game) and `S23_dealers_rules` (every game's
+ * rules, the sheet); `S24_quiz_ask` (a heads-up flop to guess) and `S24_quiz_range_wrong` (three
  * hands, the range answered one off). The other states get the layout checks.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -39,13 +39,13 @@ class FunToolsScreenTest(private val config: ScreenConfig) {
     @get:Rule
     val screen = ScreenTestRule(config)
 
-    // Shot clock (S17)
+    // Shot clock (S19)
 
     @Test
-    fun shotClockReady() = shotClock("S17_shot_clock_ready", ShotClockFixtures.ready)
+    fun shotClockReady() = shotClock("S19_shot_clock_ready", ShotClockFixtures.ready)
 
     @Test
-    fun shotClockLow() = shotClock("S17_shot_clock_low", ShotClockFixtures.low)
+    fun shotClockLow() = shotClock("S19_shot_clock_low", ShotClockFixtures.low)
 
     @Test
     fun shotClockTimeUp() = shotClock(name = null, ShotClockFixtures.timeUp)
@@ -53,10 +53,10 @@ class FunToolsScreenTest(private val config: ScreenConfig) {
     @Test
     fun shotClockNoTimeBank() = shotClock(name = null, ShotClockFixtures.noTimeBank)
 
-    // Dealer's choice (S18)
+    // Dealer's choice (S23)
 
     @Test
-    fun dealersPicked() = dealers("S18_dealers_picked", DealersFixtures.picked)
+    fun dealersPicked() = dealers("S23_dealers_picked", DealersFixtures.picked)
 
     @Test
     fun dealersFirstSpin() = dealers(name = null, DealersFixtures.fresh)
@@ -71,17 +71,17 @@ class FunToolsScreenTest(private val config: ScreenConfig) {
     fun dealersHouseFull() = dealers(name = null, DealersFixtures.houseFull)
 
     @Test
-    fun dealersRules() = check("S18_dealers_rules") {
+    fun dealersRules() = check("S23_dealers_rules") {
         PokerSheetContent(title = stringResource(R.string.dealers_all_rules)) { AllGameRules() }
     }
 
-    // Equity quiz (S19)
+    // Equity quiz (S24)
 
     @Test
-    fun quizAsk() = quiz("S19_quiz_ask", QuizFixtures.ask)
+    fun quizAsk() = quiz("S24_quiz_ask", QuizFixtures.ask)
 
     @Test
-    fun quizRangeWrong() = quiz("S19_quiz_range_wrong", QuizFixtures.rangeWrong)
+    fun quizRangeWrong() = quiz("S24_quiz_range_wrong", QuizFixtures.rangeWrong)
 
     @Test
     fun quizWorking() = quiz(name = null, QuizFixtures.working)

@@ -765,6 +765,28 @@ s_table_view_resume() {
   ui assert-text "text~=10 of 10 left" "text~=Pool " "Pause timer" "desc=Exit table view" || return 1
   require_landscape
 }
+s_table_view_knockout() {
+  # PP-135: Knock out on the table view, in two taps: who's out, then who knocked them out. It is
+  # the Bank's own knockout: recorded at once, with UNDO on the snackbar (bottom left, the time and
+  # the controls still in view) and the players left counting down.
+  ui tap "text=Knock out"
+  ui wait "text=Who's out?"
+  ui tap "text=Player 10" --scroll-in scrollable
+  ui wait "text=Who knocked Player 10 out?"
+  ui assert-text "text=10TH PLACE" "re=^Nobody" "desc=Back to who's out" "desc=Close knockout" || return 1
+  ui tap "text=Player 1" --scroll-in scrollable
+  ui wait-gone "text=Who knocked Player 10 out?"
+  ui assert-text "text~=Player 10 is out in 10th" text=UNDO "text~=9 of 10 left" "desc=Exit table view" || return 1
+  require_landscape
+}
+s_table_view_knockout_undo() {
+  # UNDO on the snackbar takes the knockout back, in the Bank too: everyone in again
+  ui tap text=UNDO
+  ui wait "text~=10 of 10 left"
+  ui wait-gone text=UNDO
+  ui assert-text "text=Knock out" "desc=Exit table view" || return 1
+  require_landscape
+}
 s_table_view_exit() {
   ui tap "desc=Exit table view"
   ui wait-gone "desc=Exit table view"
@@ -1763,6 +1785,8 @@ step timer-break          "Skip to the first break (S4)"                        
 step timer-paused         "Pause on the break"                                  s_timer_paused
 step table-view           "Table-view button: landscape clock, on the break"    s_table_view
 step table-view-resume    "Table view: resume; the table's numbers"             s_table_view_resume
+step table-view-knockout  "Table view: Knock out Player 10, by Player 1"        s_table_view_knockout
+step table-view-ko-undo   "Table view: UNDO the knockout, 10 of 10 left again"  s_table_view_knockout_undo
 step table-view-exit      "Leave table view: back to portrait"                  s_table_view_exit
 step end-break            "End break now: level 5 starts"                       s_end_break
 step rotate-to-table      "Phone on its side: the table view (PP-079)"          s_rotate_to_table

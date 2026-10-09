@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The shot clock's warnings buzz when Vibrate is on in Tools. The tournament clock's quiet
+         cues ask for the same permission, so the app asks for nothing new. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+</manifest>

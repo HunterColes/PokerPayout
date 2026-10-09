@@ -52,6 +52,7 @@ import kotlin.math.sin
  * are part of the drawing (the list of games under the wheel carries them for TalkBack and large
  * text); the whole wheel is one button that spins it.
  */
+@Suppress("LongParameterList") // the games, where the wheel stands, the slice that won, its size, the tap, a modifier
 @Composable
 internal fun GameWheelDial(
     wheel: List<GameChoice>,

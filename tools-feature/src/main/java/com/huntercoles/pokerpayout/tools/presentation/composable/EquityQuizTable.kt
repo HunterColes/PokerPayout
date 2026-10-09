@@ -107,27 +107,10 @@ private fun HandPanel(state: EquityQuizUiState, index: Int, name: String, onPick
     val canPick = state.question == QuizQuestion.Leader && state.answer == null
     val equity = state.equity?.getOrNull(index)?.takeIf { state.revealed }
     val description = handDescription(name, cards.map(labels::cardName), equity, ahead, picked)
-    val shape = RoundedCornerShape(PokerDimens.CornerCard)
     val pickLabel = stringResource(R.string.quiz_pick_hand, name)
     Column(
         modifier = modifier
-            .clip(shape)
-            .background(if (ahead) PokerColors.GoldWash else PokerColors.FeltGreen)
-            .then(
-                when {
-                    picked -> Modifier.border(2.dp, PokerColors.PokerGold, shape)
-                    // A hand to pick is outlined like any other control
-                    canPick -> Modifier.border(1.dp, PokerColors.FeltEdge, shape)
-                    else -> Modifier
-                },
-            )
-            .then(
-                if (canPick) {
-                    Modifier.clickable(onClickLabel = pickLabel, role = Role.Button, onClick = onPick)
-                } else {
-                    Modifier
-                },
-            )
+            .panelFrame(ahead = ahead, picked = picked, onPick = if (canPick) onPick else null, pickLabel = pickLabel)
             .semantics(mergeDescendants = true) { contentDescription = description }
             .heightIn(min = PokerDimens.MinTouch)
             .padding(12.dp),
@@ -156,6 +139,22 @@ private fun HandPanel(state: EquityQuizUiState, index: Int, name: String, onPick
             val win = state.wins?.getOrNull(index) ?: equity
             EquityBar(win = (win / PERCENT).toFloat(), tie = ((equity - win) / PERCENT).toFloat())
         }
+    }
+}
+
+/**
+ * A hand's panel: gold-washed when it was ahead, a gold edge when it was the pick, and while it can
+ * be picked an outline like any other control, the whole panel the button.
+ */
+private fun Modifier.panelFrame(ahead: Boolean, picked: Boolean, onPick: (() -> Unit)?, pickLabel: String): Modifier {
+    val shape = RoundedCornerShape(PokerDimens.CornerCard)
+    val framed = clip(shape).background(if (ahead) PokerColors.GoldWash else PokerColors.FeltGreen)
+    return when {
+        picked -> framed.border(2.dp, PokerColors.PokerGold, shape)
+        onPick != null -> framed
+            .border(1.dp, PokerColors.FeltEdge, shape)
+            .clickable(onClickLabel = pickLabel, role = Role.Button, onClick = onPick)
+        else -> framed
     }
 }
 

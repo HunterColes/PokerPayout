@@ -55,7 +55,7 @@ class EquityQuizTest {
         assertFalse(QuizJudge.isRight(QuizAnswer.InRange(EquityRange.Over80), listOf(60.5, 39.5)))
         assertTrue(QuizJudge.isCloseCall(QuizQuestion.Range, listOf(60.5, 39.5)))
         // Every equity from 0 to 100 is in at least one range
-        (0..1_000).forEach { assertTrue(QuizJudge.ranges(it / 10.0).isNotEmpty()) }
+        for (tenths in 0..1_000) assertTrue(QuizJudge.ranges(tenths / 10.0).isNotEmpty())
     }
 
     @Test

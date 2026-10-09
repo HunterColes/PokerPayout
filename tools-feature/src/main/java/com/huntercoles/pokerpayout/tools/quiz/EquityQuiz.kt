@@ -14,13 +14,24 @@ enum class QuizQuestion(val key: String) {
     }
 }
 
-/** A guess at the first hand's equity: a fifth of the way from 0 to 100%. */
-enum class EquityRange(val from: Int, val to: Int) {
-    Under20(0, 20),
-    From20(20, 40),
-    From40(40, 60),
-    From60(60, 80),
-    Over80(80, 100),
+/** A guess at the first hand's equity: a fifth of the way from 0 to 100%, in order. */
+enum class EquityRange {
+    Under20,
+    From20,
+    From40,
+    From60,
+    Over80,
+    ;
+
+    /** Where the range starts, in percent: 0, 20, 40, 60 or 80. */
+    val from: Int get() = ordinal * WIDTH
+
+    /** Where it ends, in percent. */
+    val to: Int get() = from + WIDTH
+
+    private companion object {
+        const val WIDTH = 20
+    }
 }
 
 /** A guess: the hand that's ahead, or the range the first hand's equity is in. */

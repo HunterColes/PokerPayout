@@ -127,7 +127,7 @@ class DealersChoiceViewModelTest {
         val vm = viewModel()
         vm.acceptIntent(DealersChoiceIntent.AddHouseGame("A".repeat(40)))
         assertEquals(DealersChoiceViewModel.MAX_NAME_LENGTH, vm.state.houseGames.single().houseName?.length)
-        (2..10).forEach { vm.acceptIntent(DealersChoiceIntent.AddHouseGame("Game $it")) }
+        for (game in 2..10) vm.acceptIntent(DealersChoiceIntent.AddHouseGame("Game $game"))
         assertEquals(DealersChoiceViewModel.MAX_HOUSE_GAMES, vm.state.houseGames.size)
         assertFalse(vm.state.canAddHouseGame)
     }

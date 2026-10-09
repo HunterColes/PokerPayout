@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared by the table tools: Side pots (S21), Deal maker (S22), Outs & pot odds (S20) -->
+    <string name="table_tools_undo">Undo</string>
+    <!-- A player nobody named, and the TalkBack name of each name field -->
+    <string name="table_tools_default_player">Player %1$d</string>
+    <string name="table_tools_name_label">Player %1$d name</string>
+    <string name="table_tools_add_player">Add player</string>
+    <string name="table_tools_remove_player">Remove %1$s</string>
+    <!-- Lists of names: "Dana or Sam", "Dana, Sam or Theo" -->
+    <string name="table_tools_list_or">%1$s or %2$s</string>
+    <string name="table_tools_list_separator">", "</string>
+    <plurals name="table_tools_players">
+        <item quantity="one">%1$d player</item>
+        <item quantity="other">%1$d players</item>
+    </plurals>
+</resources>

@@ -4,9 +4,14 @@
    SharedPreferences file and the files folder, as the in-app backup file takes them; never the cache.
    Unlike Android 12's rules, these don't ask for an encrypted cloud copy: the flag for it would also
    leave the data out of a move to a new phone by cable on Android 9 to 11.
+
+   phone_prefs is about this phone alone (the music's picked songs, which are this phone's file
+   loans, and whether it shows the welcome): left out, as in data_extraction_rules.xml (core/backup/BackupCatalog.PHONE_FILES;
+   AndroidBackupRulesTest checks every one is left out here).
    See https://developer.android.com/guide/topics/data/autobackup
 -->
 <full-backup-content>
     <include domain="sharedpref" path="." />
     <include domain="file" path="." />
+    <exclude domain="sharedpref" path="phone_prefs.xml" />
 </full-backup-content>

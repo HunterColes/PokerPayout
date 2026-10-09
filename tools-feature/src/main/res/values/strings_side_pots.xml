@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Side pots (S21): who put what in, and the pots it makes -->
+    <string name="side_pots_title">Side pots</string>
+    <!-- "3 players · 2,350 in" -->
+    <string name="side_pots_subtitle">%1$s · %2$s in</string>
+    <string name="side_pots_new_hand">New hand</string>
+    <string name="side_pots_snackbar_new_hand">New hand: chips cleared</string>
+
+    <!-- Who put in what -->
+    <string name="side_pots_players_title">Who put in what</string>
+    <string name="side_pots_players_note">Chips in this hand</string>
+    <string name="side_pots_chips_hint">Chips in</string>
+    <!-- TalkBack: "Chips Dana put in" -->
+    <string name="side_pots_chips_description">Chips %1$s put in</string>
+    <string name="side_pots_folded">Folded</string>
+    <!-- TalkBack: "Dana folded, checkbox" -->
+    <string name="side_pots_folded_description">%1$s folded</string>
+
+    <!-- The pots -->
+    <string name="side_pots_pots_title">Pots</string>
+    <string name="side_pots_main">Main pot</string>
+    <string name="side_pots_side">Side pot %1$d</string>
+    <!-- "Dana, Sam or Theo can win it" -->
+    <string name="side_pots_can_win">%1$s can win it</string>
+    <string name="side_pots_only">Only %1$s can win it</string>
+    <!-- "Up to 300 from each player" -->
+    <string name="side_pots_up_to">Up to %1$s from each player</string>
+    <!-- "Over 300, up to 800 from each player" -->
+    <string name="side_pots_over">Over %1$s, up to %2$s from each player</string>
+    <string name="side_pots_back">Back to %1$s</string>
+    <string name="side_pots_back_why">Nobody matched it, so it isn\'t in a pot.</string>
+    <string name="side_pots_empty">Type what each player put in, and the pots show here.</string>
+    <string name="side_pots_all_folded">Everyone with chips in has folded, so nobody can win. Untick whoever is still in.</string>
+    <!-- "Adds up to 2,350, everything put in" -->
+    <string name="side_pots_total">Adds up to %1$s, everything put in.</string>
+    <string name="side_pots_how">Each pot takes the same from everyone who reached it. Folded chips stay in, but folded players can\'t win.</string>
+</resources>

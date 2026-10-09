@@ -241,7 +241,7 @@ private fun TableSide(uiState: TimerUiState, blindsCap: Dp) {
             )
         }
         HorizontalDivider(color = PokerColors.FeltLine)
-        NextBlinds(uiState)
+        NextBlinds(uiState.blindsUp)
     } else {
         uiState.currentBreak?.let { segment ->
             breakDetails(segment, formatter)?.let {
@@ -270,7 +270,7 @@ private fun TableFooter(
 ) {
     val formatter = rememberChipFormatter()
     val table = uiState.table
-    val bigBlind = (uiState.currentLevelSegment ?: uiState.nextLevelSegment)?.level?.bigBlind ?: 0
+    val bigBlind = uiState.statsBigBlind
     val facts = listOfNotNull(
         stringResource(R.string.table_left, table.playersLeft, table.playerCount),
         if (table.averageStack > 0 && bigBlind > 0) {
@@ -311,7 +311,7 @@ private fun TableFooter(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             onKnockOut?.let { KnockOutButton(it) }
-            PlayPauseButton(uiState, TableControl) { onIntent(TimerIntent.ToggleTimer) }
+            PlayPauseButton(uiState.buttons, TableControl) { onIntent(TimerIntent.ToggleTimer) }
             ExitButton(onExit)
         }
     }

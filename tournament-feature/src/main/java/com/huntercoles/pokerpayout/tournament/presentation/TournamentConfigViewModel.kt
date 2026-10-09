@@ -62,6 +62,12 @@ class TournamentConfigViewModel @Inject constructor(
         viewModelScope.launch {
             tournamentPreferences.setupRevision.drop(1).collect { loadTournamentConfiguration() }
         }
+
+        // PP-113: the welcome shows on a new install until dismissed; the first clock started ends it too
+        _uiState.update { it.copy(showWelcome = timerPreferences.getShowWelcome()) }
+        viewModelScope.launch {
+            timerPreferences.timerRunning.collect { running -> if (running) dismissWelcome() }
+        }
     }
 
     fun acceptIntent(intent: TournamentConfigIntent) {
@@ -100,7 +106,13 @@ class TournamentConfigViewModel @Inject constructor(
             TournamentConfigIntent.ShowResetDialog -> showResetDialog()
             TournamentConfigIntent.HideResetDialog -> hideResetDialog()
             TournamentConfigIntent.ConfirmReset -> confirmReset()
+            TournamentConfigIntent.DismissWelcome -> dismissWelcome()
         }
+    }
+
+    private fun dismissWelcome() {
+        timerPreferences.dismissWelcome()
+        _uiState.update { it.copy(showWelcome = false) }
     }
 
     private fun loadTournamentConfiguration() {

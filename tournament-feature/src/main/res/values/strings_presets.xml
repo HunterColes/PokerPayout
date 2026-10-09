@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Saved setups (PP-032): the presets row on the setup page and the mid-game panel, the presets
-     sheet, and the setup shared as text. -->
+     sheet, and the setup shared as text. The starter nights and the first-run welcome (PP-113). -->
 <resources>
     <!-- The row that opens the presets -->
     <string name="presets_title">Presets</string>
-    <string name="presets_row_hint">Load a saved setup, save this one or share it</string>
+    <string name="presets_row_hint">Load a starter or a saved setup, save this one or share it</string>
     <string name="presets_row_hint_mid_game">Save or share this setup. Loading waits for a new tournament.</string>
     <string name="presets_open">Open presets</string>
 
@@ -20,6 +20,21 @@
     <string name="presets_rename_action">Rename…</string>
     <string name="presets_delete_action">Delete</string>
     <string name="presets_with_chip_set">chip set</string>
+
+    <!-- The starter nights that come with the app (PP-113): listed under the saved presets -->
+    <string name="presets_starters">Starters</string>
+    <string name="starter_turbo">Turbo</string>
+    <string name="starter_classic">Classic</string>
+    <string name="starter_deep_stack">Deep stack</string>
+    <string name="starter_bounty_night">Bounty night</string>
+    <string name="presets_starter_more">More options for the %1$s starter</string>
+    <string name="presets_copy_starter">Copy to my presets</string>
+    <string name="presets_load_starter_confirm">Load starter</string>
+
+    <!-- The welcome on the setup page, on a new install only, until dismissed (PP-113) -->
+    <string name="welcome_line">Set up tonight and press Start, or begin with a starter night. Everything stays on this phone.</string>
+    <string name="welcome_see_starters">See starters</string>
+    <string name="welcome_dismiss">Dismiss welcome</string>
 
     <!-- A preset as a small file, for a friend: shared, and opened -->
     <string name="presets_share_file_action">Share as file</string>
@@ -72,6 +87,7 @@
     <string name="presets_snackbar_loaded">%1$s loaded</string>
     <string name="presets_snackbar_renamed">Renamed to %1$s</string>
     <string name="presets_snackbar_deleted">%1$s deleted</string>
+    <string name="presets_snackbar_copied">%1$s added to your presets</string>
     <string name="presets_undo">Undo</string>
 
     <!-- The setup as text, for the group chat. Its payouts use the Payouts tab's share lines. -->

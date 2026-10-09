@@ -198,6 +198,14 @@ finish() {
   local fatal anr
   fatal=$(grep -c "FATAL EXCEPTION" "$OUT/logcat.txt" || true)
   anr=$(grep -c "ANR in $APP_ID" "$OUT/logcat.txt" || true)
+  # Debug builds log main-thread disk work and leaks (MainApplication's StrictMode): the app's own
+  # lines (by its uid; other apps log theirs too) go to strictmode.txt. A count, not a failure.
+  local uid strict=0
+  uid="$(adb_ shell pm list packages -U "$APP_ID" 2>/dev/null | tr -d '\r' | sed -n "s/^package:$APP_ID uid://p" | head -1 || true)"
+  if [[ -n "$uid" ]]; then
+    adb_ logcat -d --uid="$uid" -v threadtime -s 'StrictMode:*' > "$OUT/strictmode.txt" 2>/dev/null || true
+    strict=$(grep -c "StrictMode policy violation" "$OUT/strictmode.txt" || true)
+  fi
   local total_secs; total_secs=$(since "$T0")
   local verdict=PASS
   (( FAILED > 0 || fatal > 0 || anr > 0 || ABORTED )) && verdict=FAIL
@@ -211,6 +219,7 @@ finish() {
     echo "- Device: $ANDROID_SERIAL, AVD \`$PP_AVD\`, Android $(adb_ shell getprop ro.build.version.release | tr -d '\r') (API $(adb_ shell getprop ro.build.version.sdk | tr -d '\r')), $(adb_ shell wm size | awk '{print $NF}' | tr -d '\r') @ $(adb_ shell wm density | awk '{print $NF}' | tr -d '\r')dpi"
     echo "- Steps: $PASSED passed, $FAILED failed, of $STEP_NO run$( (( ABORTED )) && echo ' (interrupted)')"
     echo "- Logcat: $fatal FATAL EXCEPTION, $anr ANR (full log: [logcat.txt](logcat.txt))"
+    echo "- StrictMode: $strict warnings (debug builds only: [strictmode.txt](strictmode.txt))"
     echo "- Timing: boot ${BOOT_SECS}s, build+install ${INSTALL_SECS}s, total ${total_secs}s"
     echo
     echo "Each step has a screenshot (\`NN-name.png\`) and a UI tree dump (\`NN-name.xml\`)."
@@ -328,6 +337,32 @@ s_launch() {
   # ticket shows level 1 with its full time; Start sits at the foot of the page.
   ui assert-text "text=Tournament" "desc=Reset tournament" Bank Payouts Tools "text~=Setup · not started" \
     "text~=Level 1 · ready" text=20:00 "has=Buy-in" "Start clock" || return 1
+  require_tab_selected Tournament
+}
+# The first run (PP-113): a new install (launch cleared the data) gets one welcome line above the
+# ticket, pointing at the starter nights in the presets sheet. A starter loads with one tap (a new
+# tournament has nothing to lose, so there's no question) and Undo puts the setup back as it was.
+s_starters() {
+  ui assert-text "text~=Everything stays on this phone" "text=See starters" "desc=Dismiss welcome" || return 1
+  ui tap "text=See starters"
+  ui wait "text=STARTERS"
+  ui scroll-to "text=Bounty night" --in scrollable --max 4
+  ui assert-text "text=Turbo" "text=Classic" "text=Deep stack" "text=Bounty night" "desc=More options for the Turbo starter" \
+    || return 1
+  ui tap "text=Turbo"
+  ui wait-gone "text=STARTERS"
+  ui assert-text "text=Turbo loaded" text=UNDO "text~=Level 1 · ready" text=10:00 || return 1
+  ui tap text=UNDO
+  ui wait-gone text=UNDO --timeout 15 || return 1
+  ui assert-text "text~=Level 1 · ready" text=20:00 "text~=Everything stays on this phone"
+}
+# ✕ hides the welcome for good: gone at once, and a fresh start of the app doesn't bring it back.
+s_welcome_dismiss() {
+  ui tap "desc=Dismiss welcome"
+  ui wait-gone "desc=Dismiss welcome" || return 1
+  ui launch                                   # force-stop and start again, the data kept
+  ui assert-text "text~=Level 1 · ready" text=20:00 "has=Buy-in" "Start clock" || return 1
+  if ui find "desc=Dismiss welcome" --timeout 2 >/dev/null 2>&1; then echo "[ui] FAIL the welcome came back"; return 1; fi
   require_tab_selected Tournament
 }
 s_tournament_config() {
@@ -1261,7 +1296,7 @@ s_tools() {
   ui assert-text "Everything works offline" text=Odds "text=Chip set" "text=Hand ranks" || return 1
   require_tab_selected Tools || return 1
   # The Sound section comes after the tools: on a phone it is below the fold
-  ui scroll-to "Test chime" --max 4
+  ui scroll-to "Test chime" --max 6
   ui assert-text text=Sound "desc=Chime volume" "Test chime"
 }
 # The Sound row is one switch; the uiautomator node that holds "Sound" and is checkable.
@@ -1386,7 +1421,9 @@ PY
 s_hand_ranks() {
   # S12: a tool's screen keeps Tools selected (B16) and has a back arrow. Each hand shows how often
   # it comes up by the river: the royal flush is 1 in 30,940 of the 133,784,560 seven-card hands.
-  ui scroll-to "text=Hand ranks" --dir up --max 4   # the Sound steps left the list scrolled down
+  # Back to the top of the list from the Sound section, as the steps after expect (Odds in view)
+  ui scroll up --times 4
+  ui scroll-to text=Odds --dir up --max 4
   ui tap "text=Hand ranks"
   ui assert-text "Best to worst" desc=Back "re=Royal flush" "re=1 in 30,940" || return 1
   require_tab_selected Tools || return 1
@@ -2070,6 +2107,8 @@ s_app_alive() {
 }
 
 step launch               "Fresh launch (data cleared): setup page, ready ticket" s_launch
+step starters             "Welcome > See starters: Turbo loads, Undo puts it back" s_starters
+step welcome-dismiss      "Dismiss the welcome; a fresh start doesn't bring it back" s_welcome_dismiss
 step tournament-config    "Type buy-in 12.50 key by key, bounty 5, players 10"  s_tournament_config
 step payouts-tab          "Payouts tab (S6): rows add up to the prize pool"     s_payouts_tab
 step payouts-preset       "Top-heavy: 1st gets what its preview said"           s_payouts_preset
@@ -2151,6 +2190,7 @@ step seat-draw-button     "Deal for the button: high card, blinds by seat"      
 step seat-draw-undo       "Redraw seats, then Undo brings the draw back"        s_seat_draw_undo
 step seat-draw-share      "Share as text: the share sheet opens and closes"     s_seat_draw_share
 step seat-draw-back       "Back to the Tools list"                              s_seat_draw_back
+source "$DEVICE_SCRIPTS/steps-table-tools.sh"   # Outs & pot odds, Side pots, Deal maker (S20 to S22)
 step backup               "Tools > Backup: save and restore, Tools selected"    s_backup
 step backup-save          "Save backup…: the file picker saves the file"        s_backup_save
 step backup-open          "Open it again: the preview names what it holds"      s_backup_open

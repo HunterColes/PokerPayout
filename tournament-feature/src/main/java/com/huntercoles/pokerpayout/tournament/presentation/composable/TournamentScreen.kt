@@ -1,7 +1,6 @@
 package com.huntercoles.pokerpayout.tournament.presentation.composable
 
 import android.Manifest
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import androidx.activity.ComponentActivity
@@ -56,6 +55,7 @@ import com.huntercoles.pokerpayout.core.presentation.RequestOrientation
 import com.huntercoles.pokerpayout.core.presentation.findActivity
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.tournament.R
+import com.huntercoles.pokerpayout.tournament.live.NotificationsAsk
 import com.huntercoles.pokerpayout.tournament.presentation.PurchaseKind
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
@@ -88,7 +88,7 @@ fun TournamentScreen(
     val timer by timerViewModel.uiState.collectAsStateWithLifecycle()
     val presets by presetsViewModel.uiState.collectAsStateWithLifecycle()
     var ui by rememberSaveable { mutableStateOf(TournamentUi.initial(timerViewModel.uiState.value.hasTimerStarted)) }
-    val askForNotifications = rememberNotificationsAsk(timerViewModel)
+    val askForNotifications = rememberNotificationsAsk()
     val onPresetIntent = rememberPresetIntents(presetsViewModel, presets.sharing)
     val context = LocalContext.current
     val actions = remember(
@@ -145,23 +145,22 @@ private fun rememberCueFlashes(timerViewModel: TimerViewModel): FlashRequest? {
 }
 
 /**
- * PP-081: on Android 13 and up, asks once ever for permission to post notifications, so the live
- * clock can show in the shade and on the lock screen. Never again, whatever the answer: everything
- * else works without it, and Tools, Sound offers the way back to it.
+ * PP-081: on Android 13 and up, asks once on this phone for permission to post notifications, so
+ * the live clock can show in the shade and on the lock screen. Never again once answered: everything
+ * else works without it, and Tools, Sound offers the way back to it. Android keeps the answer, not
+ * the app, so a phone restored from a backup asks too (PP-137, [NotificationsAsk]).
  */
 @Composable
-private fun rememberNotificationsAsk(timerViewModel: TimerViewModel): () -> Unit {
+private fun rememberNotificationsAsk(): () -> Unit {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         // Allowed or not, the clock starts as asked; the notification shows only if allowed
     }
-    return remember(context, launcher, timerViewModel) {
+    return remember(context, launcher) {
         {
-            val missing = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-            if (missing && timerViewModel.takeNotificationsAsk()) {
-                runCatching { launcher.launch(Manifest.permission.POST_NOTIFICATIONS) }
-            }
+            val ask = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                context.findActivity()?.let(NotificationsAsk::shouldAsk) == true
+            if (ask) runCatching { launcher.launch(Manifest.permission.POST_NOTIFICATIONS) }
         }
     }
 }

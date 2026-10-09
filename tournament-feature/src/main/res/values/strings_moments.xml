@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- PP-111: the night's big moments on the clock, and the champion's screen (S25) -->
+    <!-- PP-111: the night's big moments on the clock, and the champion's screen (S29) -->
     <string name="moment_bubble_title">On the bubble</string>
     <string name="moment_bubble_line">One more out, then everyone left is paid.</string>
     <string name="moment_in_the_money_title">In the money!</string>

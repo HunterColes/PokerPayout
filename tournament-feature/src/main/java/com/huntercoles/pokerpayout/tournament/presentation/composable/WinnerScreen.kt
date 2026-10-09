@@ -62,7 +62,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * PP-111: the champion's screen (S25), what the champion moment leads into: their name with a burst
+ * PP-111: the champion's screen (S29), what the champion moment leads into: their name with a burst
  * of gold, what the paid places won, and the way to "Save this night" in History. It is the Payouts
  * tab's own picture of the night ([PayoutsUiState]), so the names and the amounts are the Bank's to
  * the cent, and saving is the Payouts tab's save.

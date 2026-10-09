@@ -2036,7 +2036,7 @@ s_bank_pko() {
 # The PKO night above, on the clock: five players, Player 2 out, two places paid, and the seat
 # draw's tables of three (from its steps). The Bank's knockouts bring the bubble and the final table
 # at once (three left: the bigger, the final table, shows; the pill says the bubble) and heads-up
-# (two) to the clock; the table view's Knock out makes the champion, whose screen (S25) takes the
+# (two) to the clock; the table view's Knock out makes the champion, whose screen (S29) takes the
 # clock's place. Its UNDO takes it back, the
 # knockout again brings it again, and then its way to History: pay out in the Bank, then "Save
 # this night" on it. A banner's title starts its text ("re=^"), the pill beside the players left
@@ -2090,7 +2090,7 @@ s_moment_champion() {
   ui assert-text "text=Knock out" "desc=Exit table view"
 }
 s_moment_again() {
-  # Recorded again, the champion's screen (S25) opens again: what the paid places won and, while
+  # Recorded again, the champion's screen (S29) opens again: what the paid places won and, while
   # they are owed, the way to the Bank
   table_knockout_player_5
   ui assert-text "text=Pay out in the Bank" "text=PAYOUTS" "desc=Back to the clock"
@@ -2256,7 +2256,7 @@ step moments-start        "Big moments: start the clock on the PKO night"       
 step moment-final-table   "A Bank knockout: \"Final table\", on the bubble"     s_moment_final_table
 step moment-heads-up      "Another: \"Heads-up\" on the clock"                  s_moment_heads_up
 step moment-champion      "Table view knockout: champion's screen; UNDO, gone"  s_moment_champion
-step moment-again         "Knocked out again: the champion's screen (S25)"      s_moment_again
+step moment-again         "Knocked out again: the champion's screen (S29)"      s_moment_again
 step moment-pay           "Pay out in the Bank: champion and runner-up paid"    s_moment_pay
 step moment-save          "Save this night on it; Open History has the night"   s_moment_save
 step moment-close         "Close: the clock's champion card leads back to it"   s_moment_close

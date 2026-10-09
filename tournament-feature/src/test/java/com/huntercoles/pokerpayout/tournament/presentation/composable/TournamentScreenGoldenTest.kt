@@ -61,7 +61,7 @@ import java.util.TimeZone
  * goldens on the landscape phone cells are table views; the tablet-land cell is the two-pane Z4.
  * The table view has its Knock out button (PP-135); the Bank's panel behind it is a stand-in here
  * ([FakeTableKnockouts]) and bank-feature's QuickKnockoutScreensTest checks the real one. The big
- * moments and the champion's screen (PP-111, S25) are drawn as the clock shows them.
+ * moments and the champion's screen (PP-111, S29) are drawn as the clock shows them.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -244,7 +244,7 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
     }
 
     /**
-     * PP-111: the champion's screen (S25), what the last knockout opens: upright, sideways (the
+     * PP-111: the champion's screen (S29), what the last knockout opens: upright, sideways (the
      * two-pane tablet) and on a phone's table view. Before everyone is paid it leads to the Bank;
      * then it offers "Save this night", then says where the night went (checked, not drawn), with a
      * long name fitted to the width.
@@ -253,14 +253,14 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
     fun champion() {
         val running = TournamentUi(mode = TournamentMode.Running)
         val over = fixture.running.championDana().copy(winnerOpen = true)
-        showAndCheck("S25_winner", scroll = true) {
+        showAndCheck("S29_winner", scroll = true) {
             TournamentContent(setup, over, running, TournamentActions(), winner = WINNER)
         }
-        showAndCheck("S25_winner_save", scroll = true, golden = false) {
+        showAndCheck("S29_winner_save", scroll = true, golden = false) {
             TournamentContent(setup, over, running, TournamentActions(), winner = WINNER.copy(night = NightSave.Offered))
         }
         val longName = WINNER.copy(championName = LONG_NAME, night = NightSave.Saved)
-        showAndCheck("S25_winner_saved", scroll = true, golden = false) {
+        showAndCheck("S29_winner_saved", scroll = true, golden = false) {
             TournamentContent(setup, over, running, TournamentActions(), winner = longName)
         }
     }

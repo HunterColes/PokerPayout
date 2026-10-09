@@ -170,7 +170,7 @@ private fun rememberNotificationsAsk(timerViewModel: TimerViewModel): () -> Unit
  * view the phone was turned into holds the clock upright until the phone is held upright again
  * (PP-094 #2): turned sideways after that, it shows the table view again.
  *
- * PP-111: once the last knockout leaves a champion, their screen ([winner], S25) takes the tab's
+ * PP-111: once the last knockout leaves a champion, their screen ([winner], S29) takes the tab's
  * place, upright or sideways, until ✕ or Back.
  */
 @Suppress("LongParameterList") // the tab's states, what it does, and the champion's screen

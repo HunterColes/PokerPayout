@@ -36,7 +36,7 @@ import org.robolectric.annotation.Config
 /**
  * PP-111 on screen: a big moment's banner on the clock (it says what happened, TalkBack hears it,
  * and it goes after its time), the champion's card that leads back to their screen, and the
- * champion's screen itself (S25): what each of its buttons asks for, Back on it, and the last
+ * champion's screen itself (S29): what each of its buttons asks for, Back on it, and the last
  * knockout's mystery envelope showing over it first. The clock's ViewModel is BigMomentsClockTest's.
  */
 @RunWith(RobolectricTestRunner::class)

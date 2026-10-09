@@ -299,7 +299,10 @@ and carries on. Use `--keep-going` to run all steps even after a failure.
 The live clock steps read the notification from `dumpsys notification --noredact` (the record the app
 posted: its extras, actions and visibility), which needs no screenshot of the shade and works with
 SystemUI's demo mode on. The tour then returns to the app from the launcher (`live-clock-back`):
-the clock must still be running and the notification gone.
+the clock must still be running and the notification gone. `live-clock-flap` then leaves and comes
+back ten times in one shell with no waits (the race the monkey found: a Hide that ended the service
+while a Show it owed `startForeground` for was pending crashed the app), and checks the clock is
+still running, the notification gone, and nothing crashed.
 
 Pause and Open are tapped in the real shade (`cmd statusbar expand-notifications`, then
 uiautomator) only in the opt-in steps `live-clock-pause` and `live-clock-open`: on the API 34

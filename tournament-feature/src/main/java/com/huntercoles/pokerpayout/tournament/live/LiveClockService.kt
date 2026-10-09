@@ -51,6 +51,9 @@ class LiveClockService : Service() {
     private var observing: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
+    /** The newest start request delivered here; stopping with it never cancels a newer one (see [stop]). */
+    private var lastStartId = 0
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -59,14 +62,16 @@ class LiveClockService : Service() {
         LiveClockNotification.createChannel(this)
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int =
-        if (intent?.action == ACTION_HIDE) {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        lastStartId = startId
+        return if (intent?.action == ACTION_HIDE) {
             stop()
             START_NOT_STICKY
         } else {
             show()
             START_STICKY
         }
+    }
 
     /** Foreground at once (a promise made by startForegroundService), then the driver takes over. */
     private fun show() {
@@ -120,6 +125,14 @@ class LiveClockService : Service() {
         }
     }
 
+    /**
+     * Gone from the shade, and the service ends unless a newer start is on its way. The app coming back
+     * and leaving again in a moment sends Hide, then Show; Show comes through startForegroundService,
+     * which promises startForeground. A plain stopSelf() on the Hide would end the service with that
+     * promise pending, and Android crashes the app for it (ForegroundServiceDidNotStartInTimeException,
+     * found by the monkey). stopSelf(startId) does nothing when a newer start is pending: Show then
+     * arrives and calls startForeground.
+     */
     private fun stop() {
         observing?.cancel()
         observing = null
@@ -127,7 +140,7 @@ class LiveClockService : Service() {
         driving = null
         keepAwake(null)
         stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        stopSelf(lastStartId)
     }
 
     override fun onDestroy() {

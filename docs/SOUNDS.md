@@ -13,7 +13,7 @@ sound pack. Everything here is offline and asks for no new permission.
 | Music player | `core/.../audio/music/MusicPlayer.kt` | The platform `MediaPlayer` (no library: the APK stays small and plays every format the phone does). Audio focus: a call pauses it until it's over, another music app stops it, a notification dips it. Headphones out pause it. |
 | Playlist | `core/.../audio/music/Playlist.kt` | Songs in the host's order, shuffle (every song once a pass; the random numbers come from the caller, so tests seed them), repeat off, all or one. Songs whose files have gone are passed over. |
 | Play with the clock | `core/.../audio/music/MusicAutoPlay.kt`, `tournament-feature/.../live/TournamentMusicLink.kt` | Starts the music when the clock runs, pauses it when the clock is paused or over; on breaks it keeps playing, pauses or plays quieter, as the host chose. It acts on changes only, so the host's own Play and Pause stand in between. |
-| Screens | `tools-feature/.../composable/MusicScreen.kt`, `CueSoundsScreen.kt` | Tools > Sound > Music (S17) and Cue sounds (S18). |
+| Screens | `tools-feature/.../composable/MusicScreen.kt`, `CueSoundsScreen.kt` | Tools > Sound > Music (S18) and Cue sounds (S18). |
 
 ### Songs from the phone
 

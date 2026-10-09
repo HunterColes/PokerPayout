@@ -65,7 +65,7 @@ fun MusicRoute(onBack: () -> Unit, viewModel: MusicViewModel = hiltViewModel()) 
 private const val AUDIO_FILES = "audio/*"
 
 /**
- * Music (S17), stateless: what plays and the buttons to play it, the music's volume, playing with
+ * Music (S18), stateless: what plays and the buttons to play it, the music's volume, playing with
  * the clock (and what it does on breaks), the songs (tap one to play it; Edit to move or remove),
  * and the songs that come with the app, none yet.
  */

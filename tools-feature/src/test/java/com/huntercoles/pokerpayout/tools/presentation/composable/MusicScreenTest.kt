@@ -19,10 +19,10 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Music (S17) and Cue sounds (S18) inside the app's shell on every cell of the device matrix: text
+ * Music (S18) and Cue sounds (S18) inside the app's shell on every cell of the device matrix: text
  * fits and is never clipped at any scroll position, 48 dp targets that don't overlap. Goldens on
- * [DeviceMatrix.goldens]: `S17_music_empty` (a fresh install), `S17_music_playing` (five songs, one
- * playing, one whose file has gone, with the clock and quieter on breaks), `S17_music_editing` (move
+ * [DeviceMatrix.goldens]: `S18_music_empty` (a fresh install), `S18_music_playing` (five songs, one
+ * playing, one whose file has gone, with the clock and quieter on breaks), `S18_music_editing` (move
  * and remove), `S18_cue_sounds` and `S18_cue_sounds_off` (the sound switched off). Every file gone
  * and the built-in songs (none ship yet) get the layout checks too.
  */
@@ -34,13 +34,13 @@ class MusicScreenTest(private val config: ScreenConfig) {
     val screen = ScreenTestRule(config)
 
     @Test
-    fun musicEmpty() = music("S17_music_empty", MusicFixtures.empty)
+    fun musicEmpty() = music("S18_music_empty", MusicFixtures.empty)
 
     @Test
-    fun musicPlaying() = music("S17_music_playing", MusicFixtures.playing)
+    fun musicPlaying() = music("S18_music_playing", MusicFixtures.playing)
 
     @Test
-    fun musicEditing() = music("S17_music_editing", MusicFixtures.editing)
+    fun musicEditing() = music("S18_music_editing", MusicFixtures.editing)
 
     @Test
     fun musicNothingPlayable() = music(name = null, MusicFixtures.nothingPlayable)
@@ -60,7 +60,7 @@ class MusicScreenTest(private val config: ScreenConfig) {
                 MusicContent(state, onIntent = {}, onBack = {}, onAddSongs = {})
             }
         }
-        check(name ?: "S17 (layout only)", golden = name)
+        check(name ?: "S18 (layout only)", golden = name)
     }
 
     private fun cueSounds(name: String, state: CueSoundsUiState) {

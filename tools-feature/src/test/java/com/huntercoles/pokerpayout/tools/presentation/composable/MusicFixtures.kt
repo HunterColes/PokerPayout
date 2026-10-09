@@ -8,7 +8,7 @@ import com.huntercoles.pokerpayout.core.audio.packs.SoundPacks
 import com.huntercoles.pokerpayout.tools.presentation.CueSoundsUiState
 import com.huntercoles.pokerpayout.tools.presentation.MusicUiState
 
-/** The Music (S17) and Cue sounds (S18) screens' states for the tests and goldens. */
+/** The Music (S18) and Cue sounds (S18) screens' states for the tests and goldens. */
 internal object MusicFixtures {
     val songs = listOf(
         MusicTrack("content://music/1", "Shuffle Up and Deal"),

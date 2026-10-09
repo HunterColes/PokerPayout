@@ -1227,7 +1227,7 @@ s_cue_sounds() {
   ui assert-text "text=Classic" "desc=Play Game over, Classic"
 }
 s_music() {
-  # S17: Music, from the Sound section: no songs yet, nothing built in yet; Play with the clock
+  # S18: Music, from the Sound section: no songs yet, nothing built in yet; Play with the clock
   # switches on and breaks can be quieter; then off again for the steps after.
   ui back                                      # Cue sounds -> the Tools list
   ui scroll-to "text=No songs yet" --max 6
@@ -1838,7 +1838,7 @@ step tools                "Tools tab: tool list and Sound (S7)"                 
 step sound-off            "Sound off: switch off, volume and chime rest"        s_sound_off
 step sound-on             "Sound back on; test chime"                           s_sound_on
 step cue-sounds           "Cue sounds (S18): the classic pack, each sound plays" s_cue_sounds
-step music                "Music (S17): no songs yet; play with the clock"      s_music
+step music                "Music (S18): no songs yet; play with the clock"      s_music
 step music-song           "Music: a song from the file picker plays, pauses"    s_music_song
 step hand-ranks           "Hand ranks (S12): how often by the river, kickers"   s_hand_ranks
 step seat-draw            "Seat draw (S14): the Bank's players, Tools selected" s_seat_draw

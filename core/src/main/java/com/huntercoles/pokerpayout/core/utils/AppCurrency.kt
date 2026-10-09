@@ -3,6 +3,11 @@ package com.huntercoles.pokerpayout.core.utils
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.huntercoles.pokerpayout.core.utils.DigitStyle.APOSTROPHE
+import com.huntercoles.pokerpayout.core.utils.DigitStyle.COMMA
+import com.huntercoles.pokerpayout.core.utils.DigitStyle.LAKH
+import com.huntercoles.pokerpayout.core.utils.DigitStyle.POINT
+import com.huntercoles.pokerpayout.core.utils.DigitStyle.SPACE
 import com.huntercoles.pokerpayout.core.utils.SymbolPlacement.AFTER_SPACED
 import com.huntercoles.pokerpayout.core.utils.SymbolPlacement.BEFORE
 import com.huntercoles.pokerpayout.core.utils.SymbolPlacement.BEFORE_SPACED
@@ -14,14 +19,35 @@ import kotlin.math.abs
 enum class SymbolPlacement { BEFORE, BEFORE_SPACED, AFTER_SPACED }
 
 /**
+ * How a currency writes the number itself: the mark between groups of digits, the decimal mark, and
+ * whether the groups after the first thousand go in twos (lakhs and crores, [LAKH]).
+ */
+enum class DigitStyle(val groupSeparator: Char, val decimalMark: Char, val indianGroups: Boolean = false) {
+    /** 1,234,567.50 */
+    POINT(',', '.'),
+
+    /** 1.234.567,50 */
+    COMMA('.', ','),
+
+    /** 1 234 567,50, the groups held together by no-break spaces. */
+    SPACE(NO_BREAK_SPACE, ','),
+
+    /** 1’234’567.50 */
+    APOSTROPHE('’', '.'),
+
+    /** 12,34,567.50 */
+    LAKH(',', '.', indianGroups = true),
+}
+
+/**
  * A currency the host can show amounts in (PP-114, Tools > Currency). Only the display changes:
  * amounts stay whole cents ([Money]) whatever is picked, so switching back and forth changes nothing
  * saved, and the maths (payouts, settle-up, bounties) is the same in every currency.
  *
  * Each one carries its own conventions, fixed here rather than read from the phone's locale, so a
- * pick looks the same on every phone and in every share text: where the symbol goes (always held to
- * the number by a no-break space when spaced), the digit grouping ([indianGrouping]: 1,23,456) and
- * the decimal mark. A minus goes in front of everything: "-$10", "-10 €".
+ * pick looks the same on every phone and in every share text: where the symbol goes (held to the
+ * number by a no-break space when spaced) and how the digits are written ([digits]). A minus goes in
+ * front of everything: "-$10", "-10 €".
  *
  * [decimals] is 0 for a currency whose cents nobody uses (the yen): amounts show in whole units,
  * rounded half up, and money fields take whole numbers. What is saved keeps its cents.
@@ -32,26 +58,24 @@ enum class AppCurrency(
     val key: String,
     val symbol: String,
     val placement: SymbolPlacement,
-    val groupSeparator: Char,
-    val decimalMark: Char,
+    val digits: DigitStyle,
     val decimals: Int = 2,
-    val indianGrouping: Boolean = false,
 ) {
-    DOLLAR("dollar", "$", BEFORE, ',', '.'),
-    EURO("euro", "€", AFTER_SPACED, '.', ','),
-    EURO_FIRST("euro_first", "€", BEFORE, ',', '.'),
-    POUND("pound", "£", BEFORE, ',', '.'),
-    RUPEE("rupee", "₹", BEFORE, ',', '.', indianGrouping = true),
-    REAL("real", "R$", BEFORE_SPACED, '.', ','),
-    KRONA("krona", "kr", AFTER_SPACED, NO_BREAK_SPACE, ','),
-    YEN("yen", "¥", BEFORE, ',', '.', decimals = 0),
-    YUAN("yuan", "¥", BEFORE, ',', '.'),
-    FRANC("franc", "CHF", BEFORE_SPACED, '’', '.'),
-    ZLOTY("zloty", "zł", AFTER_SPACED, NO_BREAK_SPACE, ','),
-    RUBLE("ruble", "₽", AFTER_SPACED, NO_BREAK_SPACE, ','),
+    DOLLAR("dollar", "$", BEFORE, POINT),
+    EURO("euro", "€", AFTER_SPACED, COMMA),
+    EURO_FIRST("euro_first", "€", BEFORE, POINT),
+    POUND("pound", "£", BEFORE, POINT),
+    RUPEE("rupee", "₹", BEFORE, LAKH),
+    REAL("real", "R$", BEFORE_SPACED, COMMA),
+    KRONA("krona", "kr", AFTER_SPACED, SPACE),
+    YEN("yen", "¥", BEFORE, POINT, decimals = 0),
+    YUAN("yuan", "¥", BEFORE, POINT),
+    FRANC("franc", "CHF", BEFORE_SPACED, APOSTROPHE),
+    ZLOTY("zloty", "zł", AFTER_SPACED, SPACE),
+    RUBLE("ruble", "₽", AFTER_SPACED, SPACE),
 
     /** Plain numbers ("1,234.50"), for a game played for points or chips, or a currency not listed. */
-    NONE("none", "", BEFORE, ',', '.'),
+    NONE("none", "", BEFORE, POINT),
     ;
 
     /** True when cents show and can be typed; false for the yen. */
@@ -73,7 +97,8 @@ enum class AppCurrency(
         val fraction = abs(cents % Money.CENTS_PER_DOLLAR)
         val units = if (!hasCents && fraction * 2 >= Money.CENTS_PER_DOLLAR) whole + 1 else whole
         val showFraction = hasCents && (alwaysCents || fraction != 0L)
-        val number = group(units) + if (showFraction) "$decimalMark${fraction.toString().padStart(decimals, '0')}" else ""
+        val decimalPart = if (showFraction) "${digits.decimalMark}${fraction.toString().padStart(decimals, '0')}" else ""
+        val number = group(units) + decimalPart
         val shownAsZero = if (hasCents) cents == 0L else units == 0L
         val sign = if (cents < 0 && !shownAsZero) "-" else ""
         return sign + withSymbol(number)
@@ -86,13 +111,14 @@ enum class AppCurrency(
         else -> "$number$NO_BREAK_SPACE$symbol"
     }
 
-    /** "1,234,567", or in lakhs and crores "12,34,567": the last three digits, then twos. */
+    /** "1,234,567", or in lakhs and crores "12,34,567": the last three digits, then threes (or twos). */
     private fun group(units: Long): String {
-        val digits = units.toString()
-        if (digits.length <= THOUSAND_DIGITS) return digits
-        val size = if (indianGrouping) INDIAN_GROUP else THOUSAND_DIGITS
-        val head = digits.dropLast(THOUSAND_DIGITS).reversed().chunked(size).joinToString("$groupSeparator").reversed()
-        return head + groupSeparator + digits.takeLast(THOUSAND_DIGITS)
+        val text = units.toString()
+        if (text.length <= THOUSAND_DIGITS) return text
+        val size = if (digits.indianGroups) INDIAN_GROUP else THOUSAND_DIGITS
+        val separator = digits.groupSeparator
+        val head = text.dropLast(THOUSAND_DIGITS).reversed().chunked(size).joinToString("$separator").reversed()
+        return head + separator + text.takeLast(THOUSAND_DIGITS)
     }
 
     companion object {
@@ -113,27 +139,21 @@ enum class AppCurrency(
          */
         fun forLocale(locale: Locale): AppCurrency {
             val code = runCatching { Currency.getInstance(locale)?.currencyCode }.getOrNull() ?: return DEFAULT
-            return when (code) {
-                "EUR" -> if (locale.language in EURO_FIRST_LANGUAGES) EURO_FIRST else EURO
-                "GBP" -> POUND
-                "INR" -> RUPEE
-                "BRL" -> REAL
-                "SEK", "NOK", "DKK", "ISK" -> KRONA
-                "JPY" -> YEN
-                "CNY" -> YUAN
-                "CHF" -> FRANC
-                "PLN" -> ZLOTY
-                "RUB" -> RUBLE
-                in DOLLAR_CODES -> DOLLAR
-                else -> NONE
-            }
+            val euroFirst = code == "EUR" && locale.language in EURO_FIRST_LANGUAGES
+            return if (euroFirst) EURO_FIRST else BY_CODE[code] ?: NONE
         }
 
         private const val THOUSAND_DIGITS = 3
         private const val INDIAN_GROUP = 2
 
-        /** Currencies written with a plain "$" where they are spent. */
-        private val DOLLAR_CODES = setOf("USD", "CAD", "AUD", "NZD", "SGD", "HKD", "TWD", "MXN", "ARS", "CLP", "COP")
+        /** ISO 4217 codes to the currency that writes them: every "$" currency is the dollar, every krona or krone "kr". */
+        private val BY_CODE: Map<String, AppCurrency> =
+            listOf("USD", "CAD", "AUD", "NZD", "SGD", "HKD", "TWD", "MXN", "ARS", "CLP", "COP").associateWith { DOLLAR } +
+                listOf("SEK", "NOK", "DKK", "ISK").associateWith { KRONA } +
+                mapOf(
+                    "EUR" to EURO, "GBP" to POUND, "INR" to RUPEE, "BRL" to REAL, "JPY" to YEN, "CNY" to YUAN,
+                    "CHF" to FRANC, "PLN" to ZLOTY, "RUB" to RUBLE,
+                )
 
         /** Languages that put the euro sign first, in the English style ("€12.50"). */
         private val EURO_FIRST_LANGUAGES = setOf("en", "ga", "mt")

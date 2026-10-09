@@ -6,12 +6,14 @@ import com.huntercoles.pokerpayout.core.preferences.CurrencyPreferences
 import com.huntercoles.pokerpayout.core.preferences.MusicPreferences
 import com.huntercoles.pokerpayout.core.preferences.PhonePrefs
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
+import com.huntercoles.pokerpayout.core.tip.TipJar
 
 /**
  * Every SharedPreferences file the app keeps, and what a backup does with it. `BackupCoverageTest`
  * finds every file the sources open and fails until it is listed here, so new data can't be left
  * out of backups by accident. Android's own Auto Backup (res/xml/data_extraction_rules.xml) takes
- * every one of them as well, and leaves out the [PHONE_FILES] (`AndroidBackupRulesTest` checks).
+ * every one of them as well, and leaves out the [PHONE_FILES] (`AndroidBackupRulesTest` checks). The
+ * [OWNER_FILES] are the other way round: Android's backup takes them, the in-app one leaves them out.
  */
 object BackupCatalog {
 
@@ -54,6 +56,17 @@ object BackupCatalog {
      * each one out). A new or restored phone starts them empty.
      */
     val PHONE_FILES: Set<String> = setOf(PhonePrefs.FILE)
+
+    /**
+     * PP-112: files about this phone's owner rather than the game. Android's own backup takes them (the
+     * same person on a new phone); the in-app backup leaves them out, and a restore leaves them as they
+     * are: a backup file may be opened on a friend's phone, or an older one restored later.
+     */
+    val OWNER_FILES: Set<String> = setOf(
+        // The "Tip the dealer?" card's counters and answer: a restore may never ask again someone who
+        // said no, and a friend's backup neither asks nor silences this phone's host
+        TipJar.FILE,
+    )
 
     fun filesOf(group: SettingsGroup): List<SettingsFile> = SETTINGS.filter { it.group == group }
 }

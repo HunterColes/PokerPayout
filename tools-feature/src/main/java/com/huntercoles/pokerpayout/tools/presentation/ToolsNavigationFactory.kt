@@ -25,6 +25,7 @@ import com.huntercoles.pokerpayout.tools.presentation.composable.OutsRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.SeatDrawRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ShotClockRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.SidePotsRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.TipRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ToolsHomeScreen
 import javax.inject.Inject
 
@@ -106,6 +107,11 @@ class ToolsNavigationFactory @Inject constructor(
         // The money symbol every amount shows with (PP-114)
         builder.composable<NavigationDestination.Currency> {
             CurrencyRoute(onBack = navigationManager::navigateBack)
+        }
+
+        // Tip the dealer (PP-112): from the foot of the Tools list, and from the card on the Payouts tab
+        builder.composable<NavigationDestination.TipDealer> {
+            TipRoute(onBack = navigationManager::navigateBack)
         }
     }
 }

@@ -41,6 +41,9 @@
     <string name="tools_lock_screen_title">Clock on the lock screen</string>
     <string name="tools_lock_screen_off">Notifications are off, so the running clock can\'t show in the notifications or on the lock screen.</string>
     <string name="tools_lock_screen_allow">Turn on notifications</string>
+    <!-- PP-112: at the foot of the list, next to the app's promise -->
+    <string name="tools_tip_title">Tip the dealer</string>
+    <string name="tools_tip_description">Free, with no ads. A tip keeps it going</string>
     <!-- What the old Settings screen's "About" card said, now under the Tools list -->
     <string name="tools_footer">Free and open source (MIT License).\nNo ads, no accounts, no tracking.\nNo internet permission · v%1$s</string>
 </resources>

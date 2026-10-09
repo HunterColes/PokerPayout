@@ -47,15 +47,22 @@ import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.core.R as CoreR
 
-/** The Payouts tab (S6, D1): [PayoutsContent] over [PayoutsViewModel], with Share as text. */
+/**
+ * The Payouts tab (S6, D1): [PayoutsContent] over [PayoutsViewModel], with Share as text. "Leave a
+ * tip" on the tip card (PP-112) opens the Tip the dealer page through [onOpenTip].
+ */
 @Composable
-fun PayoutsScreen(viewModel: PayoutsViewModel = hiltViewModel()) {
+fun PayoutsScreen(viewModel: PayoutsViewModel = hiltViewModel(), onOpenTip: () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     PayoutsContent(
         state = state,
         onIntent = viewModel::acceptIntent,
         onShare = { sharePayouts(context, PayoutsShareText.build(context, state)) },
+        onLeaveTip = {
+            viewModel.acceptIntent(PayoutsIntent.LeaveTip)
+            onOpenTip()
+        },
     )
 }
 
@@ -72,7 +79,8 @@ private fun sharePayouts(context: Context, text: String) {
  * The Payouts tab, stateless (S6): the pool and where it came from, the structure (presets with
  * what 1st would get, rounding, places), what each place pays with its share of the pool, the
  * bubble, and the bounties. Rows fill in with names as players finish. The structure is locked
- * while the clock runs, and says so.
+ * while the clock runs, and says so. A saved night may have the "Tip the dealer?" card under it
+ * (PP-112), whose "Leave a tip" calls [onLeaveTip].
  */
 @Composable
 fun PayoutsContent(
@@ -80,6 +88,7 @@ fun PayoutsContent(
     onIntent: (PayoutsIntent) -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
+    onLeaveTip: () -> Unit = {},
 ) {
     val gutter = if (LocalWidthClass.current == WidthClass.Small) 12.dp else PokerDimens.Gutter
     Column(modifier = modifier.fillMaxSize()) {
@@ -109,6 +118,7 @@ fun PayoutsContent(
         ) {
             if (state.isLocked) LockedNote()
             if (state.night != NightSave.NotOver) SaveNightCard(state.night, onIntent)
+            if (state.tipCard) TipDealerCard(onLeaveTip, onIntent)
             PoolHero(state)
             StructurePicker(state, onIntent)
             RoundingPicker(state, onIntent)

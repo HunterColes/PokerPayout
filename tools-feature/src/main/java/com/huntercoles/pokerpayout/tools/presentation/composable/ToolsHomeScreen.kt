@@ -107,7 +107,10 @@ private val Tools = listOf(
     Tool(NavigationDestination.Backup, PokerIcons.Save, R.string.tools_backup_title, R.string.tools_backup_description),
 )
 
-/** The Tools tab (S7): the tools as a list, the currency, then the Sound section, then the app's promise. */
+/**
+ * The Tools tab (S7): the tools as a list, the currency, then the Sound section, then Tip the dealer
+ * and the app's promise.
+ */
 @Composable
 fun ToolsHomeScreen(
     navigationManager: NavigationManager,
@@ -172,6 +175,13 @@ fun ToolsHomeContent(
                 onClick = { onOpenTool(NavigationDestination.Currency) },
             )
             SoundSection(state = state, onIntent = onIntent, onAllowNotifications = onAllowNotifications, onOpen = onOpenTool)
+            // PP-112: quietly at the foot of the list, next to the app's promise
+            ToolRow(
+                icon = PokerIcons.Heart,
+                title = stringResource(R.string.tools_tip_title),
+                description = stringResource(R.string.tools_tip_description),
+                onClick = { onOpenTool(NavigationDestination.TipDealer) },
+            )
             Text(
                 text = stringResource(R.string.tools_footer, versionName),
                 style = MaterialTheme.typography.bodySmall,

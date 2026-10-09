@@ -25,8 +25,11 @@ class NightRecorder @Inject constructor(
     val nights: StateFlow<List<SavedNight>> get() = store.nights
 
     /** True when History already holds a night with exactly these results. */
-    fun isSaved(players: List<NightPlayer>, prizePoolCents: Long): Boolean =
-        store.nights.value.any { it.prizePoolCents == prizePoolCents && it.players == players }
+    fun isSaved(players: List<NightPlayer>, prizePoolCents: Long): Boolean = savedId(players, prizePoolCents) != null
+
+    /** The id of the night in History with exactly these results, or null. */
+    fun savedId(players: List<NightPlayer>, prizePoolCents: Long): Long? =
+        store.nights.value.firstOrNull { it.prizePoolCents == prizePoolCents && it.players == players }?.id
 
     fun save(players: List<NightPlayer>, prizePoolCents: Long): SavedNight = store.add(
         SavedNight(

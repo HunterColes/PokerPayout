@@ -147,7 +147,8 @@ Poker Payout is free: no ads, nothing locked, nothing to sign up for. If it has 
 poker nights and you'd like to say thanks, a donation is the nicest way. It pays for the time that
 goes into new features and fixes.
 
-**[Donate in Ethereum or Monero](crypto/DONATIONS.md)** (addresses and QR codes)
+**[Donate in Ethereum or Monero](crypto/DONATIONS.md)** (addresses and QR codes). The app shows
+them too, offline: **Tools > Tip the dealer**.
 
 No crypto? These help just as much, and cost nothing:
 

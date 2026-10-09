@@ -3,6 +3,20 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.14 (on master, not published)
+
+Tip the dealer, a friendly way to support the app:
+
+- **Tip the dealer in Tools:** a quiet row at the foot of the list, next to the app's promise. Its
+  page has the donation page (it opens in your browser; the app still has no internet permission)
+  and the Ethereum and Monero addresses with their QR codes, which work offline. Copy puts an
+  address on the clipboard and says "Copied". Telling a friend, a star and an idea are there too.
+- **One gentle card, at most twice:** after the third night saved to History, "Tip the dealer?"
+  sits under "Saved to History" on the Payouts tab, with Leave a tip, Not now and Don't ask again,
+  each one tap. It never shows on the app's first run or while the clock runs, comes at most twice
+  (three nights apart), and Don't ask again ends it for good. The answer stays on this phone: a
+  backup file never brings the card back, and Android's own backup keeps it on a new phone.
+
 ## 1.4.13 (on master, not published)
 
 Late arrivals and re-entries:

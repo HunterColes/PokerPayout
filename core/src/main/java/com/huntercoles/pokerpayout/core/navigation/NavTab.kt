@@ -41,6 +41,7 @@ val NavigationDestination.tab: NavTab?
         NavigationDestination.Outs,
         NavigationDestination.SidePots,
         NavigationDestination.DealMaker,
+        NavigationDestination.TipDealer,
         -> NavTab.Tools
         NavigationDestination.Back -> null
     }
@@ -66,6 +67,7 @@ val ScreenDestinations: List<NavigationDestination> = listOf(
     NavigationDestination.Outs,
     NavigationDestination.SidePots,
     NavigationDestination.DealMaker,
+    NavigationDestination.TipDealer,
 )
 
 /** The tab to show as selected while this destination is on top, or null when it isn't a screen. */

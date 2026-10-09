@@ -47,15 +47,16 @@ class BackupCoverageTest {
         }
         assertTrue(unresolved.isEmpty(), "Can't tell which file these open; use a constant in the same file:\n$unresolved")
         assertTrue(opened.isNotEmpty(), "found no SharedPreferences at all under $root")
-        val missing = opened.keys - BackupCatalog.FILES - BackupCatalog.PHONE_FILES
+        val missing = opened.keys - BackupCatalog.FILES - BackupCatalog.PHONE_FILES - BackupCatalog.OWNER_FILES
         assertTrue(
             missing.isEmpty(),
             "Not in any backup: ${missing.associateWith { opened[it] }}. List each in BackupCatalog (core/backup): " +
                 "SETTINGS to save it whole with a settings group, or COLLECTIONS with a BackupSection of its own " +
-                "(or, for what's about this phone alone, PHONE_FILES, left out of Android's backup rules too).",
+                "(or, for what's about this phone alone, PHONE_FILES, left out of Android's backup rules too; " +
+                "or OWNER_FILES, which only Android's backup takes).",
         )
         assertEquals(
-            BackupCatalog.FILES + BackupCatalog.PHONE_FILES,
+            BackupCatalog.FILES + BackupCatalog.PHONE_FILES + BackupCatalog.OWNER_FILES,
             opened.keys,
             "BackupCatalog lists a file nothing opens any more",
         )
@@ -81,6 +82,8 @@ class BackupCoverageTest {
         assertEquals(names.distinct(), names, "a settings file listed twice")
         assertTrue(BackupCatalog.COLLECTIONS.keys.none { it in names }, "a file both saved whole and item by item")
         assertTrue(BackupCatalog.PHONE_FILES.none { it in BackupCatalog.FILES }, "a phone-only file in a backup")
+        assertTrue(BackupCatalog.OWNER_FILES.none { it in BackupCatalog.FILES }, "an owner's file in the in-app backup")
+        assertTrue(BackupCatalog.OWNER_FILES.none { it in BackupCatalog.PHONE_FILES }, "a file listed as both")
         val keys = SettingsGroup.entries.map { it.key } + BackupCatalog.COLLECTIONS.values
         assertEquals(keys.distinct(), keys, "two sections with one key")
         SettingsGroup.entries.forEach { group -> assertTrue(BackupCatalog.filesOf(group).isNotEmpty(), "$group has no files") }

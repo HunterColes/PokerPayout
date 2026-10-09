@@ -16,6 +16,7 @@ import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -134,5 +135,48 @@ class PayoutsScreenTest {
         compose.onNodeWithText("Saved to History, in the Tools tab.").assertExists()
         compose.onNodeWithText("Save this night").assertDoesNotExist()
         assertEquals(1, game.nights.nights.value.size)
+    }
+
+    // PP-112: the "Tip the dealer?" card, each answer one tap -----------------------------------------
+
+    /** The third night saved on a later run (two saved before on this phone): the card under it. */
+    private fun saveTheThirdNight(onOpenTip: () -> Unit = {}) {
+        game.settled().laterRun()
+        listOf(901L, 902L).forEach(game.tip::nightSaved)
+        val viewModel = game.viewModel()
+        compose.setContent { PokerTheme(reducedMotion = true) { PayoutsScreen(viewModel, onOpenTip = onOpenTip) } }
+        compose.onNodeWithText("Save this night").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Tip the dealer?").assertExists()
+    }
+
+    private fun answer(button: String) {
+        compose.onNodeWithText(button).performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Tip the dealer?").assertDoesNotExist()
+    }
+
+    @Test
+    fun leaveATipOpensThePageAndTheCardNeverComesBack() {
+        var opened = 0
+        saveTheThirdNight(onOpenTip = { opened++ })
+        answer("Leave a tip")
+        assertEquals(1, opened)
+        assertTrue(game.tip.ask.value.stopped)
+    }
+
+    @Test
+    fun dontAskAgainIsOneTapForGood() {
+        saveTheThirdNight()
+        answer("Don't ask again")
+        assertTrue(game.tip.ask.value.stopped)
+    }
+
+    @Test
+    fun notNowPutsThisCardAway() {
+        saveTheThirdNight()
+        answer("Not now")
+        assertFalse(game.tip.ask.value.stopped)
+        assertEquals(1, game.tip.ask.value.asksShown)
     }
 }

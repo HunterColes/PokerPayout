@@ -74,6 +74,14 @@ class AndroidBackupRulesTest {
     }
 
     @Test
+    fun `the owner's files go with the owner to a new phone`() {
+        assertTrue(BackupCatalog.OWNER_FILES.isNotEmpty())
+        everyRuleSet().forEach { rules ->
+            BackupCatalog.OWNER_FILES.forEach { file -> assertTrue(rules.takesPrefs(file), "${rules.name} leaves out $file") }
+        }
+    }
+
+    @Test
     fun `everything the in-app backup takes, Android's backup takes too`() {
         everyRuleSet().forEach { rules ->
             BackupCatalog.FILES.forEach { file -> assertTrue(rules.takesPrefs(file), "${rules.name} leaves out $file") }

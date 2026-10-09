@@ -76,6 +76,9 @@ sealed class NavigationDestination {
     /** The chop: ICM and chip chop for the players left (S22). */
     @Serializable
     data object DealMaker : NavigationDestination()
+    /** Tip the dealer (PP-112): the donation page, the addresses and their QR codes. */
+    @Serializable
+    data object TipDealer : NavigationDestination()
 
     @Serializable
     data object Back : NavigationDestination()

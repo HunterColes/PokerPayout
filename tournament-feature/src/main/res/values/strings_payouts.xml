@@ -74,6 +74,14 @@
     <string name="payouts_save_night">Save this night</string>
     <string name="payouts_night_saved">Saved to History, in the Tools tab.</string>
 
+    <!-- PP-112: the "Tip the dealer?" card under a saved night. At most twice ever, never while the
+         clock runs. Plain and kind: no guilt, no urgency, and every answer is one tap. -->
+    <string name="payouts_tip_title">Tip the dealer?</string>
+    <string name="payouts_tip_body">Poker Payout is free, with no ads and no tracking. If it has earned a seat at your table, a tip helps pay for new features and fixes.</string>
+    <string name="payouts_tip_leave">Leave a tip</string>
+    <string name="payouts_tip_not_now">Not now</string>
+    <string name="payouts_tip_never">Don\'t ask again</string>
+
     <!-- Share as text -->
     <string name="payouts_share_title">Poker night payouts</string>
     <string name="payouts_share_pool">Prize pool %1$s (%2$s)</string>

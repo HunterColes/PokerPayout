@@ -29,7 +29,9 @@ data class PayoutsUiState(
     val isLocked: Boolean = false,
     val showStructureSheet: Boolean = false,
     /** Saving the finished night to History (PP-037). */
-    val night: NightSave = NightSave.NotOver
+    val night: NightSave = NightSave.NotOver,
+    /** The "Tip the dealer?" card under the saved night (PP-112); never while the clock runs. */
+    val tipCard: Boolean = false
 ) {
     val places: Int get() = table.places.size
 

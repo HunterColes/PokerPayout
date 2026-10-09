@@ -90,6 +90,34 @@ class MysteryBountyTest {
     }
 
     @Test
+    fun `the envelopes left are the deal less the ones drawn while the field stays the same`() {
+        val deal = MysteryBounty.envelopes(9, 500)
+        assertEquals(MysteryBounty.remaining(deal, listOf(1_500L, 300L)), MysteryBounty.left(9, 500, listOf(1_500L, 300L)))
+        assertEquals(deal, MysteryBounty.left(9, 500, emptyList()))
+    }
+
+    /**
+     * Found by SettlementPropertiesTest: nine players at $5, the $15 envelope drawn, then a tenth player
+     * joins. The new deal for ten (1 x $17, 2 x $6, 7 x $3) has no $15, so nothing came out of it, and
+     * the ten envelopes left held the whole $50 again on top of the $15 already paid: the night paid out
+     * more bounty than went in. Now the $35 left is dealt again into the nine envelopes still to draw.
+     */
+    @Test
+    fun `a player joining after a draw leaves exactly the money not yet drawn in the pool`() {
+        val left = MysteryBounty.left(players = 10, bountyCents = 500, drawn = listOf(1_500L))
+        assertEquals(listOf(1_500L, 400L, 400L, 200L, 200L, 200L, 200L, 200L, 200L), left)
+        assertEquals(10 * 500L - 1_500L, left.sum())
+    }
+
+    @Test
+    fun `a pool already drawn past what is in it leaves nothing, and no envelopes are left for nobody`() {
+        // Players removed after big envelopes were drawn: nothing left to deal
+        assertEquals(List(1) { 0L }, MysteryBounty.left(players = 2, bountyCents = 500, drawn = listOf(1_500L)))
+        assertEquals(emptyList(), MysteryBounty.left(players = 1, bountyCents = 500, drawn = listOf(1_500L)))
+        assertEquals(emptyList(), MysteryBounty.left(players = 9, bountyCents = 0, drawn = listOf(1_500L)))
+    }
+
+    @Test
     fun `the same seed draws the same envelopes, and an empty pool draws nothing`() {
         val deal = MysteryBounty.envelopes(9, 500)
         fun drawAll(seed: Int): List<Long> {

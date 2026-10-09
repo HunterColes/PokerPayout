@@ -52,10 +52,12 @@ import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.PokerTopBar
+import com.huntercoles.pokerpayout.core.design.icons.MoneyIcons
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.core.navigation.NavigationCommand
 import com.huntercoles.pokerpayout.core.navigation.NavigationDestination
 import com.huntercoles.pokerpayout.core.navigation.NavigationManager
+import com.huntercoles.pokerpayout.core.utils.MoneyFormat
 import com.huntercoles.pokerpayout.tools.R
 import com.huntercoles.pokerpayout.tools.presentation.ToolsHomeIntent
 import com.huntercoles.pokerpayout.tools.presentation.ToolsHomeUiState
@@ -74,6 +76,15 @@ private val Tools = listOf(
     Tool(NavigationDestination.ChipCalculator, PokerIcons.Chip, R.string.tools_chips_title, R.string.tools_chips_description),
     Tool(NavigationDestination.HandRanks, PokerIcons.List, R.string.tools_ranks_title, R.string.tools_ranks_description),
     Tool(NavigationDestination.SeatDraw, PokerIcons.Seat, R.string.tools_seats_title, R.string.tools_seats_description),
+    // The table tools (S20 to S22): mid-hand maths and the end-of-night deal
+    Tool(NavigationDestination.Outs, TableToolIcons.Percent, R.string.tools_outs_title, R.string.tools_outs_description),
+    Tool(
+        NavigationDestination.SidePots,
+        TableToolIcons.SplitPot,
+        R.string.tools_side_pots_title,
+        R.string.tools_side_pots_description,
+    ),
+    Tool(NavigationDestination.DealMaker, TableToolIcons.Chop, R.string.tools_deal_title, R.string.tools_deal_description),
     Tool(
         NavigationDestination.ShotClock,
         PokerIcons.Hourglass,
@@ -96,7 +107,10 @@ private val Tools = listOf(
     Tool(NavigationDestination.Backup, PokerIcons.Save, R.string.tools_backup_title, R.string.tools_backup_description),
 )
 
-/** The Tools tab (S7): the tools as a list, then the Sound section, then Tip the dealer and the app's promise. */
+/**
+ * The Tools tab (S7): the tools as a list, the currency, then the Sound section, then Tip the dealer
+ * and the app's promise.
+ */
 @Composable
 fun ToolsHomeScreen(
     navigationManager: NavigationManager,
@@ -108,7 +122,7 @@ fun ToolsHomeScreen(
     val canVibrate = remember(context) { context.getSystemService(Vibrator::class.java)?.hasVibrator() == true }
     val notificationsOff = rememberNotificationsOff(context)
     ToolsHomeContent(
-        state = state.copy(canVibrate = canVibrate, notificationsOff = notificationsOff),
+        state = state.copy(canVibrate = canVibrate, notificationsOff = notificationsOff, currency = MoneyFormat.current),
         onIntent = viewModel::acceptIntent,
         onOpenTool = { destination ->
             navigationManager.navigate(object : NavigationCommand {
@@ -149,6 +163,17 @@ fun ToolsHomeContent(
                     onClick = { onOpenTool(tool.destination) },
                 )
             }
+            // PP-114: the money symbol, with what it is set to ("Euro · 1.234,50 €")
+            ToolRow(
+                icon = MoneyIcons.Cash,
+                title = stringResource(R.string.tools_currency_title),
+                description = stringResource(
+                    R.string.tools_currency_line,
+                    stringResource(currencyName(state.currency)),
+                    state.currency.format(CURRENCY_ROW_SAMPLE_CENTS, alwaysCents = true),
+                ),
+                onClick = { onOpenTool(NavigationDestination.Currency) },
+            )
             SoundSection(state = state, onIntent = onIntent, onAllowNotifications = onAllowNotifications, onOpen = onOpenTool)
             // PP-112: quietly at the foot of the list, next to the app's promise
             ToolRow(
@@ -242,6 +267,9 @@ private fun appVersionName(context: Context): String = runCatching {
 }.getOrNull().orEmpty()
 
 private val ToolRowMinHeight = 76.dp
+
+/** The Currency row's sample: 1,234.50 as the picked currency writes it. */
+private const val CURRENCY_ROW_SAMPLE_CENTS = 123_450L
 
 /** Tool names and section titles: Barlow, as in the mockup's tool rows. */
 internal val ToolTitle = PokerType.Title.copy(fontSize = 21.sp, lineHeight = 24.sp)

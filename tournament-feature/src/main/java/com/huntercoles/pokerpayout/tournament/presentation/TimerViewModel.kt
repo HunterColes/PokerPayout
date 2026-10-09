@@ -18,6 +18,7 @@ import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
 import com.huntercoles.pokerpayout.core.utils.BlindStructureInput
 import com.huntercoles.pokerpayout.core.utils.ChipSetChips
 import com.huntercoles.pokerpayout.core.utils.ChipSetProvider
+import com.huntercoles.pokerpayout.core.utils.MoneyFormat
 import com.huntercoles.pokerpayout.core.utils.SmallestChipChoices
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSettings
@@ -103,9 +104,6 @@ class TimerViewModel @Inject constructor(
         observeChipSet()
         observeSavedClock()
     }
-
-    /** PP-081: true at most once ever, the first Start asking for the live clock's notification. */
-    fun takeNotificationsAsk(): Boolean = timerPreferences.takeNotificationsAsk()
 
     fun acceptIntent(intent: TimerIntent) {
         when (intent) {
@@ -723,6 +721,8 @@ class TimerViewModel @Inject constructor(
                     refreshTable()
                 }
         }
+        // PP-114: the places paid follow a currency picked on another tab (the yen rounds to ¥100s)
+        viewModelScope.launch { MoneyFormat.changes.drop(1).collect { refreshTable() } }
     }
 
     /**

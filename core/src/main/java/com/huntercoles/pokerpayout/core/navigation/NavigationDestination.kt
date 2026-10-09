@@ -49,6 +49,10 @@ sealed class NavigationDestination {
     @Serializable
     data object Backup : NavigationDestination()
 
+    /** The money symbol amounts show with: $, €, £, kr, ₹, ¥ or none (PP-114). */
+    @Serializable
+    data object Currency : NavigationDestination()
+
     /** A countdown for each decision, with time-bank cards for slow players. */
     @Serializable
     data object ShotClock : NavigationDestination()
@@ -61,6 +65,17 @@ sealed class NavigationDestination {
     @Serializable
     data object EquityQuiz : NavigationDestination()
 
+    /** Outs as exact chances, and pot odds (S20). */
+    @Serializable
+    data object Outs : NavigationDestination()
+
+    /** Main and side pots from what each player put in (S21). */
+    @Serializable
+    data object SidePots : NavigationDestination()
+
+    /** The chop: ICM and chip chop for the players left (S22). */
+    @Serializable
+    data object DealMaker : NavigationDestination()
     /** Tip the dealer (PP-112): the donation page, the addresses and their QR codes. */
     @Serializable
     data object TipDealer : NavigationDestination()

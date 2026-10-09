@@ -2,15 +2,18 @@ package com.huntercoles.pokerpayout.core.backup
 
 import androidx.annotation.StringRes
 import com.huntercoles.pokerpayout.core.R
+import com.huntercoles.pokerpayout.core.preferences.CurrencyPreferences
 import com.huntercoles.pokerpayout.core.preferences.MusicPreferences
+import com.huntercoles.pokerpayout.core.preferences.PhonePrefs
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.tip.TipJar
 
 /**
  * Every SharedPreferences file the app keeps, and what a backup does with it. `BackupCoverageTest`
  * finds every file the sources open and fails until it is listed here, so new data can't be left
- * out of backups by accident (a file left out on purpose is listed in [PHONE_ONLY_FILES], with why).
- * Android's own Auto Backup (res/xml/data_extraction_rules.xml) takes every one of them as well.
+ * out of backups by accident. Android's own Auto Backup (res/xml/data_extraction_rules.xml) takes
+ * every one of them as well, and leaves out the [PHONE_FILES] (`AndroidBackupRulesTest` checks). The
+ * [OWNER_FILES] are the other way round: Android's backup takes them, the in-app one leaves them out.
  */
 object BackupCatalog {
 
@@ -20,9 +23,12 @@ object BackupCatalog {
         SettingsFile("tournament_prefs", SettingsGroup.GAME),
         SettingsFile("timer_prefs", SettingsGroup.GAME, phoneOnly = TimerPreferences.PHONE_ONLY_KEYS),
         SettingsFile("bank_prefs", SettingsGroup.GAME),
+        // The currency amounts show in (PP-114): a game's amounts read as they were meant
+        SettingsFile(CurrencyPreferences.FILE, SettingsGroup.GAME),
         SettingsFile("chip_calculator_prefs", SettingsGroup.CHIP_SET),
         SettingsFile("audio_prefs", SettingsGroup.SOUND),
         // The music's settings; its playlist names this phone's files, so it stays with the phone
+        // (in PhonePrefs.FILE; the keys are still marked here for an install they haven't moved from yet)
         SettingsFile(MusicPreferences.FILE, SettingsGroup.SOUND, phoneOnly = MusicPreferences.PHONE_ONLY_KEYS),
         SettingsFile("odds_calculator_prefs", SettingsGroup.TOOLS),
         SettingsFile("seat_draw_prefs", SettingsGroup.TOOLS),
@@ -37,20 +43,30 @@ object BackupCatalog {
     val COLLECTIONS: Map<String, String> = mapOf(
         "tournament_presets" to "presets",
         "night_history" to HistoryBackup.KEY,
-    )
-
-    /**
-     * Files about this phone's owner, not the game, that a backup leaves out on purpose and a restore
-     * leaves as they are. Android's own backup (the same person moving to a new phone) still takes them.
-     */
-    val PHONE_ONLY_FILES: Set<String> = setOf(
-        // PP-112: the "Tip the dealer?" card's counters and answer. A backup file can be opened on a
-        // friend's phone, and an older one restored later: neither may ask again someone who said no.
-        TipJar.FILE,
+        // The regulars (PP-110): the names the Bank has used, and the names merged in History
+        "regulars" to RegularsBackup.KEY,
     )
 
     /** Every file a backup saves. */
     val FILES: Set<String> get() = SETTINGS.map { it.name }.toSet() + COLLECTIONS.keys
+
+    /**
+     * PP-137: files about this phone alone, which no backup takes: not this one, and not Android's
+     * own or a move to a new phone (res/xml/data_extraction_rules.xml and backup_rules.xml leave
+     * each one out). A new or restored phone starts them empty.
+     */
+    val PHONE_FILES: Set<String> = setOf(PhonePrefs.FILE)
+
+    /**
+     * PP-112: files about this phone's owner rather than the game. Android's own backup takes them (the
+     * same person on a new phone); the in-app backup leaves them out, and a restore leaves them as they
+     * are: a backup file may be opened on a friend's phone, or an older one restored later.
+     */
+    val OWNER_FILES: Set<String> = setOf(
+        // The "Tip the dealer?" card's counters and answer: a restore may never ask again someone who
+        // said no, and a friend's backup neither asks nor silences this phone's host
+        TipJar.FILE,
+    )
 
     fun filesOf(group: SettingsGroup): List<SettingsFile> = SETTINGS.filter { it.group == group }
 }
@@ -58,8 +74,9 @@ object BackupCatalog {
 /**
  * A settings file in a backup.
  *
- * @property phoneOnly keys about this phone rather than the game (a monotonic clock reading, a
- *   permission already asked for): never written to a backup, and kept as they are on a restore.
+ * @property phoneOnly keys about this phone rather than the game (a monotonic clock reading, or one
+ *   an older version saved here before it moved to a [BackupCatalog.PHONE_FILES] file): never
+ *   written to a backup, and kept as they are on a restore.
  */
 data class SettingsFile(val name: String, val group: SettingsGroup, val phoneOnly: Set<String> = emptySet())
 

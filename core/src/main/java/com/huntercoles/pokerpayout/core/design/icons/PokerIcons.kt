@@ -285,6 +285,30 @@ object PokerIcons {
                 " 4v2h16v-2c0-2.66-5.33-4-8-4z",
         )
     }
+
+    /** The regulars: tonight's players picked from everyone you've played with (Material "group"). */
+    val People: ImageVector by lazy {
+        icon(
+            "People",
+            "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66" +
+                " 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29" +
+                " 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z",
+        )
+    }
+
+    /** A new name added (Material "person_add"). */
+    val PersonAdd: ImageVector by lazy {
+        icon(
+            "PersonAdd",
+            "M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8" +
+                " 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z",
+        )
+    }
+
+    /** Two spellings made one person (Material "call_merge"). */
+    val Merge: ImageVector by lazy {
+        icon("Merge", "M17 20.41 18.41 19 15 15.59 13.59 17 17 20.41zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5 7.5 8z")
+    }
     val Backspace: ImageVector by lazy {
         icon(
             "Backspace",

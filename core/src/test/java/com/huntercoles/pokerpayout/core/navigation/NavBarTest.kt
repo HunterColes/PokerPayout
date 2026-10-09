@@ -56,9 +56,13 @@ class NavBarTest {
             NavigationDestination.Music,
             NavigationDestination.CueSounds,
             NavigationDestination.Backup,
+            NavigationDestination.Currency,
             NavigationDestination.ShotClock,
             NavigationDestination.DealersChoice,
             NavigationDestination.EquityQuiz,
+            NavigationDestination.Outs,
+            NavigationDestination.SidePots,
+            NavigationDestination.DealMaker,
             NavigationDestination.TipDealer,
         ).forEach { assertEquals("$it", NavTab.Tools, it.tab) }
         assertNull(NavigationDestination.Back.tab)
@@ -111,9 +115,13 @@ class NavBarTest {
             NavigationDestination.SeatDraw,
             NavigationDestination.History,
             NavigationDestination.Backup,
+            NavigationDestination.Currency,
             NavigationDestination.ShotClock,
             NavigationDestination.DealersChoice,
             NavigationDestination.EquityQuiz,
+            NavigationDestination.Outs,
+            NavigationDestination.SidePots,
+            NavigationDestination.DealMaker,
             NavigationDestination.TipDealer,
         ).forEach { destination ->
             navigate(destination)
@@ -208,9 +216,13 @@ class NavBarTest {
                 builder.composable<NavigationDestination.SeatDraw> { Text(SCREEN + NavigationDestination.SeatDraw) }
                 builder.composable<NavigationDestination.History> { Text(SCREEN + NavigationDestination.History) }
                 builder.composable<NavigationDestination.Backup> { Text(SCREEN + NavigationDestination.Backup) }
+                builder.composable<NavigationDestination.Currency> { Text(SCREEN + NavigationDestination.Currency) }
                 builder.composable<NavigationDestination.ShotClock> { Text(SCREEN + NavigationDestination.ShotClock) }
                 builder.composable<NavigationDestination.DealersChoice> { Text(SCREEN + NavigationDestination.DealersChoice) }
                 builder.composable<NavigationDestination.EquityQuiz> { Text(SCREEN + NavigationDestination.EquityQuiz) }
+                builder.composable<NavigationDestination.Outs> { Text(SCREEN + NavigationDestination.Outs) }
+                builder.composable<NavigationDestination.SidePots> { Text(SCREEN + NavigationDestination.SidePots) }
+                builder.composable<NavigationDestination.DealMaker> { Text(SCREEN + NavigationDestination.DealMaker) }
                 builder.composable<NavigationDestination.TipDealer> { Text(SCREEN + NavigationDestination.TipDealer) }
             }
         }

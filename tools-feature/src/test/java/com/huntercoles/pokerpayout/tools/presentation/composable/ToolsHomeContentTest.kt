@@ -56,11 +56,15 @@ class ToolsHomeContentTest {
         compose.onNodeWithText("Chip set").performClick()
         compose.onNodeWithText("Hand ranks").performClick()
         compose.onNodeWithText("Seat draw").performClick()
+        compose.onNodeWithText("Outs & pot odds").performScrollTo().performClick()
+        compose.onNodeWithText("Side pots").performScrollTo().performClick()
+        compose.onNodeWithText("Deal maker").performScrollTo().performClick()
         compose.onNodeWithText("Shot clock").performScrollTo().performClick()
         compose.onNodeWithText("Dealer's choice").performScrollTo().performClick()
         compose.onNodeWithText("Equity quiz").performScrollTo().performClick()
         compose.onNodeWithText("History").performScrollTo().performClick()
         compose.onNodeWithText("Backup").performScrollTo().performClick()
+        compose.onNodeWithText("Currency").performScrollTo().performClick()
         // PP-112: quietly at the foot of the list, after Sound, next to the app's promise
         compose.onNodeWithText("Tip the dealer").performScrollTo().performClick()
         assertEquals(
@@ -69,11 +73,15 @@ class ToolsHomeContentTest {
                 NavigationDestination.ChipCalculator,
                 NavigationDestination.HandRanks,
                 NavigationDestination.SeatDraw,
+                NavigationDestination.Outs,
+                NavigationDestination.SidePots,
+                NavigationDestination.DealMaker,
                 NavigationDestination.ShotClock,
                 NavigationDestination.DealersChoice,
                 NavigationDestination.EquityQuiz,
                 NavigationDestination.History,
                 NavigationDestination.Backup,
+                NavigationDestination.Currency,
                 NavigationDestination.TipDealer,
             ),
             opened,

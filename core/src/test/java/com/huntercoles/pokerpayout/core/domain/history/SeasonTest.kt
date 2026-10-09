@@ -1,13 +1,15 @@
 package com.huntercoles.pokerpayout.core.domain.history
 
 import com.huntercoles.pokerpayout.core.domain.history.Nights.night
+import com.huntercoles.pokerpayout.core.domain.players.PlayerMerges
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 /**
  * The season's points (PP-037): players minus place plus 1 a night, added up per player across the
  * nights of the season; names match after trimming and ignoring case; players level on points share
- * a rank; the player of the year is the top of the year.
+ * a rank; the player of the year is the top of the year. Names merged in History (PP-110) add up under
+ * the name kept, never twice in one night, and taken apart again they are as they were.
  */
 class SeasonTest {
 
@@ -105,5 +107,55 @@ class SeasonTest {
         assertEquals(listOf("Priya"), Season.leaders(Season.standings(nights, 2025)).map { it.name })
         assertEquals(listOf("Dana"), Season.leaders(Season.standings(nights)).map { it.name })
         assertEquals(emptyList<Standing>(), Season.leaders(emptyList()))
+    }
+
+    private val mikes = listOf(
+        night("2026-03-01", listOf("Mike R.", "Dana", "Priya"), id = 1),
+        night("2026-04-01", listOf("Dana", "Mike", "Priya"), id = 2),
+        night("2026-05-01", listOf("Priya", "Dana", "Mike"), id = 3),
+    )
+
+    /** Mike R. 3 points and a win in March; Mike 2 in April and 1 in May; Dana 2 + 3 + 2; Priya 1 + 1 + 3. */
+    private val apart = listOf("1 Dana 7p 3n 1w", "2 Priya 5p 3n 1w", "3 Mike R. 3p 1n 1w", "3 Mike 3p 2n 0w")
+
+    @Test
+    fun `merged spellings add up, points, nights, wins and places counting for the name kept (PP-110)`() {
+        assertEquals(apart, Season.standings(mikes).lines())
+        val merged = PlayerMerges.NONE.merge("Mike R.", "Mike")
+        assertEquals(
+            listOf("1 Dana 7p 3n 1w", "2 Mike 6p 3n 1w", "3 Priya 5p 3n 1w"),
+            Season.standings(mikes, merges = merged).lines(),
+        )
+        // Kept the other way round, the name shown is Mike R.
+        val other = PlayerMerges.NONE.merge("Mike", "Mike R.")
+        assertEquals("2 Mike R. 6p 3n 1w", Season.standings(mikes, merges = other).lines()[1])
+        // A year counts its own nights, merged the same way
+        assertEquals(Season.standings(mikes, merges = other), Season.standings(mikes, 2026, other))
+        assertEquals(emptyList<Standing>(), Season.standings(mikes, 2025, other))
+    }
+
+    @Test
+    fun `a merge made twice counts once, and taken back the standings are as they were`() {
+        val merged = PlayerMerges.NONE.merge("Mike R.", "Mike")
+        val twice = merged.merge("Mike R.", "Mike").merge("mike r.", "MIKE")
+        assertEquals(Season.standings(mikes, merges = merged), Season.standings(mikes, merges = twice))
+        assertEquals(apart, Season.standings(mikes, merges = merged.separate("Mike R.")).lines())
+        assertEquals(apart, Season.standings(mikes, merges = PlayerMerges.NONE).lines())
+    }
+
+    @Test
+    fun `two names merged that played one night still count once each that night`() {
+        val nights = listOf(
+            night("2026-03-01", listOf("Mike", "Mike R.", "Dana"), id = 1),
+            night("2026-04-01", listOf("Mike R.", "Dana"), id = 2),
+        )
+        val merged = PlayerMerges.NONE.merge("Mike R.", "Mike")
+        // March: both played, so each counts as themselves; April: Mike R. counts as Mike
+        assertEquals(
+            listOf("1 Mike 5p 2n 2w", "2 Dana 2p 2n 0w", "2 Mike R. 2p 1n 0w"),
+            Season.standings(nights, merges = merged).lines(),
+        )
+        assertEquals(listOf("mike", "mike r.", "dana"), Season.people(nights[0], merged))
+        assertEquals(listOf("mike", "dana"), Season.people(nights[1], merged))
     }
 }

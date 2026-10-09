@@ -11,7 +11,10 @@ import com.huntercoles.pokerpayout.bank.presentation.BankScenes.THEO
 import com.huntercoles.pokerpayout.core.domain.settle.MinimumPayments
 import com.huntercoles.pokerpayout.core.domain.settle.SettleUp
 import com.huntercoles.pokerpayout.core.domain.settle.Transfer
+import com.huntercoles.pokerpayout.core.testing.withCurrency
+import com.huntercoles.pokerpayout.core.utils.AppCurrency
 import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
+import com.huntercoles.pokerpayout.core.utils.NO_BREAK_SPACE
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -252,6 +255,21 @@ class BankSettleUpTest {
         val payee = viewModel.player(first.toId).name
         assertTrue(text, lines.contains("The bank pays $payee ${formatMoney(first.amountCents)} (paid)"))
         assertNull("nothing to share before the night is over", SettleUpShareText.build(context.resources, BankUiState()))
+    }
+
+    /** PP-114: the same night shared in kronor; every amount in the host's currency, the money the same. */
+    @Test
+    fun theShareTextIsInTheHostsCurrency() = with(kit) {
+        val viewModel = BankScenes.settleUp(kit)
+        val first = viewModel.transfers().first()
+        val text = withCurrency(AppCurrency.KRONA) { requireNotNull(SettleUpShareText.build(context.resources, viewModel.state)) }
+        val lines = text.lines()
+        val kr = "$NO_BREAK_SPACE" + "kr"
+        assertTrue(text, lines.any { it.startsWith("Sam: in 50$kr, won 0$kr, down 50$kr") })
+        assertTrue(text, lines.contains("Food 45$kr, kept by the bank."))
+        val amount = withCurrency(AppCurrency.KRONA) { formatMoney(first.amountCents) }
+        assertTrue(text, lines.contains("The bank pays ${viewModel.player(first.toId).name} $amount"))
+        assertFalse(text, '$' in text)
     }
 
     @Test

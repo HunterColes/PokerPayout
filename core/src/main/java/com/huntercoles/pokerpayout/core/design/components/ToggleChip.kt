@@ -52,6 +52,8 @@ import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
  *
  * @param icon shown while off and unlocked (a plus by default).
  * @param count how many were taken, shown as "×1" and read as "1 taken"; null hides it.
+ * @param spokenLabel what TalkBack reads instead of [label] where the chip repeats on every row and needs
+ *   its row's name ("Dana folded"); null reads [label].
  */
 @Suppress("LongParameterList") // a component API: one parameter per visual option
 @Composable
@@ -63,11 +65,13 @@ fun ToggleChip(
     locked: Boolean = false,
     icon: ImageVector = PokerIcons.Plus,
     count: Int? = null,
+    spokenLabel: String? = null,
 ) {
     val colors = toggleColors(checked, locked)
     val shape = CircleShape
     val interactions = remember { MutableInteractionSource() }
-    val name = if (count != null) stringResource(R.string.design_toggle_taken, label, count) else label
+    val spoken = spokenLabel ?: label
+    val name = if (count != null) stringResource(R.string.design_toggle_taken, spoken, count) else spoken
     val description = if (locked) "$name, ${stringResource(R.string.design_locked)}" else name
     Row(
         modifier = modifier

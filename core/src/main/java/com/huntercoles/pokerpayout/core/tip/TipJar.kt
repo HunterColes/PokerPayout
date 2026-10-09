@@ -17,7 +17,7 @@ import javax.inject.Singleton
  * (`tip_prefs`) the moment anything changes, so a card shows again after process death and an answer
  * holds for good. Written on a save or a tap, never per tick.
  *
- * The file stays with this phone: the in-app backup leaves it out (`BackupCatalog.PHONE_ONLY_FILES`),
+ * The file stays with this phone: the in-app backup leaves it out (`BackupCatalog.OWNER_FILES`),
  * so restoring an older backup can never bring back a card the host said no to, and a backup opened
  * on a friend's phone neither asks them nor silences them. Android's own backup, the same person's
  * phone moved to a new one, takes it along.

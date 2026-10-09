@@ -11,6 +11,7 @@ import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
+import com.huntercoles.pokerpayout.core.utils.MoneyFormat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,10 +58,20 @@ class TournamentConfigViewModel @Inject constructor(
         viewModelScope.launch {
             bankPreferences.revision.collect { refreshPayouts() }
         }
+        // PP-114: a currency picked on another tab (the yen rounds to ¥100s)
+        viewModelScope.launch {
+            MoneyFormat.changes.drop(1).collect { refreshPayouts() }
+        }
 
         // A preset loaded (PP-032) replaces the blind fields this keeps its own copy of
         viewModelScope.launch {
             tournamentPreferences.setupRevision.drop(1).collect { loadTournamentConfiguration() }
+        }
+
+        // PP-113: the welcome shows on a new install until dismissed; the first clock started ends it too
+        _uiState.update { it.copy(showWelcome = timerPreferences.getShowWelcome()) }
+        viewModelScope.launch {
+            timerPreferences.timerRunning.collect { running -> if (running) dismissWelcome() }
         }
     }
 
@@ -100,7 +111,13 @@ class TournamentConfigViewModel @Inject constructor(
             TournamentConfigIntent.ShowResetDialog -> showResetDialog()
             TournamentConfigIntent.HideResetDialog -> hideResetDialog()
             TournamentConfigIntent.ConfirmReset -> confirmReset()
+            TournamentConfigIntent.DismissWelcome -> dismissWelcome()
         }
+    }
+
+    private fun dismissWelcome() {
+        timerPreferences.dismissWelcome()
+        _uiState.update { it.copy(showWelcome = false) }
     }
 
     private fun loadTournamentConfiguration() {

@@ -767,26 +767,24 @@ s_table_view_resume() {
 }
 s_table_view_knockout() {
   # PP-135: Knock out on the table view, in two taps: who's out, then who knocked them out. It is
-  # the Bank's own knockout: recorded at once, with UNDO on the snackbar (bottom left, the time and
-  # the controls still in view) and the players left counting down.
+  # the Bank's own knockout: recorded at once, the panel gone, with UNDO on the snackbar (bottom
+  # left, over the footer's numbers, which make way for its 8 s; the time and the controls stay).
+  # Quick: one dump at a time takes 2 s here.
   ui tap "text=Knock out"
   ui wait "text=Who's out?"
   ui tap "text=Player 10" --scroll-in scrollable
   ui wait "text=Who knocked Player 10 out?"
   ui assert-text "text=10TH PLACE" "re=^Nobody" "desc=Back to who's out" "desc=Close knockout" || return 1
+  # Knock out is only in reach (and TalkBack's) once the panel is gone
   ui tap "text=Player 1" --scroll-in scrollable
-  adb_ exec-out screencap -p > "$OUT/table-view-knockout-recorded.png" || true   # PP-135 diagnosis
-  ui texts | head -30
-  ui wait-gone "text=Who knocked Player 10 out?"
-  ui assert-text "text~=Player 10 is out in 10th" text=UNDO "text~=9 of 10 left" "desc=Exit table view" || return 1
-  require_landscape
+  ui assert-text "text~=Player 10 is out in 10th · bounty to Player 1" text=UNDO "text=Knock out" \
+    "desc=Exit table view"
 }
 s_table_view_knockout_undo() {
   # UNDO on the snackbar takes the knockout back, in the Bank too: everyone in again
   ui tap text=UNDO
-  ui wait "text~=10 of 10 left"
   ui wait-gone text=UNDO
-  ui assert-text "text=Knock out" "desc=Exit table view" || return 1
+  ui assert-text "text~=10 of 10 left" "text=Knock out" "desc=Exit table view" || return 1
   require_landscape
 }
 s_table_view_exit() {

@@ -192,9 +192,9 @@ are:
      the break (S4: "Break · back at Level 5", Last rebuy); pause.
    * Table view: the table-view button forces a landscape screen on the paused break; resume
      there (the footer shows "10 of 10 left" and the pool); Knock out (PP-135): "Who's out?",
-     Player 10, "Who knocked Player 10 out?" (10th place), Player 1, then the snackbar's UNDO with
-     "9 of 10 left" beside it, and UNDO brings back "10 of 10 left"; leave it and require portrait
-     again. End break now starts level 5.
+     Player 10, "Who knocked Player 10 out?" (10th place), Player 1, then the snackbar's UNDO over
+     the footer (its numbers make way for those 8 s), and UNDO brings back "10 of 10 left"; leave
+     it and require portrait again. End break now starts level 5.
    * Rotation (PP-079): with auto-rotate off, `settings put system user_rotation 1` turns the
      emulator on its side: the clock must become the table view, landscape, still on level 5;
      `user_rotation 0` brings the clock back upright. The step puts the settings back however it

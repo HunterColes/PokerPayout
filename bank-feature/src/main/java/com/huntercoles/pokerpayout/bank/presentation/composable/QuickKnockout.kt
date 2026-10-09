@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,10 +59,13 @@ import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerIconButton
 import com.huntercoles.pokerpayout.core.design.components.PokerPill
 import com.huntercoles.pokerpayout.core.design.components.PokerPillTone
+import com.huntercoles.pokerpayout.core.design.icons.MoneyIcons
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
+import java.text.NumberFormat
+import java.util.Locale
 
 /**
  * The quick knockout (PP-135) over the full-screen clock: a dim the clock still reads through (a tap
@@ -69,7 +73,8 @@ import com.huntercoles.pokerpayout.core.utils.FormatUtils
  * so the time stays in view; upright (a tablet that won't turn) it is a bottom sheet.
  *
  * The panel follows the Bank's sheet: none is "Who's out?", [BankSheet.Knockout] (opened by picking
- * who is out) is "Who knocked them out?", and [BankSheet.Envelope] is a mystery knockout's envelope.
+ * who is out) is "Who knocked them out?", [BankSheet.Envelope] is a mystery knockout's envelope, and
+ * [BankSheet.LateEntry] (Re-entry, PP-116) is "Who's back in?".
  * A pick applies at once ([BankIntent.KnockOut]); Undo on the snackbar is the way back.
  */
 @Composable
@@ -116,6 +121,7 @@ internal fun QuickKnockoutOverlay(
             when (val sheet = state.sheet) {
                 is BankSheet.Knockout -> WhoKnockedOut(sheet, onIntent, onClose)
                 is BankSheet.Envelope -> EnvelopeSheetContent(sheet, onDismiss = { onIntent(BankIntent.DismissSheet) })
+                is BankSheet.LateEntry -> WhoIsBackIn(sheet, state, onIntent, onClose)
                 else -> WhoIsOut(state, onIntent, onClose)
             }
         }
@@ -136,6 +142,55 @@ private fun ColumnScope.WhoIsOut(state: BankUiState, onIntent: (BankIntent) -> U
     }
     ChoiceList(Modifier.weight(1f, fill = false)) { perRow ->
         ChoiceGrid(choices, perRow) { id -> id?.let { onIntent(BankIntent.OpenKnockout(it)) } }
+    }
+    // PP-116: someone who is out buying back in, while late entry is open
+    if (state.reEntries.isNotEmpty()) {
+        ChoiceTile(
+            choice = PanelChoice(
+                playerId = null,
+                label = stringResource(R.string.quick_ko_re_entry),
+                muted = true,
+                icon = MoneyIcons.Renew,
+            ),
+            onClick = { onIntent(BankIntent.OpenLateEntry) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * "Who's back in?" (PP-116): the players who are out, as on the Bank's late entry sheet, with what a
+ * re-entry costs and the stack it gets. A pick re-enters them at once ([BankIntent.ReEnter]); Undo on
+ * the snackbar is the way back. A late arrival's name is typed in the Bank.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ColumnScope.WhoIsBackIn(
+    sheet: BankSheet.LateEntry,
+    state: BankUiState,
+    onIntent: (BankIntent) -> Unit,
+    onClose: () -> Unit,
+) {
+    PanelHeader(
+        title = stringResource(R.string.quick_ko_back_in),
+        onClose = onClose,
+        onBack = { onIntent(BankIntent.DismissSheet) },
+    )
+    val chips = remember { NumberFormat.getIntegerInstance(Locale.getDefault()) }.format(sheet.startingChips)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        val price = FormatUtils.formatMoney(sheet.price.totalCents)
+        PokerPill(stringResource(R.string.bank_late_price, price, chips), tone = PokerPillTone.Gold)
+    }
+    val choices = state.reEntries.map { candidate ->
+        PanelChoice(
+            playerId = candidate.playerId,
+            label = candidate.name,
+            detail = candidate.place?.let { stringResource(R.string.bank_late_out_in, ordinalOf(it)) },
+            clickLabel = stringResource(R.string.bank_late_re_enter, candidate.name),
+        )
+    }
+    ChoiceList(Modifier.weight(1f, fill = false)) { perRow ->
+        ChoiceGrid(choices, perRow) { id -> id?.let { onIntent(BankIntent.ReEnter(it)) } }
     }
 }
 
@@ -223,9 +278,10 @@ private class PanelChoice(
     val detail: String? = null,
     val muted: Boolean = false,
     val clickLabel: String? = null,
+    icon: ImageVector? = null,
 ) {
-    /** Nobody shows a person; a player's name stands alone. */
-    val icon: ImageVector? get() = if (playerId == null) PokerIcons.Person else null
+    /** Nobody shows a person; a player's name stands alone; Re-entry shows its own [icon]. */
+    val icon: ImageVector? = icon ?: if (playerId == null) PokerIcons.Person else null
 }
 
 /**

@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout.bank.presentation
 
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
+import com.huntercoles.pokerpayout.core.domain.model.EntryPrice
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
@@ -13,6 +14,12 @@ import com.huntercoles.pokerpayout.core.domain.model.PurchaseWindow
 import com.huntercoles.pokerpayout.core.domain.settle.Transfer
 
 const val MAX_PURCHASE_COUNT = 20
+
+/** The most entries a night can have, late entries and re-entries included (PP-116). */
+const val MAX_ENTRIES = 60
+
+/** The longest name the late entry sheet takes (PP-116). */
+const val MAX_ENTRY_NAME_LENGTH = 40
 
 /** What can be bought after the entry: rebuys and add-ons. */
 enum class Purchase { REBUY, ADD_ON }
@@ -32,13 +39,26 @@ data class PlayerData(
     /** The clock's level when this player went out, if the clock was running. */
     val outLevel: Int? = null,
     /** Mystery bounties (PP-035): the envelope drawn for this player's knockout, in cents. */
-    val bountyDrawCents: Long? = null
+    val bountyDrawCents: Long? = null,
+    /** A late entry or a re-entry (PP-116): what it paid to sit down then; null: today's amounts. */
+    val entryPrice: EntryPrice? = null,
+    /** A re-entry (PP-116): the player's first entry; null for a first entry. */
+    val reEntryOf: Int? = null
 ) {
     val rebuys: Int get() = rebuyPrices.size
     val addons: Int get() = addOnPrices.size
 
     fun prices(kind: Purchase): List<Long> = if (kind == Purchase.REBUY) rebuyPrices else addOnPrices
+
+    /** What this entry costs to sit down: its recorded price, or today's [money]. */
+    fun entryCents(money: MoneySettings): Long = entryPrice?.totalCents ?: money.entryCents
 }
+
+/**
+ * A player who is out and can buy back in as a new entry (PP-116): [playerId] is their latest entry,
+ * out in [place] (null while undecided); [entries] is how many they have had.
+ */
+data class ReEntryCandidate(val playerId: Int, val name: String, val place: Int?, val entries: Int)
 
 /**
  * Bank screen state. Every amount is in cents and comes from one settlement of what was recorded
@@ -71,6 +91,10 @@ data class BankUiState(
     val rebuyWindow: PurchaseWindow = PurchaseWindow.NoCutoff,
     /** Add-ons: open until the end of the first break after the rebuy cutoff. */
     val addOnWindow: PurchaseWindow = PurchaseWindow.NoCutoff,
+    /** Late entries and re-entries (PP-116), from "late entry until level N" and the clock. */
+    val lateEntryWindow: PurchaseWindow = PurchaseWindow.NoCutoff,
+    /** Players who are out and can re-enter now (PP-116); empty while late entry is closed. */
+    val reEntries: List<ReEntryCandidate> = emptyList(),
     val isTimerRunning: Boolean = false,
     val isMuted: Boolean = false,
     /** The sheet on screen, if any (one at a time). */
@@ -100,6 +124,17 @@ data class BankUiState(
     val totalRebuyCount: Int get() = players.sumOf { it.rebuys }
     val totalAddonCount: Int get() = players.sumOf { it.addons }
     val canUndo: Boolean get() = undoLabel != null
+
+    /**
+     * Late entry (PP-116) is offered once the clock is running, until the cutoff, while nobody has
+     * won yet and there is room for another entry.
+     */
+    val canTakeLateEntry: Boolean
+        get() {
+            val clockRunning = clock.started && !clock.finished
+            val roomLeft = championId == null && players.size < MAX_ENTRIES
+            return clockRunning && lateEntryWindow.isOpen && roomLeft
+        }
 
     /**
      * The money summary offers Settle up once the night is over and someone's buy-in is still open:
@@ -221,7 +256,9 @@ data class BankRowModel(
      * Progressive bounties (PP-035): the bounty on this player's head, growing with each knockout
      * (the champion's: what they take home). Null in the other modes and once the player is out.
      */
-    val bountyCents: Long? = null
+    val bountyCents: Long? = null,
+    /** A re-entry (PP-116): which of the player's entries this is (2 for the first re-entry); null for a first entry. */
+    val entryNumber: Int? = null
 ) {
     fun cell(column: BankColumn): BankCell = when (column) {
         BankColumn.BUY_IN -> buyIn
@@ -289,7 +326,11 @@ sealed interface BankSheet {
         /** Knockouts nobody was credited with; their bounties go to the champion. */
         val unclaimedKnockouts: Int,
         /** Mystery bounties: the envelopes still in the pool (the champion's, once there is one). */
-        val envelopesLeft: Int = 0
+        val envelopesLeft: Int = 0,
+        /** What this entry paid to sit down: today's amounts, or a late entry's (PP-116). */
+        val entry: EntryPrice = EntryPrice.of(money),
+        /** Standard bounties: what each knockout paid, when they all paid the same (PP-116: a late entry's may differ). */
+        val knockoutEachCents: Long? = money.bountyCents
     ) : BankSheet
 
     /** Hold Rebuy or Add-on: set an exact count. */
@@ -308,6 +349,13 @@ sealed interface BankSheet {
         /** After the cutoff the count can only go down (to remove one recorded by mistake). */
         val maxCount: Int get() = if (window.isOpen) MAX_PURCHASE_COUNT else taken
     }
+
+    /**
+     * S25, late entry (PP-116), once the clock is running and until [window] closes: a player who
+     * arrives late pays [price] (today's buy-in, food and bounty) and starts with [startingChips];
+     * a player who is out ([BankUiState.reEntries]) can re-enter for the same.
+     */
+    data class LateEntry(val price: EntryPrice, val startingChips: Int, val window: PurchaseWindow) : BankSheet
 
     /** The pool, where it came from, and the payout table. */
     data object PoolBreakdown : BankSheet

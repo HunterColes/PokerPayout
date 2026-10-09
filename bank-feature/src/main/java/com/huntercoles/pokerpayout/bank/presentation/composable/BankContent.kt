@@ -260,7 +260,8 @@ private fun PaneCard(content: @Composable ColumnScope.() -> Unit) {
 // The list --------------------------------------------------------------------------------------------
 
 /**
- * The header (sticky), then each section with its label and rows, then the cutoff note. Rows keep
+ * The header (sticky), then each section with its label and rows, then Late entry (PP-116, under the
+ * players who are out, who can re-enter from it) and the cutoff note. Rows keep
  * their key, so a knocked-out player slides into the Out section (no red flash), or jumps there
  * under Reduce motion.
  */
@@ -290,6 +291,7 @@ private fun LazyListScope.playerList(state: BankUiState, layout: BankLayout, onI
             }
         }
     }
+    item(key = "late") { LateEntryFooter(state, onLateEntry = { onIntent(BankIntent.OpenLateEntry) }) }
     item(key = "note") { CutoffNote(state) }
 }
 
@@ -318,6 +320,13 @@ private fun BankSheets(state: BankUiState, onIntent: (BankIntent) -> Unit, onSha
             onDismiss = dismiss,
         )
         is BankSheet.Envelope -> EnvelopeSheet(sheet = sheet, onDismiss = dismiss)
+        is BankSheet.LateEntry -> LateEntrySheet(
+            sheet = sheet,
+            reEntries = state.reEntries,
+            onAdd = { onIntent(BankIntent.AddLateEntry(it)) },
+            onReEnter = { onIntent(BankIntent.ReEnter(it)) },
+            onDismiss = dismiss,
+        )
         BankSheet.PoolBreakdown -> PoolBreakdownSheet(
             state = state,
             onPayoutStructure = { onIntent(BankIntent.ShowPayoutStructure) },

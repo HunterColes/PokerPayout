@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- PP-116: late entries and re-entries. A late entry is a player who arrives after the start; a
+         re-entry is a player who was knocked out buying back in as a new entry. -->
+
+    <!-- Under the Bank's list, once the clock is running -->
+    <string name="bank_late_button">Late entry</string>
+    <string name="bank_note_late_open_level">Late entry until the end of level %1$d.</string>
+    <string name="bank_note_late_closed">Late entry closed after level %1$d.</string>
+
+    <!-- S25: the late entry sheet -->
+    <string name="bank_late_title">Late entry</string>
+    <!-- %1$s: the entry ($50), %2$s: the starting stack (10,000) -->
+    <string name="bank_late_price">%1$s to sit down · %2$s chips</string>
+    <string name="bank_late_open_level">Open until the end of level %1$d.</string>
+    <string name="bank_late_open_all">Open all night.</string>
+    <string name="bank_late_name">Name</string>
+    <string name="bank_late_name_description">Late arrival\'s name</string>
+    <!-- %1$s: the entry, paid now -->
+    <string name="bank_late_add">Add · %1$s paid</string>
+    <string name="bank_late_re_enter_title">Or re-enter a player who is out</string>
+    <!-- A player who is out, "Out in 9th" -->
+    <string name="bank_late_out_in">Out in %1$s</string>
+    <string name="bank_late_re_enter">Re-enter %1$s</string>
+
+    <!-- What the Bank says after one, with Undo -->
+    <string name="bank_done_late_entry">%1$s joins late · %2$s paid</string>
+    <string name="bank_done_re_entry">%1$s re-enters · %2$s paid</string>
+
+    <!-- A re-entry's row: which of the player's entries it is -->
+    <string name="bank_micro_entry">Entry %1$d</string>
+
+    <!-- The pay-out sheet: knockouts whose bounties differ (a late entry's at its own price) -->
+    <plurals name="bank_pay_knockouts_count">
+        <item quantity="one">Knockouts · %d</item>
+        <item quantity="other">Knockouts · %d</item>
+    </plurals>
+
+    <!-- The full-screen clock's knockout panel -->
+    <string name="quick_ko_re_entry">Re-entry</string>
+    <string name="quick_ko_back_in">Who\'s back in?</string>
+</resources>

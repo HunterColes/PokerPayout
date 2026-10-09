@@ -1439,6 +1439,70 @@ s_seat_draw_back() {
   ui assert-text text=Odds "text=Hand ranks" "text=Seat draw" || return 1
   require_tab_selected Tools
 }
+
+# Backup (Tools) ---------------------------------------------------------------------------------------
+# Everything the app saves in one file, through the system's file picker (DocumentsUI, no permission):
+# a backup saved where the picker offers, opened again (its preview names what it holds: the tour's
+# preset Friday and its saved night), Add (nothing new: it is this phone's own), then Replace, which
+# starts the app again on the same game. Ends on the Tools list.
+BACKUP_FILE_RE='re=^poker-payout-[0-9]{4}-[0-9]{2}-[0-9]{2}( \([0-9]+\))?\.json$'
+picker_open() { # waits for the system's file picker to come to the front
+  local focus="" try
+  for try in $(seq 20); do
+    focus="$(adb_ shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
+    [[ "$focus" =~ documentsui ]] && break
+    sleep 0.5
+  done
+  echo "focus: $focus"
+  [[ "$focus" =~ documentsui ]] || { echo "[ui] FAIL the file picker didn't open"; return 1; }
+}
+s_backup() {
+  ui scroll-to "text=Backup" --max 5
+  ui tap "text=Backup"
+  ui assert-text "text=Save a backup" "text=Restore from a file" "text=Save backup…" "text=Open a file…" desc=Back || return 1
+  require_tab_selected Tools
+}
+s_backup_save() {
+  ui tap "text=Save backup…"
+  picker_open || return 1
+  ui tap "re=^(SAVE|Save)$" --timeout 15
+  ui wait "re=^Backup saved" --timeout 15
+}
+s_backup_open() {
+  ui wait-gone "re=^Backup saved" --timeout 12
+  ui tap "text=Open a file…"
+  picker_open || return 1
+  ui tap "$BACKUP_FILE_RE" --timeout 15
+  ui assert-text "text=Restore this file?" "text=1 preset" "text=1 night in History" \
+    "text=Tournament setup and tonight's game" "text=Add to this phone" "text=Replace this phone's data" || return 1
+}
+s_backup_add() {
+  # The backup is this phone's own: nothing to add, and the preview closes
+  ui tap "text=Add to this phone"
+  ui assert-text "text=Nothing new: this phone has it all already." || return 1
+  ui wait-gone "text=Restore this file?"
+}
+s_backup_replace() {
+  ui wait-gone "re=^Nothing new" --timeout 12
+  ui tap "text=Open a file…"
+  picker_open || return 1
+  ui tap "$BACKUP_FILE_RE" --timeout 15
+  ui scroll-to "text=Replace this phone's data" --max 3
+  ui tap "text=Replace this phone's data"
+  # A fresh process on the first tab, the same game: the Bank's champion, the preset, the night
+  PP_UI_SCROLL=0 ui wait "re=$TAB_RE" --timeout 30
+  echo "app pid after the restart: $(adb_ shell pidof "$APP_ID" | tr -d '\r')"
+  require_tab_selected Tournament || return 1
+  tab Bank
+  ui assert-text "desc=Alice, champion" || return 1
+  tab Tools
+  ui scroll-to text=History --max 4
+  ui tap text=History
+  ui assert-text "text=1 night saved" || return 1
+  ui back
+  ui assert-text text=Odds "text=Seat draw" || return 1
+  require_tab_selected Tools
+}
 s_odds_empty() {
   # The Settings volume dialog may still be open: the dump only sees a dialog's window, so if the
   # Odds tile isn't there, close the dialog first.
@@ -1816,6 +1880,11 @@ step seat-draw-button     "Deal for the button: high card, blinds by seat"      
 step seat-draw-undo       "Redraw seats, then Undo brings the draw back"        s_seat_draw_undo
 step seat-draw-share      "Share as text: the share sheet opens and closes"     s_seat_draw_share
 step seat-draw-back       "Back to the Tools list"                              s_seat_draw_back
+step backup               "Tools > Backup: save and restore, Tools selected"    s_backup
+step backup-save          "Save backup…: the file picker saves the file"        s_backup_save
+step backup-open          "Open it again: the preview names what it holds"      s_backup_open
+step backup-add           "Add to this phone: nothing new, nothing changed"     s_backup_add
+step backup-replace       "Replace: the app starts again on the same game"      s_backup_replace
 step odds-empty           "Odds: empty table, first slot waiting"              s_odds_empty
 step odds-card-picker     "Docked keypad: ranks, then suits that wait"          s_card_picker
 step odds-hole-cards      "Keypad: AsKs vs QhQd, auto-advance to the flop"      s_hole_cards

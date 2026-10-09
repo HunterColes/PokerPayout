@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -203,7 +205,10 @@ private fun ProblemNote(message: String) {
  */
 @Composable
 fun BackupPreviewBody(preview: BackupPreview, busy: Boolean, onIntent: (BackupIntent) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+    ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             preview.fileName?.let { Text(it, style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite) }
             savedLine(preview)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk) }

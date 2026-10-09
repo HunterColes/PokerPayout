@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.huntercoles.pokerpayout.core.constants.TournamentConstants
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
@@ -55,7 +56,7 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiSta
 import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetsIntent
 
 /** The players stepper's range (as the slider it replaces). */
-internal val PlayerRange = 3..30
+internal val PlayerRange = TournamentConstants.MIN_PLAYERS..TournamentConstants.MAX_PLAYERS
 
 private val SectionShape = RoundedCornerShape(PokerDimens.CornerCard)
 

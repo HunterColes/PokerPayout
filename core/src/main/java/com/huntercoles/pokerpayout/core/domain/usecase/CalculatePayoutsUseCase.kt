@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.core.domain.usecase
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlace
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutTable
 import javax.inject.Inject
 
@@ -42,6 +43,15 @@ class CalculatePayoutsUseCase @Inject constructor() {
         }
         return table
     }
+
+    /**
+     * The most places, up to [PayoutPlaces.maxFor] [playerCount], that each pay something with
+     * [settings] and this pool (rule 5): where the Payouts tab's stepper stops.
+     */
+    fun payablePlaces(prizePoolCents: Long, settings: PayoutSettings, playerCount: Int): Int =
+        (PayoutPlaces.maxFor(playerCount) downTo 1).first { count ->
+            invoke(prizePoolCents, settings.withPlaces(count).weights, playerCount, settings.rounding).places.size == count
+        }
 
     private fun table(pool: Long, paying: List<Int>, rounding: PayoutRounding): PayoutTable {
         val totalWeight = paying.sumOf { it.toLong() }

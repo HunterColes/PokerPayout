@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- PP-111: the night's big moments on the clock, and the champion's screen (S25) -->
+    <string name="moment_bubble_title">On the bubble</string>
+    <string name="moment_bubble_line">One more out, then everyone left is paid.</string>
+    <string name="moment_in_the_money_title">In the money!</string>
+    <string name="moment_in_the_money_line">Everyone left wins at least %1$s.</string>
+    <string name="moment_final_table_title">Final table</string>
+    <plurals name="moment_final_table_line">
+        <item quantity="one">%d player left, at one table.</item>
+        <item quantity="other">%d players left, all at one table.</item>
+    </plurals>
+    <string name="moment_heads_up_title">Heads-up</string>
+    <string name="moment_heads_up_line">%1$s against %2$s</string>
+    <string name="moment_heads_up_line_unnamed">Two players left.</string>
+
+    <string name="champion_card">%1$s is the champion</string>
+    <string name="champion_card_open">See the results</string>
+
+    <string name="winner_eyebrow">Champion</string>
+    <string name="winner_wins">Wins %1$s</string>
+    <string name="winner_bounties">Plus %1$s in bounties</string>
+    <string name="winner_payouts">Payouts</string>
+    <string name="winner_pay_first">Pay everyone in the Bank, then save this night to History.</string>
+    <string name="winner_open_bank">Pay out in the Bank</string>
+    <string name="winner_open_history">Open History</string>
+    <string name="winner_close">Back to the clock</string>
+</resources>

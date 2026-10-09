@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -77,6 +78,10 @@ import kotlinx.coroutines.delay
  * who is out, then who knocked them out. While it is open the clock is only to look at (TalkBack
  * skips it) and Back puts the knockout away. The snackbar's Undo shows bottom left; the players left
  * say when it is the bubble.
+ *
+ * PP-111: a big moment of the night shows across the top ([MomentSlot]) and the digits make room
+ * for it. The last knockout opens the champion's screen ([winner]) in place of the clock (Back or ✕
+ * closes it); a mystery envelope drawn by that knockout still shows over it first.
  */
 @Composable
 internal fun TableViewContent(
@@ -84,6 +89,40 @@ internal fun TableViewContent(
     onIntent: (TimerIntent) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
+    winner: WinnerPane? = null,
+) {
+    val knockouts = LocalTableKnockouts.current
+    var knockoutAsked by rememberSaveable { mutableStateOf(false) }
+    val canKnockOut = knockouts != null && uiState.table.playersLeft > 1
+    // Open until it closes itself: the last knockout's envelope still shows once one player is left
+    val knockoutOpen = knockoutAsked && knockouts != null
+    val champion = winner?.takeIf { uiState.winnerOpen }
+    BackHandler(enabled = champion != null) { onIntent(TimerIntent.CloseWinner) }
+    BackHandler(enabled = knockoutOpen) { knockoutAsked = false }
+    BoxWithConstraints(modifier.fillMaxSize().background(PokerColors.PokerBlack)) {
+        if (champion != null) {
+            // Under the knockout the screen is only to look at (TalkBack skips it)
+            WinnerContent(champion.model, champion.onAction, if (knockoutOpen) Modifier.clearAndSetSemantics {} else Modifier)
+        } else {
+            val openKnockout = { knockoutAsked = true }
+            TableClock(uiState, onIntent, onExit, onKnockOut = openKnockout.takeIf { canKnockOut }, quiet = knockoutOpen)
+        }
+        if (knockoutOpen) knockouts?.Panel(onClose = { knockoutAsked = false })
+        TableSnackbars()
+    }
+}
+
+/**
+ * The clock itself: a big moment across the top, the time and the blinds, the numbers and the
+ * controls along the foot. [quiet] while the knockout is over it: only to look at.
+ */
+@Composable
+private fun TableClock(
+    uiState: TimerUiState,
+    onIntent: (TimerIntent) -> Unit,
+    onExit: () -> Unit,
+    onKnockOut: (() -> Unit)?,
+    quiet: Boolean,
 ) {
     var touches by remember { mutableIntStateOf(0) }
     var dimmed by remember { mutableStateOf(false) }
@@ -98,43 +137,36 @@ internal fun TableViewContent(
         animationSpec = if (reduced) snap() else tween(FADE_MILLIS),
         label = "tableControls",
     )
-    val knockouts = LocalTableKnockouts.current
-    var knockoutAsked by rememberSaveable { mutableStateOf(false) }
-    val canKnockOut = knockouts != null && uiState.table.playersLeft > 1
-    val knockoutOpen = knockoutAsked && canKnockOut
-    BackHandler(enabled = knockoutOpen) { knockoutAsked = false }
-    BoxWithConstraints(modifier.fillMaxSize().background(PokerColors.PokerBlack)) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            awaitPointerEvent(PointerEventPass.Initial)
-                            touches++
-                        }
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent(PointerEventPass.Initial)
+                        touches++
                     }
                 }
-                .windowInsetsPadding(WindowInsets.displayCutout)
-                .padding(horizontal = 24.dp, vertical = 12.dp)
-                .then(if (knockoutOpen) Modifier.clearAndSetSemantics {} else Modifier),
-        ) {
-            val width = maxWidth
-            val height = maxHeight
-            Column(Modifier.fillMaxSize()) {
-                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    if (width > height) {
-                        LandscapeBody(uiState, heroCap = height * HERO_MAX_HEIGHT_LANDSCAPE, width = width)
-                    } else {
-                        PortraitBody(uiState, heroCap = height * HERO_MAX_HEIGHT_PORTRAIT, width = width)
-                    }
-                }
-                val openKnockout = { knockoutAsked = true }
-                TableFooter(uiState, controlsAlpha, onIntent, onExit, onKnockOut = openKnockout.takeIf { canKnockOut })
             }
+            .windowInsetsPadding(WindowInsets.displayCutout)
+            .padding(horizontal = 24.dp, vertical = 12.dp)
+            .then(if (quiet) Modifier.clearAndSetSemantics {} else Modifier),
+    ) {
+        val width = maxWidth
+        val height = maxHeight
+        // PP-111: a short window at large text keeps a moment to its title, so the digits keep room
+        val brief = height < BRIEF_BELOW * LocalDensity.current.fontScale
+        Column(Modifier.fillMaxSize()) {
+            MomentSlot(uiState, onIntent, style = if (brief) MomentStyle.Brief else MomentStyle.Strip)
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                if (width > height) {
+                    LandscapeBody(uiState, heroCap = height * HERO_MAX_HEIGHT_LANDSCAPE, width = width)
+                } else {
+                    PortraitBody(uiState, heroCap = height * HERO_MAX_HEIGHT_PORTRAIT, width = width)
+                }
+            }
+            TableFooter(uiState, controlsAlpha, onIntent, onExit, onKnockOut)
         }
-        if (knockoutOpen) knockouts?.Panel(onClose = { knockoutAsked = false })
-        TableSnackbars()
     }
 }
 
@@ -346,5 +378,8 @@ private const val ANTE_SCALE = 0.8f
 private const val DIVIDER_HEIGHT = 0.7f
 private const val DIMMED_ALPHA = 0.4f
 private const val CONTROLS_VISIBLE_MILLIS = 3_000L
+
+/** Below this height (per unit of font scale) a big moment on the table view is its title alone. */
+private val BRIEF_BELOW = 240.dp
 private const val FADE_MILLIS = 300
 private val TableControl = 48.dp

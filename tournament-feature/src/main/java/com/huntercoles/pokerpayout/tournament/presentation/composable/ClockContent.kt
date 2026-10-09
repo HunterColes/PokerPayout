@@ -28,7 +28,8 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiSta
  * S2, the clock, level-first (PP-025): the setup strip, then the level's time left as the hero with
  * its progress, the blinds (big) and what's next (labelled, dimmer), the controls, the table's
  * numbers, next break / end time / rebuys, and the schedule. On a break the middle is S4
- * ([BreakContent]). Z1 (under 360 dp) tightens it; Z4 (840 dp and up) splits it 62/38.
+ * ([BreakContent]). Z1 (under 360 dp) tightens it; Z4 (840 dp and up) splits it 62/38. A big moment
+ * of the night (PP-111) shows under the strip ([MomentSlot]), and the clock moves down for it.
  */
 @Composable
 internal fun ClockContent(
@@ -42,6 +43,7 @@ internal fun ClockContent(
     if (layout == ClockLayout.TwoPane) {
         Column(Modifier.fillMaxSize().padding(horizontal = gutter)) {
             SetupStrip(SetupSummary.stripParts(setup, timer, full = true), openPanel)
+            MomentSlot(timer, actions.onTimerIntent)
             Row(Modifier.weight(1f).padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 Column(
                     modifier = Modifier.weight(LEFT_PANE).verticalScroll(rememberScrollState()).padding(bottom = 16.dp),
@@ -65,7 +67,11 @@ internal fun ClockContent(
                 .padding(start = gutter, end = gutter, top = 4.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SetupStrip(SetupSummary.stripParts(setup, timer), openPanel)
+            // PP-111: a big moment shows under the strip; with none, the slot takes no room
+            Column(Modifier.fillMaxWidth()) {
+                SetupStrip(SetupSummary.stripParts(setup, timer), openPanel)
+                MomentSlot(timer, actions.onTimerIntent)
+            }
             ClockMain(timer, actions, layout)
             ClockSide(setup, timer, showSubs = layout != ClockLayout.Small)
         }

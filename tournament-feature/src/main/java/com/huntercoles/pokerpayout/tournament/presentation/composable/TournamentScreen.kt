@@ -66,6 +66,7 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigViewM
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentMode
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentOrientation
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentUi
+import com.huntercoles.pokerpayout.tournament.presentation.payouts.PayoutsViewModel
 import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetsViewModel
 import com.huntercoles.pokerpayout.tournament.presentation.presets.shareSetup
 
@@ -74,11 +75,13 @@ import com.huntercoles.pokerpayout.tournament.presentation.presets.shareSetup
  * is the same one on every tab and through every rotation; the tab's own state (which mood it's in,
  * the panel's lock) is saved with the screen, so a rotation or a process death puts it back.
  */
+@Suppress("LongParameterList") // one link per tab or screen it opens, and its ViewModels
 @Composable
 fun TournamentScreen(
     onOpenBank: () -> Unit = {},
     onOpenPayouts: () -> Unit = {},
     onOpenSound: () -> Unit = {},
+    onOpenHistory: () -> Unit = {},
     calculatorViewModel: TournamentConfigViewModel = hiltViewModel(),
     timerViewModel: TimerViewModel = hiltViewModel(viewModelStoreOwner = LocalContext.current as ComponentActivity),
 ) {
@@ -87,12 +90,16 @@ fun TournamentScreen(
     val setup by calculatorViewModel.uiState.collectAsStateWithLifecycle()
     val timer by timerViewModel.uiState.collectAsStateWithLifecycle()
     val presets by presetsViewModel.uiState.collectAsStateWithLifecycle()
+    // PP-111: the champion's screen is the Payouts tab's picture of the night, and saves it the same way
+    val payoutsViewModel: PayoutsViewModel = hiltViewModel()
+    val winner = rememberWinner(payoutsViewModel)
     var ui by rememberSaveable { mutableStateOf(TournamentUi.initial(timerViewModel.uiState.value.hasTimerStarted)) }
     val askForNotifications = rememberNotificationsAsk(timerViewModel)
     val onPresetIntent = rememberPresetIntents(presetsViewModel, presets.sharing)
     val context = LocalContext.current
     val actions = remember(
-        calculatorViewModel, timerViewModel, context, onOpenBank, onOpenPayouts, onOpenSound, askForNotifications, onPresetIntent,
+        calculatorViewModel, timerViewModel, payoutsViewModel, context, onOpenBank, onOpenPayouts, onOpenSound, onOpenHistory,
+        askForNotifications, onPresetIntent,
     ) {
         TournamentActions(
             onSetupIntent = calculatorViewModel::acceptIntent,
@@ -112,23 +119,37 @@ fun TournamentScreen(
             openSound = onOpenSound,
             onPresetIntent = onPresetIntent,
             shareText = { text -> shareSetup(context, text) },
+            onPayoutsIntent = payoutsViewModel::acceptIntent,
+            openHistory = onOpenHistory,
         )
     }
+    OnLeavingTheTab(timerViewModel)
+    val flash = rememberCueFlashes(timerViewModel)
+    Box(Modifier.fillMaxSize()) {
+        TournamentContent(setup = setup, timer = timer, ui = ui, actions = actions, winner = winner)
+        CueFlash(flash)
+    }
+    PresetsSheet(presets, setup, timer, actions)
+}
+
+/** Leaving the tab commits what was typed, and ends a ⤢ table view (phones turn back upright). */
+@Composable
+private fun OnLeavingTheTab(timerViewModel: TimerViewModel) {
     val focusManager = LocalFocusManager.current
-    val activity = context.findActivity()
+    val activity = LocalContext.current.findActivity()
     DisposableEffect(Unit) {
         onDispose {
-            // Leaving the tab commits what was typed, and ends a ⤢ table view (phones turn back upright).
             focusManager.clearFocus(force = true)
             if (activity?.isChangingConfigurations != true) timerViewModel.acceptIntent(TimerIntent.SetTableView(false))
         }
     }
-    val flash = rememberCueFlashes(timerViewModel)
-    Box(Modifier.fillMaxSize()) {
-        TournamentContent(setup = setup, timer = timer, ui = ui, actions = actions)
-        CueFlash(flash)
-    }
-    PresetsSheet(presets, setup, timer, actions)
+}
+
+/** PP-111: the champion's screen for the night as the Payouts tab has it; null until there is a champion. */
+@Composable
+private fun rememberWinner(payoutsViewModel: PayoutsViewModel): WinnerModel? {
+    val payouts by payoutsViewModel.uiState.collectAsStateWithLifecycle()
+    return remember(payouts) { WinnerModel.from(payouts) }
 }
 
 /** PP-083: the clock's flashes while the tab is on screen; one that comes while it isn't is dropped. */
@@ -171,7 +192,11 @@ private fun rememberNotificationsAsk(timerViewModel: TimerViewModel): () -> Unit
  * panel; or the full-screen table view when a phone is turned sideways (or ⤢ is on). ✕ in a table
  * view the phone was turned into holds the clock upright until the phone is held upright again
  * (PP-094 #2): turned sideways after that, it shows the table view again.
+ *
+ * PP-111: once the last knockout leaves a champion, their screen ([winner], S25) takes the tab's
+ * place, upright or sideways, until ✕ or Back.
  */
+@Suppress("LongParameterList") // the tab's states, what it does, and the champion's screen
 @Composable
 fun TournamentContent(
     setup: TournamentConfigUiState,
@@ -179,6 +204,7 @@ fun TournamentContent(
     ui: TournamentUi,
     actions: TournamentActions,
     modifier: Modifier = Modifier,
+    winner: WinnerModel? = null,
 ) {
     val reduced = LocalReducedMotion.current
     val started = timer.hasTimerStarted
@@ -189,6 +215,7 @@ fun TournamentContent(
     val clockExists = timer.hasTimerStarted
     RequestOrientation(TournamentOrientation.requested(smallestWidth, clockExists, timer.isTableView, settled.rotationPaused))
     OnPhoneUpright(enabled = settled.rotationPaused) { actions.updateUi { it.pauseRotation(false) } }
+    val champion = winner?.takeIf { timer.winnerOpen && clockExists }?.let { WinnerPane(it, actions::onWinner) }
     val tableView = TournamentOrientation.showsTableView(
         smallestScreenWidthDp = smallestWidth,
         landscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
@@ -206,7 +233,10 @@ fun TournamentContent(
         RequestShellChrome(immersive = true)
         HideSystemBars()
         BackHandler(onBack = exit)
-        TableViewContent(timer, actions.onTimerIntent, onExit = exit, modifier = modifier)
+        TableViewContent(timer, actions.onTimerIntent, onExit = exit, modifier = modifier, winner = champion)
+    } else if (champion != null) {
+        BackHandler { actions.onTimerIntent(TimerIntent.CloseWinner) }
+        WinnerContent(champion.model, champion.onAction, modifier)
     } else {
         TabBody(setup, timer, settled, actions, modifier)
     }

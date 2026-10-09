@@ -31,10 +31,14 @@ import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.testing.forEachScrollPosition
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
+import com.huntercoles.pokerpayout.tournament.domain.moments.BigMoment
+import com.huntercoles.pokerpayout.tournament.presentation.MomentBanner
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentMode
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentUi
+import com.huntercoles.pokerpayout.tournament.presentation.payouts.NightSave
+import com.huntercoles.pokerpayout.tournament.presentation.payouts.PayoutRowModel
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -56,7 +60,8 @@ import java.util.TimeZone
  * A phone held sideways shows the table view once a clock exists, as the app does, so the S1 and S2
  * goldens on the landscape phone cells are table views; the tablet-land cell is the two-pane Z4.
  * The table view has its Knock out button (PP-135); the Bank's panel behind it is a stand-in here
- * ([FakeTableKnockouts]) and bank-feature's QuickKnockoutScreensTest checks the real one.
+ * ([FakeTableKnockouts]) and bank-feature's QuickKnockoutScreensTest checks the real one. The big
+ * moments and the champion's screen (PP-111, S25) are drawn as the clock shows them.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -212,6 +217,58 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         check("S2_clock_bubble", fixture.running.withPlayersLeft(BUBBLE_LEFT), TournamentUi(mode = TournamentMode.Running))
     }
 
+    /**
+     * PP-111: the night's big moments on the clock. Upright, a banner under the strip (heads-up, by
+     * name) and, once the champion's screen is closed, the champion's card there; on the table view,
+     * a banner across the top (in the money) over smaller digits, the controls where they were.
+     */
+    @Test
+    fun bigMoments() {
+        val running = TournamentUi(mode = TournamentMode.Running)
+        if (!config.device.isLandscape || config.device == Device.TabletLandscape) {
+            val headsUp = MomentBanner(BigMoment.HEADS_UP, id = 1, playersLeft = 2, names = listOf("Dana", "Marcus"))
+            check("S2_clock_moment", fixture.running.withPlayersLeft(2).copy(moment = headsUp), running, scroll = true)
+            check("S2_clock_champion", fixture.running.championDana(), running, scroll = true)
+        }
+        if (config.device.isLandscape) {
+            val money = MomentBanner(BigMoment.IN_THE_MONEY, id = 1, playersLeft = 3, lowestPrizeCents = PRIZE_3RD)
+            check("S3_table_moment", fixture.running.withPlayersLeft(3).copy(isTableView = true, moment = money), running)
+            showAndCheck("S3_table_final", scroll = false, golden = false) {
+                // A night on two tables (the fixture's is one): the banner as it would show
+                val finalTable = MomentBanner(BigMoment.FINAL_TABLE, id = 1, playersLeft = 9)
+                val state = fixture.running.copy(isTableView = true, moment = finalTable)
+                TournamentContent(setup, state, running, TournamentActions())
+            }
+            check("S3_table_champion", fixture.running.championDana().copy(isTableView = true), running, golden = false)
+        }
+    }
+
+    /**
+     * PP-111: the champion's screen (S25), what the last knockout opens: upright, sideways (the
+     * two-pane tablet) and on a phone's table view. Before everyone is paid it leads to the Bank;
+     * then it offers "Save this night", then says where the night went (checked, not drawn), with a
+     * long name fitted to the width.
+     */
+    @Test
+    fun champion() {
+        val running = TournamentUi(mode = TournamentMode.Running)
+        val over = fixture.running.championDana().copy(winnerOpen = true)
+        showAndCheck("S25_winner", scroll = true) {
+            TournamentContent(setup, over, running, TournamentActions(), winner = WINNER)
+        }
+        showAndCheck("S25_winner_save", scroll = true, golden = false) {
+            TournamentContent(setup, over, running, TournamentActions(), winner = WINNER.copy(night = NightSave.Offered))
+        }
+        val longName = WINNER.copy(championName = LONG_NAME, night = NightSave.Saved)
+        showAndCheck("S25_winner_saved", scroll = true, golden = false) {
+            TournamentContent(setup, over, running, TournamentActions(), winner = longName)
+        }
+    }
+
+    /** One player left, Dana: the champion. */
+    private fun TimerUiState.championDana(): TimerUiState =
+        withPlayersLeft(1).let { it.copy(table = it.table.copy(championName = "Dana")) }
+
     /** The same moment with [left] players still in (each one's stack grows as the field shrinks). */
     private fun TimerUiState.withPlayersLeft(left: Int): TimerUiState =
         copy(table = table.copy(playersLeft = left, averageStack = table.averageStack * table.playersLeft / left))
@@ -281,8 +338,8 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         )
     }
 
-    private fun check(name: String, timer: TimerUiState, ui: TournamentUi, scroll: Boolean = false) {
-        showAndCheck(name, scroll) { TournamentContent(setup, timer, ui, TournamentActions()) }
+    private fun check(name: String, timer: TimerUiState, ui: TournamentUi, scroll: Boolean = false, golden: Boolean = true) {
+        showAndCheck(name, scroll, golden = golden) { TournamentContent(setup, timer, ui, TournamentActions()) }
     }
 
     private fun show(name: String, timer: TimerUiState, ui: TournamentUi) {
@@ -299,8 +356,17 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         }
     }
 
-    /** Shows [content] in the shell, checks the layout (at every scroll position if [scroll]), records the golden. */
-    private fun showAndCheck(name: String, scroll: Boolean, checkLayout: Boolean = true, content: @Composable () -> Unit) {
+    /**
+     * Shows [content] in the shell, checks the layout (at every scroll position if [scroll]), records
+     * the golden (unless not [golden]: a state checked but not drawn).
+     */
+    private fun showAndCheck(
+        name: String,
+        scroll: Boolean,
+        checkLayout: Boolean = true,
+        golden: Boolean = true,
+        content: @Composable () -> Unit,
+    ) {
         shownKey = name
         shown = { InTournamentTab { content() } }
         screen.compose.waitForIdle()
@@ -309,7 +375,7 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
             LayoutAssertions.assertTextFits(screen.compose, where)
             LayoutAssertions.assertTouchTargets(screen.compose, where, strict = false)
         }
-        if (config in DeviceMatrix.goldens) screen.compose.onRoot().captureGolden("screens", name, config)
+        if (golden && config in DeviceMatrix.goldens) screen.compose.onRoot().captureGolden("screens", name, config)
         when {
             !checkLayout -> Unit
             scroll -> screen.compose.forEachScrollPosition { position ->
@@ -327,6 +393,21 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         private const val BUBBLE_LEFT = 4
         private const val AFTER_KNOCKOUT_LEFT = 6
         private const val KNOCKOUT_DONE = "Theo is out in 7th · bounty to Dana"
+        private const val PRIZE_3RD = 9_500L
+        private const val LONG_NAME = "Christopher Montgomery"
+
+        /** The mockups' night over: Dana wins the $450 pool, Standard to $5, her own bounty and Ben's. */
+        private val WINNER = WinnerModel(
+            championName = "Dana",
+            prizeCents = 22_500L,
+            bountyCents = 1_000L,
+            rows = listOf(
+                PayoutRowModel(1, 22_500L, 50.0, "Dana"),
+                PayoutRowModel(2, 13_000L, 28.9, "Marcus"),
+                PayoutRowModel(3, PRIZE_3RD, 21.1, "Priya"),
+            ),
+            night = NightSave.NotOver,
+        )
         private val MIN_TOUCH = 48.dp
         private val TOP_BAR_BUTTONS = listOf("Reset tournament", "Mute chimes", "Unmute chimes", "Table view", "More options")
         private val ADAPTIVE_GOLDENS =

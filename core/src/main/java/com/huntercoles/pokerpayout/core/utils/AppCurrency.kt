@@ -1,8 +1,7 @@
 package com.huntercoles.pokerpayout.core.utils
 
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import com.huntercoles.pokerpayout.core.utils.DigitStyle.APOSTROPHE
 import com.huntercoles.pokerpayout.core.utils.DigitStyle.COMMA
 import com.huntercoles.pokerpayout.core.utils.DigitStyle.LAKH
@@ -171,5 +170,16 @@ const val NO_BREAK_SPACE = ' '
  * previews, it is the dollar.
  */
 object MoneyFormat {
-    var current: AppCurrency by mutableStateOf(AppCurrency.DEFAULT)
+    private val state = mutableStateOf(AppCurrency.DEFAULT)
+
+    /**
+     * Set in a snapshot of its own, applied at once: open compositions see it as any state change,
+     * and nothing waits on the main thread's next frame to publish it (a change made with no screen
+     * showing, at start or in a test, is done when this returns).
+     */
+    var current: AppCurrency
+        get() = state.value
+        set(value) {
+            Snapshot.withMutableSnapshot { state.value = value }
+        }
 }

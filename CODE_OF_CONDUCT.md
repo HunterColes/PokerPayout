@@ -1,35 +1,21 @@
-# Code of Conduct
+# Code of conduct
 
-## Our Pledge
+Poker Payout follows the **[Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)**.
+The full text is at that link; it applies to everyone who takes part here, in issues, pull
+requests, reviews and anywhere else the project is represented.
 
-We are committed to providing a friendly, safe, and welcoming environment for everyone, regardless of level of experience, gender identity and expression, sexual orientation, disability, personal appearance, body size, race, ethnicity, age, religion, nationality, or other similar characteristics.
+In short: be kind and patient, welcome people whatever their background or experience, give and
+take feedback gracefully, and keep the focus on what's best for the people who use the app.
+Harassment, insults, personal or political attacks, and publishing someone's private details are
+not acceptable.
 
-## Our Standards
+## Reporting
 
-Examples of behavior that contributes to a positive environment:
+If something here makes you uncomfortable, email the maintainer, Hunter Coles, at
+**hunter.colesw@gmail.com**. Every report is read and handled privately and fairly.
 
-- Being respectful and constructive in discussions
-- Using welcoming and inclusive language
-- Being respectful of differing viewpoints and experiences
-- Gracefully accepting constructive criticism
-- Focusing on what is best for the community
-- Showing empathy towards other community members
-
-Examples of unacceptable behavior:
-
-- Harassment of any participants in any form
-- Deliberate intimidation, stalking, or following
-- Violent threats or language directed against another person
-- Discriminatory jokes and language
-- Unwelcome sexual attention or advances
-- Advocating for, or encouraging, any of the above behavior
-
-## Enforcement
-
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by opening an issue or contacting project maintainers. All complaints will be reviewed and investigated promptly and fairly.
-
-Project maintainers have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct.
-
-## Attribution
-
-This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.0.
+The maintainer may edit or remove comments, commits, code, issues and other contributions that
+don't follow this code, and may warn, or temporarily or permanently ban, anyone who keeps
+breaking it. The Covenant's
+[enforcement guidelines](https://www.contributor-covenant.org/version/2/1/code_of_conduct/#enforcement-guidelines)
+describe the steps.

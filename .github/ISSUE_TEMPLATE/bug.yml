@@ -1,0 +1,66 @@
+name: Something's wrong
+description: The app did something it shouldn't, or didn't do something it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. A few details help a lot.
+        The app never sends anything itself, so this report is the only way we hear about a problem.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected to see instead.
+      placeholder: "I tapped ..., and ... happened. I expected ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we see it too?
+      description: The steps that lead to it, if you know them.
+      placeholder: |
+        1. Start a tournament with 9 players
+        2. ...
+        3. ...
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: It's at the bottom of the Tools tab, for example v1.3.14.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Where did you install it from?
+      options:
+        - F-Droid
+        - GitHub release
+        - I built it myself
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Phone and Android version
+      placeholder: "Pixel 7, Android 14"
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or a screen recording
+      description: Drag them in here. Hide any names you'd rather not share.
+    validations:
+      required: false

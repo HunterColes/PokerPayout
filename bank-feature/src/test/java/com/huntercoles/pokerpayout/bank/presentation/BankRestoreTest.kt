@@ -49,8 +49,18 @@ class BankRestoreTest {
     private data class Night(val players: Int, val mode: BountyMode, val bounty: Double, val steps: List<Step>)
 
     @Test
-    fun `a night at the Bank comes back exactly after process death`() =
-        forAll(seed = 2026_1008_61L, iterations = 50, gen = nights) { night ->
+    fun `a night at the Bank comes back exactly after process death`() = playAndRestart(seed = 2026_1008_61L, nights)
+
+    /**
+     * PP-116: the same, with late arrivals and re-entries among the steps (and Undo taking them back),
+     * so the rows the Bank adds, their prices and who re-entered for whom all come back too.
+     */
+    @Test
+    fun `a night with late entries and re-entries comes back exactly after process death`() =
+        playAndRestart(seed = 2026_1009_61L, nightsWithEntries)
+
+    private fun playAndRestart(seed: Long, gen: Arb<Night>) =
+        forAll(seed = seed, iterations = 50, gen = gen) { night ->
             val kit = BankTestKit(testDispatcher)
             kit.draws = Random(night.steps.size)
             kit.configure(players = night.players, buyIn = 20.0, bounty = night.bounty, rebuy = 20.0, addOn = 10.0)
@@ -107,6 +117,11 @@ class BankRestoreTest {
                 }
                 null
             }
+            // PP-116: a late arrival, or a player who is out buying back in
+            LATE_ENTRY -> BankIntent.AddLateEntry(NAMES[step.arg.mod(NAMES.size)])
+            RE_ENTRY -> viewModel.uiState.value.reEntries.let { out ->
+                BankIntent.ReEnter(if (out.isEmpty()) id else out[step.arg.mod(out.size)].playerId)
+            }
             else -> BankIntent.ToggleMute
         }
         intent?.let(viewModel::acceptIntent)
@@ -115,6 +130,8 @@ class BankRestoreTest {
 
     private companion object {
         const val DIE = 13
+        const val LATE_ENTRY = 14
+        const val RE_ENTRY = 15
         const val LATER_REBUY = 15.0
         val NAMES = listOf("Dana", "Priya", "", "  ", "Jo, \"Ace\"", "Zoë")
 
@@ -124,6 +141,16 @@ class BankRestoreTest {
             Arb.element(BountyMode.entries),
             Arb.element(5.0, 7.75, 10.0),
             Arb.list(steps, 1..40),
+            ::Night,
+        )
+
+        /** Every kind of step, late entries and re-entries included. */
+        private val stepsWithEntries = Arb.bind(Arb.int(0..RE_ENTRY), Arb.int(0..20), Arb.int(0..20), ::Step)
+        val nightsWithEntries = Arb.bind(
+            Arb.int(2..9),
+            Arb.element(BountyMode.entries),
+            Arb.element(5.0, 7.75, 10.0),
+            Arb.list(stepsWithEntries, 1..40),
             ::Night,
         )
     }

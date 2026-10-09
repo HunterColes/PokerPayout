@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout.bank.presentation.composable
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -109,6 +110,37 @@ class BankContentTest {
             ),
             sent
         )
+    }
+
+    /** PP-116: Late entry under the list, once the clock runs, with no cutoff set. */
+    @Test
+    fun lateEntryUnderTheListOpensItsSheet() {
+        show(BankScenes.midGame(kit).uiState.value)
+        compose.onNodeWithText("Late entry").performScrollTo().performClick()
+        assertEquals(listOf(BankIntent.OpenLateEntry), sent)
+    }
+
+    @Test
+    fun theLateEntrySheetSendsTheNameTypedOrAReEntry() {
+        val state = BankScenes.lateEntrySheet(kit).uiState.value
+        val sheet = state.sheet as BankSheet.LateEntry
+        setContent {
+            LateEntrySheetContent(
+                sheet = sheet,
+                reEntries = state.reEntries,
+                onAdd = { sent += BankIntent.AddLateEntry(it) },
+                onReEnter = { sent += BankIntent.ReEnter(it) },
+                onDismiss = { sent += BankIntent.DismissSheet },
+            )
+        }
+        compose.onNodeWithText("\$50 to sit down · 5,000 chips").assertExists()
+        compose.onNodeWithText("Open until the end of level 6.").assertExists()
+        compose.onNodeWithContentDescription("Late arrival's name").performTextReplacement("Kai")
+        compose.onNodeWithText("Add · \$50 paid").performScrollTo().performClick()
+        compose.onNodeWithText("Rita").performScrollTo().assert(
+            SemanticsMatcher("re-enters Rita") { it.config[SemanticsActions.OnClick].label == "Re-enter Rita" },
+        ).performClick()
+        assertEquals(listOf(BankIntent.AddLateEntry("Kai"), BankIntent.ReEnter(BankScenes.RITA)), sent)
     }
 
     @Test

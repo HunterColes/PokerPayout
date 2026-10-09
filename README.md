@@ -69,7 +69,8 @@
     places always add up to the prize pool to the cent
   ◦ The bank: who has paid the buy-in, rebuys, add-ons, knockouts and bounties, and who has been
     paid out, with Undo
-  ◦ A cash game mode: buy-ins and top-ups, a chip count check, and who pays whom at the end
+  ◦ Settle up at the end of the night: the fewest payments that square everyone, with a tick for
+    each, when not everyone paid in at the start
   ◦ Share the payouts or the settle-up as text
 
 • **Tools**

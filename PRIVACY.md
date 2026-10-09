@@ -29,7 +29,8 @@ Only when you ask:
   open Android's share sheet. You pick the app it goes to, and it gets that text and nothing else.
 - **Your phone's own backup.** Like most apps, Poker Payout lets Android include its saved data in
   your phone's backup and in phone-to-phone transfers. That's done by Android, under your phone's
-  backup settings, not by the app. If backup is off, nothing is copied.
+  backup settings, not by the app. If backup is off, nothing is copied. The music playlist stays
+  on the phone: the songs you picked are that phone's files.
 
 ## Permissions
 

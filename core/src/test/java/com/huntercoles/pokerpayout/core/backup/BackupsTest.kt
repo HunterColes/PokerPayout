@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.R
 import com.huntercoles.pokerpayout.core.audio.music.BreakMusic
+import com.huntercoles.pokerpayout.core.audio.music.MusicTrack
+import com.huntercoles.pokerpayout.core.audio.music.Playlist
 import com.huntercoles.pokerpayout.core.domain.history.NightStore
 import com.huntercoles.pokerpayout.core.domain.history.Nights.night
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
@@ -17,6 +19,7 @@ import com.huntercoles.pokerpayout.core.preferences.MusicPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.ChipCalculatorPreferences
 import com.huntercoles.pokerpayout.core.preferences.OddsCalculatorPreferences
+import com.huntercoles.pokerpayout.core.preferences.PhonePrefs
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.time.ClockAnchor
@@ -38,6 +41,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.time.LocalDate
+import kotlin.random.Random
 
 /**
  * Backups of everything the core saves ([Backups] with the core's sections, as the app builds them in
@@ -70,7 +74,7 @@ class BackupsTest {
 
     @Before
     fun wipe() {
-        BackupCatalog.FILES.forEach { prefs(it).edit().clear().commit() }
+        (BackupCatalog.FILES + BackupCatalog.PHONE_FILES).forEach { prefs(it).edit().clear().commit() }
         nights = NightStore(context)
         regulars = RegularsStore(context)
     }
@@ -300,18 +304,31 @@ class BackupsTest {
     @Test
     fun `what's about this phone never leaves it, and a restore leaves it alone`() {
         fillEverything()
-        TimerPreferences(context).takeNotificationsAsk()
+        val playlist = Playlist().add(listOf(MusicTrack(PICKED_SONG, "Night Owl")), Random(0))
+        with(MusicPreferences(context)) {
+            setPlaylist(playlist)
+            setPosition(PICKED_SONG, 61_000)
+        }
+        // The flag 1.4.6 kept, as an install not yet started since the update still has it
+        prefs("timer_prefs").edit().putBoolean("notifications_permission_asked", true).commit()
         val text = backups().export()
-        assertFalse(text, "notifications_permission_asked" in text)
+        listOf("notifications_permission_asked", PICKED_SONG, PhonePrefs.FILE, "position_ms").forEach {
+            assertFalse(it, it in text)
+        }
 
-        // Another phone: never asked for notifications
+        // Another phone: no playlist (its songs are this phone's files)
         wipe()
         backups().replace(backups().open(text))
-        assertTrue("asks for notifications once, as a new install does", TimerPreferences(context).takeNotificationsAsk())
+        assertTrue(MusicPreferences(context).getPlaylist().isEmpty)
 
-        // This phone again: asked already, and a restore doesn't undo that
+        // This phone again: a restore leaves its playlist and the paused song's place alone
+        with(MusicPreferences(context)) {
+            setPlaylist(playlist)
+            setPosition(PICKED_SONG, 61_000)
+        }
         backups().replace(backups().open(text))
-        assertFalse(TimerPreferences(context).takeNotificationsAsk())
+        assertEquals(playlist, MusicPreferences(context).getPlaylist())
+        assertEquals(61_000, MusicPreferences(context).getPosition(PICKED_SONG))
     }
 
     @Test
@@ -434,6 +451,11 @@ class BackupsTest {
         val problem = assertThrows(BackupException::class.java) { backups().open(text) }.problem
         assertEquals(BackupProblem.Damaged, problem)
         assertEquals(before, settings())
+    }
+
+    private companion object {
+        /** A song the host picked: a loan from this phone's file picker. */
+        const val PICKED_SONG = "content://com.android.providers.media.documents/document/audio%3A12"
     }
 
     /** Stands still unless a test moves it: 12:00 UTC on 8 October 2026, one boot. */

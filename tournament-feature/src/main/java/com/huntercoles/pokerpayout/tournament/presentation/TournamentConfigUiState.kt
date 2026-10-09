@@ -50,7 +50,9 @@ data class TournamentConfigUiState(
     /** Someone is out in the Bank: the bounty type is fixed now (PP-035). */
     val knockoutsRecorded: Boolean = false,
     /** The Bank has drawn at least one mystery envelope for a knockout (PP-035). */
-    val envelopesDrawn: Boolean = false
+    val envelopesDrawn: Boolean = false,
+    /** PP-113: the setup page's one-line welcome, on a new install until dismissed or the first clock starts. */
+    val showWelcome: Boolean = false
 ) {
     val money: MoneySettings get() = config.money
     val playerCount: Int get() = config.numPlayers

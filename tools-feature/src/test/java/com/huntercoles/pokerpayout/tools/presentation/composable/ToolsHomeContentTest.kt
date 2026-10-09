@@ -56,6 +56,9 @@ class ToolsHomeContentTest {
         compose.onNodeWithText("Chip set").performClick()
         compose.onNodeWithText("Hand ranks").performClick()
         compose.onNodeWithText("Seat draw").performClick()
+        compose.onNodeWithText("Outs & pot odds").performScrollTo().performClick()
+        compose.onNodeWithText("Side pots").performScrollTo().performClick()
+        compose.onNodeWithText("Deal maker").performScrollTo().performClick()
         compose.onNodeWithText("Shot clock").performScrollTo().performClick()
         compose.onNodeWithText("Dealer's choice").performScrollTo().performClick()
         compose.onNodeWithText("Equity quiz").performScrollTo().performClick()
@@ -67,6 +70,9 @@ class ToolsHomeContentTest {
                 NavigationDestination.ChipCalculator,
                 NavigationDestination.HandRanks,
                 NavigationDestination.SeatDraw,
+                NavigationDestination.Outs,
+                NavigationDestination.SidePots,
+                NavigationDestination.DealMaker,
                 NavigationDestination.ShotClock,
                 NavigationDestination.DealersChoice,
                 NavigationDestination.EquityQuiz,

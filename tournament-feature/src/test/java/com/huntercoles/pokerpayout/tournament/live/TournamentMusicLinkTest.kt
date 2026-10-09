@@ -7,6 +7,7 @@ import com.huntercoles.pokerpayout.core.audio.music.BreakMusic
 import com.huntercoles.pokerpayout.core.audio.music.ClockPhase
 import com.huntercoles.pokerpayout.core.audio.music.MusicControls
 import com.huntercoles.pokerpayout.core.preferences.MusicPreferences
+import com.huntercoles.pokerpayout.core.preferences.PhonePrefs
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.time.ClockAnchor
@@ -72,7 +73,7 @@ class TournamentMusicLinkTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        listOf(MusicPreferences.FILE, "timer_prefs", "tournament_prefs").forEach {
+        listOf(MusicPreferences.FILE, PhonePrefs.FILE, "timer_prefs", "tournament_prefs").forEach {
             context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
         }
         musicPreferences = MusicPreferences(context)

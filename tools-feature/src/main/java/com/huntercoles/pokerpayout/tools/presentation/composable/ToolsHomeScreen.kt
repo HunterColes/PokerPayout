@@ -74,6 +74,15 @@ private val Tools = listOf(
     Tool(NavigationDestination.ChipCalculator, PokerIcons.Chip, R.string.tools_chips_title, R.string.tools_chips_description),
     Tool(NavigationDestination.HandRanks, PokerIcons.List, R.string.tools_ranks_title, R.string.tools_ranks_description),
     Tool(NavigationDestination.SeatDraw, PokerIcons.Seat, R.string.tools_seats_title, R.string.tools_seats_description),
+    // The table tools (S20 to S22): mid-hand maths and the end-of-night deal
+    Tool(NavigationDestination.Outs, TableToolIcons.Percent, R.string.tools_outs_title, R.string.tools_outs_description),
+    Tool(
+        NavigationDestination.SidePots,
+        TableToolIcons.SplitPot,
+        R.string.tools_side_pots_title,
+        R.string.tools_side_pots_description,
+    ),
+    Tool(NavigationDestination.DealMaker, TableToolIcons.Chop, R.string.tools_deal_title, R.string.tools_deal_description),
     Tool(
         NavigationDestination.ShotClock,
         PokerIcons.Hourglass,

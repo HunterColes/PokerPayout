@@ -21,6 +21,7 @@ import com.huntercoles.pokerpayout.tools.presentation.composable.MusicRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.OddsCalculatorScreen
 import com.huntercoles.pokerpayout.tools.presentation.composable.SeatDrawRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ShotClockRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.TipRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ToolsHomeScreen
 import javax.inject.Inject
 
@@ -84,6 +85,11 @@ class ToolsNavigationFactory @Inject constructor(
         // Everything the app saves, in one file: save it, open it and restore it
         builder.composable<NavigationDestination.Backup> {
             BackupRoute(onBack = navigationManager::navigateBack)
+        }
+
+        // Tip the dealer (PP-112): from the foot of the Tools list, and from the card on the Payouts tab
+        builder.composable<NavigationDestination.TipDealer> {
+            TipRoute(onBack = navigationManager::navigateBack)
         }
     }
 }

@@ -61,6 +61,8 @@ class ToolsHomeContentTest {
         compose.onNodeWithText("Equity quiz").performScrollTo().performClick()
         compose.onNodeWithText("History").performScrollTo().performClick()
         compose.onNodeWithText("Backup").performScrollTo().performClick()
+        // PP-112: quietly at the foot of the list, after Sound, next to the app's promise
+        compose.onNodeWithText("Tip the dealer").performScrollTo().performClick()
         assertEquals(
             listOf(
                 NavigationDestination.OddsCalculator,
@@ -72,6 +74,7 @@ class ToolsHomeContentTest {
                 NavigationDestination.EquityQuiz,
                 NavigationDestination.History,
                 NavigationDestination.Backup,
+                NavigationDestination.TipDealer,
             ),
             opened,
         )

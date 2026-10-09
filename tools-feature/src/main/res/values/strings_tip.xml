@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tip the dealer (S25, PP-112). Plain and kind: no guilt, no urgency, and the app is the same either way. -->
+    <string name="tip_title">Tip the dealer</string>
+    <string name="tip_subtitle">Free, with no ads or tracking</string>
+    <string name="tip_intro">If Poker Payout has made your poker nights easier, a tip is a kind way to say thanks. It pays for the time that goes into new features and fixes. Nothing is locked, and nothing changes if you don\'t.</string>
+    <string name="tip_page_heading">Donation page</string>
+    <string name="tip_page_body">Every way to tip, kept up to date. It opens in your browser.</string>
+    <string name="tip_page_open">Open the donation page</string>
+    <string name="tip_no_browser">No app on this phone can open web pages.</string>
+    <string name="tip_no_browser_addresses">No app on this phone can open web pages. The addresses below work without one.</string>
+    <string name="tip_eth">Ethereum (ETH)</string>
+    <string name="tip_eth_name">Ethereum</string>
+    <string name="tip_xmr">Monero (XMR)</string>
+    <string name="tip_xmr_name">Monero</string>
+    <string name="tip_qr_description">QR code for the %1$s address</string>
+    <string name="tip_copy">Copy address</string>
+    <string name="tip_copy_description">Copy the %1$s address</string>
+    <string name="tip_copied">Copied</string>
+    <string name="tip_copied_description">%1$s address copied</string>
+    <string name="tip_check">Scan the code with your wallet, or copy the address. Check the first and last few characters before you send.</string>
+    <string name="tip_free_heading">Free ways to help</string>
+    <string name="tip_free_body">Tell your poker group, or the next host you play with. A star or an idea on GitHub helps too.</string>
+    <string name="tip_star">Star on GitHub</string>
+    <string name="tip_idea">Suggest an idea</string>
+    <string name="tip_thanks">Thank you. Every bit of support is noticed.</string>
+</resources>

@@ -14,6 +14,8 @@ Only what you enter or choose, in the app's own private storage on your phone:
   which settle-up payments you ticked. (A cash game saved by version 1.3.14 stays where it was.)
 - **Presets** you save, and your **chip set**.
 - **History:** the nights you choose to save, with names, places, amounts and season points.
+- **Regulars:** the names you have used in the bank, the last day you did, and the names you merged
+  as one person in History, so you can pick tonight's players instead of typing them.
 - **Settings:** sound, vibration and flash, payout choices, the four-colour deck, and similar.
 
 Other apps can't read this storage. Uninstalling Poker Payout, or clearing its storage in

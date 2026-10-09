@@ -26,7 +26,8 @@ import javax.inject.Inject
  *
  * - shows the notification, re-posted only when it changes ([LiveClockDriver]);
  * - keeps the process in the foreground, so Android doesn't freeze or kill it, and the clock's cues
- *   (chime, vibration) keep sounding on time, from here or from the clock's own screen;
+ *   (chime, vibration) keep sounding on time, from here or from the clock's own screen; the music
+ *   plays on too ([TournamentMusicLink]);
  * - holds a partial wake lock while the clock runs, renewed at each look, so the CPU is awake when
  *   a cue is due even with the screen off.
  *
@@ -45,28 +46,37 @@ class LiveClockService : Service() {
 
     @Inject lateinit var controller: LiveClockController
 
+    @Inject lateinit var musicLink: TournamentMusicLink
+
     private val scope = MainScope()
     private var driver: LiveClockDriver? = null
     private var driving: Job? = null
     private var observing: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
+    /** The newest start request delivered here; stopping with it never cancels a newer one (see [stop]). */
+    private var lastStartId = 0
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         controller.serviceRunning = true
+        // A process the system started for this service alone has no screen yet to start the music's link
+        musicLink.start()
         LiveClockNotification.createChannel(this)
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int =
-        if (intent?.action == ACTION_HIDE) {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        lastStartId = startId
+        return if (intent?.action == ACTION_HIDE) {
             stop()
             START_NOT_STICKY
         } else {
             show()
             START_STICKY
         }
+    }
 
     /** Foreground at once (a promise made by startForegroundService), then the driver takes over. */
     private fun show() {
@@ -120,6 +130,14 @@ class LiveClockService : Service() {
         }
     }
 
+    /**
+     * Gone from the shade, and the service ends unless a newer start is on its way. The app coming back
+     * and leaving again in a moment sends Hide, then Show; Show comes through startForegroundService,
+     * which promises startForeground. A plain stopSelf() on the Hide would end the service with that
+     * promise pending, and Android crashes the app for it (ForegroundServiceDidNotStartInTimeException,
+     * found by the monkey). stopSelf(startId) does nothing when a newer start is pending: Show then
+     * arrives and calls startForeground.
+     */
     private fun stop() {
         observing?.cancel()
         observing = null
@@ -127,13 +145,14 @@ class LiveClockService : Service() {
         driving = null
         keepAwake(null)
         stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        stopSelf(lastStartId)
     }
 
     override fun onDestroy() {
         scope.cancel()
         keepAwake(null)
         controller.serviceRunning = false
+        musicLink.liveClockGone()
         super.onDestroy()
     }
 

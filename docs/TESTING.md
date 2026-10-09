@@ -10,6 +10,10 @@ sound. It is written so that a person *or* an AI agent can run it unattended.
 | Instrumented tests | `./gradlew connectedDebugAndroidTest` | running emulator | compiles; there are 0 instrumented tests (see below) |
 | JVM screenshot goldens + layout checks (Roborazzi, section 9) | part of `./gradlew testDebugUnitTest`; re-record with `./gradlew recordRoborazziDebug` | JDK 21 | ~20 s for core's 120 goldens and 48 matrix checks |
 | Device matrix: the real app on 10 screen sizes, fonts and rotations (section 10) | `scripts/device/matrix.sh` | emulator (auto-booted) | focused set (4 profiles) not yet timed on 1.3.4; 41 min for 8 profiles on 1.3.0 |
+| Property-based tests: seeded random cases that shrink (section 6) | part of `./gradlew testDebugUnitTest` | JDK 21 | ~3 s for core's 26; ~25 s for the three process-death properties |
+| Accessibility checks: TalkBack names, WCAG contrast (section 9) | part of every screen test's layout checks | JDK 21 | a few seconds over the whole matrix |
+| Monkey: seeded chaos on the emulator (section 11) | `scripts/device/monkey.sh`; on GitHub `monkey.yml` | emulator (auto-booted) | ~23 min for 3 seeds of 4,000 events on GitHub, incl. boot and build |
+| Mutation testing, PIT on core's maths (section 12) | `gh workflow run mutation.yml` | GitHub | ~16 min on GitHub |
 
 ## 1. Prerequisites
 
@@ -192,8 +196,10 @@ are:
      2; at level 4 require "Next · Break" and the break with its note in the schedule; skip into
      the break (S4: "Break · back at Level 5", Last rebuy); pause.
    * Table view: the table-view button forces a landscape screen on the paused break; resume
-     there (the footer shows "10 of 10 left" and the pool); leave it and require portrait again.
-     End break now starts level 5.
+     there (the footer shows "10 of 10 left" and the pool); Knock out (PP-135): "Who's out?",
+     Player 10, "Who knocked Player 10 out?" (10th place), Player 1, then the snackbar's UNDO over
+     the footer (its numbers make way for those 8 s), and UNDO brings back "10 of 10 left"; leave
+     it and require portrait again. End break now starts level 5.
    * Rotation (PP-079): with auto-rotate off, `settings put system user_rotation 1` turns the
      emulator on its side: the clock must become the table view, landscape, still on level 5;
      `user_rotation 0` brings the clock back upright. The step puts the settings back however it
@@ -207,13 +213,20 @@ are:
      asks in a sheet first, then opens them; closing locks them again.
    * New tournament… (the menu) asks first; the reset unfolds setup at LEVEL 1 · READY, 20:00,
      50 / 100.
-2. **Bank** (21 steps). Set the rebuy amount to $10. The labelled header (Player, Buy-in,
+2. **Bank** (25 steps). Set the rebuy amount to $10. The labelled header (Player, Buy-in,
    Rebuy, Out, Paid) and the top bar. Rename Player 1 to Alice with no Enter, switch tabs and
    come back: the name must survive. A buy-in in one tap, with "Alice paid the buy-in" and UNDO
    on the snackbar; UNDO must take it back. A rebuy in one tap. Knock out Player 2 from the
    knockout sheet ("5TH PLACE"; Alice picked, applied with no second dialog): the 5th badge must
    sit in the Out column, clear of the name. Three more out with nobody credited: Alice is the
-   champion; her pay-out sheet; Mark paid. The pool breakdown and payout structure sheets; scroll.
+   champion; her pay-out sheet; Mark paid. Then **Settle up** (4 steps, 1.4; it took over the cash
+   game's): only Alice paid in, so the summary offers "Settle up · 4 payments", and its sheet must
+   list "Player 2 pays the bank $25", "Player 3 pays the bank $25", "Player 4 pays Player 5 $15" and
+   "Player 4 pays the bank $10" (the Bank paid Alice $70 from $35, and keeps the $25 food). A row is
+   one checkbox: tick and untick it. Share as text opens the share sheet with the settle-up. Ticking
+   all four records everyone square ("Everyone is square: nobody owes anybody."; every buy-in paid,
+   "all paid" in the subtitle, Settle up gone), and the top bar's Undo puts it back. The pool
+   breakdown and payout structure sheets; scroll.
    Then clear the Rebuy amount and retype 15 by switching tabs: the recorded rebuy must survive
    (the keyboard is up when the tab is tapped). Leave the field empty: "Turn rebuys off?" must ask
    first, and Keep must bring back the $15 and the rebuy. Then the cutoff (PP-030): "rebuys until
@@ -232,17 +245,14 @@ are:
    full (Share, Alice and Player 5), Back closes it, and Back again returns to the Tools list. It
    scrolls to the night's row before tapping it, since a swipe flings less on GitHub's emulator.
 
-   **Cash game** (8 steps, S13). In the Bank, switch to Cash game (nobody in yet). Dana $40, Sam
-   $20 and Theo $40 buy in from the add sheet, each with its snackbar; Theo tops up $20 from his
-   sheet. Each player's chips are entered and saved with Enter ($75, $0, $45): the chip check must
-   say BALANCED, with every line's in, out and net. The settle-up must list "Sam pays Dana $20" and
-   "Theo pays Dana $15"; ticking Theo's shows it checked. Share as text opens the share sheet with
-   the settle-up; UNDO on the snackbar takes back Sam's tick and the top bar's Undo Theo's. Switching
-   back to Tournament must show the tournament's Bank as the steps above left it (Alice the champion,
-   paid).
-4. **Tools** (4 steps). The tool list and the Sound section (S7); turn the sound off (the
-   volume and Test chime rest) and on again, and play the test chime; Hand ranks (S12), with a
-   back arrow, the Tools tab still selected, "1 in 30,940" for a royal flush and a kicker.
+4. **Tools** (7 steps). The tool list and the Sound section (S7); turn the sound off (the
+   volume and Test chime rest) and on again, and play the test chime; Cue sounds (S18): the
+   classic pack picked, a sound played, the minute's slot empty; Music (S18): no songs yet,
+   Play with the clock and Quieter take; a song from the phone: the tour puts a WAV in
+   Downloads, picks it in the system's file picker, and it must join the list, play (still
+   playing three seconds later, no "File not found"), pause, and go again with Edit; Hand ranks
+   (S12), with a back arrow, the Tools tab still selected, "1 in 30,940" for a royal flush and a
+   kicker.
    Then **Seat draw** (S14, 6 steps): the Bank's players ("Alice, Player 2, ..."); seats per table
    down to half the players, so there are two tables; the draw must seat every player once, from
    seat 1 at each table, with the tables within one of each other; after the deal for the button
@@ -260,7 +270,13 @@ are:
    three players to name; 5,000 / 3,000 / 2,000 chips for typed prizes of $50 / $30 / $20 must give
    $38.39, $32.75 and $28.86 by ICM and $40, $32 and $28 by chip chop, each adding up to $100;
    $10 saved for the winner leaves $90 shared; Start over then Undo brings the deal back. The
-   last step scrolls the Tools list back to its top for the Odds steps.
+   last step scrolls the Tools list back to its top.
+   Then **Backup** (5 steps): Tools > Backup (Tools still selected); Save backup… must open the
+   system's file picker (DocumentsUI) and its Save must bring back "Backup saved"; Open a file…
+   picks that file and the preview must name what it holds ("1 preset", "1 night in History",
+   "Tournament setup and tonight's game"); Add to this phone must find nothing new; Replace this
+   phone's data must start the app again on the first tab with the same game (Alice the Bank's
+   champion, the night in History), ending on the Tools list.
 5. **Odds.** Empty state, with the slot being filled on screen above the keypad without
    scrolling; card picker; AsKs vs QhQd; a JsTs2c flop (the picker scrolls to find 2c); calculate
    and require the exact answer, **56.06%** under Player 1 and **43.94%** under Player 2 (555 and
@@ -272,6 +288,17 @@ are:
    10 green 25s for 5 players"; reset applies at once with Undo; the stack settings keep back
    the Tournament's estimate until the stepper is touched (PP-091 #3; here "no rebuys or
    add-ons"), then keep 2 stacks back as "your own", and the color-up plan counts 7 stacks in play.
+
+   **Shot clock** (S19, 3 steps): full and waiting at 30 s with the Bank's players in the time bank;
+   a tap on the face starts a decision, Pause holds the seconds left (the same number 3 s later),
+   Alice's time-bank card adds exactly 30 s and leaves her "1 of 2 cards left"; everyone's cards
+   back with Undo on the snackbar, and Reset waits, full, again. **Dealer's choice** (S23, 3 steps):
+   the nine classics on the wheel; a spin (instant, animations being off) shows a game and its
+   rules, and a second spin never picks it twice running; a house game ("Guts") makes ten, and
+   every game's rules open in a sheet. **Equity quiz** (S24, 3 steps): two hands dealt at once;
+   picking Hand A shows the engine's exact equities under both hands, adding up to 100%, right or
+   not, scored "of 1"; then three hands asked how often Hand A wins, the 40–60% range picked and
+   named under the verdict; Back to the Tools list.
 7. Back to Tournament.
 8. **Rail** (4 steps). `wm density 240` makes the phone's window 720 dp wide: the tabs must
    move to a rail down the left edge (PP-087), with the screen recreated where it was; Tools and
@@ -307,7 +334,10 @@ and carries on. Use `--keep-going` to run all steps even after a failure.
 The live clock steps read the notification from `dumpsys notification --noredact` (the record the app
 posted: its extras, actions and visibility), which needs no screenshot of the shade and works with
 SystemUI's demo mode on. The tour then returns to the app from the launcher (`live-clock-back`):
-the clock must still be running and the notification gone.
+the clock must still be running and the notification gone. `live-clock-flap` then leaves and comes
+back ten times in one shell with no waits (the race the monkey found: a Hide that ended the service
+while a Show it owed `startForeground` for was pending crashed the app), and checks the clock is
+still running, the notification gone, and nothing crashed.
 
 Pause and Open are tapped in the real shade (`cmd statusbar expand-notifications`, then
 uiautomator) only in the opt-in steps `live-clock-pause` and `live-clock-open`: on the API 34
@@ -393,8 +423,8 @@ input sweep, about 2 s).
 
 | Module | Tests | Skipped | What they cover |
 |---|---|---|---|
-| core | 139 | 0 | Payouts and settlement: presets, rounding (the rows always add up to the pool), standings, 2,000 seeded random tournaments that must conserve money exactly, bounties nobody claimed going to the champion. Money in cents and the money parser. Blind engine: 6,600-config property sweep (every accepted ladder in the 1.3x-2.0x band) plus exact ladders, setup advice whose every offered fix works, color-ups. Chip optimizer: reported crashes, typed failures, a 115,500-call input sweep and a brute-force oracle. FormatUtils. Bounty modes (PP-035, `BountyModesTest`, `MysteryBountyTest`): the progressive split and its rounding, exact PKO and mystery nights, every envelope deal adding up to players × bounty, the seeded draw, and 2,100 seeded random knockout orders (700 per mode) whose bounties add up to the bounty pool to the cent. History (PP-037, `core/domain/history`): `NightCodecTest` (every field round-trips; corrupt text, another format number, a bad date, a missing or out-of-range field, places that aren't 1 to N are skipped, never thrown; the saved keys), `NightStoreTest` (a fresh store reads them back, the latest night first; a deleted night put back keeps its id; an unreadable night is skipped, left in place, and its key never reused), `SeasonTest` (the points rule; totals over nights; players level on points share a rank; names matched after trimming and ignoring case, a different spelling a different player; a year against all time; the player of the year, and several when level), `NightCsvTest` (one row per player per night, oldest first; dollars with two decimals; quoting of commas, quotes and line breaks), `NightResultsTest` (nothing to save before a champion or while anyone owed is unpaid; then every player in finishing order with entry, rebuys, add-ons, prize, knockouts and bounties). `NavBarTest` keeps History under Tools. |
-| bank-feature | 44 | 0 | BankViewModel money flows on real prefs: buy-ins, rebuys, knockouts, money conservation over 14 configs and 60 seeded random sessions, live totals when the Tournament settings change, purchases surviving a cleared-and-retyped amount, weights, reset. `BankBountyModesTest` (PP-035): progressive and mystery knockouts, what the knockout sheet, rows and snackbar say, Undo (envelopes back in the pool) and restarts, the seeded envelope draw, a game saved before bounty modes loading as Standard, and 36 seeded random sessions across the three modes. |
+| core | 139 | 0 | Payouts and settlement: presets, rounding (the rows always add up to the pool), standings, 2,000 seeded random tournaments that must conserve money exactly, bounties nobody claimed going to the champion. Money in cents and the money parser. Blind engine: 6,600-config property sweep (every accepted ladder in the 1.3x-2.0x band) plus exact ladders, setup advice whose every offered fix works, color-ups. Chip optimizer: reported crashes, typed failures, a 115,500-call input sweep and a brute-force oracle. FormatUtils. Bounty modes (PP-035, `BountyModesTest`, `MysteryBountyTest`): the progressive split and its rounding, exact PKO and mystery nights, every envelope deal adding up to players × bounty, the seeded draw, and 2,100 seeded random knockout orders (700 per mode) whose bounties add up to the bounty pool to the cent. History (PP-037, `core/domain/history`): `NightCodecTest` (every field round-trips; corrupt text, another format number, a bad date, a missing or out-of-range field, places that aren't 1 to N are skipped, never thrown; the saved keys), `NightStoreTest` (a fresh store reads them back, the latest night first; a deleted night put back keeps its id; an unreadable night is skipped, left in place, and its key never reused), `SeasonTest` (the points rule; totals over nights; players level on points share a rank; names matched after trimming and ignoring case, a different spelling a different player; a year against all time; the player of the year, and several when level), `NightCsvTest` (one row per player per night, oldest first; dollars with two decimals; quoting of commas, quotes and line breaks), `NightResultsTest` (nothing to save before a champion or while anyone owed is unpaid; then every player in finishing order with entry, rebuys, add-ons, prize, knockouts and bounties). `NavBarTest` keeps History under Tools. Settle up (1.4, `core/domain/settle`): `MinimumPaymentsTest` (the fewest payments: exactly what a brute force finds on 3,000 small cases, every zero-sum group found, never more than the greedy pass over 2,000 seeded random sets up to 16 parties, every party square to the cent and nobody paid more than owed), `SettleUpUseCaseTest` (balances from what the Bank recorded; over 500 seeded random nights the Bank always ends holding the food money), `BankPreferencesSettleTest` (the ticks' key; a 1.3.14 cash game left in storage is never read and gets in nobody's way). |
+| bank-feature | 44 | 0 | BankViewModel money flows on real prefs: buy-ins, rebuys, knockouts, money conservation over 14 configs and 60 seeded random sessions, live totals when the Tournament settings change, purchases surviving a cleared-and-retyped amount, weights, reset. `BankBountyModesTest` (PP-035): progressive and mystery knockouts, what the knockout sheet, rows and snackbar say, Undo (envelopes back in the pool) and restarts, the seeded envelope draw, a game saved before bounty modes loading as Standard, and 36 seeded random sessions across the three modes. `BankSettleUpTest` (1.4): the settle-up once the night is over, the fewest payments, ticks through Undo, a restart, a changed payment and a reset, the last tick recording everyone square, the share text, and an install left on 1.3.14's Cash game tab. |
 | tools-feature | 139 | 1 | The Sound section (S7): chime, volume, and the quiet cues' Vibrate and Flash switches (`ToolsHomeViewModelTest`, `ToolsHomeContentTest`). Odds: 100 golden hand-ranking and equity tests, exhaustive 5- and 7-card evaluator checks, the engine (exact, Monte Carlo, cancellation) and its ViewModel. `OddsKeypadRoomTest`: with the keypad open, the slot it is filling is in view (the page scrolls to it) and "Add player" within a scroll, above the keypad, inside the app's shell on all 24 cells and again in the 320 x 521 dp the device matrix's small profile leaves the app (on a short, narrow window the suits share the ranks' rows, three rows of keys, not four). Chip calculator ViewModel. History (PP-037): `HistoryViewModelTest` (over a real store: the nights the latest first with all time's standings, a year's season and its player of the year, a night opened and closed, delete with Undo on the snackbar, a night saved elsewhere showing up at once, a night shared as text), `ToolsHomeContentTest` (the History row opens History), and the screen tests in section 9. `OddsBenchmark` is skipped unless `ODDS_BENCH=1`. |
 | tournament-feature | 358 | 0 | TournamentConfigViewModel (rebuy/add-on edits that can't wipe purchases, presets, paid places capped at the player count), the Float-to-cents preference migration. The clock: TimerViewModel on virtual time with a fake monotonic clock (late ticks, sleep gaps, process death mid-level and mid-overtime, reboot, v1.1 migration, chimes including the end chime after a resume, breaks, ante, write cadence, table numbers) and the break/overtime timeline. `BreakMessageFieldTest` is a Robolectric Compose UI test: hardware Enter in the break note must not click Reset. The Tournament tab (M3): `TimerViewModelControlsTest` (the one-minute nudges, End break now, color-up done, next break, projected end, rebuy state, mid-game blind changes that keep the level), `TournamentModeTest` (the setup/fold/clock/panel state machine and where the phone may turn), and the Robolectric screen tests in section 9. Bounty modes (PP-035): `TournamentBountyModeTest` (the bounty type saved under its own key, fixed from the first knockout, the mystery envelopes before the start, a game saved before it loading as Standard) and `PayoutsBountyModesTest` (the bounties card and share text in each mode). The live clock and the quiet cues (PP-081, PP-083): `ClockCueTimesTest` (when the chime, the level change and the one-minute warning fall, the chime's old timing kept exactly), `ClockCuesTest` (what each cue sets off with each switch, and a cue reported by both the clock and the service plays once), `LiveClockCardTest` and `LiveClockNotificationTest` (what the notification says, its countdown, buttons and their broadcasts, the public channel), `LiveClockDriverTest` (on virtual time: posted only when its words change, cues on time from the background, the wake lock only while running, Pause, Resume, the half-hour pause limit, reset and finish), and `LiveClockSyncTest` (the notification's Pause and Resume leave exactly what the clock's button leaves, the clock on screen follows at once, and a command made with the app's process gone is there when it comes back). Saved setups (PP-032): `PresetCodecTest` (every field round-trips; corrupt text, another format number, a missing or out-of-range field are skipped, never thrown; the saved keys), `PresetStoreTest` (a fresh store reads them back, last used first; a name in use is saved over; an unreadable preset is skipped and left in place), `CurrentSetupTest` (saved and loaded back, every field is exactly restored; players, the Bank and the clock untouched; refused once the clock has started; payouts follow tonight's player count), `PresetsViewModelTest` (save, load, rename, delete with Undo; the question only when something would be replaced; the clock and the setup page follow a load), `SetupShareTextTest` (the setup shared as text). Saving a night to History (PP-037), in `PayoutsViewModelTest`: offered only once the night is over and everyone owed is paid; one save however many taps, with every player in finishing order and their money; offered again if History deletes it, gone when the Bank is cleared; named after the preset the setup still matches. |
 
@@ -449,6 +479,55 @@ The only skipped test is `OddsBenchmark`, which is a benchmark, not a spec.
   the clock agree; `sleep(ms)` moves the clocks without running a tick (deep sleep), `reboot()`
   restarts the monotonic clock, and clearing the `ViewModelStore` and building a new ViewModel
   from fresh preference objects is a process death. Never sleep or read real time in a test.
+* **A process death builds everything again from what was saved**: clear the `ViewModelStore`,
+  make new preference objects over the same SharedPreferences (nothing kept in memory survives),
+  build a new ViewModel. `BankTestKit.restartProcess()` does it for the Bank. Compare what the
+  screen shows before and after, leaving out only what is meant to go (an open sheet, Undo's
+  history).
+
+### Property-based tests
+
+Example tests pin the answers someone thought of; property tests state what must hold for *every*
+input and let a generator look for the case nobody wrote down. They use
+[kotest-property](https://kotest.io/docs/proptest/property-based-testing.html) (test-only) from
+plain JUnit `@Test` methods, through `forAll` in core's test fixtures
+(`core/src/testFixtures/.../testing/Properties.kt`):
+
+```kotlin
+@Test
+fun `the table adds up to the pool to the cent`() =
+    forAll(seed = 2026_1008_01L, iterations = 4_000, gen = cases) { case ->
+        expect(case.table().totalCents == case.poolCents) { "pays ${case.table().totalCents} of ${case.poolCents}" }
+    }
+```
+
+* **Seeded.** Every run checks the same cases. A failure prints the case, a *shrunk* one (kotest
+  makes it as small as it can while it still fails: fewer steps, smaller numbers) and
+  `Repeat this test by using seed N`. Change a seed only on purpose.
+* **Generators build inputs from numbers** (`Arb.bind`, `Arb.list`), so a failing night at the Bank
+  shrinks to its fewest, smallest steps. `BankNight` (core, `property/BankScript.kt`) replays a
+  script of Bank steps onto the records the Bank keeps, stale credits included.
+* **Kinds of property**: invariants (the table adds up to the pool), metamorphic relations
+  (renumbering the players changes nothing; the same night in bigger money pays the same, scaled),
+  oracles (the CSV read back by an independent RFC 4180 reader), and twin runs (the clock with a
+  process death against the clock with the phone only asleep).
+
+| Module | Class | What it holds |
+|---|---|---|
+| core | `PayoutPropertiesTest` | Any pool, field, structure and rounding: the table adds up to the pool, whole units below 1st within one unit of each share, no place above the one before it (falling weights), the same for 50/30/20 and 5/3/2, exact shares for exact pools; more or fewer places always give weights the editor accepts |
+| core | `SettlementPropertiesTest` | Random Bank nights in all three bounty modes, step by step: nothing owed beyond the pools, nothing negative, every cent owned once there is a champion, also with late registration; renumbering or reordering the players changes nothing; one more knockout never takes money from anyone |
+| core | `SettleUpPropertiesTest` | The settle-up (1.4, `MinimumPayments`) pays the same, scaled, in bigger money; ids are labels; a party already square changes no payment; any finished Bank night, with any entries ticked and winners paid, settles square in no more payments than the greedy pass |
+| core | `BlindPropertiesTest` | Every setup the Tournament tab allows: the advisor and the calculator agree, every ladder keeps every rule (overtime included), every fix offered works |
+| core | `MoneyPropertiesTest` | A money field in any JVM locale types back key by key; nothing typed throws; "$1,234.56" reads back; v1.1's Floats come back to the cent |
+| core | `HistoryPropertiesTest` | Every night the Bank can finish saves and reads back; the CSV reads back with every name intact (Robolectric) |
+| tournament-feature | `ClockRestoreTest` | Random clock sessions played twice, with process deaths and with the phone asleep for as long: the two clocks agree a second after every step |
+| bank-feature | `BankRestoreTest` | Random nights with the process killed at random: the Bank shows exactly what it showed |
+| tools-feature | `OddsRestoreTest` | Random odds sessions with the process killed at random: the table comes back exactly |
+
+Bugs they found (wave 9): a late player in a mystery-bounty game made the envelopes pay out up to
+$9 more than the bounty pool (`MysteryBounty.left`); overtime doubled a 500,000,000 stack into a
+negative big blind; the setup advice offered a 1,200,000,000-chip stack whose ladder overflowed;
+the payout editor lost its unsaved weights when the activity was recreated.
 
 ## 7. Instrumented tests
 
@@ -536,7 +615,7 @@ at font scales 1.15, 1.3 and 1.5 (stacked sums, wrapped lines, the Bank header's
 |---|---|
 | `small` at 2.0 | The small-phone layouts at the largest font: the tightest cell (the odds keypad's short form, suits sharing the ranks' rows) |
 | `phone` at 1.0 | The layouts as drawn, 1:1 with `mockups.html` |
-| `phone` at 1.3 | Between the font thresholds: one knockout choice a row and stacked sums (above 1.15), side-by-side cash fields and the Bank header's words (up to 1.3) |
+| `phone` at 1.3 | Between the font thresholds: one knockout choice a row and stacked sums (above 1.15), the Bank header's words (up to 1.3) |
 | `tablet` at 1.0 | The rail beside a 704 dp column: Hand ranks in two columns, Chip set in two panes |
 | `phone-land` at 1.0 | A phone on its side, the shortest common height: the table view, the keypad beside the cards, run it out's two panes |
 | `tablet-land` at 1.0 | The only cell from 840 dp: the two-pane clock and Bank (Z4, Z5), the centred 720 dp column |
@@ -548,8 +627,8 @@ Left out (until PP-090 they had goldens too): `tall` at 1.0 (the `phone` layouts
 The pinned goldens keep the cells they were drawn for: `Z1_clock_small` (`small` at 1.0),
 `Z2_bank_small` (`small` at 1.0 and 2.0), `Z3_table_small_land` and `S10_runout_land`
 (`small-land`), `Z4_clock_tablet` and `Z5_bank_tablet` (`tablet-land`), `S2_clock_running_font2x`,
-`S8_odds_font2x` and `S14_seats_font2x` (`tall` at 2.0), and `S5_bank_font2x`, `S6_payouts_font2x`
-and `S13_cash_font2x` (`small` and `phone` at 2.0). A test records a pinned golden with
+`S8_odds_font2x` and `S14_seats_font2x` (`tall` at 2.0), and `S5_bank_font2x` and `S6_payouts_font2x`
+(`small` and `phone` at 2.0). A test records a pinned golden with
 `DeviceMatrix.isPinned(name, config)`, never with a cell written into the test, so
 `scripts/dev/retired-goldens.sh` can work out from the code which committed goldens no test
 records any more.
@@ -675,7 +754,22 @@ class ClockScreenTest(private val config: ScreenConfig) {
   Call it at each scroll position (see `ComponentLayoutTest.forEachScrollPosition`).
 * `LayoutAssertions.assertTouchTargets`: 48 x 48 dp and no overlaps. `strict = true` demands
   the clickable node itself be 48 dp (the design-system components do); `strict = false`
-  accepts Compose's expansion of a smaller node, as long as no neighbour is in the way.
+  accepts Compose's expansion of a smaller node, as long as no neighbour is in the way. It also
+  checks **TalkBack names** (`AccessibilityAssertions.assertNamed`): every tappable node has a
+  text or a content description, and no empty text field is without a label (TalkBack would
+  read only "Edit box"; a field with a value is read by it, as the Bank's names are).
+* **Contrast** (`AccessibilityAssertions.assertTextContrast`), run by `assertTextFits` on the
+  reference cell only (`phone` upright at font 1.0; contrast is about colours, not size): every
+  text has 4.5:1 against what is behind it, or 3:1 at 18 sp and up (14 sp bold), WCAG 2.1 AA.
+  The text's colour is the one its style declares (blended if see-through); what is behind is
+  the commonest other colour in its box on the rendered screen. Text in a disabled control is
+  exempt. Pairs below AA kept on purpose are listed in `KNOWN_BELOW_AA` (the owner's call, 1.4.5:
+  chip values on the green and grey chips' physical colours, and Hand ranks' faded cards); any other
+  pair below AA fails. The check's first run also found the selected segment's 90% gold second line
+  and the odds grid's ChalkDim cards, both now drawn at full strength.
+  Google's Accessibility Test Framework (through Roborazzi) was the other way to do it;
+  this needs no new dependency, reads the colour the text really has instead of guessing it from
+  anti-aliased pixels, and gives a message that names the text and both colours.
 * `captureGolden` refuses to capture something taller than the window, because the picture
   would silently cut it off. Split a long gallery instead.
 * Render sheets through their content composable (`PokerSheetContent`), not through
@@ -695,10 +789,12 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 
 | Module | Class | Goldens (`src/test/screenshots/screens/`) | Layout checks |
 |---|---|---|---|
-| `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted`, `S7_tools_cues_off`, `S7_tools_notifications_off` (PP-081/083: the Vibrate and Flash rows, and the way back to notifications; the History row, PP-037) | S7: all three, at every scroll position |
+| `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted`, `S7_tools_cues_off`, `S7_tools_notifications_off` (PP-081/083: the Vibrate and Flash rows, and the way back to notifications; the History row, PP-037), `S7_tools_music` (the Cue sounds and Music rows, a song playing) | S7: all three, at every scroll position |
+| `tools-feature` | `MusicScreenTest` | `S18_music_empty` (a fresh install: no songs, nothing built in), `S18_music_playing` (five songs, one playing, one whose file has gone, shuffle and repeat on, with the clock and quieter on breaks), `S18_music_editing` (move and remove), `S18_cue_sounds`, `S18_cue_sounds_off` (the sound switched off) | Music and Cue sounds: all three, at every scroll position, on all 24 cells; also every file gone and the built-in songs (none ship yet). Fixtures in `MusicFixtures` |
 | `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
 | `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end`, `S11_chipset_settings` (the stack settings unfolded, keeping back the Tournament's estimate) | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
 | `tools-feature` | `HistoryScreenTest` | `S16_history_list` (all time, two players level at the top), `S16_history_night` (one night in full), `S16_history_empty` (nothing saved yet) | History (PP-037): all three, at every scroll position, on all 24 cells; also a year picked. Fixtures in `HistoryFixtures`: three nights over two years with the mockups' players |
+| `tools-feature` | `FunToolsScreenTest` (+ `FunToolsContentTest`, what each control sends) | `S19_shot_clock_ready`, `S19_shot_clock_low` (8 s left, two players' cards played); `S23_dealers_picked` (Badugi, with a house game on the wheel), `S23_dealers_rules` (the sheet); `S24_quiz_ask` (a heads-up flop), `S24_quiz_range_wrong` (three hands, odds from the engine) | All three, at every scroll position, on all 24 cells; also time up, no time bank, the first spin, a house game picked, too few games, eight house games, the guess waiting on the engine and the range question |
 | `tools-feature` | `SeatDrawScreenTest` (+ `SeatDrawExtraGoldenTest`) | `S14_seats_empty`, `S14_seats_one_table`, `S14_seats_two_tables`, `S14_button_draw`; `S14_seats_font2x` at tall@2.0 | All three, at every scroll position of each pane; also the name fields and an out-of-date draw with the players unfolded |
 | `tools-feature` | `TableToolsScreenTest` | `S20_outs_flop` (a flush draw facing a bet: both chances beside the rules of thumb, and the verdict), `S21_side_pots` (an all-in, a bigger all-in, a fold and a bet nobody matched), `S22_deal` (three left from the Bank, ICM and chip chop side by side, $50 saved for the winner) | The table tools: all three, at every scroll position of each pane, on all 24 cells; also outs on the turn and at 15, side pots empty, all folded and with ten players, a deal with no chips yet and one with typed prizes that go up. `TableToolsContentTest`: what each control sends and its TalkBack name |
 | `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament: touch targets |
@@ -707,8 +803,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tournament-feature` | `PresetsInteractionTest` | none | What the presets' controls send: the row on the setup page and in the panel, load (off mid-game), save (the name, the chip set switch, a name in use replaces it, a blank one can't be saved), share, rename (a name in use is refused), delete, and the load question |
 | `tournament-feature` | `TournamentInteractionTest`, `TournamentRotationTest`, `SetupFoldTest` | none | What each control sends; rotation per device class (Robolectric `+land` shows the table view, `+port` the clock, other tabs portrait on phones, tablets free, state kept through recreation; ✕ in a turned table view holds for that turn only, with the phone's hold faked through `LocalPhoneHold`); the fold plays once and is cut under Reduce motion |
 | `tournament-feature` | `PayoutsTabScreenTest` | `S6_payouts_{standard,topheavy,custom,finished}`, `S6_payouts_font2x`, `S6_payouts_save` (PP-037: over and everyone paid, "Save this night" heads the tab) | All three, at every scroll position, and locked while the clock runs; also the saved night's line |
-| `bank-feature` | `BankScreensTest` | `S5_bank_{before_buyins,midgame,rebuys_open,no_rebuys,champion,30players}`, `S5_bank_font2x`, `S5b_knockout_sheet`, `S5b_count_sheet`, `S5c_payout_{champion,second}`, `S5c_pool_breakdown`, `Z2_bank_small`, `Z5_bank_tablet`; PP-035: `S5_bank_pko` (each player's bounty under the name), `S5b_knockout_sheet_pko`, `S5c_payout_champion_pko`, `S5d_envelope_reveal` | All three, at every scroll position (also the mystery pool breakdown). A sheet is rendered as its content over the screen behind, since a modal window doesn't capture under Robolectric |
-| `bank-feature` | `CashScreensTest` | `S13_cash_{balanced,off,settle,player}`, `S13_cash_font2x` | The cash game (M7): all three, at every scroll position, also counting, the split difference, nobody yet and the add-player sheet. The Bank's goldens above show the Tournament / Cash game switch, as the app does |
+| `bank-feature` | `BankScreensTest` | `S5_bank_{before_buyins,midgame,rebuys_open,no_rebuys,champion,30players}`, `S5_bank_font2x`, `S5b_knockout_sheet`, `S5b_count_sheet`, `S5c_payout_{champion,second}`, `S5c_pool_breakdown`, `Z2_bank_small`, `Z5_bank_tablet`; PP-035: `S5_bank_pko` (each player's bounty under the name), `S5b_knockout_sheet_pko`, `S5c_payout_champion_pko`, `S5d_envelope_reveal`; 1.4: `S5_bank_settle_up` (Settle up under the meters), `S5e_settle_up` (who pays whom, two ticked) | All three, at every scroll position (also the mystery pool breakdown and the settle-up once everyone is square). A sheet is rendered as its content over the screen behind, since a modal window doesn't capture under Robolectric |
 
 The screens' ViewModels are the real ones over Robolectric's in-memory preferences, set up as the
 mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app shows.
@@ -730,7 +825,12 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 | `LayoutAssertionsTest` | 11 | The checks themselves catch what they claim |
 | `ScreenOrientationTest` | 3 | Phones portrait unless the screen on show asks for more, and portrait again when it goes; free from 600 dp; a screen can take the full width beside the rail, or the whole window |
 | `SystemBarsTest` | 1 | Light status and navigation bar icons on the dark app (B13) |
-| `SoundManagerTest` | 3 | A loaded chime plays at the slider's volume now, not the one it had when loaded (B12); silent at 0 and with the sound off. The player is a recording fake |
+| `SoundManagerTest` | 7 | A loaded chime plays at the slider's volume now, not the one it had when loaded (B12); silent at 0 and with the sound off; the music dips while a cue sounds and comes back up when it ends or fails; a preview plays with the sound off. The player is a recording fake |
+| `SoundPacksTest` | 5 | The classic pack is today's sounds (the chime at every change, nothing with a minute left); every pack has its own id and a name; an unknown saved id plays the default; `sound_pack` is a key of its own |
+| `PlaylistTest` | 18 | The playlist as a value: adding (no doubles), moving and removing keep the place; the end of a song, Next and Previous with repeat off, all and one; songs whose files have gone passed over; shuffle on seeded randoms: the current song first, the same seed the same order, every song once a pass, never one song twice in a row across passes (200 seeds), songs added mid-pass come later |
+| `MusicAutoPlayTest` | 11 | Play with the clock against the clock's states: starts and pauses with the clock, breaks keep playing, pause or play quieter, acts only on changes (the host's own pause stands), never pauses music it didn't start, does nothing when off |
+| `MusicPreferencesTest` | 8 | `music_prefs`: defaults, the playlist back exactly as saved, the settings under their own keys, unreadable or half-broken text read safely; titles from file names |
+| `MusicPlayerTest` | 20 | The music player with recording players and a library whose files can go: loads and starts the current song, keeps the place on a pause and across a restart, goes on at the end of a song and stops at the end of the list, passes over gone and failing files (stops when none is left), removes the song playing, saves the list, and dips under a cue (back up after 15 s if the cue never ends) and on a quiet break |
 
 ## 10. The device matrix: real screens, sizes, fonts and rotation
 
@@ -1045,3 +1145,56 @@ The emulator is shared and keeps `wm size` and `wm density` across reboots, so:
 * Register the step with `extra_step` (a name and function the tour doesn't use: the tour dies
   on a name registered twice) and add it to `SMOKE_STEPS` (and `SCREENS_STEPS` to run it on every
   profile).
+
+## 11. Chaos: the monkey
+
+`adb shell monkey` taps, swipes, rotates and presses keys at random, as fast as a person never
+would, to find the crash nobody walked into. `scripts/device/monkey.sh` boots the test AVD,
+installs the build and runs the monkey once per seed against the app's package only (`-p`: other
+apps' screens, such as a share sheet, are refused). Home, the notification shade and End-call are
+switched off for the run (quick settings could start a screen recording; End-call would put the
+screen to sleep) and put back afterwards, as is the rotation.
+
+```bash
+flock /tmp/pokerpayout-emulator.lock scripts/device/monkey.sh --stop          # default seeds, 4,000 events each
+scripts/device/monkey.sh --no-build --seeds 1204 --events 4000              # replay one seed, event for event
+gh workflow run monkey.yml --ref <branch> -f seeds=1,2,3 -f events=10000     # on GitHub's emulator
+```
+
+* **Seeds** are fixed and logged (default `20261008,1204,35`). Each seed starts from cleared data
+  with notifications allowed, so it replays on its own.
+* **Events**: touches 45%, swipes 20%, rotations 5%, arrow keys 5%, Menu and DPad-centre 10%,
+  system keys 5% (Back and the volume keys while Home is off), relaunching the app 5%, any other
+  key 5%; 75 ms apart.
+* **Fails** on a crash or an ANR in the app: the monkey's own `// CRASH:` or `// NOT RESPONDING:`
+  report, or, as a backstop, the app's FATAL EXCEPTION or ANR in logcat. A crash in another app
+  (a system app on the Play image) ends that seed early and is noted, not failed.
+* **Report**: `build/device-reports/monkey-<timestamp>/summary.md` (a row per seed: events
+  injected, time, verdict), `seed-<n>.txt` (the monkey's log, every event), `logcat-<n>.txt`, and
+  `crash-<n>.png` (the screen when it failed). GitHub uploads them and shows the summary on the run.
+* `monkey.yml` runs on every pull request (not a required check) and by hand.
+
+## 12. Mutation testing (PIT)
+
+Mutation testing plants small bugs in the code (a `<` turned into `<=`, a `+` into a `-`, a
+return value replaced) and counts how many the tests catch. A surviving mutant is a line the tests
+run but don't check. `mutation.yml` runs [PIT](https://pitest.org) on GitHub, by hand, on
+core's maths (`core.domain`, `core.utils`) with the plain JVM tests (Robolectric ones are slow to
+fork and add nothing for pure code):
+
+```bash
+gh workflow run mutation.yml --ref <branch>
+./gradlew --init-script scripts/dev/pitest.init.gradle :core:pitestDebug    # the same, locally (heavy)
+```
+
+The plugin (`pl.droidsonroids.pitest`) is applied only by `scripts/dev/pitest.init.gradle`, never
+by the build, so the app, its dependencies and F-Droid's reproducible build don't change. Kotlin's
+generated `equals`, `hashCode`, `toString`, `componentN` and `copy` aren't mutated. The run's
+summary shows the score per class; the HTML report (every surviving mutant, line by line) is an
+artifact. Report-only: not a gate.
+
+First run (wave 9): 1,761 of 2,229 mutants killed (79%), 87% of the 2,032 the tests reach; about
+16 minutes. Highest: the settlement and bounty maths (`BountyLedger` 56 of 60,
+`CalculatePayoutsUseCase` 31 of 34). Lowest: `BlindLadderSearch` (39 survivors, mostly in the
+"nice value" scoring) and `BlindSetupAdvisor` (20). `NightCodec` and `CashGame` show no coverage
+only because their tests run under Robolectric, which this run leaves out.

@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tournament.domain.presets
 
+import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.ChipCalculatorPreferences
 import com.huntercoles.pokerpayout.core.preferences.ChipSetSettings
@@ -107,13 +108,19 @@ class CurrentSetup @Inject constructor(
         return true
     }
 
-    /** [setup] for tonight's players, keeping a rebuy or add-on amount the Bank has purchases at. */
+    /**
+     * [setup] for tonight's players, keeping a rebuy or add-on amount the Bank has purchases at, and
+     * a mystery bounty whose envelopes have started to be drawn (PP-035).
+     */
     private fun resolve(setup: PresetSetup): PresetSetup {
         val now = tournamentPreferences.getMoneySettings()
+        val players = tournamentPreferences.getPlayerCount()
+        val envelopesDrawn = now.bountyMode == BountyMode.MYSTERY && bankPreferences.hasBountyDraws(players)
         return setup.resolved(
-            players = tournamentPreferences.getPlayerCount(),
+            players = players,
             keepRebuyCents = now.rebuyCents.takeIf { bankPreferences.getTotalRebuyCount() > 0 },
             keepAddOnCents = now.addOnCents.takeIf { bankPreferences.getTotalAddonCount() > 0 },
+            keepBountyCents = now.bountyCents.takeIf { envelopesDrawn },
         )
     }
 

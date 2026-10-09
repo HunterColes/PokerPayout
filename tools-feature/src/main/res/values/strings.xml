@@ -17,8 +17,16 @@
     <string name="tools_side_pots_description">Who can win what when someone is all in</string>
     <string name="tools_deal_title">Deal maker</string>
     <string name="tools_deal_description">Chop the prizes left by ICM or by chips</string>
+    <string name="tools_shot_clock_title">Shot clock</string>
+    <string name="tools_shot_clock_description">A timer for each decision, with time-bank cards</string>
+    <string name="tools_dealers_choice_title">Dealer\'s choice</string>
+    <string name="tools_dealers_choice_description">Spin a wheel for the next game, and its rules</string>
+    <string name="tools_equity_quiz_title">Equity quiz</string>
+    <string name="tools_equity_quiz_description">Guess who\'s ahead, then see the real odds</string>
     <string name="tools_history_title">History</string>
     <string name="tools_history_description">Saved nights and the season\'s points</string>
+    <string name="tools_backup_title">Backup</string>
+    <string name="tools_backup_description">Save everything to a file, or restore from one</string>
     <string name="tools_sound_title">Sound</string>
     <string name="tools_sound_description">A chime %1$d s before each level, break and the end</string>
     <string name="tools_volume">Chime volume</string>

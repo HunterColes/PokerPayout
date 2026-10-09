@@ -19,7 +19,6 @@ import com.huntercoles.pokerpayout.bank.presentation.BankUiState
 import com.huntercoles.pokerpayout.bank.presentation.BankViewModel
 import com.huntercoles.pokerpayout.bank.presentation.Purchase
 import com.huntercoles.pokerpayout.core.design.components.PokerSheetContent
-import com.huntercoles.pokerpayout.core.domain.cash.BankMode
 import com.huntercoles.pokerpayout.core.navigation.NavTab
 import com.huntercoles.pokerpayout.core.testing.Device
 import com.huntercoles.pokerpayout.core.testing.DeviceMatrix
@@ -82,12 +81,7 @@ class BankScreensTest(private val config: ScreenConfig) {
             InAppShell(NavTab.Bank) {
                 Box(Modifier.fillMaxSize()) {
                     if (screenBehind.value) {
-                        // As the app shows it: the Tournament / Cash game switch on top (M7)
-                        BankContent(
-                            state = state.copy(sheet = null),
-                            onIntent = {},
-                            modeSwitch = { BankModeSwitch(BankMode.TOURNAMENT, onSwitch = {}) },
-                        )
+                        BankContent(state = state.copy(sheet = null), onIntent = {})
                     }
                     if (sheet != null) {
                         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = SCRIM)))
@@ -233,6 +227,38 @@ class BankScreensTest(private val config: ScreenConfig) {
         show(state) { PoolBreakdownSheetContent(state, onPayoutStructure = {}, onDismiss = {}) }
         golden("S5c_pool_breakdown")
         check("Pool breakdown sheet")
+    }
+
+    // Settle up (1.4, from the cash game) --------------------------------------------------------------
+
+    /** The night over with four buy-ins still open: Settle up under the meters. */
+    @Test
+    fun settleUpOffered() {
+        show(BankScenes.settleUp(kit).state())
+        golden("S5_bank_settle_up")
+        check("Bank with Settle up")
+    }
+
+    /** Who pays whom, the Bank's two payments ticked. */
+    @Test
+    fun settleUpSheet() = with(kit) {
+        val viewModel = BankScenes.settleUp(kit)
+        viewModel.state().settleUp!!.transfers.take(2).forEach { viewModel.send(BankIntent.SetSettlePaid(it, true)) }
+        viewModel.send(BankIntent.ShowSettleUp)
+        val state = viewModel.state()
+        show(state) { SettleUpSheetContent(state.settleUp!!, state, onSetPaid = { _, _ -> }, onShare = {}, onDismiss = {}) }
+        golden("S5e_settle_up")
+        check("Settle-up sheet")
+    }
+
+    /** Every payment ticked: the Bank records everyone square, and the sheet says so (layout only). */
+    @Test
+    fun settleUpSheetSquare() = with(kit) {
+        val viewModel = BankScenes.settleUp(kit)
+        viewModel.state().settleUp!!.transfers.forEach { viewModel.send(BankIntent.SetSettlePaid(it, true)) }
+        val state = viewModel.state()
+        show(state) { SettleUpSheetContent(state.settleUp!!, state, onSetPaid = { _, _ -> }, onShare = {}, onDismiss = {}) }
+        check("Settle-up sheet, square")
     }
 
     // Progressive and mystery bounties (PP-035) ------------------------------------------------------

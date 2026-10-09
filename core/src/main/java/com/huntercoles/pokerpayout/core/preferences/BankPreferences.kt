@@ -2,12 +2,8 @@ package com.huntercoles.pokerpayout.core.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.huntercoles.pokerpayout.core.domain.cash.BankMode
-import com.huntercoles.pokerpayout.core.domain.cash.CashGame
-import com.huntercoles.pokerpayout.core.domain.cash.CashLedger
-import com.huntercoles.pokerpayout.core.domain.cash.CashPlayer
-import com.huntercoles.pokerpayout.core.domain.cash.CashTransfer
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
+import com.huntercoles.pokerpayout.core.domain.settle.Transfer
 import com.huntercoles.pokerpayout.core.utils.Money
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -25,7 +21,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * readers that only count. Purchases recorded before PP-085 had no price; [migratePurchasePrices]
  * prices them once at the amount set then.
  *
- * The cash game (PP-029) lives here too, apart from the tournament: [getCashGame], [getBankMode].
+ * The settle-up's ticks live here too ([getSettlePaid]). The cash game (PP-029) that 1.3.14 kept here
+ * went in 1.4: its keys are no longer read or written, and stay as they were on old installs (see
+ * the companion object).
  */
 @Singleton
 class BankPreferences @Inject constructor(
@@ -111,6 +109,13 @@ class BankPreferences @Inject constructor(
         val key = "$PLAYER_BOUNTY_DRAW_PREFIX$playerId"
         return if (prefs.contains(key)) prefs.getLong(key, 0L).coerceAtLeast(0L) else null
     }
+
+    /**
+     * Mystery bounties (PP-035): true once an envelope has been drawn for any of players 1 to
+     * [playerCount]. From then on the envelopes are dealt, so the bounty and the player count that
+     * made them stay put (the count can still go up for a late entry).
+     */
+    fun hasBountyDraws(playerCount: Int): Boolean = (1..playerCount).any { prefs.contains("$PLAYER_BOUNTY_DRAW_PREFIX$it") }
 
     fun savePlayerBountyDraw(playerId: Int, cents: Long?) {
         val editor = prefs.edit()
@@ -294,76 +299,40 @@ class BankPreferences @Inject constructor(
             }
         }
         editor.remove(ELIMINATION_ORDER_KEY)
+        editor.remove(SETTLE_PAID_KEY)
         editor.apply()
         _eliminationOrder.value = emptyList()
         clearAllEliminatedBy()
     }
 
-    // The cash game (PP-029, D4) ---------------------------------------------------------------------
+    // The settle-up (1.4) -----------------------------------------------------------------------------
     //
-    // Its own keys, all new: the mode under "bank_mode", the ledger under "cash_". None starts with
-    // "player_", so nothing the tournament does (its reset, the Bank's reset, removing players,
-    // clearing rebuys) reaches them, and cash writes don't bump [revision], which is the tournament's.
+    // The payments ticked as paid, under one new key that doesn't start with "player_", so removing
+    // players and the Bank's per-player bookkeeping leave it alone; the Bank's reset clears it. Its
+    // writes don't bump [revision]: no other screen reads it.
 
-    /** Which game the Bank shows; the tournament until the players switch. */
-    fun getBankMode(): BankMode =
-        if (prefs.getString(BANK_MODE_KEY, null) == BANK_MODE_CASH) BankMode.CASH else BankMode.TOURNAMENT
-
-    fun saveBankMode(mode: BankMode) {
-        prefs.edit().putString(BANK_MODE_KEY, if (mode == BankMode.CASH) BANK_MODE_CASH else BANK_MODE_TOURNAMENT).apply()
-    }
-
-    /** The cash game as last saved; empty if there is none. Unreadable entries are skipped. */
-    fun getCashGame(): CashGame {
-        val ids = prefs.getString(CASH_PLAYERS_KEY, null).orEmpty()
-            .split(",")
-            .mapNotNull { it.trim().toIntOrNull()?.takeIf { id -> id > 0 } }
-            .distinct()
-        val players = ids.map { id ->
-            CashPlayer(
-                id = id,
-                name = prefs.getString("$CASH_NAME_PREFIX$id", null) ?: "Player $id",
-                buyInsCents = parseCents(prefs.getString("$CASH_BUY_INS_PREFIX$id", null)),
-                cashOutCents = if (prefs.contains("$CASH_OUT_PREFIX$id")) {
-                    prefs.getLong("$CASH_OUT_PREFIX$id", 0L).coerceAtLeast(0L)
-                } else {
-                    null
-                },
-            )
-        }
-        val paid = prefs.getString(CASH_PAID_KEY, null).orEmpty()
+    /** The settle-up payments ticked as paid; unreadable entries are skipped. */
+    fun getSettlePaid(): Set<Transfer> =
+        prefs.getString(SETTLE_PAID_KEY, null).orEmpty()
             .split(",")
             .mapNotNull(::parseTransfer)
             .toSet()
-        val split = if (prefs.contains(CASH_SPLIT_KEY)) prefs.getLong(CASH_SPLIT_KEY, 0L) else null
-        return CashGame(CashLedger(players), paid, split)
-    }
 
-    /** Replaces the saved cash game with [game], in one write. */
-    fun saveCashGame(game: CashGame) {
+    /** Replaces the ticked payments with [paid]; an empty set removes the key. */
+    fun saveSettlePaid(paid: Set<Transfer>) {
         val editor = prefs.edit()
-        prefs.all.keys.filter { it.startsWith(CASH_PREFIX) }.forEach { editor.remove(it) }
-        val players = game.ledger.players
-        if (players.isNotEmpty()) editor.putString(CASH_PLAYERS_KEY, players.joinToString(",") { it.id.toString() })
-        players.forEach { player ->
-            editor.putString("$CASH_NAME_PREFIX${player.id}", player.name)
-            editor.putString("$CASH_BUY_INS_PREFIX${player.id}", player.buyInsCents.joinToString(","))
-            player.cashOutCents?.let { editor.putLong("$CASH_OUT_PREFIX${player.id}", it) }
+        if (paid.isEmpty()) {
+            editor.remove(SETTLE_PAID_KEY)
+        } else {
+            editor.putString(SETTLE_PAID_KEY, paid.joinToString(",") { "${it.fromId}>${it.toId}:${it.amountCents}" })
         }
-        if (game.paid.isNotEmpty()) {
-            editor.putString(CASH_PAID_KEY, game.paid.joinToString(",") { "${it.fromId}>${it.toId}:${it.amountCents}" })
-        }
-        game.splitCents?.let { editor.putLong(CASH_SPLIT_KEY, it) }
         editor.apply()
     }
 
-    private fun parseCents(stored: String?): List<Long> =
-        stored.orEmpty().split(",").mapNotNull { it.trim().toLongOrNull()?.takeIf { cents -> cents > 0L } }
-
-    /** "4>1:4700": player 4 pays player 1 $47. */
-    private fun parseTransfer(stored: String): CashTransfer? {
+    /** "4>0:2500": player 4 pays the Bank (0) $25. */
+    private fun parseTransfer(stored: String): Transfer? {
         val (from, to, amount) = TRANSFER_FORMAT.matchEntire(stored.trim())?.destructured ?: return null
-        return CashTransfer(from.toInt(), to.toInt(), amount.toLong()).takeIf { it.amountCents > 0L }
+        return Transfer(from.toInt(), to.toInt(), amount.toLong()).takeIf { it.amountCents > 0L && it.fromId != it.toId }
     }
 
     // Purchase prices (PP-085) -------------------------------------------------------------------
@@ -494,19 +463,15 @@ class BankPreferences @Inject constructor(
         /** PP-035, mystery bounties: a new key; never rename it. */
         private const val PLAYER_BOUNTY_DRAW_PREFIX = "player_bounty_draw_"
 
-        // The cash game (PP-029): new keys; never rename them
-        private const val BANK_MODE_KEY = "bank_mode"
-        private const val BANK_MODE_CASH = "cash"
-        private const val BANK_MODE_TOURNAMENT = "tournament"
-        private const val CASH_PREFIX = "cash_"
-        private const val CASH_PLAYERS_KEY = "cash_players"
-        private const val CASH_NAME_PREFIX = "cash_name_"
-        private const val CASH_BUY_INS_PREFIX = "cash_buy_ins_"
-        private const val CASH_OUT_PREFIX = "cash_out_"
-        private const val CASH_PAID_KEY = "cash_paid"
-        private const val CASH_SPLIT_KEY = "cash_split"
+        /** The settle-up's ticked payments (1.4): a new key; never rename it. */
+        private const val SETTLE_PAID_KEY = "settle_paid"
 
-        /** One ticked payment, "from>to:cents"; the digit limits keep the numbers in range. */
+        // Retired with the cash game (PP-029, gone in 1.4): "bank_mode" and every key starting with
+        // "cash_" ("cash_players", "cash_name_<id>", "cash_buy_ins_<id>", "cash_out_<id>",
+        // "cash_paid", "cash_split"). Nothing reads or writes them any more and they are left as
+        // they were on old installs; never reuse these names for anything else.
+
+        /** One ticked payment, "from>to:cents" (0 is the Bank); the digit limits keep the numbers in range. */
         private val TRANSFER_FORMAT = Regex("""(\d{1,9})>(\d{1,9}):(\d{1,18})""")
 
         // TournamentPreferences' file and keys for the rebuy and add-on amounts (read only, for

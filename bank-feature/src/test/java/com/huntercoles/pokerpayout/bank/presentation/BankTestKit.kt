@@ -10,6 +10,7 @@ import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatusProvider
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.domain.settle.SettleUpUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.DrawEnvelopeUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
@@ -44,10 +45,14 @@ class FakeClockStatus(start: ClockStatus = ClockStatus.NOT_STARTED) : ClockStatu
  */
 class BankTestKit(private val dispatcher: TestDispatcher) {
     val context: Context = ApplicationProvider.getApplicationContext()
-    val tournamentPreferences: TournamentPreferences
-    val bankPreferences: BankPreferences
-    val timerPreferences: TimerPreferences
-    val audioPreferences: AudioPreferences
+    var tournamentPreferences: TournamentPreferences
+        private set
+    var bankPreferences: BankPreferences
+        private set
+    var timerPreferences: TimerPreferences
+        private set
+    var audioPreferences: AudioPreferences
+        private set
     val clock = FakeClockStatus()
     val snackbars = SnackbarController()
     private val stores = mutableListOf<ViewModelStore>()
@@ -77,7 +82,8 @@ class BankTestKit(private val dispatcher: TestDispatcher) {
                 clock,
                 audioPreferences,
                 BankFeedback(context, snackbars),
-                DrawEnvelopeUseCase(draws)
+                DrawEnvelopeUseCase(draws),
+                SettleUpUseCase()
             ) as T
         }
         val viewModel = ViewModelProvider(store, factory)[BankViewModel::class.java]
@@ -88,6 +94,19 @@ class BankTestKit(private val dispatcher: TestDispatcher) {
     fun clear() {
         stores.forEach { it.clear() }
         stores.clear()
+    }
+
+    /**
+     * Process death and a cold start: every ViewModel cleared, every preference object built again
+     * from what is saved (nothing kept in memory survives), and a new Bank on top.
+     */
+    fun restartProcess(): BankViewModel {
+        clear()
+        tournamentPreferences = TournamentPreferences(context)
+        bankPreferences = BankPreferences(context)
+        timerPreferences = TimerPreferences(context)
+        audioPreferences = AudioPreferences(context)
+        return newViewModel()
     }
 
     /** Runs everything due, including the 8 s Undo windows (virtual time). */

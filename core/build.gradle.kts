@@ -70,7 +70,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.hilt)
     implementation(libs.kotlin.coroutines)
-    implementation(libs.kotlin.serialization)
+    api(libs.kotlin.serialization) // backup sections (core/backup) are JSON objects in their API
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.navigation)
     implementation(libs.timber)
@@ -80,12 +80,14 @@ dependencies {
     testImplementation(libs.bundles.common.test)
     testImplementation(libs.bundles.screenshot.test)
     testImplementation(libs.test.androidx.core)
+    testImplementation(libs.test.kotest.property)
     androidTestImplementation(libs.bundles.common.android.test)
 
     testFixturesImplementation(platform(libs.compose.bom))
     testFixturesImplementation(libs.compose.material3)
     testFixturesApi(libs.test.junit4)
     testFixturesApi(libs.bundles.screenshot.test)
+    testFixturesApi(libs.test.kotest.property) // forAll (Properties.kt), for every module's property tests
 
     ksp(libs.hilt.compiler)
     kspAndroidTest(libs.hilt.compiler)

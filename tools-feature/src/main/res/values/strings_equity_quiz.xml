@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Equity quiz: guess who's ahead, then see the real odds -->
+    <string name="quiz_title">Equity quiz</string>
+    <!-- "Two hands · Who's ahead" -->
+    <string name="quiz_subtitle">%1$s · %2$s</string>
+
+    <!-- The score strip -->
+    <string name="quiz_stat_streak">Streak</string>
+    <string name="quiz_stat_best">Best</string>
+    <string name="quiz_stat_right">Right</string>
+    <!-- Under "Right": "of 15" -->
+    <string name="quiz_stat_of">of %1$d</string>
+
+    <!-- The table -->
+    <string name="quiz_board">Board</string>
+    <string name="quiz_no_board">No cards out yet: all five to come.</string>
+    <string-array name="quiz_hand_names">
+        <item>Hand A</item>
+        <item>Hand B</item>
+        <item>Hand C</item>
+    </string-array>
+    <!-- TalkBack for a hand: "Hand A: Ace of spades, King of hearts" -->
+    <string name="quiz_hand_description">%1$s: %2$s, %3$s</string>
+    <!-- Added once the odds show: "Hand A: ..., 63.4%" -->
+    <string name="quiz_hand_equity_description">%1$s, %2$s%%</string>
+    <!-- Added for TalkBack: ", Ahead", ", Your pick" -->
+    <string name="quiz_description_more">%1$s, %2$s</string>
+    <string name="quiz_pick_hand">Pick %1$s</string>
+    <string name="quiz_ahead">Ahead</string>
+    <string name="quiz_your_pick">Your pick</string>
+
+    <!-- The question -->
+    <string name="quiz_question_leader">Who\'s ahead?</string>
+    <string name="quiz_hint_leader">Tap the hand that wins most often from here.</string>
+    <!-- "How often does Hand A win?" -->
+    <string name="quiz_question_range">How often does %1$s win?</string>
+    <string name="quiz_hint_range">Its equity: wins, and its share of any split pots.</string>
+    <string name="quiz_range_under">Under %1$d%%</string>
+    <string name="quiz_range_between">%1$d–%2$d%%</string>
+    <string name="quiz_range_over">Over %1$d%%</string>
+    <string name="quiz_working">Working out the odds…</string>
+
+    <!-- The answer -->
+    <string name="quiz_right">Right!</string>
+    <string name="quiz_wrong">Not this time</string>
+    <!-- "Hand B wins 63.4% of the time." -->
+    <string name="quiz_leader_explained">%1$s wins %2$s%% of the time.</string>
+    <string name="quiz_close_leader">Too close to call: either hand counts.</string>
+    <!-- "Hand A wins 63.4%: 60–80%." -->
+    <string name="quiz_range_explained">%1$s wins %2$s%%: %3$s.</string>
+    <!-- Under the verdict, asked how often: "Your pick: 20–40%" -->
+    <string name="quiz_your_range">Your pick: %1$s</string>
+    <!-- "40–60% or 60–80%" -->
+    <string name="quiz_ranges_or">%1$s or %2$s</string>
+    <string name="quiz_close_range">Right on the line: either range counts.</string>
+    <string name="quiz_deal_again">Deal again</string>
+
+    <!-- Settings -->
+    <string name="quiz_settings_hands">Hands</string>
+    <string name="quiz_two_hands">Two hands</string>
+    <string name="quiz_three_hands">Three hands</string>
+    <string name="quiz_settings_question">Question</string>
+    <string name="quiz_question_option_leader">Who\'s ahead</string>
+    <string name="quiz_question_option_range">How often</string>
+    <string name="quiz_how">The odds are worked out exactly, every runout, as on the Odds screen.</string>
+</resources>

@@ -9,10 +9,10 @@ GitHub releases. No ads, no accounts, no internet permission.
 | Module | What lives there |
 |---|---|
 | `app` | `MainActivity` wiring, release build config (R8, signing from `keystore.properties`) |
-| `core` | Design system (`core/design`: `PokerTheme`, `PokerColors`, `PokerType`, components), navigation, preferences, money and blind maths, the device-matrix test kit (`src/testFixtures`) |
+| `core` | Design system (`core/design`: `PokerTheme`, `PokerColors`, `PokerType`, components), navigation, preferences, money and blind maths, the cue sound packs and the music player (`core/audio`, docs/SOUNDS.md), the device-matrix test kit (`src/testFixtures`) |
 | `tournament-feature` | Tournament tab (setup, presets, clock, blinds, table view), the live clock notification and its service, and the Payouts tab |
 | `bank-feature` | Bank tab: buy-ins, rebuys, add-ons, knockouts and bounty types, settlement, and the cash game |
-| `tools-feature` | Tools hub (with Sound), Odds and Run it out, Chip set, Hand ranks, Seat draw, History |
+| `tools-feature` | Tools hub (with Sound: Cue sounds and Music), Odds and Run it out, Chip set, Hand ranks, Seat draw, Shot clock, Dealer's choice, Equity quiz, History, Backup |
 
 Jetpack Compose (Material 3), Hilt, MVI (`*Intent`, `*UiState`, `*ViewModel`), SharedPreferences.
 Screens are a thin route plus a stateless `*Content(state, onIntent)` composable.
@@ -66,7 +66,12 @@ JDK 21 toolchain (F-Droid's buildserver has only JDK 21; bytecode targets 17). T
   recorded on 6 cells (`DeviceMatrix.goldens`, plus `pinned` ones); review new ones by eye.
 - **Layout checks** (`core` test fixtures: `DeviceMatrix`, `ScreenTestRule`, `LayoutAssertions`) run
   every screen at 8 sizes x 3 font scales and fail on clipped, ellipsized, broken-word or off-screen
-  text, targets under 48 dp, and overlapping targets.
+  text, targets under 48 dp, overlapping targets, tappable things TalkBack can't name, and (on
+  `phone` at font 1.0) text under WCAG AA contrast.
+- **Property tests** (kotest-property through `forAll` in core's test fixtures): seeded, a failure
+  shrinks and prints its seed. For the maths, and for process death (`BankTestKit.restartProcess()`).
+- **Monkey** (`scripts/device/monkey.sh`, `monkey.yml` on every pull request): seeded chaos on the
+  emulator, failing on a crash or ANR. **Mutation testing**: `gh workflow run mutation.yml`, by hand.
 - **Device tour** on a headless emulator (never ask the owner to plug in a phone):
 
   ```bash

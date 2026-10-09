@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 # The table tools (S20 to S22): Outs & pot odds, Side pots and Deal maker. tour.sh sources this file
 # right after the seat draw steps, so these run in the plain tour, in this order, between Seat draw
-# and Odds: each tool opens from the Tools list and goes back to it, and the last step scrolls the
-# list back to its top for the Odds steps. They use tour.sh's helpers (ui, step, require_tab_selected).
+# and Backup: each tool opens from the Tools list and goes back to it, and the last step scrolls the
+# list back to its top, as the seat draw left it. They use tour.sh's helpers (ui, step, require_tab_selected).
 #
 # The Bank's night is over by now (Alice won), so the deal maker has nobody left to take from the
 # Bank and starts from three players to name; its prizes are typed, to check the ICM example worked
@@ -128,7 +128,7 @@ s_deal_start_over() {
   ui assert-text "text=Each way adds up to \$90."
 }
 s_table_tools_back() {
-  # Back to the Tools list, scrolled to its top again for the Odds steps.
+  # Back to the Tools list, scrolled to its top again, as the seat draw left it.
   ui back
   ui scroll-to text=Odds --dir up --max 6
   ui assert-text text=Odds "text=Chip set" || return 1

@@ -249,6 +249,44 @@
     <string name="bank_still_playing">still playing</string>
     <string name="bank_structure">Structure</string>
 
+    <!-- Settle up: who pays whom once the night is over (it took over the cash game's in 1.4) -->
+    <plurals name="bank_settle_button">
+        <item quantity="one">Settle up · %d payment</item>
+        <item quantity="other">Settle up · %d payments</item>
+    </plurals>
+    <string name="bank_settle_title">Settle up</string>
+    <string name="bank_settle_note">The fewest payments that square everyone, counting what the Bank has taken in and paid out.</string>
+    <plurals name="bank_settle_count">
+        <item quantity="one">%d payment</item>
+        <item quantity="other">%d payments</item>
+    </plurals>
+    <string name="bank_settle_hint">Tick each one when paid</string>
+    <string name="bank_settle_square_pill">Square</string>
+    <string name="bank_settle_square">Everyone is square: nobody owes anybody.</string>
+    <!-- A payment: "Sam pays Dana". The Bank is one side of some: "The bank pays Dana", "Sam pays the bank". -->
+    <string name="bank_settle_line">%1$s pays %2$s</string>
+    <string name="bank_settle_the_bank_first">The bank</string>
+    <string name="bank_settle_the_bank">the bank</string>
+    <string name="bank_settle_share">Share as text</string>
+    <string name="bank_settle_share_chooser">Share the settle-up</string>
+    <!-- On the snackbar with Undo -->
+    <string name="bank_done_settle_paid">%1$s paid %2$s %3$s</string>
+    <string name="bank_done_settle_unpaid">%1$s hasn\'t paid %2$s yet</string>
+    <string name="bank_done_square">Everyone is square: buy-ins and payouts marked paid</string>
+    <!-- Share as text (ACTION_SEND text/plain) -->
+    <string name="bank_settle_share_title">Poker night: settle up</string>
+    <string name="bank_settle_share_up">%1$s: in %2$s, won %3$s, up %4$s</string>
+    <string name="bank_settle_share_down">%1$s: in %2$s, won %3$s, down %4$s</string>
+    <string name="bank_settle_share_even">%1$s: in %2$s, won %3$s, even</string>
+    <string name="bank_settle_share_food">Food %1$s, kept by the bank.</string>
+    <plurals name="bank_settle_share_payments">
+        <item quantity="one">Settle up, 1 payment:</item>
+        <item quantity="other">Settle up, %d payments:</item>
+    </plurals>
+    <string name="bank_settle_share_payment">%1$s pays %2$s %3$s</string>
+    <string name="bank_settle_share_payment_paid">%1$s pays %2$s %3$s (paid)</string>
+    <string name="bank_settle_share_square">Everyone is square: no payments.</string>
+
     <!-- Reset (⋮) -->
     <string name="bank_reset_title">Reset the bank?</string>
     <plurals name="bank_reset_body">

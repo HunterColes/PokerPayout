@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.core.design.components
 
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
@@ -23,6 +24,14 @@ class ShellChrome {
 
 /** The shell's [ShellChrome], or null outside a [PokerAppShell]. */
 val LocalShellChrome = staticCompositionLocalOf<ShellChrome?> { null }
+
+/**
+ * The app's one snackbar queue ([SnackbarController.hostState]) as the shell hosts it. A screen that
+ * takes the whole window ([RequestShellChrome] with `immersive`) has no shell snackbar host around
+ * it, so it hosts its snackbars itself, where they leave what it needs in view (the table view's
+ * Undo after a knockout, PP-135). Null outside a shell with snackbars.
+ */
+val LocalShellSnackbars = staticCompositionLocalOf<SnackbarHostState?> { null }
 
 /** While composed, asks the shell for the whole window. */
 @Composable

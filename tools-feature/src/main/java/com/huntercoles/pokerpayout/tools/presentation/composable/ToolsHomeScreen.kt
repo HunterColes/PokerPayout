@@ -83,7 +83,26 @@ private val Tools = listOf(
         R.string.tools_side_pots_description,
     ),
     Tool(NavigationDestination.DealMaker, TableToolIcons.Chop, R.string.tools_deal_title, R.string.tools_deal_description),
+    Tool(
+        NavigationDestination.ShotClock,
+        PokerIcons.Hourglass,
+        R.string.tools_shot_clock_title,
+        R.string.tools_shot_clock_description,
+    ),
+    Tool(
+        NavigationDestination.DealersChoice,
+        PokerIcons.Wheel,
+        R.string.tools_dealers_choice_title,
+        R.string.tools_dealers_choice_description,
+    ),
+    Tool(
+        NavigationDestination.EquityQuiz,
+        PokerIcons.Quiz,
+        R.string.tools_equity_quiz_title,
+        R.string.tools_equity_quiz_description,
+    ),
     Tool(NavigationDestination.History, PokerIcons.Trophy, R.string.tools_history_title, R.string.tools_history_description),
+    Tool(NavigationDestination.Backup, PokerIcons.Save, R.string.tools_backup_title, R.string.tools_backup_description),
 )
 
 /** The Tools tab (S7): the tools as a list, then the Sound section, then the app's promise. */
@@ -139,7 +158,7 @@ fun ToolsHomeContent(
                     onClick = { onOpenTool(tool.destination) },
                 )
             }
-            SoundSection(state = state, onIntent = onIntent, onAllowNotifications = onAllowNotifications)
+            SoundSection(state = state, onIntent = onIntent, onAllowNotifications = onAllowNotifications, onOpen = onOpenTool)
             Text(
                 text = stringResource(R.string.tools_footer, versionName),
                 style = MaterialTheme.typography.bodySmall,

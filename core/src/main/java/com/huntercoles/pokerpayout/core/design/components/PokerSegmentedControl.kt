@@ -140,8 +140,9 @@ private fun Segment(
             Text(text = label, color = color, style = styles.label, textAlign = TextAlign.Center)
             if (secondary != null) {
                 Text(
+                    // Full strength: gold at 90% on the selected thumb was 4.49:1, under AA
                     text = secondary,
-                    color = color.copy(alpha = SECONDARY_ALPHA),
+                    color = color,
                     style = styles.secondary,
                     textAlign = TextAlign.Center,
                 )
@@ -157,7 +158,6 @@ private val ThumbPadding = 4.dp
 
 /** Each segment's padding plus its thumb's: the room a label loses inside its share of the track. */
 private val SegmentInset = TrackPadding + ThumbPadding
-private const val SECONDARY_ALPHA = 0.9f
 
 private enum class PreviewPreset(val label: String, val firstPlace: String) {
     TopHeavy("Top-heavy", "$270"),

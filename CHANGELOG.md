@@ -3,6 +3,132 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.6 (on master, not published)
+
+Knockouts from the full-screen clock:
+
+- **Knock out on the clock:** the full-screen clock has a Knock out button beside pause: who's out,
+  then who knocked them out (or Nobody), in two taps, with no need to leave the clock. It is the
+  Bank's own knockout, so the place, the bounty (progressive too), the mystery envelope, the players
+  left and the payouts come out exactly as from the Bank; a mystery knockout opens its envelope
+  right there. At large text on a phone the button is the skull alone.
+- **Undo on the clock:** the snackbar now shows on the full-screen clock too, bottom left, clear of
+  the time and the controls. The Bank and the clock share one Bank, so the Bank's top-bar Undo can
+  take back a knockout made from the clock as well.
+- **The bubble:** the clock says "On the bubble" when the next player out finishes one place short
+  of the money, then "In the money": beside the players left on the full-screen clock, beside the
+  level on the upright clock.
+
+## 1.4.5 (on master, not published)
+
+A test lab that found five bugs, all fixed:
+
+- **Mystery bounties:** a player joining after an envelope was drawn could make the night pay up to
+  $9 more in bounties than was collected (nine players' $15 envelope wasn't in ten players' deal).
+  The money not yet drawn is now dealt again into the envelopes still to come.
+- **Live clock:** leaving the app and coming straight back, over and over, with the clock running
+  could crash it (found by the monkey). The notification's service no longer stops while a new
+  start is on its way.
+- **Huge stacks:** overtime no longer doubles a big blind past what can be counted (a 500,000,000
+  stack showed a negative big blind), and the setup advice never suggests such a stack.
+- **Payout editor:** a turned tablet or a font change kept the weights and rounding you hadn't
+  saved yet, as every other sheet does.
+- **Payouts:** a place that would round to $0 isn't paid (27 players at $10 rounded to $10 paid 9th
+  nothing); the places stepper stops at the most places that each pay something.
+- **Easier to read:** each payout preset's 1st-place amount is full gold, the odds grid's cards
+  already on the table are lighter, and Music's "On breaks" heading stays readable with the clock
+  switch off.
+- **New tests:** property tests that throw thousands of random nights, setups and amounts at the
+  money and blind maths; checks on every screen for TalkBack names and WCAG text contrast; the
+  clock, the Bank and the odds table surviving the app being killed at random; a seeded monkey on
+  GitHub's emulator for every pull request; and mutation testing, by hand (79% of core's maths).
+
+## 1.4.4 (on master, not published)
+
+House cleaning:
+
+- **Mystery bounties:** once an envelope is drawn, the player count can't go lower (fewer players
+  would deal fewer envelopes and could leave the champion's pool at $0); the Players hint says so.
+  A late entry still comes in, and Undo or a new tournament lifts it. Loading a preset keeps the
+  bounty that dealt the envelopes.
+- **No white flash at launch:** the launch screen, and Android 12's splash, are the felt green.
+- **Snackbars:** a new one replaces the one showing at once, on every screen, instead of waiting
+  behind it; the one replaced takes its Undo with it.
+- Under the hood: release.sh finds the last release by the highest version tag, the device tour's
+  break check allows any time up to 10:00, unused and duplicate launcher drawables are gone, and
+  the changelog marks 1.3.14 as published.
+
+## 1.4.3 (on master, not published)
+
+- **Shot clock** (Tools): a countdown for each decision, 30, 45 or 60 seconds. The whole face is one
+  big button: tap it for the next decision. A warning at 10 seconds and when time is up, with the
+  Sound section's settings (a beep unless the sound is off, a buzz with Vibrate, a gold flash with
+  Flash the clock). Pause, Resume and Reset. **Time-bank cards:** each player (the Bank's) gets up
+  to five, and playing one adds 30 seconds, even just after time ran out; "Give everyone their
+  cards back" with Undo. It keeps the screen on while it counts, and never touches the tournament
+  clock or its chime.
+- **Dealer's choice** (Tools): spin a wheel to pick the next game. Seventeen games with a short
+  rules card each (Hold'em, Omaha, Big O, Stud, Razz, 2-7 Triple Draw, Badugi, Pineapple, Crazy
+  Pineapple and more), nine on the first wheel; switch any on or off, and add up to eight house
+  games. It never picks the game just played twice running, and with Remove animations on, the
+  pick shows at once.
+- **Equity quiz** (Tools): two or three hands face up, before the flop, on the flop or on the turn.
+  Guess who's ahead, or how often the first hand wins; then see every hand's real odds, worked out
+  exactly by the Odds screen's engine. Your streak, best streak and score stay on the phone.
+- Backups take all three: the shot clock's settings and cards played, the wheel and its house
+  games, and the quiz's settings and score.
+
+## 1.4.2 (on master, not published)
+
+- **Music** (Tools > Sound): a playlist of songs from your phone, added with the phone's file
+  picker (no new permission, still no internet). Play, pause, previous and next, shuffle, repeat
+  (all songs or one), move and remove songs, and a volume of its own. A song whose file has gone
+  says "File not found" and is skipped.
+- **Play with the clock:** the music starts when the clock runs and pauses when it's paused or
+  over; on breaks it keeps playing, pauses or plays quieter, as you choose. It dips under the
+  clock's sounds, plays on with the screen off, and keeps going in the background while the clock
+  runs.
+- **Cue sounds** (Tools > Sound): sound packs with a sound for each moment (a new level, a minute
+  left, a break starting and ending, the game over), each played on a tap. *Classic*, the default,
+  is the chime as before. Room for built-in songs and new packs (docs/SOUNDS.md); none ship yet.
+- Backups take the sound pack and the music's settings; the playlist stays with the phone.
+
+## 1.4.1 (on master, not published)
+
+- **Backup** (Tools): one file with everything the app saves (presets, History and the season's
+  points, the chip set, settings, sound and tonight's game), saved and opened through the phone's
+  file picker, so it can live in Drive, Downloads or on a computer. No permission and still no
+  internet. Opening one shows what it holds before anything changes, then *Add to this phone*
+  (the presets and nights the phone doesn't have, with Undo) or *Replace this phone's data* (the
+  app starts again on the backup's game; a running clock comes back paused). A file that isn't a
+  backup, is damaged or comes from a newer version is turned away with a plain reason.
+- **History's CSV as a file:** *Save as CSV file…* writes every night as a spreadsheet file (UTF-8,
+  a header row); *Share as CSV* (formerly *Export as CSV*) still sends it as text.
+- **Presets as files:** a preset's menu has *Share as file* ("Friday.json" for a friend), and the
+  presets list has *Open preset file…*, which adds its presets with Undo ("Friday 2" when the name
+  is taken by another setup). The Backup screen opens preset files too.
+- Android's own backup now takes the same data as the backup file, and on Android 12 and up copies
+  it to Google's cloud only when the copy is end-to-end encrypted, since it holds players' names.
+
+## 1.4.0 (on master, not published)
+
+- **The cash game folds into the Bank.** The Bank's Tournament / Cash game switch and the separate
+  cash page are gone: a home night runs one way, through the Tournament, Bank and Payouts tabs.
+- **Settle up:** once the night is over and someone's buy-in is still open, the Bank offers
+  "Settle up": who pays whom so that everyone is square, counting what the Bank took in and paid
+  out (it keeps the food money). It finds the true fewest payments (exactly, for nights of up to 10
+  players), with a tick for each payment and Share as text for the group chat. Ticking the last one
+  marks every buy-in and payout paid, so the night can go into History; Undo takes it back. When
+  everyone paid in at the start, the Paid column does the job as before.
+- Gone with the cash page: free-amount buy-ins and top-ups, the chip count check and splitting a
+  difference. A cash game saved by 1.3.14 is left untouched on the phone and no longer shown.
+- The store listing's fifth picture is now the settle-up.
+
+## [1.3.14](https://github.com/HunterColes/PokerPayout/releases/tag/v1.3.14) (2026-10-07)
+
+A new look, cash games and a clock on your lock screen: everything in 1.3.1 to 1.3.13 below,
+published as one release.
+
 ## 1.3.13 (on master, not published)
 
 - **Odds on small phones:** on the smallest phones at large text, the card keypad takes a row less

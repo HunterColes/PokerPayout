@@ -65,7 +65,7 @@ object DeviceMatrix {
      *   The tightest cell.
      * - `phone` at 1.0: the layouts as drawn, 1:1 with the mockups.
      * - `phone` at 1.3: between the font thresholds (one knockout choice a row and stacked sums above
-     *   1.15; side-by-side cash fields and the Bank header's words up to 1.3).
+     *   1.15; the Bank header's words up to 1.3).
      * - `tablet` (800 dp, upright): the rail, with a 704 dp column, so Hand ranks shows two columns and
      *   Chip set two panes.
      * - `phone-land`: a phone on its side, the shortest common height: the table view, the odds keypad
@@ -101,7 +101,6 @@ object DeviceMatrix {
         "S6_payouts_font2x" to listOf(ScreenConfig(Device.SmallPhone, 2.0f), ScreenConfig(Device.Phone, 2.0f)),
         "S8_odds_font2x" to listOf(ScreenConfig(Device.TallPhone, 2.0f)),
         "S10_runout_land" to listOf(ScreenConfig(Device.SmallPhoneLandscape, 1.0f)),
-        "S13_cash_font2x" to listOf(ScreenConfig(Device.SmallPhone, 2.0f), ScreenConfig(Device.Phone, 2.0f)),
         "S14_seats_font2x" to listOf(ScreenConfig(Device.TallPhone, 2.0f)),
     )
 

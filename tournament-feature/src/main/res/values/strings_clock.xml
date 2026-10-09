@@ -44,6 +44,8 @@
     <string name="setup_players">Players</string>
     <string name="setup_players_hint">Bank gets one row per player</string>
     <string name="setup_players_late_entry">A late entry adds a Bank row</string>
+    <!-- Mystery bounties (PP-035): fewer players would re-deal the envelopes already drawn -->
+    <string name="setup_players_envelopes_drawn">Can\'t go lower now that envelopes are drawn</string>
     <string name="setup_money_title">Money · per player</string>
     <string name="setup_money_to_sit_down">%1$s to sit down</string>
     <string name="setup_buy_in">Buy-in</string>

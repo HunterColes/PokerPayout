@@ -2,7 +2,6 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
@@ -752,12 +751,8 @@ class TimerViewModel @Inject constructor(
         val left = (players - out).coerceAtLeast(0)
         val stacks = players.toLong() + bank.rebuys + bank.addOns
         val chips = stacks * _uiState.value.config.startingChips
-        val prizePool = PoolBreakdown.withRecordedPurchases(
-            tableConfig.money,
-            players,
-            bankPreferences.getRecordedRebuyCents(),
-            bankPreferences.getRecordedAddOnCents(),
-        ).prizePoolCents
+        // Purchases, late entries and re-entries at the prices paid (PP-085, PP-116)
+        val prizePool = bankPreferences.recordedPool(tableConfig.money, players).prizePoolCents
         val table = TableStats(
             playerCount = players,
             playersLeft = left,

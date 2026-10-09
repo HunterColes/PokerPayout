@@ -334,6 +334,12 @@ are:
    $7.50"; confirming shows it on the snackbar and under Player 1's name ("bounty $7.50, 1
    knockout" to TalkBack). Each part scrolls to what it checks last, since a swipe flings less on
    GitHub's emulator.
+   Then **Late entry and re-entry** (PP-116, S27, 3 steps): the clock started, Late entry under the
+   Bank's list opens its sheet ("to sit down", "Open all night.", Player 2 offered to re-enter); Kai
+   typed and Add: "Kai joins late", one more in the top bar's "N of M left", Kai's buy-in paid.
+   Then Player 2 re-enters: one more again, the first entry last of the field with nothing to bring
+   back, "Entry 2" under the new one; the top bar's Undo takes it back, and the first entry can be
+   brought back again.
 10. Check that the app process is still alive.
 
 Phones stay portrait (`AppOrientation` in `core`) except on the Tournament tab while a clock

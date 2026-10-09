@@ -67,6 +67,27 @@ object BankScenes {
     }
 
     /**
+     * S5 at level 6 with late entry until the end of level 6 (PP-116): the mid-game night, then Kai
+     * arrived late and Rita, knocked out by Marcus at level 5, bought back in as her second entry.
+     * Eleven entries: ten still in, Rita's first entry and Ben out.
+     */
+    fun lateEntries(kit: BankTestKit): BankViewModel = with(kit) {
+        tournamentPreferences.setLateEntryUntilLevel(6)
+        val viewModel = midGame(kit)
+        viewModel.send(BankIntent.AddLateEntry("Kai"))
+        viewModel.send(BankIntent.ReEnter(RITA))
+        viewModel
+    }
+
+    /** [midGame] with late entry open until the end of level 6, and its sheet open (S27). */
+    fun lateEntrySheet(kit: BankTestKit): BankViewModel = with(kit) {
+        tournamentPreferences.setLateEntryUntilLevel(6)
+        val viewModel = midGame(kit)
+        viewModel.send(BankIntent.OpenLateEntry)
+        viewModel
+    }
+
+    /**
      * S5 with progressive bounties (PP-035), level 6: everyone bought in, Marcus rebought, five
      * add-ons. Ben out at level 3 and Alex at level 6, both by Dana, whose bounty grew to $10; Rita
      * out at level 5 by Marcus, whose bounty is $7.50. Everyone else still carries $5.

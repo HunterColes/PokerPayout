@@ -11,10 +11,11 @@
   <img src="metadata/en-US/images/featureGraphic.png" alt="Poker Payout: tournament clock, payouts and bank. Free, no ads, offline." width="720"/>
 </p>
 
+<p align="center"><b>A free Android app for home poker nights.</b></p>
+
 <p align="center">
-  <b>A free Android app for home poker nights.</b><br/>
-  A tournament clock with blinds that fit your chips, payouts that add up to the cent,<br/>
-  a bank of who paid what, and tools for the table. Offline, no ads, no accounts.
+  A tournament clock with blinds that fit your chips, payouts that add up to the cent, a bank of
+  who paid what, and tools for the table. Offline, no ads, no accounts.
 </p>
 
 <p align="center">
@@ -41,17 +42,10 @@
 
 ## What's inside
 
-Four tabs: **Tournament**, **Bank**, **Payouts** and **Tools**.
+### Tournament
 
-<table>
-<tr>
-<td width="220"><img src="tournament-feature/src/test/screenshots/screens/S2_clock_running/S2_clock_running_phone-360x780_font1.0.png" alt="The tournament clock" width="200"/></td>
-<td valign="top">
-
-**Tournament**
-
-- Set up the night once: players, buy-in, bounty, rebuys (with a cutoff level), add-ons and
-  food. Save it as a preset and load it next time.
+- Set up the night once: players, buy-in, bounty, rebuys (with a cutoff level), add-ons and food.
+  Save it as a preset and load it next time.
 - Blinds from four numbers: game length, level length, starting stack and smallest chip. Every
   level is a multiple of your smallest chip, and a setup that can't work says why and offers the
   nearest fix.
@@ -63,13 +57,14 @@ Four tabs: **Tournament**, **Bank**, **Payouts** and **Tools**.
   you turn the phone sideways.
 - Share the setup as text for the group chat.
 
-</td>
-</tr>
-<tr>
-<td width="220"><img src="bank-feature/src/test/screenshots/screens/S5_bank_midgame/S5_bank_midgame_phone-360x780_font1.0.png" alt="The bank" width="200"/></td>
-<td valign="top">
+<p align="center">
+  <img src="tournament-feature/src/test/screenshots/screens/S1_panel_open/S1_panel_open_phone-360x780_font1.0.png" alt="Tournament setup" width="23%"/>
+  <img src="tournament-feature/src/test/screenshots/screens/S2_clock_running/S2_clock_running_phone-360x780_font1.0.png" alt="The running clock" width="23%"/>
+  <img src="tournament-feature/src/test/screenshots/screens/S4_break_colorup/S4_break_colorup_phone-360x780_font1.0.png" alt="A break with a color-up" width="23%"/>
+  <img src="tournament-feature/src/test/screenshots/screens/S15_presets_list/S15_presets_list_phone-360x780_font1.0.png" alt="Saved presets" width="23%"/>
+</p>
 
-**Bank**
+### Bank
 
 - Who has paid the buy-in, rebuys and add-ons, and who has been paid out, with Undo.
 - Knockouts and bounties three ways: standard, progressive (half now, half onto the winner's own
@@ -77,41 +72,48 @@ Four tabs: **Tournament**, **Bank**, **Payouts** and **Tools**.
 - Cash games: buy-ins and top-ups, a chip count check, and who pays whom at the end.
 - Share the settle-up as text.
 
-</td>
-</tr>
-<tr>
-<td width="220"><img src="tournament-feature/src/test/screenshots/screens/S6_payouts_standard/S6_payouts_standard_phone-360x780_font1.0.png" alt="Payouts" width="200"/></td>
-<td valign="top">
+<p align="center">
+  <img src="bank-feature/src/test/screenshots/screens/S5_bank_midgame/S5_bank_midgame_phone-360x780_font1.0.png" alt="The bank during a game" width="23%"/>
+  <img src="bank-feature/src/test/screenshots/screens/S5b_knockout_sheet_pko/S5b_knockout_sheet_pko_phone-360x780_font1.0.png" alt="A knockout with a progressive bounty" width="23%"/>
+  <img src="bank-feature/src/test/screenshots/screens/S5d_envelope_reveal/S5d_envelope_reveal_phone-360x780_font1.0.png" alt="A mystery bounty envelope" width="23%"/>
+  <img src="bank-feature/src/test/screenshots/screens/S13_cash_settle/S13_cash_settle_phone-360x780_font1.0.png" alt="Settling up a cash game" width="23%"/>
+</p>
 
-**Payouts**
+### Payouts
 
 - Top-heavy, standard or flat, or your own weights, rounded to $1, $5 or $10.
 - The places always add up to the prize pool, to the cent.
 - Share the payouts as text, and save the night to History once everyone is paid.
 
-</td>
-</tr>
-<tr>
-<td width="220"><img src="tools-feature/src/test/screenshots/screens/S7_tools_default/S7_tools_default_phone-360x780_font1.0.png" alt="The Tools tab" width="200"/></td>
-<td valign="top">
+<p align="center">
+  <img src="tournament-feature/src/test/screenshots/screens/S6_payouts_standard/S6_payouts_standard_phone-360x780_font1.0.png" alt="Payouts for three places" width="23%"/>
+  <img src="tournament-feature/src/test/screenshots/screens/S6_payouts_save/S6_payouts_save_phone-360x780_font1.0.png" alt="Saving the night when everyone is paid" width="23%"/>
+</p>
 
-**Tools**
+### Tools
 
 - **Odds** for two to ten hands (exact, or a close estimate when there are too many runouts),
   and run it out card by card.
-- **Chip set:** stacks from the chips you own, and a color-up plan.
 - **Hand ranks:** what beats what, with how often each hand comes up.
+- **Chip set:** stacks from the chips you own, and a color-up plan.
 - **Seat draw:** random, balanced seats across your tables, and the high card for the button.
 - **History:** saved nights, season points and the player of the year, and a CSV export for a
   spreadsheet.
 - **Sound:** a chime before each level, break and the end; vibrate and flash for quiet rooms.
 
-</td>
-</tr>
-</table>
+<p align="center">
+  <img src="tools-feature/src/test/screenshots/screens/S9_odds_flop_exact/S9_odds_flop_exact_phone-360x780_font1.0.png" alt="Odds on the flop" width="23%"/>
+  <img src="tools-feature/src/test/screenshots/screens/S10_runout_river_p1/S10_runout_river_p1_phone-360x780_font1.0.png" alt="Running it out to the river" width="23%"/>
+  <img src="tools-feature/src/test/screenshots/screens/S12_ranks_default/S12_ranks_default_phone-360x780_font1.0.png" alt="Hand ranks" width="23%"/>
+</p>
+<p align="center">
+  <img src="tools-feature/src/test/screenshots/screens/S11_chipset_ok/S11_chipset_ok_phone-360x780_font1.0.png" alt="Chip set" width="23%"/>
+  <img src="tools-feature/src/test/screenshots/screens/S14_seats_two_tables/S14_seats_two_tables_phone-360x780_font1.0.png" alt="Seats across two tables" width="23%"/>
+  <img src="tools-feature/src/test/screenshots/screens/S16_history_list/S16_history_list_phone-360x780_font1.0.png" alt="History and season points" width="23%"/>
+</p>
 
-<sub>These pictures come from the app's screenshot tests. A change to a screen can't merge until
-they're updated, so they always show the app as it is today.</sub>
+<sub>The pictures in this section come from the app's screenshot tests. A change to a screen can't
+merge until they're updated, so they always show the app as it is today.</sub>
 
 ## Private by design
 

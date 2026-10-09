@@ -7,9 +7,9 @@ sound pack. Everything here is offline and asks for no new permission.
 
 | Part | Where | What it does |
 |---|---|---|
-| Cue sound packs | `core/.../audio/packs/SoundPacks.kt` | A pack has one slot per moment (`CueEvent`): new level, 1 minute left, break starts, break ends, game over. An empty slot is silent; the vibration and the flash still come. **Classic** (the default) is the chime the clock always played, at every change, and no sound with a minute left. |
+| Cue sound packs | `core/.../audio/packs/SoundPacks.kt` | A pack has one slot per moment (`CueEvent`): new level, 1 minute left, break starts, break ends, game over, and the night's big moments (PP-111): one slot for the bubble, in the money, the final table and heads-up, one for the champion. An empty slot is silent; the vibration and the flash still come. **Classic** (the default) is the chime the clock always played, at every change, and no sound with a minute left; the champion gets the chime too, the other big moments none. |
 | Cue player | `core/.../audio/SoundManager.kt` | Plays a cue; dips the music while it sounds (`CueDucking`). `previewSound` plays one even with the sound off (the picker). |
-| Which sound when | `tournament-feature/.../clock/ClockCueTimes.kt`, `ClockCues.kt` | Each cue knows its moment; `ClockCues` plays that slot of the picked pack. |
+| Which sound when | `tournament-feature/.../clock/ClockCueTimes.kt`, `ClockCues.kt` | Each cue knows its moment; `ClockCues` plays that slot of the picked pack. A big moment's sound plays as the knockout that brings it is recorded (`ClockCues.playMoment`, from the clock's `TimerViewModel`), muted or not as the Sound section says. |
 | Music player | `core/.../audio/music/MusicPlayer.kt` | The platform `MediaPlayer` (no library: the APK stays small and plays every format the phone does). Audio focus: a call pauses it until it's over, another music app stops it, a notification dips it. Headphones out pause it. |
 | Playlist | `core/.../audio/music/Playlist.kt` | Songs in the host's order, shuffle (every song once a pass; the random numbers come from the caller, so tests seed them), repeat off, all or one. Songs whose files have gone are passed over. |
 | Play with the clock | `core/.../audio/music/MusicAutoPlay.kt`, `tournament-feature/.../live/TournamentMusicLink.kt` | Starts the music when the clock runs, pauses it when the clock is paused or over; on breaks it keeps playing, pauses or plays quieter, as the host chose. It acts on changes only, so the host's own Play and Pause stand in between. |
@@ -60,7 +60,8 @@ There are none yet; Music says so ("None yet") until there are.
    15 s whatever the cue does) and small.
 2. Add the files as `core/src/main/res/raw/cue_<pack>_<moment>.ogg`.
 3. Timing: the sounds for a change start 4 s before it (`AudioConstants.LEVEL_CHANGE_SOUND_LEAD_SECONDS`),
-   so they should peak about 4 s in, as the chime does. The 1-minute sound plays on the minute.
+   so they should peak about 4 s in, as the chime does. The 1-minute sound plays on the minute, and
+   a big moment's at once, so it should start strong and stay short (2 to 4 s).
 4. Add the pack to `SoundPacks.all`, with a name and a one-line description in
    `core/src/main/res/values/strings.xml`, and a sound for each moment it has; leave a moment out
    for no sound. A new sound for one moment of the classic pack is one more line in its map.

@@ -21,13 +21,20 @@ enum class CueEvent {
 
     /** The last level ends: the clock has finished. */
     GAME_OVER,
+
+    /** PP-111: a big moment of the night on the clock: the bubble, in the money, the final table, heads-up. */
+    BIG_MOMENT,
+
+    /** PP-111: the last knockout leaves a champion. */
+    CHAMPION,
 }
 
 /**
  * A set of cue sounds, one slot per [CueEvent]. A slot with no sound is silent; the vibration and the
- * flash still come. The sounds for a change (every slot but [CueEvent.ONE_MINUTE]) start
+ * flash still come. The sounds for a change of level or break start
  * [AudioConstants.LEVEL_CHANGE_SOUND_LEAD_SECONDS] before the change, so they should peak about that
- * far in, as the chime does. The one-minute sound plays on the minute.
+ * far in, as the chime does. The one-minute sound plays on the minute, and a big moment's
+ * ([CueEvent.BIG_MOMENT], [CueEvent.CHAMPION]) as the knockout that brings it is recorded.
  *
  * Adding a pack or a sound: docs/SOUNDS.md.
  */
@@ -47,7 +54,10 @@ data class SoundPack(
 object SoundPacks {
     const val CLASSIC_ID = "classic"
 
-    /** The sounds the clock has always played: the chime at every change, nothing with a minute left. */
+    /**
+     * The sounds the clock has always played: the chime at every change, nothing with a minute left.
+     * The champion (PP-111) gets the chime too; the other big moments show without a sound.
+     */
     val Classic = SoundPack(
         id = CLASSIC_ID,
         name = R.string.sound_pack_classic,
@@ -57,6 +67,7 @@ object SoundPacks {
             CueEvent.BREAK_START to R.raw.blind_level_up,
             CueEvent.BREAK_END to R.raw.blind_level_up,
             CueEvent.GAME_OVER to R.raw.blind_level_up,
+            CueEvent.CHAMPION to R.raw.blind_level_up,
         ),
     )
 

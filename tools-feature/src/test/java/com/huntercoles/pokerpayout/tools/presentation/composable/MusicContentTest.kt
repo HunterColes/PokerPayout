@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -174,12 +175,16 @@ class MusicContentTest {
         showCues(MusicFixtures.cueSounds)
         compose.onNodeWithContentDescription("Play New level, Classic").performClick()
         compose.onNodeWithContentDescription("Play Game over, Classic").performScrollTo().performClick()
-        compose.onNodeWithText("No sound").assertExists()
+        // PP-111: the champion's slot has the chime; the other big moments' is empty
+        compose.onNodeWithContentDescription("Play Champion, Classic").performScrollTo().performClick()
+        assertEquals("the minute and the big moments", 2, compose.onAllNodesWithText("No sound").fetchSemanticsNodes().size)
         compose.onNodeWithContentDescription("Play 1 minute left, Classic").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Play Bubble, final table, heads-up, Classic").assertDoesNotExist()
         assertEquals(
             listOf(
                 CueSoundsIntent.Preview(SoundPacks.CLASSIC_ID, CueEvent.LEVEL_UP),
                 CueSoundsIntent.Preview(SoundPacks.CLASSIC_ID, CueEvent.GAME_OVER),
+                CueSoundsIntent.Preview(SoundPacks.CLASSIC_ID, CueEvent.CHAMPION),
             ),
             cueIntents,
         )

@@ -40,6 +40,13 @@ class SoundPacksTest {
         assertNull(classic.soundFor(CueEvent.ONE_MINUTE))
     }
 
+    /** PP-111: the champion gets the chime, as the end of the clock does; the other big moments show without a sound. */
+    @Test
+    fun theClassicPackChimesForTheChampionOnly() {
+        assertEquals(R.raw.blind_level_up, SoundPacks.Classic.soundFor(CueEvent.CHAMPION))
+        assertNull(SoundPacks.Classic.soundFor(CueEvent.BIG_MOMENT))
+    }
+
     @Test
     fun everyPackHasItsOwnIdAndAName() {
         assertEquals(SoundPacks.all.size, SoundPacks.all.map { it.id }.toSet().size)

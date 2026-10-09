@@ -50,8 +50,9 @@ fun CueSoundsRoute(onBack: () -> Unit, viewModel: CueSoundsViewModel = hiltViewM
 
 /**
  * Cue sounds (S18), stateless: each sound pack with a sound per moment (a new level, a minute left,
- * a break starting and ending, the game over), each one played on a tap, and the pack the clock
- * plays picked. An empty slot says so. With the sound off, it says the clock plays none of them.
+ * a break starting and ending, the game over, and the night's big moments: the bubble, the final
+ * table, heads-up and the champion, PP-111), each one played on a tap, and the pack the clock plays
+ * picked. An empty slot says so. With the sound off, it says the clock plays none of them.
  */
 @Composable
 fun CueSoundsContent(
@@ -184,4 +185,6 @@ private fun eventName(event: CueEvent): Int = when (event) {
     CueEvent.BREAK_START -> R.string.cue_event_break_start
     CueEvent.BREAK_END -> R.string.cue_event_break_end
     CueEvent.GAME_OVER -> R.string.cue_event_game_over
+    CueEvent.BIG_MOMENT -> R.string.cue_event_big_moment
+    CueEvent.CHAMPION -> R.string.cue_event_champion
 }

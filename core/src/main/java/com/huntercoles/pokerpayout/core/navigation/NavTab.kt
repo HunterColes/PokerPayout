@@ -37,6 +37,7 @@ val NavigationDestination.tab: NavTab?
         NavigationDestination.ShotClock,
         NavigationDestination.DealersChoice,
         NavigationDestination.EquityQuiz,
+        NavigationDestination.TipDealer,
         -> NavTab.Tools
         NavigationDestination.Back -> null
     }
@@ -58,6 +59,7 @@ val ScreenDestinations: List<NavigationDestination> = listOf(
     NavigationDestination.ShotClock,
     NavigationDestination.DealersChoice,
     NavigationDestination.EquityQuiz,
+    NavigationDestination.TipDealer,
 )
 
 /** The tab to show as selected while this destination is on top, or null when it isn't a screen. */

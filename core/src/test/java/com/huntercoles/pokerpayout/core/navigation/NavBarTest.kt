@@ -59,6 +59,7 @@ class NavBarTest {
             NavigationDestination.ShotClock,
             NavigationDestination.DealersChoice,
             NavigationDestination.EquityQuiz,
+            NavigationDestination.TipDealer,
         ).forEach { assertEquals("$it", NavTab.Tools, it.tab) }
         assertNull(NavigationDestination.Back.tab)
     }
@@ -113,6 +114,7 @@ class NavBarTest {
             NavigationDestination.ShotClock,
             NavigationDestination.DealersChoice,
             NavigationDestination.EquityQuiz,
+            NavigationDestination.TipDealer,
         ).forEach { destination ->
             navigate(destination)
             compose.onNodeWithText(SCREEN + destination).assertExists()
@@ -209,6 +211,7 @@ class NavBarTest {
                 builder.composable<NavigationDestination.ShotClock> { Text(SCREEN + NavigationDestination.ShotClock) }
                 builder.composable<NavigationDestination.DealersChoice> { Text(SCREEN + NavigationDestination.DealersChoice) }
                 builder.composable<NavigationDestination.EquityQuiz> { Text(SCREEN + NavigationDestination.EquityQuiz) }
+                builder.composable<NavigationDestination.TipDealer> { Text(SCREEN + NavigationDestination.TipDealer) }
             }
         }
     }

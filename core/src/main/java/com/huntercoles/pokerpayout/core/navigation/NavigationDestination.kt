@@ -61,6 +61,10 @@ sealed class NavigationDestination {
     @Serializable
     data object EquityQuiz : NavigationDestination()
 
+    /** Tip the dealer (PP-112): the donation page, the addresses and their QR codes. */
+    @Serializable
+    data object TipDealer : NavigationDestination()
+
     @Serializable
     data object Back : NavigationDestination()
 }

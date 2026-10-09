@@ -13,14 +13,17 @@ import com.huntercoles.pokerpayout.core.navigation.NavigationManager
 import com.huntercoles.pokerpayout.tools.presentation.composable.BackupRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ChipSetRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.CueSoundsRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.DealRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.DealersChoiceRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.EquityQuizRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.HandRanksScreen
 import com.huntercoles.pokerpayout.tools.presentation.composable.HistoryRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.MusicRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.OddsCalculatorScreen
+import com.huntercoles.pokerpayout.tools.presentation.composable.OutsRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.SeatDrawRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ShotClockRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.SidePotsRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ToolsHomeScreen
 import javax.inject.Inject
 
@@ -84,6 +87,19 @@ class ToolsNavigationFactory @Inject constructor(
         // Everything the app saves, in one file: save it, open it and restore it
         builder.composable<NavigationDestination.Backup> {
             BackupRoute(onBack = navigationManager::navigateBack)
+        }
+
+        // The table tools (S20 to S22)
+        builder.composable<NavigationDestination.Outs> {
+            OutsRoute(onBack = navigationManager::navigateBack)
+        }
+
+        builder.composable<NavigationDestination.SidePots> {
+            SidePotsRoute(onBack = navigationManager::navigateBack)
+        }
+
+        builder.composable<NavigationDestination.DealMaker> {
+            DealRoute(onBack = navigationManager::navigateBack)
         }
     }
 }

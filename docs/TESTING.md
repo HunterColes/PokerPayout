@@ -88,6 +88,7 @@ files and stdout stays short.
 | `steps-matrix.sh` | The matrix's opt-in tour steps (profile, tab layout, rotation, table view, keyboard) and the rotation helpers. `tour.sh` sources it. |
 | `listing.sh [--release] [--no-build] [--stop] [--copy-from DIR]` | The store listing's phone screenshots: a home game played through with the tour, copied to `metadata/en-US/images/phoneScreenshots/` only if every step passed (docs/RELEASING.md, "Refreshing the store listing"). |
 | `steps-listing.sh` | The listing's opt-in tour steps (`listing-*`). `tour.sh` sources it. |
+| `steps-table-tools.sh` | The table tools' tour steps (Outs & pot odds, Side pots, Deal maker), part of the plain tour. `tour.sh` sources it after the seat draw steps. |
 | `layout_check.py <report dir>..` | Layout heuristics over a tour's dumps and screenshots: off-screen text, small or overlapping targets, cut text (section 10). Works on any tour report. |
 | `matrix_report.py <matrix dir>` | Writes the matrix's `index.md` and `index.html`. |
 
@@ -259,6 +260,17 @@ are:
    next seats post the blinds (heads-up the button posts the small one) and "Button: NAME, seat N"
    names it; Redraw seats then Undo brings back the same draw; Share opens the system share sheet,
    and Back closes it with the draw still there; Back to the Tools list.
+   Then the **table tools** (S20 to S22, 11 steps, `steps-table-tools.sh`). **Outs & pot odds**: a
+   flush draw on the flop must read exactly 35.0% by the river and 19.1% on the next card, beside
+   "Rule of 4: 36%" and "Rule of 2: 18%"; a gutshot on the turn (one tap on the common draw) 8.7%;
+   a pot of 300 and 100 to call need 25.0% (3 to 1), and the gutshot is too short. **Side pots**:
+   100 all in against 300 and 300 make a main pot for all three and a side pot of 400 for Players 2
+   and 3, adding up to the 700 put in; Player 3 folding leaves that side pot to Player 2; New hand
+   clears the chips and Undo brings them back. **Deal maker**: with the night over it starts from
+   three players to name; 5,000 / 3,000 / 2,000 chips for typed prizes of $50 / $30 / $20 must give
+   $38.39, $32.75 and $28.86 by ICM and $40, $32 and $28 by chip chop, each adding up to $100;
+   $10 saved for the winner leaves $90 shared; Start over then Undo brings the deal back. The
+   last step scrolls the Tools list back to its top.
    Then **Backup** (5 steps): Tools > Backup (Tools still selected); Save backup… must open the
    system's file picker (DocumentsUI) and its Save must bring back "Backup saved"; Open a file…
    picks that file and the preview must name what it holds ("1 preset", "1 night in History",
@@ -784,6 +796,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tools-feature` | `HistoryScreenTest` | `S16_history_list` (all time, two players level at the top), `S16_history_night` (one night in full), `S16_history_empty` (nothing saved yet) | History (PP-037): all three, at every scroll position, on all 24 cells; also a year picked. Fixtures in `HistoryFixtures`: three nights over two years with the mockups' players |
 | `tools-feature` | `FunToolsScreenTest` (+ `FunToolsContentTest`, what each control sends) | `S19_shot_clock_ready`, `S19_shot_clock_low` (8 s left, two players' cards played); `S23_dealers_picked` (Badugi, with a house game on the wheel), `S23_dealers_rules` (the sheet); `S24_quiz_ask` (a heads-up flop), `S24_quiz_range_wrong` (three hands, odds from the engine) | All three, at every scroll position, on all 24 cells; also time up, no time bank, the first spin, a house game picked, too few games, eight house games, the guess waiting on the engine and the range question |
 | `tools-feature` | `SeatDrawScreenTest` (+ `SeatDrawExtraGoldenTest`) | `S14_seats_empty`, `S14_seats_one_table`, `S14_seats_two_tables`, `S14_button_draw`; `S14_seats_font2x` at tall@2.0 | All three, at every scroll position of each pane; also the name fields and an out-of-date draw with the players unfolded |
+| `tools-feature` | `TableToolsScreenTest` | `S20_outs_flop` (a flush draw facing a bet: both chances beside the rules of thumb, and the verdict), `S21_side_pots` (an all-in, a bigger all-in, a fold and a bet nobody matched), `S22_deal` (three left from the Bank, ICM and chip chop side by side, $50 saved for the winner) | The table tools: all three, at every scroll position of each pane, on all 24 cells; also outs on the turn and at 15, side pots empty, all folded and with ten players, a deal with no chips yet and one with typed prizes that go up. `TableToolsContentTest`: what each control sends and its TalkBack name |
 | `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament: touch targets |
 | `tournament-feature` | `TournamentScreenGoldenTest` | `S1_setup_{before,invalid}`, `S1_setup_mystery` (mystery bounties picked, the envelopes listed, PP-035), `S1_fold_300ms`, `S1_running_strip`, `S1_panel_{open,unlocked}`, `S2_clock_{ready,running,paused,final_minutes,overtime,finished}`, `S2_clock_running_font2x`, `S3_table_{running,paused,break}` (landscape cells), `S4_break_{colorup,done,plain}`, `S4_break_chipset` (the color-up with a chip set set up in Tools, PP-091 #9), `Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet` | All three checks on all 24 cells (the fold frame: none, it is mid-animation); the top bar's buttons stay 48 x 48 dp at every scroll position. `SetupStripTest`: the strip shows whole settings, as many as fit |
 | `tournament-feature` | `PresetsScreenTest` | `S15_presets_list`, `S15_presets_locked` (mid-game: loading off, and why), `S15_presets_save`, `S15_presets_load` (the question when loading would replace what the host set) | Saved setups (PP-032): all three, at every scroll position, on all 24 cells; also the empty list, the rename form and the save form before the chip set is set up. The sheet is drawn as its content over the tab and its scrim; the checks run on the sheet alone. The Presets row itself is in the S1 goldens (setup page and panel) |

@@ -3,6 +3,22 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.8 (on master, not published)
+
+Three new tools for the table, in Tools:
+
+- **Outs & pot odds:** pick the flop or the turn and your outs (or tap a common draw: flush draw,
+  open-ended, gutshot and more) for the exact chance to hit, by the river and on the next card,
+  with the rule of 4 and 2 beside it ("35.0%" and "Rule of 4: 36%" for a flush draw). Type the pot
+  and the call for the share of the pot you need to win, and whether your outs cover it.
+- **Side pots:** type what each player put in and tick who folded. The main pot and each side pot
+  show how much is in it and who can win it, in whole chips; folded chips stay in, and a bet nobody
+  matched goes back. New hand clears the chips, with Undo.
+- **Deal maker:** the chop. The players still in come from the Bank and the prizes left from the
+  Payouts tab (or type them), then each player's share by ICM and by chip chop, side by side, to
+  the cent and adding up to the prizes exactly. You can save some for the winner and play for it.
+- What you type in these tools stays while the app is open, so a trip to the Bank loses nothing.
+
 ## 1.4.7 (on master, not published)
 
 Lighter and faster:

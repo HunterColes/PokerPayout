@@ -1233,9 +1233,11 @@ s_rebuy_kept() {
 s_tools() {
   # S7: the tools as a list, then the Sound section (it was a volume dialog behind "Settings")
   tab Tools
-  ui assert-text "Everything works offline" text=Odds "text=Chip set" "text=Hand ranks" text=Sound \
-    "desc=Chime volume" "Test chime" || return 1
-  require_tab_selected Tools
+  ui assert-text "Everything works offline" text=Odds "text=Chip set" "text=Hand ranks" || return 1
+  require_tab_selected Tools || return 1
+  # Sound is under the tools, below the fold since the table tools (S20 to S22) joined the list
+  ui scroll-to "Test chime" --max 6
+  ui assert-text text=Sound "desc=Chime volume" "Test chime"
 }
 # The Sound row is one switch; the uiautomator node that holds "Sound" and is checkable.
 sound_checked() { # prints true/false from the last dump
@@ -1266,6 +1268,7 @@ s_sound_on() {
 s_hand_ranks() {
   # S12: a tool's screen keeps Tools selected (B16) and has a back arrow. Each hand shows how often
   # it comes up by the river: the royal flush is 1 in 30,940 of the 133,784,560 seven-card hands.
+  ui scroll-to "text=Hand ranks" --dir up --max 6     # back up from the Sound section
   ui tap "text=Hand ranks"
   ui assert-text "Best to worst" desc=Back "re=Royal flush" "re=1 in 30,940" || return 1
   require_tab_selected Tools || return 1
@@ -1816,6 +1819,7 @@ step seat-draw-button     "Deal for the button: high card, blinds by seat"      
 step seat-draw-undo       "Redraw seats, then Undo brings the draw back"        s_seat_draw_undo
 step seat-draw-share      "Share as text: the share sheet opens and closes"     s_seat_draw_share
 step seat-draw-back       "Back to the Tools list"                              s_seat_draw_back
+source "$DEVICE_SCRIPTS/steps-table-tools.sh"   # Outs & pot odds, Side pots, Deal maker (S20 to S22)
 step odds-empty           "Odds: empty table, first slot waiting"              s_odds_empty
 step odds-card-picker     "Docked keypad: ranks, then suits that wait"          s_card_picker
 step odds-hole-cards      "Keypad: AsKs vs QhQd, auto-advance to the flop"      s_hole_cards

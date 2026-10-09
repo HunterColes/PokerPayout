@@ -64,6 +64,7 @@ class ToolsHomeContentTest {
         compose.onNodeWithText("Equity quiz").performScrollTo().performClick()
         compose.onNodeWithText("History").performScrollTo().performClick()
         compose.onNodeWithText("Backup").performScrollTo().performClick()
+        compose.onNodeWithText("Currency").performScrollTo().performClick()
         assertEquals(
             listOf(
                 NavigationDestination.OddsCalculator,
@@ -78,6 +79,7 @@ class ToolsHomeContentTest {
                 NavigationDestination.EquityQuiz,
                 NavigationDestination.History,
                 NavigationDestination.Backup,
+                NavigationDestination.Currency,
             ),
             opened,
         )

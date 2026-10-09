@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout.core.backup
 
 import androidx.annotation.StringRes
 import com.huntercoles.pokerpayout.core.R
+import com.huntercoles.pokerpayout.core.preferences.CurrencyPreferences
 import com.huntercoles.pokerpayout.core.preferences.MusicPreferences
 import com.huntercoles.pokerpayout.core.preferences.PhonePrefs
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
@@ -20,6 +21,8 @@ object BackupCatalog {
         SettingsFile("tournament_prefs", SettingsGroup.GAME),
         SettingsFile("timer_prefs", SettingsGroup.GAME, phoneOnly = TimerPreferences.PHONE_ONLY_KEYS),
         SettingsFile("bank_prefs", SettingsGroup.GAME),
+        // The currency amounts show in (PP-114): a game's amounts read as they were meant
+        SettingsFile(CurrencyPreferences.FILE, SettingsGroup.GAME),
         SettingsFile("chip_calculator_prefs", SettingsGroup.CHIP_SET),
         SettingsFile("audio_prefs", SettingsGroup.SOUND),
         // The music's settings; its playlist names this phone's files, so it stays with the phone

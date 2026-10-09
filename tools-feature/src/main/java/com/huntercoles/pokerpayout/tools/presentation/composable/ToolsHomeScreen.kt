@@ -52,10 +52,12 @@ import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.PokerTopBar
+import com.huntercoles.pokerpayout.core.design.icons.MoneyIcons
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.core.navigation.NavigationCommand
 import com.huntercoles.pokerpayout.core.navigation.NavigationDestination
 import com.huntercoles.pokerpayout.core.navigation.NavigationManager
+import com.huntercoles.pokerpayout.core.utils.MoneyFormat
 import com.huntercoles.pokerpayout.tools.R
 import com.huntercoles.pokerpayout.tools.presentation.ToolsHomeIntent
 import com.huntercoles.pokerpayout.tools.presentation.ToolsHomeUiState
@@ -105,7 +107,7 @@ private val Tools = listOf(
     Tool(NavigationDestination.Backup, PokerIcons.Save, R.string.tools_backup_title, R.string.tools_backup_description),
 )
 
-/** The Tools tab (S7): the tools as a list, then the Sound section, then the app's promise. */
+/** The Tools tab (S7): the tools as a list, the currency, then the Sound section, then the app's promise. */
 @Composable
 fun ToolsHomeScreen(
     navigationManager: NavigationManager,
@@ -117,7 +119,7 @@ fun ToolsHomeScreen(
     val canVibrate = remember(context) { context.getSystemService(Vibrator::class.java)?.hasVibrator() == true }
     val notificationsOff = rememberNotificationsOff(context)
     ToolsHomeContent(
-        state = state.copy(canVibrate = canVibrate, notificationsOff = notificationsOff),
+        state = state.copy(canVibrate = canVibrate, notificationsOff = notificationsOff, currency = MoneyFormat.current),
         onIntent = viewModel::acceptIntent,
         onOpenTool = { destination ->
             navigationManager.navigate(object : NavigationCommand {
@@ -158,6 +160,17 @@ fun ToolsHomeContent(
                     onClick = { onOpenTool(tool.destination) },
                 )
             }
+            // PP-114: the money symbol, with what it is set to ("Euro · 1.234,50 €")
+            ToolRow(
+                icon = MoneyIcons.Cash,
+                title = stringResource(R.string.tools_currency_title),
+                description = stringResource(
+                    R.string.tools_currency_line,
+                    stringResource(currencyName(state.currency)),
+                    state.currency.format(CURRENCY_ROW_SAMPLE_CENTS, alwaysCents = true),
+                ),
+                onClick = { onOpenTool(NavigationDestination.Currency) },
+            )
             SoundSection(state = state, onIntent = onIntent, onAllowNotifications = onAllowNotifications, onOpen = onOpenTool)
             Text(
                 text = stringResource(R.string.tools_footer, versionName),
@@ -244,6 +257,9 @@ private fun appVersionName(context: Context): String = runCatching {
 }.getOrNull().orEmpty()
 
 private val ToolRowMinHeight = 76.dp
+
+/** The Currency row's sample: 1,234.50 as the picked currency writes it. */
+private const val CURRENCY_ROW_SAMPLE_CENTS = 123_450L
 
 /** Tool names and section titles: Barlow, as in the mockup's tool rows. */
 internal val ToolTitle = PokerType.Title.copy(fontSize = 21.sp, lineHeight = 24.sp)

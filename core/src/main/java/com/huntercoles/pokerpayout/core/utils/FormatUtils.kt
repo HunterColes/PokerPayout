@@ -4,15 +4,17 @@ import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
-import kotlin.math.abs
 
 /**
  * Formatting for display.
  *
- * Amounts are always shown as "$1,234.56", whatever the device locale. The app's text is English
- * and its money sign is "$", and a German device used to get "$1.234,56", half one convention and
- * half the other. The symbols are therefore pinned to [Locale.US] here.
+ * Amounts show in the currency the host picked ([MoneyFormat.current], PP-114): "$1,234.56",
+ * "1.234,56 €", "¥1,235". Each currency's grouping and decimal mark come with it ([AppCurrency]), not
+ * from the device locale, so a German phone showing dollars still reads "$1,234.56" rather than half
+ * one convention and half the other ("$1.234,56"). Every money amount on screen, in a share text, a
+ * snackbar or TalkBack goes through [formatMoney] or [formatCents]; nothing else writes a symbol.
  *
+ * Other numbers (percentages, multipliers) keep [Locale.US] symbols: the app's text is English.
  * Text that the user edits (money input fields) follows the device locale instead; see [MoneyInput].
  */
 object FormatUtils {
@@ -24,52 +26,18 @@ object FormatUtils {
     }
 
     /**
-     * Format a Double as currency with dollar sign
-     * Example: 1234.56 -> "$1,234.56", -10.5 -> "-$10.50"
+     * A whole number of cents, exactly, cents always shown (where the currency has them).
+     * Example: 123456 -> "$1,234.56", -1050 -> "-$10.50"; in euros "1.234,56 €", "-10,50 €".
      */
-    fun formatCurrency(amount: Double): String {
-        val digits = decimalFormat("#,##0.00").format(abs(amount))
-        val sign = if (amount < 0 && digits != "0.00") "-" else ""
-        return sign + "$" + digits
-    }
-
-    /**
-     * Format a whole number of cents, exactly.
-     * Example: 123456 -> "$1,234.56", -1050 -> "-$10.50"
-     */
-    fun formatCents(cents: Long): String {
-        val sign = if (cents < 0) "-" else ""
-        val magnitude = abs(cents)
-        val dollars = magnitude / Money.CENTS_PER_DOLLAR
-        val remainder = magnitude % Money.CENTS_PER_DOLLAR
-        val grouped = dollars.toString().reversed().chunked(DIGITS_PER_GROUP).joinToString(",").reversed()
-        return sign + "$" + grouped + "." + remainder.toString().padStart(2, '0')
-    }
+    fun formatCents(cents: Long, currency: AppCurrency = MoneyFormat.current): String =
+        currency.format(cents, alwaysCents = true)
 
     /**
      * A whole number of cents the makeover way (copy rules, design spec section 8): cents only when
      * there are some. Example: 45000 -> "$450", 9550 -> "$95.50", -1000 -> "-$10".
      */
-    fun formatMoney(cents: Long): String {
-        val full = formatCents(cents)
-        return if (cents % Money.CENTS_PER_DOLLAR == 0L) full.removeSuffix(".00") else full
-    }
-
-    /**
-     * Format a Double as currency without cents (whole dollars)
-     * Example: 1234.56 -> "$1,235"
-     */
-    fun formatCurrencyWhole(amount: Double): String {
-        return "$" + decimalFormat("#,##0").format(amount)
-    }
-
-    /**
-     * Format a Double as negative currency
-     * Example: 1234.56 -> "-$1,234.56"
-     */
-    fun formatNegativeCurrency(amount: Double): String {
-        return "-$" + decimalFormat("#,##0.00").format(abs(amount))
-    }
+    fun formatMoney(cents: Long, currency: AppCurrency = MoneyFormat.current): String =
+        currency.format(cents, alwaysCents = false)
 
     /**
      * Format a Double as decimal, removing trailing zeros
@@ -94,6 +62,4 @@ object FormatUtils {
     fun formatMultiplier(value: Double): String {
         return "${decimalFormat("0.##").format(value)}x"
     }
-
-    private const val DIGITS_PER_GROUP = 3
 }

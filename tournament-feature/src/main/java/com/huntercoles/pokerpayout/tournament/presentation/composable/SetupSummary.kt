@@ -133,5 +133,5 @@ private fun bountyPart(mode: BountyMode, cents: Long): String = stringResource(
     money(cents),
 )
 
-/** "$40", or "$12.50": cents only when there are some (copy rules, design spec §8). */
-internal fun money(cents: Long): String = FormatUtils.formatCents(cents).removeSuffix(".00")
+/** "$40", or "$12.50": cents only when there are some (copy rules, design spec §8), in the host's currency. */
+internal fun money(cents: Long): String = FormatUtils.formatMoney(cents)

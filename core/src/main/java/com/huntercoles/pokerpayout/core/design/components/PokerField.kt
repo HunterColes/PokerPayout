@@ -39,12 +39,14 @@ import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.utils.AppCurrency
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 /**
  * A labelled number field: the label sits above the box, so it never truncates. The value uses
- * the number face; a [prefix] ("$") and [suffix] ("min") are in Chalk. Focus is a 2 dp gold edge.
+ * the number face; a [prefix] (a money symbol, "$") and [suffix] ("min") are in Chalk, and so is a
+ * [trailingSymbol] (a money symbol written after the amount, "€", in the prefix's size). Focus is a 2 dp gold edge.
  * An error is a 2 dp Danger edge, and [supportingText] then says how to fix it ("Can't be made
  * from 25s. Try 5,000.").
  *
@@ -63,6 +65,7 @@ fun PokerField(
     prefix: String? = null,
     suffix: String? = null,
     supportingText: String? = null,
+    trailingSymbol: String? = null,
     isError: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Number,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
@@ -109,6 +112,7 @@ fun PokerField(
                 ) {
                     if (prefix != null) Text(prefix, style = FieldPrefix)
                     Row(Modifier.weight(1f)) { innerTextField() }
+                    if (trailingSymbol != null) Text(trailingSymbol, style = FieldPrefix)
                     if (suffix != null) Text(suffix, style = FieldSuffix, color = PokerColors.Chalk)
                 }
             },
@@ -149,12 +153,12 @@ internal fun PokerFieldPreview() {
     PokerPreviewPage {
         PokerStage(felt = true) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PokerField("40", {}, label = "Buy-in", prefix = "$", modifier = Modifier.weight(1f))
+                PokerField("40", {}, label = "Buy-in", prefix = AppCurrency.DOLLAR.symbol, modifier = Modifier.weight(1f))
                 PokerField(
                     "5",
                     {},
                     label = "Bounty",
-                    prefix = "$",
+                    prefix = AppCurrency.DOLLAR.symbol,
                     modifier = Modifier.weight(1f),
                     interactionSource = rememberFocusedInteractionSource(),
                 )

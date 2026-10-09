@@ -5,6 +5,8 @@ import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
+import com.huntercoles.pokerpayout.core.testing.withCurrency
+import com.huntercoles.pokerpayout.core.utils.AppCurrency
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 import kotlin.test.assertEquals
@@ -17,6 +19,20 @@ class CalculatePayoutsUseCaseTest {
 
     private fun amounts(pool: Long, weights: List<Int>, players: Int, rounding: PayoutRounding = PayoutRounding.ONE_DOLLAR) =
         useCase(pool, weights, players, rounding).places.map { it.amountCents }
+
+    @Test
+    fun `in yen places below 1st are rounded to 500 yen, and the table still adds up to the yen`() {
+        // A ¥23,000 pool, 50/30/20: 2nd's ¥6,900 rounds to ¥7,000, 3rd's ¥4,600 to ¥4,500, 1st gets the rest
+        val yen = useCase(2_300_000L, listOf(50, 30, 20), 9, PayoutRounding.FIVE_DOLLARS, AppCurrency.YEN)
+        assertEquals(listOf(1_150_000L, 700_000L, 450_000L), yen.places.map { it.amountCents })
+        // The same night in dollars rounds to $5s: $6,900 and $4,600 stay as they are
+        val dollars = useCase(2_300_000L, listOf(50, 30, 20), 9, PayoutRounding.FIVE_DOLLARS, AppCurrency.DOLLAR)
+        assertEquals(listOf(1_150_000L, 690_000L, 460_000L), dollars.places.map { it.amountCents })
+        // The picked currency is the default
+        withCurrency(AppCurrency.YEN) {
+            assertEquals(yen, useCase(2_300_000L, listOf(50, 30, 20), 9, PayoutRounding.FIVE_DOLLARS))
+        }
+    }
 
     @Test
     fun `default weights for six players pay two places`() {

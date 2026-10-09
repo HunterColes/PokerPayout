@@ -29,6 +29,9 @@
 
     <!-- A re-entry's row: which of the player's entries it is -->
     <string name="bank_micro_entry">Entry %1$d</string>
+    <!-- TalkBack, the Out cell of an entry the player re-entered after: out for good, so no "Bring back" -->
+    <string name="bank_cell_out_re_entered">%1$s, out, %2$s, knocked out by %3$s</string>
+    <string name="bank_cell_out_unclaimed_re_entered">%1$s, out, %2$s</string>
 
     <!-- The pay-out sheet: knockouts whose bounties differ (a late entry's at its own price) -->
     <plurals name="bank_pay_knockouts_count">

@@ -52,7 +52,8 @@ class BackupsTest {
     private val time = Clock()
     private lateinit var nights: NightStore
 
-    private val friday = night("2026-10-02", listOf("Dana", "Marcus", "Priya"), prizes = listOf(9_000L, 3_000L), structure = "Friday")
+    private val friday =
+        night("2026-10-02", listOf("Dana", "Marcus", "Priya"), prizes = listOf(9_000L, 3_000L), structure = "Friday")
     private val saturday = night("2026-10-03", listOf("Priya", "Dana"), prizes = listOf(8_000L))
     private val holiday = night("2025-12-19", listOf("Theo", "Jo"), prizes = listOf(6_000L), structure = "Holiday")
 
@@ -72,6 +73,14 @@ class BackupsTest {
 
     /** A night in progress and a phone set up every way the core saves: every setter, off its default. */
     private fun fillEverything() {
+        val tournament = fillTournament()
+        fillBank()
+        fillTools(tournament)
+        listOf(holiday, friday, saturday).forEach { nights.add(it) }
+    }
+
+    /** The setup and the clock. */
+    private fun fillTournament(): TournamentPreferences {
         val tournament = TournamentPreferences(context)
         with(tournament) {
             setPlayerCount(6)
@@ -106,6 +115,11 @@ class BackupsTest {
             setBigBlindAnteFromLevel(5)
             setColorUpDone(4, true)
         }
+        return tournament
+    }
+
+    /** Tonight's players, their purchases and knockouts, and a cash game. */
+    private fun fillBank() {
         with(BankPreferences(context)) {
             savePlayerName(1, "Dana")
             savePlayerName(2, "Zoë, \"Ace\"")
@@ -122,14 +136,22 @@ class BackupsTest {
             saveBankMode(BankMode.CASH)
             saveCashGame(
                 CashGame(
-                    CashLedger(listOf(CashPlayer(1, "Sam", listOf(4_000L, 2_000L), 7_500L), CashPlayer(2, "Theo", listOf(4_000L)))),
+                    CashLedger(
+                        listOf(CashPlayer(1, "Sam", listOf(4_000L, 2_000L), 7_500L), CashPlayer(2, "Theo", listOf(4_000L))),
+                    ),
                     paid = setOf(CashTransfer(2, 1, 1_500L)),
                     splitCents = 0L,
                 ),
             )
         }
+    }
+
+    /** The chip set, sound, odds and the seat draw. */
+    private fun fillTools(tournament: TournamentPreferences) {
         with(ChipCalculatorPreferences(context, tournament)) {
-            setInventory(ChipInventory.of(listOf(InventoryChip(ChipColour.White, 25, 200), InventoryChip(ChipColour.Red, 100, 120))))
+            setInventory(
+                ChipInventory.of(listOf(InventoryChip(ChipColour.White, 25, 200), InventoryChip(ChipColour.Red, 100, 120))),
+            )
             setStackOverride(8_000)
             setShape(ChipDistributionCurve.BellCurve)
             setMaxColours(4)
@@ -154,7 +176,6 @@ class BackupsTest {
             .putString("players", "Dana,Zo%C3%AB")
             .putString("draw", "seats:1\nDana,Zo%C3%AB|As,Kd")
             .commit()
-        listOf(holiday, friday, saturday).forEach { nights.add(it) }
     }
 
     /** Every settings file as it stands, without the keys about this phone. */
@@ -242,7 +263,10 @@ class BackupsTest {
         wipe()
         backups().replace(backups().open(text))
         val clock = TimerPreferences(context).getClock()
-        assertEquals(ClockAnchor(elapsedMillis = 660_000L, running = false), clock?.copy(realtimeMillis = 0L, wallMillis = 0L, bootCount = -1))
+        assertEquals(
+            ClockAnchor(elapsedMillis = 660_000L, running = false),
+            clock?.copy(realtimeMillis = 0L, wallMillis = 0L, bootCount = -1),
+        )
         assertFalse(TimerPreferences(context).getTimerRunning())
     }
 
@@ -256,7 +280,7 @@ class BackupsTest {
         // Another phone: never asked for notifications
         wipe()
         backups().replace(backups().open(text))
-        assertTrue("this phone asks for notifications once, as a new install does", TimerPreferences(context).takeNotificationsAsk())
+        assertTrue("asks for notifications once, as a new install does", TimerPreferences(context).takeNotificationsAsk())
 
         // This phone again: asked already, and a restore doesn't undo that
         backups().replace(backups().open(text))
@@ -351,7 +375,8 @@ class BackupsTest {
     @Test
     fun `a damaged setting refuses the whole file, and nothing changes`() {
         fillEverything()
-        val text = backups().export().replace(Regex(""""player_count": \{\s*"int": 6\s*}"""), """"player_count": {"int": "six"}""")
+        val text = backups().export()
+            .replace(Regex(""""player_count": \{\s*"int": 6\s*}"""), """"player_count": {"int": "six"}""")
         assertTrue("the fixture's player count is in the file", text.contains("\"six\""))
         val before = settings()
         val problem = assertThrows(BackupException::class.java) { backups().open(text) }.problem

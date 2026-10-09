@@ -86,37 +86,33 @@ class NightCsvFileTest {
     fun `a file too big to be a backup isn't read whole`() {
         val file = folder.newFile("big.json")
         file.writeText("{" + " ".repeat(2_000) + "}")
-        val problem = assertThrows(BackupException::class.java) { ResolverDocumentFiles(context).read(Uri.fromFile(file), maxBytes = 1_000) }
+        val files = ResolverDocumentFiles(context)
+        val problem = assertThrows(BackupException::class.java) { files.read(Uri.fromFile(file), maxBytes = 1_000) }
         assertEquals(BackupProblem.TooBig, problem.problem)
     }
 
-    /** A strict RFC 4180 reader: fields split on commas, records on CRLF, quoted fields with doubled quotes. */
+    /** A strict RFC 4180 reader: fields split on commas, records end in CRLF, quoted fields with doubled quotes. */
     private fun parse(csv: String): List<List<String>> {
         val rows = mutableListOf<List<String>>()
-        var row = mutableListOf<String>()
-        val field = StringBuilder()
-        var quoted = false
-        var i = 0
-        while (i < csv.length) {
-            val c = csv[i]
-            when {
-                quoted && c == '"' && csv.getOrNull(i + 1) == '"' -> field.append('"').also { i++ }
-                quoted && c == '"' -> quoted = false
-                quoted -> field.append(c)
-                c == '"' -> quoted = true
-                c == ',' -> row.add(field.toString()).also { field.clear() }
-                c == '\r' && csv.getOrNull(i + 1) == '\n' -> {
-                    row.add(field.toString())
-                    field.clear()
-                    rows.add(row)
-                    row = mutableListOf()
-                    i++
-                }
-                else -> field.append(c)
-            }
-            i++
+        var at = 0
+        while (at < csv.length) {
+            val row = mutableListOf<String>()
+            do {
+                val match = requireNotNull(FIELD.find(csv, at)?.takeIf { it.range.first == at }) { "no field at $at" }
+                row += match.groups[1]?.value?.replace("\"\"", "\"") ?: match.groupValues[2]
+                at = match.range.last + 1
+                val comma = csv.getOrNull(at) == ','
+                if (comma) at++
+            } while (comma)
+            assertEquals("a record ends in CRLF", "\r\n", csv.substring(at, minOf(at + 2, csv.length)))
+            at += 2
+            rows += row
         }
-        assertTrue("the last record ends in CRLF", row.isEmpty() && field.isEmpty())
         return rows
+    }
+
+    private companion object {
+        /** A quoted field (its quotes doubled inside) or a plain one. */
+        val FIELD = Regex(""""((?:[^"]|"")*)"|([^,"\r\n]*)""")
     }
 }

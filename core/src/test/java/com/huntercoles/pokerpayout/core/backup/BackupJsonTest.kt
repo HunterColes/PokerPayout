@@ -19,7 +19,8 @@ class BackupJsonTest {
     private val meta = BackupMeta(appVersion = "1.4.0", created = Instant.parse("2026-10-08T21:14:03Z"))
     private val presets = JsonObject(mapOf("presets" to JsonPrimitive("x")))
 
-    private fun problemOf(text: String): BackupProblem = assertThrows<BackupException>(text.take(60)) { BackupJson.read(text) }.problem
+    private fun problemOf(text: String): BackupProblem =
+        assertThrows<BackupException>(text.take(60)) { BackupJson.read(text) }.problem
 
     @Test
     fun `what it writes reads back, sections with their versions`() {
@@ -40,7 +41,9 @@ class BackupJsonTest {
 
     @Test
     fun `a file without a version or date still reads`() {
-        val back = BackupJson.read("""{"format": "com.huntercoles.pokerpayout.backup", "schema": 1, "created": "last week", "sections": {}}""")
+        val back = BackupJson.read(
+            """{"format": "com.huntercoles.pokerpayout.backup", "schema": 1, "created": "last week", "sections": {}}""",
+        )
         assertNull(back.meta.appVersion)
         assertNull(back.meta.created)
     }
@@ -105,7 +108,8 @@ class BackupJsonTest {
 
     @Test
     fun `brackets inside text don't count as nesting`() {
-        val text = """{"format": "com.huntercoles.pokerpayout.backup", "schema": 1, "sections": {}, "note": "${"[{".repeat(100)}\"]"}"""
+        val note = "[{".repeat(100) + "\\\"]"
+        val text = """{"format": "com.huntercoles.pokerpayout.backup", "schema": 1, "sections": {}, "note": "$note"}"""
         assertEquals(emptyMap(), BackupJson.read(text).sections)
     }
 

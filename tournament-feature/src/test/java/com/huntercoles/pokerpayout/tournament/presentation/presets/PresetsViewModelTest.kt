@@ -93,7 +93,8 @@ class PresetsViewModelTest {
     private fun viewModel(): PresetsViewModel = inStore("presets") {
         val section = PresetsBackup(presets)
         val presetFiles = PresetFiles(Backups(setOf(section), clock, context), section, files, dispatcher)
-        PresetsViewModel(presets, CurrentSetup(tournament, timer, chips, bank), snackbars, PresetMessages(context), clock, presetFiles)
+        val setup = CurrentSetup(tournament, timer, chips, bank)
+        PresetsViewModel(presets, setup, snackbars, PresetMessages(context), clock, presetFiles)
     }
 
     /** A ViewModel in [store], so [tearDown] cancels its coroutines. */

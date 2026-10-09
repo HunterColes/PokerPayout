@@ -210,7 +210,9 @@ fun BackupPreviewBody(preview: BackupPreview, busy: Boolean, onIntent: (BackupIn
         verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            preview.fileName?.let { Text(wrappable(it), style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite) }
+            preview.fileName?.let { name ->
+                Text(wrappable(name), style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite)
+            }
             savedLine(preview)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk) }
         }
         PokerEyebrow(stringResource(R.string.backup_preview_holds), modifier = Modifier.semantics { heading() })

@@ -135,7 +135,10 @@ class BackupViewModelTest {
                 fileName = "poker-payout-2026-10-08.json",
                 saved = LocalDate.of(2026, 10, 8),
                 appVersion = null, // Robolectric's package has no version name
-                lines = listOf(BackupLine.Counted(CoreR.plurals.backup_line_nights, 3), BackupLine.Named(CoreR.string.backup_line_sound)),
+                lines = listOf(
+                    BackupLine.Counted(CoreR.plurals.backup_line_nights, 3),
+                    BackupLine.Named(CoreR.string.backup_line_sound),
+                ),
                 canMerge = true,
             ),
             viewModel.state.preview?.copy(appVersion = null),
@@ -197,7 +200,8 @@ class BackupViewModelTest {
     fun `a file that won't do says why, and nothing changes`() {
         files.texts["content://a/photo.jpg"] = "JFIF"
         files.texts["content://a/cut.json"] = "{\"format\": \"com.huntercoles.pokerpayout.backup\", \"schema\": 1, \"sec"
-        files.texts["content://a/later.json"] = "{\"format\": \"com.huntercoles.pokerpayout.backup\", \"schema\": 7, \"sections\": {}}"
+        files.texts["content://a/later.json"] =
+            """{"format": "com.huntercoles.pokerpayout.backup", "schema": 7, "sections": {}}"""
         val viewModel = viewModel()
         mapOf(
             "content://a/photo.jpg" to CoreR.string.backup_problem_not_backup,

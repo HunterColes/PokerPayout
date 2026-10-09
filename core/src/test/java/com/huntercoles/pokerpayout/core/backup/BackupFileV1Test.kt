@@ -105,7 +105,11 @@ class BackupFileV1Test {
         val chips = ChipCalculatorPreferences(context, tournament).current()
         assertEquals(
             ChipInventory.of(
-                listOf(InventoryChip(ChipColour.White, 25, 200), InventoryChip(ChipColour.Red, 100, 150), InventoryChip(ChipColour.Green, 500, 50)),
+                listOf(
+                    InventoryChip(ChipColour.White, 25, 200),
+                    InventoryChip(ChipColour.Red, 100, 150),
+                    InventoryChip(ChipColour.Green, 500, 50),
+                ),
             ),
             chips.inventory,
         )

@@ -68,7 +68,8 @@ class BackupScreenTest(private val config: ScreenConfig) {
     fun saveAndRestore() = checkScreen("S17_backup", BackupUiState())
 
     @Test
-    fun aFileThatIsNotABackup() = checkScreen("S17_backup_problem", BackupUiState(problem = CoreR.string.backup_problem_not_backup))
+    fun aFileThatIsNotABackup() =
+        checkScreen("S17_backup_problem", BackupUiState(problem = CoreR.string.backup_problem_not_backup))
 
     @Test
     fun busy() = checkScreen(name = null, BackupUiState(busy = true))

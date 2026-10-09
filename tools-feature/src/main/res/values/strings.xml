@@ -11,6 +11,12 @@
     <string name="tools_ranks_description">What beats what, best to worst</string>
     <string name="tools_seats_title">Seat draw</string>
     <string name="tools_seats_description">Random seats and the button</string>
+    <string name="tools_shot_clock_title">Shot clock</string>
+    <string name="tools_shot_clock_description">A timer for each decision, with time-bank cards</string>
+    <string name="tools_dealers_choice_title">Dealer\'s choice</string>
+    <string name="tools_dealers_choice_description">Spin a wheel for the next game, and its rules</string>
+    <string name="tools_equity_quiz_title">Equity quiz</string>
+    <string name="tools_equity_quiz_description">Guess who\'s ahead, then see the real odds</string>
     <string name="tools_history_title">History</string>
     <string name="tools_history_description">Saved nights and the season\'s points</string>
     <string name="tools_backup_title">Backup</string>

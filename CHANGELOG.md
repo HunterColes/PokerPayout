@@ -3,6 +3,26 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.3 (on master, not published)
+
+- **Shot clock** (Tools): a countdown for each decision, 30, 45 or 60 seconds. The whole face is one
+  big button: tap it for the next decision. A warning at 10 seconds and when time is up, with the
+  Sound section's settings (a beep unless the sound is off, a buzz with Vibrate, a gold flash with
+  Flash the clock). Pause, Resume and Reset. **Time-bank cards:** each player (the Bank's) gets up
+  to five, and playing one adds 30 seconds, even just after time ran out; "Give everyone their
+  cards back" with Undo. It keeps the screen on while it counts, and never touches the tournament
+  clock or its chime.
+- **Dealer's choice** (Tools): spin a wheel to pick the next game. Seventeen games with a short
+  rules card each (Hold'em, Omaha, Big O, Stud, Razz, 2-7 Triple Draw, Badugi, Pineapple, Crazy
+  Pineapple and more), nine on the first wheel; switch any on or off, and add up to eight house
+  games. It never picks the game just played twice running, and with Remove animations on, the
+  pick shows at once.
+- **Equity quiz** (Tools): two or three hands face up, before the flop, on the flop or on the turn.
+  Guess who's ahead, or how often the first hand wins; then see every hand's real odds, worked out
+  exactly by the Odds screen's engine. Your streak, best streak and score stay on the phone.
+- Backups take all three: the shot clock's settings and cards played, the wheel and its house
+  games, and the quiz's settings and score.
+
 ## 1.4.2 (on master, not published)
 
 - **Music** (Tools > Sound): a playlist of songs from your phone, added with the phone's file

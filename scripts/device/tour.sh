@@ -1174,9 +1174,11 @@ s_rebuy_kept() {
 s_tools() {
   # S7: the tools as a list, then the Sound section (it was a volume dialog behind "Settings")
   tab Tools
-  ui assert-text "Everything works offline" text=Odds "text=Chip set" "text=Hand ranks" text=Sound \
-    "desc=Chime volume" "Test chime" || return 1
-  require_tab_selected Tools
+  ui assert-text "Everything works offline" text=Odds "text=Chip set" "text=Hand ranks" || return 1
+  require_tab_selected Tools || return 1
+  # The Sound section comes after the tools: on a phone it is below the fold
+  ui scroll-to "Test chime" --max 4
+  ui assert-text text=Sound "desc=Chime volume" "Test chime"
 }
 # The Sound row is one switch; the uiautomator node that holds "Sound" and is checkable.
 sound_checked() { # prints true/false from the last dump
@@ -1300,6 +1302,7 @@ PY
 s_hand_ranks() {
   # S12: a tool's screen keeps Tools selected (B16) and has a back arrow. Each hand shows how often
   # it comes up by the river: the royal flush is 1 in 30,940 of the 133,784,560 seven-card hands.
+  ui scroll-to "text=Hand ranks" --dir up --max 4   # the Sound steps left the list scrolled down
   ui tap "text=Hand ranks"
   ui assert-text "Best to worst" desc=Back "re=Royal flush" "re=1 in 30,940" || return 1
   require_tab_selected Tools || return 1
@@ -1535,6 +1538,7 @@ s_backup_replace() {
   ui tap text=History
   ui assert-text "text=1 night saved" || return 1
   ui back
+  ui scroll-to text=Odds --dir up --max 4      # the list is long: back at its top for the Odds steps
   ui assert-text text=Odds "text=Seat draw" || return 1
   require_tab_selected Tools
 }
@@ -1745,6 +1749,149 @@ s_chip_calc_settings() {
   ui scroll-to "re=Counted for 7 stacks in play" --max 6
   ui assert-text "re=Counted for 7 stacks in play \(5 players and 2 kept back\)"
 }
+# Shot clock, dealer's choice and the equity quiz ------------------------------------------------
+# The shot clock's seconds left, from its face in the last dump ("Shot clock, 27 seconds left");
+# -1 when the face isn't there.
+shot_clock_seconds() {
+  python3 - "$PP_UI_LAST_XML" <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+for n in ET.parse(sys.argv[1]).iter("node"):
+    m = re.match(r"Shot clock, (\d+) seconds? left", n.get("content-desc") or "")
+    if m:
+        print(m.group(1))
+        break
+else:
+    print(-1)
+PY
+}
+s_shot_clock() {
+  # The shot clock opens from the Tools list full and waiting, with the Bank's players in its time
+  # bank (Player 1 is Alice since the Bank steps), Tools still selected.
+  ui back                                      # Chip set -> the Tools list
+  ui scroll-to "text=Shot clock" --max 4
+  ui tap "text=Shot clock"
+  ui assert-text "text=Shot clock" desc=Back "desc=Shot clock, 30 seconds left" "text=Tap the clock to start" \
+    "text=30 s" "text=45 s" "text=60 s" || return 1
+  require_tab_selected Tools
+}
+s_shot_clock_run() {
+  # One tap on the face starts a decision. Pause holds the time left (the same number seconds
+  # later); a time-bank card adds 30 s to it and is gone from that player, with the way to give
+  # everyone theirs back.
+  local paused later carded
+  ui tap "desc=Shot clock, 30 seconds left"
+  ui assert-text "text=Tap the clock for the next decision" text=Pause text=Reset || return 1
+  ui tap text=Pause
+  ui assert-text text=Resume text=Paused "re=^Shot clock, [0-9]+ seconds? left, paused$" || return 1
+  paused="$(shot_clock_seconds)"
+  sleep 3
+  ui assert "re=^Shot clock, [0-9]+ seconds? left, paused$" >/dev/null; later="$(shot_clock_seconds)"
+  echo "paused at ${paused}s, 3 s later ${later}s"
+  [[ "$paused" == "$later" ]] && (( paused > 0 && paused < 30 )) || { echo "[ui] FAIL the paused clock moved"; return 1; }
+  ui scroll-to "desc=Play a card for Alice, 30 more seconds" --max 6 --in scrollable
+  ui tap "desc=Play a card for Alice, 30 more seconds"
+  # Alice's row is still in view (her cards, then the face's seconds, from the same dump)
+  ui assert-text "desc=1 of 2 cards left" "re=^Shot clock, [0-9]+ seconds left, paused$" || return 1
+  carded="$(shot_clock_seconds)"
+  echo "after the card: ${carded}s"
+  (( carded == paused + 30 )) || { echo "[ui] FAIL the card added $((carded - paused))s, not 30"; return 1; }
+  ui scroll-to "text=Give everyone their cards back" --max 4 --in scrollable
+  ui assert-text "text=Give everyone their cards back"
+}
+s_shot_clock_reset() {
+  # Everyone's cards back (with Undo on the snackbar), then Reset: full and waiting again
+  ui tap "text=Give everyone their cards back"
+  ui assert-text "text=Cards given back" text=UNDO || return 1
+  ui wait-gone text=UNDO --timeout 15 || return 1
+  ui scroll-to text=Reset --dir up --max 6 --in scrollable   # the face never scrolls: drag the controls
+  ui tap text=Reset
+  ui assert-text "desc=Shot clock, 30 seconds left" "text=Tap the clock to start" || return 1
+  ui scroll-to "desc=Play a card for Alice, 30 more seconds" --max 6 --in scrollable
+  ui assert-text "re=^2 of 2 cards left$"
+}
+s_dealers_choice() {
+  # Dealer's choice: the wheel of the nine classics, nothing picked yet
+  ui back                                      # Shot clock -> the Tools list
+  ui scroll-to "text=Dealer's choice" --max 4
+  ui tap "text=Dealer's choice"
+  ui assert-text "text=Dealer's choice" "text=9 games on the wheel" "desc=Game wheel, 9 games" "text=Spin the wheel" \
+    "text=Spin the wheel to pick the next game." || return 1
+  require_tab_selected Tools
+}
+# The game the wheel last picked, from the result card's TalkBack line in the last dump.
+dealers_pick() { grep -o 'content-desc="Next game: [^"]*"' "$PP_UI_LAST_XML" | head -1 | sed 's/.*Next game: //; s/"$//'; }
+s_dealers_spin() {
+  # A spin (instant, with animations off) picks a game on the wheel and shows its rules; the next
+  # spin never picks the same game twice running.
+  local first second
+  ui tap "text=Spin the wheel"
+  ui scroll-to "re=^Next game: " --max 4
+  ui assert-text "text=NEXT GAME" \
+    "re=^Next game: (Texas Hold'em|Omaha|Big O|Seven-card stud|Razz|2-7 Triple Draw|Badugi|Pineapple|Crazy Pineapple)$" || return 1
+  first="$(dealers_pick)"
+  ui scroll-to "text=Spin the wheel" --dir up --max 6
+  ui tap "text=Spin the wheel"
+  ui scroll-to "re=^Next game: " --max 4
+  ui assert "re=^Next game: " >/dev/null
+  second="$(dealers_pick)"
+  echo "picked: $first, then $second"
+  [[ -n "$first" && "$first" != "$second" ]] || { echo "[ui] FAIL the wheel picked $first twice running"; return 1; }
+}
+s_dealers_house_game() {
+  # A house game goes on the wheel (ten games now); every game's rules open in a sheet
+  ui scroll-to "desc=Add a house game" --max 8
+  ui set-text "desc=Add a house game" --value "Guts"
+  ui tap text=Add
+  ui assert-text "text=10 games on the wheel" "desc=Remove Guts" || return 1
+  ui scroll-to "text=Rules for every game" --max 4
+  ui tap "text=Rules for every game"
+  ui assert-text "text=Rules for every game" "text=Texas Hold'em" "text~=exactly two of your cards" || return 1
+  ui back                                      # close the sheet
+  ui assert-text "text=Dealer's choice" "desc=Remove Guts"
+}
+# Each hand's equity from the quiz's TalkBack lines ("Hand A: ..., 62.8%"), one a line.
+quiz_equities() { grep -o 'content-desc="Hand [A-C]: [^"]*"' "$PP_UI_LAST_XML" | sed -n 's/.*, \([0-9]*\.[0-9]\)%.*/\1/p'; }
+s_equity_quiz() {
+  # The equity quiz deals a spot at once: two hands face up, who's ahead?
+  ui back                                      # Dealer's choice -> the Tools list
+  ui scroll-to "text=Equity quiz" --max 4
+  ui tap "text=Equity quiz"
+  ui assert-text "text=Equity quiz" "text=Two hands · Who's ahead" "re=^Hand A: .+ of .+, .+ of .+$" \
+    "re=^Hand B: .+ of .+, .+ of .+$" || return 1
+  require_tab_selected Tools
+}
+s_equity_quiz_answer() {
+  # Pick Hand A: the engine's exact odds show under both hands (adding up to 100%), with right or
+  # not, and the score counts one answer.
+  local sum
+  ui tap "re=^Hand A: "
+  ui wait "re=^(Right!|Not this time)$" --timeout 30 || return 1
+  ui assert-text "re=^Hand A: .+, [0-9]+\.[0-9]%" "re=^Hand B: .+, [0-9]+\.[0-9]%" "re=^Right, [01], of 1$" || return 1
+  sum="$(quiz_equities | awk '{ s += $1 } END { print s + 0 }')"
+  echo "equities add up to $sum"
+  awk -v s="$sum" 'BEGIN { exit !(s >= 99.8 && s <= 100.2) }' || { echo "[ui] FAIL the equities add up to $sum"; return 1; }
+  ui scroll-to "text=Deal again" --max 4
+  ui assert-text "text=Deal again"
+}
+s_equity_quiz_range() {
+  # Three hands, asked how often the first wins: the five ranges are the answers; a guess names the pick
+  ui tap "text=Deal again"
+  ui scroll-to "text=Three hands" --max 6
+  ui tap "text=Three hands"
+  ui scroll-to "text=How often" --max 4
+  ui tap "text=How often"
+  ui scroll-to "re=^Hand C: " --dir up --max 6
+  ui assert-text "text=Three hands · How often" "re=^Hand C: " || return 1
+  ui scroll-to "text=Over 80%" --max 6
+  ui assert-text "text=How often does Hand A win?" "text=Under 20%" "text=40–60%" "text=Over 80%" || return 1
+  ui tap "text=40–60%"
+  ui wait "re=^(Right!|Not this time)$" --timeout 30 || return 1
+  ui scroll-to "text=Your pick: 40–60%" --max 4
+  ui assert-text "text=Your pick: 40–60%" "re=^Hand A wins [0-9]+\.[0-9]%: " || return 1
+  ui back                                      # the Tools list
+  ui assert-text "text=Equity quiz" || return 1
+  require_tab_selected Tools
+}
 s_back_to_tournament() {
   tab Tournament
   ui assert-text "Start clock" "text~=Level 1 · ready"
@@ -1935,6 +2082,15 @@ step chip-calc-colorup    "Color-up plan from the blind schedule"               
 step chip-calc-short      "Only 10 greens: short, by how many, and the fix"     s_chip_calc_short
 step chip-calc-reset      "Reset to the starting set at once, with Undo"        s_chip_calc_reset
 step chip-calc-settings   "Stack settings: keep 2 stacks back for rebuys"       s_chip_calc_settings
+step shot-clock           "Shot clock: full and waiting, Tools selected"        s_shot_clock
+step shot-clock-run       "Tap to start, pause holds, a card adds 30 s"         s_shot_clock_run
+step shot-clock-reset     "Cards back with Undo; Reset: full and waiting"       s_shot_clock_reset
+step dealers-choice       "Dealer's choice: the wheel of nine games"            s_dealers_choice
+step dealers-spin         "Spin: a game and its rules, never twice running"     s_dealers_spin
+step dealers-house-game   "Add a house game; every game's rules in a sheet"     s_dealers_house_game
+step equity-quiz          "Equity quiz: two hands dealt, who's ahead?"          s_equity_quiz
+step equity-quiz-answer   "Pick Hand A: exact odds add up to 100%, scored"      s_equity_quiz_answer
+step equity-quiz-range    "Three hands, how often: a range picked, named"       s_equity_quiz_range
 step back-to-tournament   "Back to Tournament tab, state intact"                s_back_to_tournament
 step rail                 "720 dp wide: tabs move to a rail (PP-087)"           s_rail
 step rail-tools           "Rail: Tools tab"                                     s_rail_tools

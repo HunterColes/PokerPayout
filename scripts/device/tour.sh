@@ -330,6 +330,32 @@ s_launch() {
     "text~=Level 1 · ready" text=20:00 "has=Buy-in" "Start clock" || return 1
   require_tab_selected Tournament
 }
+# The first run (PP-113): a new install (launch cleared the data) gets one welcome line above the
+# ticket, pointing at the starter nights in the presets sheet. A starter loads with one tap (a new
+# tournament has nothing to lose, so there's no question) and Undo puts the setup back as it was.
+s_starters() {
+  ui assert-text "text~=Everything stays on this phone" "text=See starters" "desc=Dismiss welcome" || return 1
+  ui tap "text=See starters"
+  ui wait "text=STARTERS"
+  ui scroll-to "text=Bounty night" --in scrollable --max 4
+  ui assert-text "text=Turbo" "text=Classic" "text=Deep stack" "text=Bounty night" "desc=More options for the Turbo starter" \
+    || return 1
+  ui tap "text=Turbo"
+  ui wait-gone "text=STARTERS"
+  ui assert-text "text=Turbo loaded" text=UNDO "text~=Level 1 · ready" text=10:00 || return 1
+  ui tap text=UNDO
+  ui wait-gone text=UNDO --timeout 15 || return 1
+  ui assert-text "text~=Level 1 · ready" text=20:00 "text~=Everything stays on this phone"
+}
+# ✕ hides the welcome for good: gone at once, and a fresh start of the app doesn't bring it back.
+s_welcome_dismiss() {
+  ui tap "desc=Dismiss welcome"
+  ui wait-gone "desc=Dismiss welcome" || return 1
+  ui launch                                   # force-stop and start again, the data kept
+  ui assert-text "text~=Level 1 · ready" text=20:00 "has=Buy-in" "Start clock" || return 1
+  if ui find "desc=Dismiss welcome" --timeout 2 >/dev/null 2>&1; then echo "[ui] FAIL the welcome came back"; return 1; fi
+  require_tab_selected Tournament
+}
 s_tournament_config() {
   # One keystroke at a time, with recomposition in between: v1.1.12 moved the cursor in front of
   # the '.' after every change and turned "12.50" into "120.5" (B10).
@@ -2025,6 +2051,8 @@ s_app_alive() {
 }
 
 step launch               "Fresh launch (data cleared): setup page, ready ticket" s_launch
+step starters             "Welcome > See starters: Turbo loads, Undo puts it back" s_starters
+step welcome-dismiss      "Dismiss the welcome; a fresh start doesn't bring it back" s_welcome_dismiss
 step tournament-config    "Type buy-in 12.50 key by key, bounty 5, players 10"  s_tournament_config
 step payouts-tab          "Payouts tab (S6): rows add up to the prize pool"     s_payouts_tab
 step payouts-preset       "Top-heavy: 1st gets what its preview said"           s_payouts_preset

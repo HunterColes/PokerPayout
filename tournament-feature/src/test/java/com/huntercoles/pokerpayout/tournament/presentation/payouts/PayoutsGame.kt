@@ -15,6 +15,7 @@ import com.huntercoles.pokerpayout.core.preferences.ChipCalculatorPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.time.TimeSource
+import com.huntercoles.pokerpayout.core.tip.TipJar
 import com.huntercoles.pokerpayout.tournament.domain.presets.CurrentSetup
 import com.huntercoles.pokerpayout.tournament.domain.presets.PresetStore
 
@@ -30,13 +31,22 @@ class PayoutsGame {
     val bank: BankPreferences
     private val store = ViewModelStore()
 
-    val nights: NightStore
+    var nights: NightStore
+        private set
     val presets: PresetStore
     val setup: CurrentSetup
+    var timer: TimerPreferences
+        private set
+
+    /** The tip card's state (PP-112). A new game starts on the app's first run, when the card never shows. */
+    var tip: TipJar
+        private set
 
     init {
-        listOf("tournament_prefs", "timer_prefs", "bank_prefs", "chip_calculator_prefs", "tournament_presets", "night_history")
-            .forEach { context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit() }
+        listOf(
+            "tournament_prefs", "timer_prefs", "bank_prefs", "chip_calculator_prefs", "tournament_presets", "night_history",
+            TipJar.FILE,
+        ).forEach { context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit() }
         tournament = TournamentPreferences(context).apply {
             setPlayerCount(NAMES.size)
             setBuyIn(40.0)
@@ -50,7 +60,28 @@ class PayoutsGame {
         bank = BankPreferences(context)
         nights = NightStore(context)
         presets = PresetStore(context)
-        setup = CurrentSetup(tournament, TimerPreferences(context), ChipCalculatorPreferences(context, tournament), bank)
+        timer = TimerPreferences(context)
+        setup = CurrentSetup(tournament, timer, ChipCalculatorPreferences(context, tournament), bank)
+        tip = TipJar(context, timer)
+    }
+
+    /** A later run of the app than the first, whose card rule (never on the first run) is behind it. */
+    fun laterRun(): PayoutsGame = apply { restart() }
+
+    /**
+     * Process death and a cold start: the ViewModel cleared, History, the clock and the tip card read
+     * again from what is saved, and a new ViewModel on top.
+     */
+    fun restartProcess(): PayoutsViewModel {
+        clear()
+        restart()
+        return viewModel()
+    }
+
+    private fun restart() {
+        nights = NightStore(context)
+        timer = TimerPreferences(context)
+        tip = TipJar(context, timer)
     }
 
     /** Names, buy-ins, Marcus's rebuy and the five add-ons. */
@@ -93,7 +124,8 @@ class PayoutsGame {
                 bank,
                 SettleTournamentUseCase(CalculatePayoutsUseCase()),
                 CalculatePayoutsUseCase(),
-                NightRecorder(nights, presets, setup, Midday)
+                NightRecorder(nights, presets, setup, Midday),
+                tip
             ) as T
         }
         return ViewModelProvider(store, factory)[PayoutsViewModel::class.java]

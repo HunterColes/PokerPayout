@@ -30,8 +30,9 @@ import org.robolectric.annotation.GraphicsMode
  * The Payouts tab (S6) inside the app's shell on every cell of the device matrix, on the mockups'
  * game ([PayoutsGame]): text fits and isn't clipped at any scroll position, targets are 48 dp
  * without overlap. Goldens on [DeviceMatrix.goldens]: Standard / $5 / 3 places, Top-heavy, custom
- * weights, the finished night with names, and the settled night offering "Save this night" (PP-037);
- * `S6_payouts_font2x` on its [DeviceMatrix.pinned] cells.
+ * weights, the finished night with names, the settled night offering "Save this night" (PP-037), and
+ * the third night saved with the "Tip the dealer?" card under it (PP-112); `S6_payouts_font2x` on its
+ * [DeviceMatrix.pinned] cells.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -132,6 +133,19 @@ class PayoutsTabScreenTest(private val config: ScreenConfig) {
         game.settled()
         show(PayoutsIntent.SaveNight)
         check("Payouts, night saved")
+    }
+
+    /**
+     * PP-112: the third night saved on a later run, so "Tip the dealer?" sits under it (two nights
+     * were saved before, on this phone).
+     */
+    @Test
+    fun theTipCardUnderTheThirdNightSaved() {
+        game.settled().laterRun()
+        listOf(901L, 902L).forEach(game.tip::nightSaved)
+        show(PayoutsIntent.SaveNight)
+        golden("S6_payouts_tip")
+        check("Payouts, tip card")
     }
 
     @Test

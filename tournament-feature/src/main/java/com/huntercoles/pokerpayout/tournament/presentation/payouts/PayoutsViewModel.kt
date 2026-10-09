@@ -14,6 +14,7 @@ import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
+import com.huntercoles.pokerpayout.core.tip.TipJar
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,13 +39,23 @@ sealed interface PayoutsIntent {
 
     /** Saves the finished night to History (PP-037); offered once everyone is paid. */
     data object SaveNight : PayoutsIntent
+
+    /** "Leave a tip" on the "Tip the dealer?" card (PP-112): the page opens, and the card never comes back. */
+    data object LeaveTip : PayoutsIntent
+
+    /** "Not now" on the card: it goes; one more may come three nights on, if this wasn't the last. */
+    data object TipNotNow : PayoutsIntent
+
+    /** "Don't ask again" on the card: no card ever again. */
+    data object TipNever : PayoutsIntent
 }
 
 /**
  * The Payouts tab (S6). One settlement of what the Bank recorded (the same one the Bank shows), so
  * the pool, the table and the names agree with the Bank to the cent, rebuys at their prices (PP-085).
  * The structure is saved in the tournament settings and locked while the clock runs. Once the night
- * is over and everyone is paid, it can be saved to History (PP-037).
+ * is over and everyone is paid, it can be saved to History (PP-037), and a saved night may bring the
+ * "Tip the dealer?" card under it (PP-112, rules in [TipJar]).
  */
 @HiltViewModel
 class PayoutsViewModel @Inject constructor(
@@ -52,7 +63,8 @@ class PayoutsViewModel @Inject constructor(
     private val bankPreferences: BankPreferences,
     private val settleTournament: SettleTournamentUseCase,
     private val calculatePayouts: CalculatePayoutsUseCase,
-    private val nights: NightRecorder
+    private val nights: NightRecorder,
+    private val tip: TipJar,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PayoutsUiState())
@@ -66,6 +78,8 @@ class PayoutsViewModel @Inject constructor(
         viewModelScope.launch { tournamentPreferences.config.collect { refresh() } }
         viewModelScope.launch { bankPreferences.revision.collect { refresh() } }
         viewModelScope.launch { nights.nights.collect { refresh() } }
+        // The card comes and goes with its answers and with the clock (never while it runs)
+        viewModelScope.launch { tip.cardNight.collect { refresh() } }
         viewModelScope.launch {
             tournamentPreferences.tournamentLocked.collect { locked -> _uiState.update { it.copy(isLocked = locked) } }
         }
@@ -83,14 +97,19 @@ class PayoutsViewModel @Inject constructor(
                 change { intent.settings }
             }
             PayoutsIntent.SaveNight -> saveNight()
+            PayoutsIntent.LeaveTip, PayoutsIntent.TipNever -> tip.stopAsking()
+            PayoutsIntent.TipNotNow -> tip.notNow()
         }
     }
 
-    /** Saves tonight once: nothing happens before it is over, or once History holds it. */
+    /**
+     * Saves tonight once: nothing happens before it is over, or once History holds it. A night saved
+     * is counted for the tip card, which may come with it.
+     */
     private fun saveNight() {
         val players = finished ?: return
         val pool = _uiState.value.pool.prizePoolCents
-        if (!nights.isSaved(players, pool)) nights.save(players, pool)
+        if (!nights.isSaved(players, pool)) tip.nightSaved(nights.save(players, pool).id)
         refresh()
     }
 
@@ -141,6 +160,7 @@ class PayoutsViewModel @Inject constructor(
         val payable = calculatePayouts.payablePlaces(settlement.pool.prizePoolCents, settings, config.numPlayers)
         val tonight = NightResults.of(settlement, players, names)
         finished = tonight
+        val savedId = tonight?.let { nights.savedId(it, settlement.pool.prizePoolCents) }
         _uiState.update {
             it.copy(
                 playerCount = config.numPlayers,
@@ -163,7 +183,8 @@ class PayoutsViewModel @Inject constructor(
                 rows = rows(settlement, names),
                 bubble = bubble(settlement, config.numPlayers),
                 bounties = bounties(settlement, names, config.money.bountyCents, config.money.foodCents * config.numPlayers),
-                night = nightSave(tonight, settlement.pool.prizePoolCents)
+                night = nightSave(tonight, settlement.pool.prizePoolCents),
+                tipCard = savedId != null && savedId == tip.cardNightNow()
             )
         }
     }

@@ -73,16 +73,19 @@ There are none yet; Music says so ("None yet") until there are.
 
 New keys only; nothing older was renamed. A backup (Tools > Backup) takes the sound pack and the
 music's settings, but not the playlist or where a song was paused: picked songs are this phone's
-file loans, so a restore keeps the phone's own list (`MusicPreferences.PHONE_ONLY_KEYS`).
+file loans, so a restore keeps the phone's own list (`MusicPreferences.PHONE_ONLY_KEYS`). Android's
+own backup and a move to a new phone leave them out too (PP-137): they live in `phone_prefs`, which
+the backup rules exclude. Older versions kept them in `music_prefs`; they move once, keeping their
+names (`PhonePrefs.moveOnce`).
 
 | File | Key | What |
 |---|---|---|
 | `audio_prefs` | `sound_pack` | The picked pack's id (none saved: the default) |
-| `music_prefs` | `playlist` | The playlist as JSON (`format` 1): songs (`ref`, `title`), the current one, shuffle and its order, repeat |
+| `phone_prefs` | `playlist` | The playlist as JSON (`format` 1): songs (`ref`, `title`), the current one, shuffle and its order, repeat |
 | `music_prefs` | `volume` | The music's own volume, 0 to 1 (the chime's is apart) |
 | `music_prefs` | `auto_play` | Play with the clock |
 | `music_prefs` | `break_music` | `KEEP`, `PAUSE` or `QUIET` |
-| `music_prefs` | `position_ref`, `position_ms` | Where the current song was paused (saved on a pause, never while playing) |
+| `phone_prefs` | `position_ref`, `position_ms` | Where the current song was paused (saved on a pause, never while playing) |
 
 ## Bundled audio
 

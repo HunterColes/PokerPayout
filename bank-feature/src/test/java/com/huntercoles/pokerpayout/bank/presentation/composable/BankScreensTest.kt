@@ -126,6 +126,14 @@ class BankScreensTest(private val config: ScreenConfig) {
         check("Bank before buy-ins")
     }
 
+    /** Seats nobody named yet: "Pick tonight's players" above the list (PP-110). */
+    @Test
+    fun namesGoingIn() {
+        show(BankScenes.naming(kit).state())
+        golden("S5_bank_naming")
+        check("Bank with seats nobody named")
+    }
+
     @Test
     fun midGame() {
         show(BankScenes.midGame(kit).state())

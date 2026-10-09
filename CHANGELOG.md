@@ -3,6 +3,72 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.12 (on master, not published)
+
+Regulars: tonight's players in a few taps:
+
+- **Pick tonight's players:** while a seat in the Bank has no name, "Pick tonight's players" sits
+  above the list (⋮ has it any time, for a late arrival). It lists everyone you've played with, from
+  your saved nights and every name typed in the Bank, the ones who came to most of the last ten
+  nights first. A tap seats someone in the first seat with no name, or adds a seat once every seat
+  has one (up to 30); a tap again frees the seat. Type a new name to add them. Typing a name in the
+  Bank still works, and remembers the name.
+- **One person, two names:** in History, tap a player in the standings to merge their two
+  spellings ("Mike" and "Mike R."), keeping whichever name you like, so their nights, points and
+  wins add up. It applies at once with Undo, and Separate takes it apart later. Two people who
+  played the same night can't be merged, and saved nights keep the names they were saved with.
+- **In your backups:** the names and merges travel in the backup file (Tools > Backup) and in
+  Android's own backup.
+
+## 1.4.11 (on master, not published)
+
+Your currency: €, £, kr, ₹, ¥ or none:
+
+- **Pick how money shows** in Tools > Currency: $, € (12,50 € or €12.50), £, ₹ (in lakhs:
+  ₹1,23,456), R$, kr, ¥ for the yen (whole yen, no cents), ¥ for the yuan, CHF, zł, ₽, or no symbol
+  at all for a game played for points or chips. Each one is written its own way, the symbol before
+  or after and the digits grouped as people expect. The Tools list shows which one is picked.
+- **Everywhere at once:** the Bank, the payouts, the setup's money fields, the clock, History, the
+  snackbars, TalkBack and every shared text follow the pick. Only the look changes: the amounts
+  saved stay exactly as they were, so switching back changes nothing.
+- **Yen:** money fields take whole yen, amounts show in whole yen, and the payout rounding steps are
+  ¥100, ¥500 and ¥1,000.
+- **Your phone's currency on a new install:** euros in Germany, rupees in India, yen in Japan, and so
+  on; plain numbers where the app doesn't have the currency. Anyone updating keeps the $ they had.
+- **The History CSV** gets a currency column (the symbol); the amounts stay plain numbers.
+- **Backups** keep the currency with tonight's game.
+- The Bank's Paid column icon is now a banknote with a tick, so it fits every currency.
+
+## 1.4.10 (on master, not published)
+
+Starter structures and a one-line welcome:
+
+- **Starter nights:** the Presets sheet now lists four ready-made nights under your saved ones:
+  Turbo (2 hours of 10-minute levels), Classic (3 hours of 20-minute levels with two breaks), Deep
+  stack (4 hours, twice the stack, an ante from level 7) and Bounty night (Classic with a $5
+  bounty). Each one fits the smallest chip you play with, so its blinds always climb cleanly from
+  your chip to the stack. A tap loads one, with Undo; if you've changed the setup it asks first.
+  Starters can't be changed, but ⋮ copies one into your presets, where you can rename and change it.
+- **A welcome on a new install:** the first time the app opens, one line above the ticket says to set
+  up tonight and press Start, or begin with a starter, and that everything stays on the phone. See
+  starters opens them; ✕ hides it for good, and so does the first Start. Anyone updating from an
+  earlier version never sees it.
+
+## 1.4.9 (on master, not published)
+
+A restored phone asks for notifications again:
+
+- **The live clock on a new phone:** a phone restored from Google's backup, or moved by cable or
+  Wi-Fi, came back sure it had already asked for notifications, so it never asked and the live clock
+  stayed out of the shade and the lock screen. The app now asks Android each time instead of
+  remembering, so the first Start on a new or restored phone asks. A phone that already said no isn't
+  asked again; if the question was closed without an answer, it comes back at the next game's first
+  Start.
+- **The music stays on its phone:** the playlist and where a song was paused are no longer copied
+  by Android's backup or a move to a new phone, since the songs picked are that phone's own files
+  and can't play on another. They move once into a file of their own, keeping everything as it was
+  on this phone. Your settings, presets, History and tonight's game still travel.
+
 ## 1.4.8 (on master, not published)
 
 Three new tools for the table, in Tools:

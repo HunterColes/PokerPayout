@@ -86,4 +86,18 @@ sealed interface BankIntent {
 
     /** The top bar's bell: the clock's chime on or off. */
     data object ToggleMute : BankIntent
+
+    // Tonight's players (S26, PP-110) ----------------------------------------------------------------
+
+    /** The top bar's regulars: tonight's players, picked from everyone the host has played with. */
+    data object ShowRegulars : BankIntent
+
+    /**
+     * A regular tapped in the sheet: not at the table, they take the first seat nobody named (a new
+     * seat when every seat has a name); at the table, their seat is nobody's again ("Player 3").
+     */
+    data class ToggleRegular(val name: String) : BankIntent
+
+    /** Quick add: [name] takes a seat as a regular tapped would, and joins the regulars if new. */
+    data class AddRegular(val name: String) : BankIntent
 }

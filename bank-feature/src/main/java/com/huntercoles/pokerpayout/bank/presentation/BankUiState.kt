@@ -11,6 +11,9 @@ import com.huntercoles.pokerpayout.core.domain.model.PayoutTable
 import com.huntercoles.pokerpayout.core.domain.model.PlayerSettlement
 import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.domain.model.PurchaseWindow
+import com.huntercoles.pokerpayout.core.domain.players.PlayerMerges
+import com.huntercoles.pokerpayout.core.domain.players.PlayerNames
+import com.huntercoles.pokerpayout.core.domain.players.Regular
 import com.huntercoles.pokerpayout.core.domain.settle.Transfer
 
 const val MAX_PURCHASE_COUNT = 20
@@ -108,7 +111,11 @@ data class BankUiState(
     /** Once the night is over: who pays whom so that everyone is square; null before. */
     val settleUp: SettleUpModel? = null,
     /** The settle-up payments ticked as paid (only ones [settleUp] lists). */
-    val settlePaid: Set<Transfer> = emptySet()
+    val settlePaid: Set<Transfer> = emptySet(),
+    /** Everyone the host has played with (PP-110), regulars first, for the tonight's players sheet. */
+    val roster: List<Regular> = emptyList(),
+    /** The names merged in History: a spelling at the table finds its regular. */
+    val merges: PlayerMerges = PlayerMerges.NONE
 ) {
     /** How knockouts pay (PP-035), from the Tournament settings. */
     val bountyMode: BountyMode get() = money.bountyMode
@@ -124,6 +131,9 @@ data class BankUiState(
     val totalRebuyCount: Int get() = players.sumOf { it.rebuys }
     val totalAddonCount: Int get() = players.sumOf { it.addons }
     val canUndo: Boolean get() = undoLabel != null
+
+    /** A seat nobody named yet ("Player 3"): the Bank offers tonight's players from the regulars (PP-110). */
+    val hasUnnamedSeat: Boolean get() = players.any { PlayerNames.isPlaceholder(it.name) }
 
     /**
      * Late entry (PP-116) is offered once the clock is running, until the cutoff, while nobody has
@@ -368,4 +378,10 @@ sealed interface BankSheet {
 
     /** Who pays whom, with a tick per payment ([BankUiState.settleUp]). */
     data object SettleUp : BankSheet
+
+    /**
+     * S26 (PP-110): tonight's players, picked from the regulars ([RegularsModel]). [order]: the
+     * regulars' keys as the roster had them when the sheet opened, which the rows keep.
+     */
+    data class Regulars(val order: List<String>) : BankSheet
 }

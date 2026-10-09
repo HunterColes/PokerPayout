@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.huntercoles.pokerpayout.core.constants.TournamentConstants
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
@@ -55,7 +56,7 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiSta
 import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetsIntent
 
 /** The players stepper's range (as the slider it replaces). */
-internal val PlayerRange = 3..30
+internal val PlayerRange = TournamentConstants.MIN_PLAYERS..TournamentConstants.MAX_PLAYERS
 
 private val SectionShape = RoundedCornerShape(PokerDimens.CornerCard)
 
@@ -63,7 +64,7 @@ private val SectionShape = RoundedCornerShape(PokerDimens.CornerCard)
  * S1 v2, before the start: the whole page is setup, under the [ReadyTicket] that previews the clock
  * it builds. Presets first (a saved night in one tap, PP-032), then people, money, blinds, payouts,
  * in the order hosts decide them, then a sticky "Start clock". Money and blinds fold to one-line
- * summaries.
+ * summaries. On a new install the [WelcomeCard] sits above the ticket until dismissed (PP-113).
  */
 @Composable
 internal fun SetupContent(
@@ -81,6 +82,12 @@ internal fun SetupContent(
                 .padding(start = gutter, end = gutter, top = 4.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (setup.showWelcome) {
+                WelcomeCard(
+                    onSeeStarters = { actions.onPresetIntent(PresetsIntent.Open) },
+                    onDismiss = { actions.onSetupIntent(TournamentConfigIntent.DismissWelcome) },
+                )
+            }
             ReadyTicket(timer)
             PresetsRow(midGame = false, onOpen = { actions.onPresetIntent(PresetsIntent.Open) })
             PlayersCard(setup, hint = R.string.setup_players_hint) {

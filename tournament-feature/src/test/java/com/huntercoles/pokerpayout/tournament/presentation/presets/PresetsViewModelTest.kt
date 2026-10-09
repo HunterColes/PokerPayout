@@ -10,6 +10,8 @@ import com.huntercoles.pokerpayout.core.R as CoreR
 import com.huntercoles.pokerpayout.core.audio.SoundManager
 import com.huntercoles.pokerpayout.core.backup.Backups
 import com.huntercoles.pokerpayout.core.design.components.SnackbarController
+import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
+import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
@@ -24,6 +26,7 @@ import com.huntercoles.pokerpayout.tournament.domain.presets.CurrentSetup
 import com.huntercoles.pokerpayout.tournament.domain.presets.PresetFiles
 import com.huntercoles.pokerpayout.tournament.domain.presets.PresetStore
 import com.huntercoles.pokerpayout.tournament.domain.presets.PresetsBackup
+import com.huntercoles.pokerpayout.tournament.domain.presets.Starter
 import com.huntercoles.pokerpayout.tournament.presentation.FakeChipSets
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
@@ -49,7 +52,8 @@ import org.robolectric.annotation.Config
  * Saved setups (PP-032) through the real ViewModel over Robolectric's preferences, on virtual time:
  * save, load (asking first only when something would be replaced), rename and delete, each with Undo
  * on the snackbar; nothing loads once the clock has started; and the clock and the setup page follow
- * a loaded preset.
+ * a loaded preset. The starter nights (PP-113) the same way: fitted to tonight, loaded with Undo,
+ * copied into the saved presets, and every one a clock that can start.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -93,8 +97,23 @@ class PresetsViewModelTest {
     private fun viewModel(): PresetsViewModel = inStore("presets") {
         val section = PresetsBackup(presets)
         val presetFiles = PresetFiles(Backups(setOf(section), clock, context), section, files, dispatcher)
-        val setup = CurrentSetup(tournament, timer, chips, bank)
-        PresetsViewModel(presets, setup, snackbars, PresetMessages(context), clock, presetFiles)
+        PresetsViewModel(presets, currentSetup(), snackbars, PresetMessages(context), clock, presetFiles)
+    }
+
+    private fun currentSetup() = CurrentSetup(tournament, timer, chips, bank)
+
+    /** The clock's ViewModel (activity-scoped in the app), which keeps its own copy of the blinds. */
+    private fun clockViewModel(): TimerViewModel = inStore("clock") {
+        val audio = AudioPreferences(context)
+        TimerViewModel(
+            timer,
+            tournament,
+            bank,
+            ClockCues(mockk<SoundManager>(relaxed = true), audio, CueVibrator { }, clock),
+            clock,
+            audio,
+            FakeChipSets(),
+        )
     }
 
     /** A ViewModel in [store], so [tearDown] cancels its coroutines. */
@@ -289,18 +308,7 @@ class PresetsViewModelTest {
     fun `the clock and the setup page follow a loaded preset`() {
         val viewModel = viewModel()
         val id = savedFriday(viewModel)
-        val clockViewModel = inStore("clock") {
-            val audio = AudioPreferences(context)
-            TimerViewModel(
-                timer,
-                tournament,
-                bank,
-                ClockCues(mockk<SoundManager>(relaxed = true), audio, CueVibrator { }, clock),
-                clock,
-                audio,
-                FakeChipSets(),
-            )
-        }
+        val clockViewModel = clockViewModel()
         val setupViewModel = inStore("setup") { TournamentConfigViewModel(CalculatePayoutsUseCase(), tournament, timer, bank) }
         assertEquals(20, clockViewModel.uiState.value.config.roundLengthMinutes)
 
@@ -367,6 +375,99 @@ class PresetsViewModelTest {
         assertEquals("the list stays open to say why", PresetSheet.List, viewModel.state.sheet)
         viewModel.send(PresetsIntent.Close, PresetsIntent.Open)
         assertNull("a fresh list forgets it", viewModel.state.fileProblem)
+    }
+
+    // Starter nights (PP-113) --------------------------------------------------------------------
+
+    @Test
+    fun `the starters are listed fitted to tonight's smallest chip, food and players`() {
+        tournament.setSmallestChip(25)
+        tournament.setFoodCents(0L)
+        val viewModel = viewModel()
+        viewModel.send(PresetsIntent.Open)
+
+        val starters = viewModel.state.starters
+        assertEquals(Starter.entries, starters.map { it.starter })
+        assertEquals(listOf(2_500, 2_500, 5_000, 2_500), starters.map { it.setup.blinds.startingChips })
+        assertTrue(starters.all { it.setup.blinds.smallestChip == 25 && it.setup.money.foodCents == 0L })
+        val forNine = PayoutPreset.STANDARD.weightsFor(PayoutPlaces.recommended(9))
+        assertTrue("the standard payouts for 9", starters.all { it.setup.payouts.weights == forNine })
+    }
+
+    @Test
+    fun `a starter loads at once over a new tournament, and Undo puts the setup back`() {
+        val viewModel = viewModel()
+        viewModel.send(PresetsIntent.Open, PresetsIntent.LoadStarter(Starter.TURBO))
+
+        assertNull("nothing to lose: no question", viewModel.state.sheet)
+        assertEquals(1_000L, tournament.getMoneySettings().buyInCents)
+        assertEquals(120, timer.getGameDurationMinutes())
+        assertEquals(10, tournament.getRoundLengthMinutes())
+        assertEquals(5_000, tournament.getStartingChips())
+        assertEquals("Turbo loaded", snackbar(undo = true))
+        assertEquals(2_000L, tournament.getMoneySettings().buyInCents)
+        assertEquals(180, timer.getGameDurationMinutes())
+        assertEquals(20, tournament.getRoundLengthMinutes())
+        assertTrue("a starter is never one of the saved presets", presets.presets.value.isEmpty())
+    }
+
+    @Test
+    fun `a starter over what the host set asks once, and leaves the food alone`() {
+        tournament.setBuyInCents(4_000L)
+        tournament.setFoodCents(0L)
+        val viewModel = viewModel()
+        viewModel.send(PresetsIntent.Open, PresetsIntent.LoadStarter(Starter.BOUNTY_NIGHT))
+        assertEquals(PresetSheet.ConfirmStarter(Starter.BOUNTY_NIGHT), viewModel.state.sheet)
+        assertEquals("asked, not loaded", 4_000L, tournament.getMoneySettings().buyInCents)
+
+        viewModel.send(PresetsIntent.ConfirmLoadStarter(Starter.BOUNTY_NIGHT))
+        assertNull(viewModel.state.sheet)
+        val money = tournament.getMoneySettings()
+        assertEquals(listOf(2_000L, 500L, 0L), listOf(money.buyInCents, money.bountyCents, money.foodCents))
+        assertEquals("Bounty night loaded", snackbar())
+    }
+
+    @Test
+    fun `a starter is copied into the saved presets under a name of its own, and Undo takes the copy out`() {
+        val viewModel = viewModel()
+        viewModel.send(PresetsIntent.Open, PresetsIntent.CopyStarter(Starter.DEEP_STACK))
+
+        assertNull(viewModel.state.sheet)
+        assertEquals("Deep stack added to your presets", snackbar())
+        assertEquals(currentSetup().starter(Starter.DEEP_STACK), presets.named("Deep stack")?.setup)
+        assertEquals("copied, not loaded", 2_000L, tournament.getMoneySettings().buyInCents)
+
+        viewModel.send(PresetsIntent.Open, PresetsIntent.CopyStarter(Starter.DEEP_STACK))
+        assertEquals("Deep stack 2 added to your presets", snackbar(undo = true))
+        assertEquals(listOf("Deep stack"), presets.presets.value.map { it.name })
+    }
+
+    @Test
+    fun `once the clock has started a starter can't be loaded, but can be copied`() {
+        timer.setHasTimerStarted(true)
+        val viewModel = viewModel()
+        viewModel.send(PresetsIntent.Open)
+        assertFalse(viewModel.state.canLoad)
+
+        viewModel.send(PresetsIntent.LoadStarter(Starter.TURBO), PresetsIntent.ConfirmLoadStarter(Starter.TURBO))
+        assertEquals(PresetSheet.List, viewModel.state.sheet)
+        assertEquals(20, tournament.getRoundLengthMinutes())
+
+        viewModel.send(PresetsIntent.CopyStarter(Starter.TURBO))
+        assertEquals(listOf("Turbo"), presets.presets.value.map { it.name })
+    }
+
+    @Test
+    fun `every starter loads a clock that can start`() {
+        val viewModel = viewModel()
+        val clockViewModel = clockViewModel()
+        Starter.entries.forEach { starter ->
+            viewModel.send(PresetsIntent.Open, PresetsIntent.ConfirmLoadStarter(starter))
+            val state = clockViewModel.uiState.value
+            assertNull("$starter: ${state.setupProblem?.explanation}", state.setupProblem)
+            assertEquals("$starter", starter.levels, state.baseBlindLevels.size)
+            assertTrue("$starter", clockViewModel.isValidBlindConfiguration(state))
+        }
     }
 
     /** A wall clock a test sets by hand. */

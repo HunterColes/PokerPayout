@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -38,19 +39,21 @@ import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.utils.AppCurrency
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
 /**
  * A labelled number field: the label sits above the box, so it never truncates. The value uses
- * the number face; a [prefix] ("$") and [suffix] ("min") are in Chalk. Focus is a 2 dp gold edge.
+ * the number face; a [prefix] (a money symbol, "$") and [suffix] ("min") are in Chalk, and so is a
+ * [trailingSymbol] (a money symbol written after the amount, "€", in the prefix's size). Focus is a 2 dp gold edge.
  * An error is a 2 dp Danger edge, and [supportingText] then says how to fix it ("Can't be made
  * from 25s. Try 5,000.").
  *
  * Stateless: the caller owns [value]. Callers that commit on blur (money fields, B18) watch focus
  * through [interactionSource]; [keyboardActions] and [fieldModifier] (the text field itself, for
  * key handling and its TalkBack name) are theirs too. A field for words rather than numbers (a
- * name) passes [textStyle] to type in the body face.
+ * name) passes [textStyle] to type in the body face, and [capitalization] to start each word upper case.
  */
 @Suppress("LongParameterList") // a component API: one parameter per visual option
 @Composable
@@ -62,12 +65,14 @@ fun PokerField(
     prefix: String? = null,
     suffix: String? = null,
     supportingText: String? = null,
+    trailingSymbol: String? = null,
     isError: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Number,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     fieldModifier: Modifier = Modifier,
     textStyle: TextStyle? = null,
+    capitalization: KeyboardCapitalization = KeyboardCapitalization.None,
 ) {
     val focused by interactionSource.collectIsFocusedAsState()
     val shape = RoundedCornerShape(PokerDimens.CornerControl)
@@ -86,7 +91,11 @@ fun PokerField(
                 .semantics { if (isError && supportingText != null) error(supportingText) },
             textStyle = textStyle?.copy(color = PokerColors.CardWhite) ?: FieldValue,
             singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
+            keyboardOptions = KeyboardOptions(
+                capitalization = capitalization,
+                keyboardType = keyboardType,
+                imeAction = ImeAction.Done,
+            ),
             keyboardActions = keyboardActions,
             interactionSource = interactionSource,
             cursorBrush = SolidColor(PokerColors.PokerGold),
@@ -103,6 +112,7 @@ fun PokerField(
                 ) {
                     if (prefix != null) Text(prefix, style = FieldPrefix)
                     Row(Modifier.weight(1f)) { innerTextField() }
+                    if (trailingSymbol != null) Text(trailingSymbol, style = FieldPrefix)
                     if (suffix != null) Text(suffix, style = FieldSuffix, color = PokerColors.Chalk)
                 }
             },
@@ -143,12 +153,12 @@ internal fun PokerFieldPreview() {
     PokerPreviewPage {
         PokerStage(felt = true) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PokerField("40", {}, label = "Buy-in", prefix = "$", modifier = Modifier.weight(1f))
+                PokerField("40", {}, label = "Buy-in", prefix = AppCurrency.DOLLAR.symbol, modifier = Modifier.weight(1f))
                 PokerField(
                     "5",
                     {},
                     label = "Bounty",
-                    prefix = "$",
+                    prefix = AppCurrency.DOLLAR.symbol,
                     modifier = Modifier.weight(1f),
                     interactionSource = rememberFocusedInteractionSource(),
                 )

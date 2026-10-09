@@ -6,6 +6,8 @@ import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.model.Standings
 import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
+import com.huntercoles.pokerpayout.core.testing.withCurrency
+import com.huntercoles.pokerpayout.core.utils.AppCurrency
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -91,6 +93,22 @@ class PayoutStructureTest {
         assertEquals(listOf("$1", "$5", "$10"), PayoutRounding.entries.map { it.label })
         assertEquals(PayoutRounding.FIVE_DOLLARS, PayoutRounding.fromUnitCents(500))
         assertEquals(PayoutRounding.ONE_DOLLAR, PayoutRounding.fromUnitCents(123))
+    }
+
+    @Test
+    fun `in yen the rounding steps are 100, 500 and 1,000 yen, saved as before`() {
+        assertEquals(listOf(10_000L, 50_000L, 100_000L), PayoutRounding.entries.map { it.unitCentsIn(AppCurrency.YEN) })
+        AppCurrency.entries.filter { it != AppCurrency.YEN }.forEach { currency ->
+            assertEquals(listOf(100L, 500L, 1_000L), PayoutRounding.entries.map { it.unitCentsIn(currency) }, "$currency")
+        }
+        withCurrency(AppCurrency.YEN) {
+            assertEquals(listOf("¥100", "¥500", "¥1,000"), PayoutRounding.entries.map { it.label })
+            // What is saved doesn't change with the currency
+            assertEquals(listOf(100L, 500L, 1_000L), PayoutRounding.entries.map { it.unitCents })
+        }
+        withCurrency(AppCurrency.EURO) {
+            assertEquals(listOf("1\u00A0€", "5\u00A0€", "10\u00A0€"), PayoutRounding.entries.map { it.label })
+        }
     }
 
     @Test

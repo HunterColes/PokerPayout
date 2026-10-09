@@ -8,9 +8,10 @@ import kotlin.test.fail
 
 /**
  * The guard that keeps backups whole: every SharedPreferences file any module's code opens must be in
- * [BackupCatalog] (saved by a settings group or a section of its own), so new data can't be left out
- * of backups by accident. Every key in a listed file is saved (typed), apart from the few a file marks
- * as about this phone ([SettingsFile.phoneOnly]); [BackupsTest] proves they all come back.
+ * [BackupCatalog] (saved by a settings group or a section of its own, or named as about this phone
+ * alone in [BackupCatalog.PHONE_FILES]), so new data can't be left out of backups by accident. Every
+ * key in a listed file is saved (typed), apart from the few a file marks as about this phone
+ * ([SettingsFile.phoneOnly]); [BackupsTest] proves they all come back.
  *
  * The sources are read as text: a call to `getSharedPreferences` with a string, or with a constant
  * from the same file. Saved data anywhere else (a file in the app's files folder, a database,
@@ -46,13 +47,18 @@ class BackupCoverageTest {
         }
         assertTrue(unresolved.isEmpty(), "Can't tell which file these open; use a constant in the same file:\n$unresolved")
         assertTrue(opened.isNotEmpty(), "found no SharedPreferences at all under $root")
-        val missing = opened.keys - BackupCatalog.FILES
+        val missing = opened.keys - BackupCatalog.FILES - BackupCatalog.PHONE_FILES
         assertTrue(
             missing.isEmpty(),
             "Not in any backup: ${missing.associateWith { opened[it] }}. List each in BackupCatalog (core/backup): " +
-                "SETTINGS to save it whole with a settings group, or COLLECTIONS with a BackupSection of its own.",
+                "SETTINGS to save it whole with a settings group, or COLLECTIONS with a BackupSection of its own " +
+                "(or, for what's about this phone alone, PHONE_FILES, left out of Android's backup rules too).",
         )
-        assertEquals(BackupCatalog.FILES, opened.keys, "BackupCatalog lists a file nothing opens any more")
+        assertEquals(
+            BackupCatalog.FILES + BackupCatalog.PHONE_FILES,
+            opened.keys,
+            "BackupCatalog lists a file nothing opens any more",
+        )
     }
 
     @Test
@@ -74,6 +80,7 @@ class BackupCoverageTest {
         val names = BackupCatalog.SETTINGS.map { it.name }
         assertEquals(names.distinct(), names, "a settings file listed twice")
         assertTrue(BackupCatalog.COLLECTIONS.keys.none { it in names }, "a file both saved whole and item by item")
+        assertTrue(BackupCatalog.PHONE_FILES.none { it in BackupCatalog.FILES }, "a phone-only file in a backup")
         val keys = SettingsGroup.entries.map { it.key } + BackupCatalog.COLLECTIONS.values
         assertEquals(keys.distinct(), keys, "two sections with one key")
         SettingsGroup.entries.forEach { group -> assertTrue(BackupCatalog.filesOf(group).isNotEmpty(), "$group has no files") }
@@ -83,8 +90,15 @@ class BackupCoverageTest {
         val OPENS = Regex("""getSharedPreferences\(\s*([^,)]+),""")
         val LITERAL = Regex(""""([^"]+)"""")
 
-        /** Code that opens the files the catalog names, by name: the backup itself. */
-        val OPENS_BY_NAME = setOf("core/src/main/java/com/huntercoles/pokerpayout/core/backup/SettingsSection.kt")
+        /**
+         * Code that opens the files the catalog names, by name: the backup itself, and the first start's
+         * looks for data from before (PP-113's welcome, PP-114's currency), which only read them.
+         */
+        val OPENS_BY_NAME = setOf(
+            "core/src/main/java/com/huntercoles/pokerpayout/core/backup/SettingsSection.kt",
+            "core/src/main/java/com/huntercoles/pokerpayout/core/preferences/FirstRun.kt",
+            "core/src/main/java/com/huntercoles/pokerpayout/core/preferences/CurrencyPreferences.kt",
+        )
 
         /** APIs that keep data outside SharedPreferences. The cache (shared files) isn't saved data. */
         val OTHER_STORAGE_APIS = listOf(

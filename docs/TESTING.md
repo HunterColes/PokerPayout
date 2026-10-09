@@ -198,8 +198,9 @@ are:
    * Table view: the table-view button forces a landscape screen on the paused break; resume
      there (the footer shows "10 of 10 left" and the pool); Knock out (PP-135): "Who's out?",
      Player 10, "Who knocked Player 10 out?" (10th place), Player 1, then the snackbar's UNDO over
-     the footer (its numbers make way for those 8 s), and UNDO brings back "10 of 10 left"; leave
-     it and require portrait again. End break now starts level 5.
+     the footer (its numbers make way for those 8 s) and "Final table" across the top (PP-111:
+     nine left fit the seat draw's table of nine), and UNDO brings back "10 of 10 left" and takes
+     the banner away; leave it and require portrait again. End break now starts level 5.
    * Rotation (PP-079): with auto-rotate off, `settings put system user_rotation 1` turns the
      emulator on its side: the clock must become the table view, landscape, still on level 5;
      `user_rotation 0` brings the clock back upright. The step puts the settings back however it
@@ -314,7 +315,18 @@ are:
    $7.50"; confirming shows it on the snackbar and under Player 1's name ("bounty $7.50, 1
    knockout" to TalkBack). Each part scrolls to what it checks last, since a swipe flings less on
    GitHub's emulator.
-10. Check that the app process is still alive.
+10. **Big moments** (PP-111, 8 steps). The PKO night above (five players, Player 2 out, two
+   places paid) on a started clock: Player 3 out at the Bank brings "On the bubble" to the clock,
+   Player 4 (by Player 1) "Heads-up"; the table view's Knock out (Player 5, by Player 1) opens the
+   champion's screen (S25) in the clock's place, with "Pay out in the Bank". UNDO closes it (the
+   Bank's top-bar Undo if the snackbar has gone), and the knockout again opens it again. "Pay out
+   in the Bank" leads to the Bank, where the champion and the runner-up are paid; back on the
+   clock, the screen offers "Save this night", says "Saved to History, in the Tools tab.", and
+   "Open History" shows the night ("Player 1 won"); ✕ leaves the champion's card on the clock
+   ("Player 1 is the champion"), whose "See the results" opens the screen again. A banner is
+   matched by its title at the start of its text (`re=^On the bubble`), never the pill beside the
+   players left, which is in capitals.
+11. Check that the app process is still alive.
 
 Phones stay portrait (`AppOrientation` in `core`) except on the Tournament tab while a clock
 exists, where the phone's own rotation turns the clock into the table view; ✕ there holds the clock
@@ -522,6 +534,8 @@ fun `the table adds up to the pool to the cent`() =
 | core | `HistoryPropertiesTest` | Every night the Bank can finish saves and reads back; the CSV reads back with every name intact (Robolectric) |
 | tournament-feature | `ClockRestoreTest` | Random clock sessions played twice, with process deaths and with the phone asleep for as long: the two clocks agree a second after every step |
 | bank-feature | `BankRestoreTest` | Random nights with the process killed at random: the Bank shows exactly what it showed |
+| tournament-feature | `BigMomentsTest` | Any night, knocked out one at a time to a champion: each big moment (PP-111) is reached once and stays reached; Undo after Undo takes each back, and none is new on the way up |
+| bank-feature | `BankBigMomentsTest` | Random nights at the real Bank, every bounty type, with knockouts, Bring back, Undo, rebuys, a late arrival and process death, under the real clock ViewModel: a moment shows only when someone more is out, it is the biggest that brought, what shows is still reached, and nothing shows again after a restart |
 | tools-feature | `OddsRestoreTest` | Random odds sessions with the process killed at random: the table comes back exactly |
 
 Bugs they found (wave 9): a late player in a mystery-bounty game made the envelopes pay out up to
@@ -798,7 +812,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tools-feature` | `SeatDrawScreenTest` (+ `SeatDrawExtraGoldenTest`) | `S14_seats_empty`, `S14_seats_one_table`, `S14_seats_two_tables`, `S14_button_draw`; `S14_seats_font2x` at tall@2.0 | All three, at every scroll position of each pane; also the name fields and an out-of-date draw with the players unfolded |
 | `tools-feature` | `TableToolsScreenTest` | `S20_outs_flop` (a flush draw facing a bet: both chances beside the rules of thumb, and the verdict), `S21_side_pots` (an all-in, a bigger all-in, a fold and a bet nobody matched), `S22_deal` (three left from the Bank, ICM and chip chop side by side, $50 saved for the winner) | The table tools: all three, at every scroll position of each pane, on all 24 cells; also outs on the turn and at 15, side pots empty, all folded and with ten players, a deal with no chips yet and one with typed prizes that go up. `TableToolsContentTest`: what each control sends and its TalkBack name |
 | `tournament-feature` | `TournamentTabsScreenTest` | `Shell_tournament` | Tournament: touch targets |
-| `tournament-feature` | `TournamentScreenGoldenTest` | `S1_setup_{before,invalid}`, `S1_setup_mystery` (mystery bounties picked, the envelopes listed, PP-035), `S1_fold_300ms`, `S1_running_strip`, `S1_panel_{open,unlocked}`, `S2_clock_{ready,running,paused,final_minutes,overtime,finished}`, `S2_clock_running_font2x`, `S3_table_{running,paused,break}` (landscape cells), `S4_break_{colorup,done,plain}`, `S4_break_chipset` (the color-up with a chip set set up in Tools, PP-091 #9), `Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet` | All three checks on all 24 cells (the fold frame: none, it is mid-animation); the top bar's buttons stay 48 x 48 dp at every scroll position. `SetupStripTest`: the strip shows whole settings, as many as fit |
+| `tournament-feature` | `TournamentScreenGoldenTest` | `S1_setup_{before,invalid}`, `S1_setup_mystery` (mystery bounties picked, the envelopes listed, PP-035), `S1_fold_300ms`, `S1_running_strip`, `S1_panel_{open,unlocked}`, `S2_clock_{ready,running,paused,final_minutes,overtime,finished}`, `S2_clock_running_font2x`, `S3_table_{running,paused,break}` (landscape cells), `S4_break_{colorup,done,plain}`, `S4_break_chipset` (the color-up with a chip set set up in Tools, PP-091 #9), `Z1_clock_small`, `Z3_table_small_land`, `Z4_clock_tablet`; PP-111: `S2_clock_moment` (heads-up, by name, under the strip), `S2_clock_champion` (the champion's card), `S3_table_moment` (in the money, across the top of the table view), `S25_winner` (the champion's screen: upright, the two-pane tablet sideways, a phone's table view) | All three checks on all 24 cells (the fold frame: none, it is mid-animation); the top bar's buttons stay 48 x 48 dp at every scroll position. Also, checked but not drawn: the final table and the champion's card on the table view (a short window at large text keeps a banner to its title), the champion's screen offering "Save this night", and saved, with a long name fitted to the width. `SetupStripTest`: the strip shows whole settings, as many as fit. `BigMomentsScreenTest`: what each moment says, TalkBack's live region, a banner going after its time, the champion's card and screen and what their buttons ask for, Back, and the last knockout's envelope over the champion's screen |
 | `tournament-feature` | `PresetsScreenTest` | `S15_presets_list`, `S15_presets_locked` (mid-game: loading off, and why), `S15_presets_save`, `S15_presets_load` (the question when loading would replace what the host set) | Saved setups (PP-032): all three, at every scroll position, on all 24 cells; also the empty list, the rename form and the save form before the chip set is set up. The sheet is drawn as its content over the tab and its scrim; the checks run on the sheet alone. The Presets row itself is in the S1 goldens (setup page and panel) |
 | `tournament-feature` | `PresetsInteractionTest` | none | What the presets' controls send: the row on the setup page and in the panel, load (off mid-game), save (the name, the chip set switch, a name in use replaces it, a blank one can't be saved), share, rename (a name in use is refused), delete, and the load question |
 | `tournament-feature` | `TournamentInteractionTest`, `TournamentRotationTest`, `SetupFoldTest` | none | What each control sends; rotation per device class (Robolectric `+land` shows the table view, `+port` the clock, other tabs portrait on phones, tablets free, state kept through recreation; ✕ in a turned table view holds for that turn only, with the phone's hold faked through `LocalPhoneHold`); the fold plays once and is cut under Reduce motion |

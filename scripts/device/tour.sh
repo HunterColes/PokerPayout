@@ -803,15 +803,18 @@ s_table_view_knockout() {
   ui tap "text=Player 10" --scroll-in scrollable
   ui wait "text=Who knocked Player 10 out?"
   ui assert-text "text=10TH PLACE" "re=^Nobody" "desc=Back to who's out" "desc=Close knockout" || return 1
-  # Knock out is only in reach (and TalkBack's) once the panel is gone
+  # Knock out is only in reach (and TalkBack's) once the panel is gone. PP-111: ten players, nine
+  # left, so the seat draw's table of nine holds them all: "Final table" across the top of the clock.
   ui tap "text=Player 1" --scroll-in scrollable
   ui assert-text "text~=Player 10 is out in 10th · bounty to Player 1" text=UNDO "text=Knock out" \
-    "desc=Exit table view"
+    "desc=Exit table view" "re=^Final table"
 }
 s_table_view_knockout_undo() {
-  # UNDO on the snackbar takes the knockout back, in the Bank too: everyone in again
+  # UNDO on the snackbar takes the knockout back, in the Bank too: everyone in again, and the
+  # final table's banner goes with it (PP-111)
   ui tap text=UNDO
   ui wait-gone text=UNDO
+  ui wait-gone "re=^Final table" --timeout 5
   ui assert-text "text~=10 of 10 left" "text=Knock out" "desc=Exit table view" || return 1
   require_landscape
 }
@@ -2029,6 +2032,107 @@ s_bank_pko() {
   ui wait-gone "text=Player 2 is out"
   ui assert-text "text~=Player 1 takes \$2.50, bounty now \$7.50" "has=Player 1|bounty \$7.50, 1 knockout"
 }
+# Big moments (PP-111) -----------------------------------------------------------------------------
+# The PKO night above, on the clock: five players, Player 2 out, two places paid. The Bank's
+# knockouts bring the bubble (three left) and heads-up (two) to the clock; the table view's Knock
+# out makes the champion, whose screen (S25) takes the clock's place. UNDO takes it back, the
+# knockout again brings it again, and then its way to History: pay out in the Bank, then "Save
+# this night" on it. A banner's title starts its text ("re=^"), the pill beside the players left
+# is in capitals, so the two can't be mistaken.
+s_moments_start() {
+  tab Tournament
+  ui tap "Start clock"
+  ui wait "desc=Pause timer"
+}
+# Knocks Player $1 out at the Bank, credited to nobody ($2 empty) or to Player $2.
+bank_knockout() {
+  tab Bank
+  ui tap "desc=Knock out Player $1"
+  if [[ -n "${2:-}" ]]; then ui tap "text~=Player $2"; else ui tap "re=^Nobody"; fi
+  ui tap "text=Knock out Player $1"
+  ui wait-gone "text=Player $1 is out"
+}
+s_moment_bubble() {
+  # Player 3 out at the Bank: three left, two paid. Back on the clock the banner says so.
+  bank_knockout 3
+  tab Tournament
+  ui assert-text "re=^On the bubble" "desc=Table view"
+}
+s_moment_heads_up() {
+  # Player 4 out, by Player 1: two left, both paid. Heads-up is the bigger moment, so it shows.
+  bank_knockout 4 1
+  tab Tournament
+  ui assert-text "re=^Heads-up" "desc=Table view"
+}
+# The table view's Knock out: Player 5, by Player 1. The table view comes first if it isn't up.
+table_knockout_player_5() {
+  if ! ui find "desc=Exit table view" --timeout 1 >/dev/null 2>&1; then
+    ui tap "desc=Table view"
+    ui wait "desc=Exit table view"
+  fi
+  ui tap "text=Knock out"
+  ui wait "text=Who's out?"
+  ui tap "text=Player 5" --scroll-in scrollable
+  ui wait "text=Who knocked Player 5 out?"
+  ui tap "text=Player 1" --scroll-in scrollable
+  ui wait "text=CHAMPION"
+}
+s_moment_champion() {
+  # The last knockout, from the table view: the champion's screen in the clock's place, with what
+  # the paid places won and, while they are owed, the way to the Bank. Quick: UNDO's 8 s are next.
+  table_knockout_player_5
+  ui assert-text "text=Pay out in the Bank" "desc=Back to the clock"
+}
+s_moment_undo() {
+  # UNDO takes the last knockout back: the champion's screen goes (the Bank's top bar Undo if the
+  # snackbar has gone). Recorded again, the champion's screen opens again.
+  if ui find text=UNDO --timeout 1 >/dev/null 2>&1; then
+    ui tap text=UNDO
+  else
+    tab Bank
+    ui tap "desc~=Undo: Player 5 is out"
+    tab Tournament
+  fi
+  ui wait-gone "text=CHAMPION"
+  if ui find "text=Pay out in the Bank" --timeout 1 >/dev/null 2>&1; then echo "[ui] FAIL still the champion's screen"; return 1; fi
+  table_knockout_player_5
+  ui assert-text "text=Pay out in the Bank" "text=PAYOUTS"
+}
+s_moment_pay() {
+  # "Pay out in the Bank": the champion (prize and bounties) and the runner-up are paid there
+  ui tap "text=Pay out in the Bank" --scroll-in scrollable
+  ui wait "text~=Finished · Player 1 wins · "
+  require_tab_selected Bank || return 1
+  local p
+  for p in 1 5; do
+    ui scroll-to "desc~=Player $p, paid out, " --max 3
+    ui tap "desc~=Player $p, paid out, "
+    ui tap "text~=Mark paid · \$"
+    ui wait-gone "text=Pay Player $p"
+  done
+}
+s_moment_save() {
+  # Back on the clock, the champion's screen offers "Save this night"; saved, History has the night
+  tab Tournament
+  ui wait "text=CHAMPION"
+  ui tap "text=Save this night" --scroll-in scrollable
+  ui wait "text=Saved to History, in the Tools tab."
+  ui tap "text=Open History" --scroll-in scrollable
+  ui scroll-to "text~=Player 1 won" --max 3
+  require_tab_selected Tools || return 1
+  ui back
+  ui wait "text=CHAMPION"
+}
+s_moment_close() {
+  # ✕: the clock, with the champion's card under the strip, leading back to their screen
+  ui tap "desc=Back to the clock"
+  ui wait-gone "text=CHAMPION"
+  ui assert-text "text=Player 1 is the champion" "text=See the results" || return 1
+  ui tap "text=See the results"
+  ui wait "text=CHAMPION"
+  ui tap "desc=Back to the clock"
+  ui wait-gone "text=CHAMPION"
+}
 s_app_alive() {
   local pid; pid="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"
   [[ -n "$pid" ]] || { echo "app process is not running"; return 1; }
@@ -2151,6 +2255,14 @@ step rail-tools           "Rail: Tools tab"                                     
 step rail-payouts         "Rail: Payouts tab, table adds up"                    s_rail_payouts
 step rail-restored        "Phone width again: bottom bar back, tab kept"        s_rail_restored
 step bank-pko             "PKO: Player 1 takes \$2.50, bounty up to \$7.50"     s_bank_pko
+step moments-start        "Big moments: start the clock on the PKO night"       s_moments_start
+step moment-bubble        "A Bank knockout: \"On the bubble\" on the clock"     s_moment_bubble
+step moment-heads-up      "Another: \"Heads-up\" on the clock"                  s_moment_heads_up
+step moment-champion      "Table view knockout: the champion's screen (S25)"    s_moment_champion
+step moment-undo          "UNDO closes it; the knockout again opens it again"   s_moment_undo
+step moment-pay           "Pay out in the Bank: champion and runner-up paid"    s_moment_pay
+step moment-save          "Save this night on it; Open History has the night"   s_moment_save
+step moment-close         "Close: the clock's champion card leads back to it"   s_moment_close
 step app-alive            "App process still alive"                             s_app_alive
 
 extra_step live-clock-pause "Pause from the shade: paused, Resume offered"      s_live_clock_pause

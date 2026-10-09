@@ -89,12 +89,13 @@ class PayoutsCurrencyTest {
     }
 
     @Test
-    fun inYenAmountsAreWholeYen() {
+    fun inYenAmountsAreWholeYenAndTheRoundingStepsAreHundreds() {
         withCurrency(AppCurrency.YEN) {
             show()
-            compose.onNodeWithText("¥450 prize pool · 3 places paid").assertExists()
+            // Rounded to ¥500 steps, 2nd's ¥135 and 3rd's ¥90 come to nothing, so 1st alone is paid
+            compose.onNodeWithText("¥450 prize pool · 1 place paid").assertExists()
             compose.onNodeWithText("Adds up to ¥450").performScrollTo().assertExists()
-            listOf("¥1", "¥5", "¥10").forEach { compose.onAllNodesWithText(it).onFirst().assertExists() }
+            listOf("¥100", "¥500", "¥1,000").forEach { compose.onAllNodesWithText(it).onFirst().assertExists() }
         }
     }
 

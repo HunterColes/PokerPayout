@@ -1,6 +1,7 @@
 package com.huntercoles.pokerpayout.core.utils
 
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.Snapshot
 import com.huntercoles.pokerpayout.core.utils.DigitStyle.APOSTROPHE
 import com.huntercoles.pokerpayout.core.utils.DigitStyle.COMMA
@@ -10,6 +11,7 @@ import com.huntercoles.pokerpayout.core.utils.DigitStyle.SPACE
 import com.huntercoles.pokerpayout.core.utils.SymbolPlacement.AFTER_SPACED
 import com.huntercoles.pokerpayout.core.utils.SymbolPlacement.BEFORE
 import com.huntercoles.pokerpayout.core.utils.SymbolPlacement.BEFORE_SPACED
+import kotlinx.coroutines.flow.Flow
 import java.util.Currency
 import java.util.Locale
 import kotlin.math.abs
@@ -51,6 +53,9 @@ enum class DigitStyle(val groupSeparator: Char, val decimalMark: Char, val india
  * [decimals] is 0 for a currency whose cents nobody uses (the yen): amounts show in whole units,
  * rounded half up, and money fields take whole numbers. What is saved keeps its cents.
  *
+ * [roundingScale] sizes the payout rounding steps to the currency: 1, 5 or 10 of it, or for the yen,
+ * whose coins start where a dollar's notes do, ¥100, ¥500 and ¥1,000 (`PayoutRounding.unitCentsIn`).
+ *
  * [key] is what is saved (`currency_prefs`); never rename one.
  */
 enum class AppCurrency(
@@ -59,6 +64,7 @@ enum class AppCurrency(
     val placement: SymbolPlacement,
     val digits: DigitStyle,
     val decimals: Int = 2,
+    val roundingScale: Long = 1L,
 ) {
     DOLLAR("dollar", "$", BEFORE, POINT),
     EURO("euro", "€", AFTER_SPACED, COMMA),
@@ -67,7 +73,7 @@ enum class AppCurrency(
     RUPEE("rupee", "₹", BEFORE, LAKH),
     REAL("real", "R$", BEFORE_SPACED, COMMA),
     KRONA("krona", "kr", AFTER_SPACED, SPACE),
-    YEN("yen", "¥", BEFORE, POINT, decimals = 0),
+    YEN("yen", "¥", BEFORE, POINT, decimals = 0, roundingScale = 100L),
     YUAN("yuan", "¥", BEFORE, POINT),
     FRANC("franc", "CHF", BEFORE_SPACED, APOSTROPHE),
     ZLOTY("zloty", "zł", AFTER_SPACED, SPACE),
@@ -171,6 +177,12 @@ const val NO_BREAK_SPACE = ' '
  */
 object MoneyFormat {
     private val state = mutableStateOf(AppCurrency.DEFAULT)
+
+    /**
+     * The currency now, then each new pick: for a ViewModel whose sums depend on it (the yen's payout
+     * rounding steps), so a pick made on another tab redoes them.
+     */
+    val changes: Flow<AppCurrency> get() = snapshotFlow { current }
 
     /**
      * Set in a snapshot of its own, applied at once: open compositions see it as any state change,

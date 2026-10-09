@@ -2037,7 +2037,7 @@ s_bank_pko() {
 # draw's tables of three (from its steps). The Bank's knockouts bring the bubble and the final table
 # at once (three left: the bigger, the final table, shows; the pill says the bubble) and heads-up
 # (two) to the clock; the table view's Knock out makes the champion, whose screen (S25) takes the
-# clock's place. The Bank's Undo takes it back, the
+# clock's place. Its UNDO takes it back, the
 # knockout again brings it again, and then its way to History: pay out in the Bank, then "Save
 # this night" on it. A banner's title starts its text ("re=^"), the pill beside the players left
 # is in capitals, so the two can't be mistaken.
@@ -2081,23 +2081,19 @@ table_knockout_player_5() {
   ui wait "text=CHAMPION"
 }
 s_moment_champion() {
-  # The last knockout, from the table view: the champion's screen in the clock's place, with what
-  # the paid places won and, while they are owed, the way to the Bank. Quick: UNDO's 8 s are next.
+  # The last knockout, from the table view: the champion's screen takes the clock's place, and the
+  # snackbar's UNDO over it takes the knockout back at once (inside its 8 s): the screen goes, the
+  # table view's clock and its Knock out are back.
   table_knockout_player_5
-  ui assert-text "text=Pay out in the Bank" "desc=Back to the clock"
-}
-s_moment_undo() {
-  # The Bank's top-bar Undo takes the last knockout back (the snackbar's 8 s are over by now; the
-  # table view's own UNDO is the table-view-ko-undo step): the champion's screen closes on the
-  # clock. Recorded again, it opens again.
-  tab Bank
-  ui tap "desc~=Undo: Player 5 is out"
-  ui wait "desc=Knock out Player 5"
-  tab Tournament
+  ui tap text=UNDO
   ui wait-gone "text=CHAMPION"
-  if ui find "text=Pay out in the Bank" --timeout 1 >/dev/null 2>&1; then echo "[ui] FAIL still the champion's screen"; return 1; fi
+  ui assert-text "text=Knock out" "desc=Exit table view"
+}
+s_moment_again() {
+  # Recorded again, the champion's screen (S25) opens again: what the paid places won and, while
+  # they are owed, the way to the Bank
   table_knockout_player_5
-  ui assert-text "text=Pay out in the Bank" "text=PAYOUTS"
+  ui assert-text "text=Pay out in the Bank" "text=PAYOUTS" "desc=Back to the clock"
 }
 s_moment_pay() {
   # "Pay out in the Bank": the champion (prize and bounties) and the runner-up are paid there
@@ -2259,8 +2255,8 @@ step bank-pko             "PKO: Player 1 takes \$2.50, bounty up to \$7.50"     
 step moments-start        "Big moments: start the clock on the PKO night"       s_moments_start
 step moment-final-table   "A Bank knockout: \"Final table\", on the bubble"     s_moment_final_table
 step moment-heads-up      "Another: \"Heads-up\" on the clock"                  s_moment_heads_up
-step moment-champion      "Table view knockout: the champion's screen (S25)"    s_moment_champion
-step moment-undo          "The Bank's Undo closes it; again, it opens again"    s_moment_undo
+step moment-champion      "Table view knockout: champion's screen; UNDO, gone"  s_moment_champion
+step moment-again         "Knocked out again: the champion's screen (S25)"      s_moment_again
 step moment-pay           "Pay out in the Bank: champion and runner-up paid"    s_moment_pay
 step moment-save          "Save this night on it; Open History has the night"   s_moment_save
 step moment-close         "Close: the clock's champion card leads back to it"   s_moment_close

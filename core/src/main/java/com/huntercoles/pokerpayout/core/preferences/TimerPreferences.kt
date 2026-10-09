@@ -105,6 +105,29 @@ class TimerPreferences @Inject constructor(
         return true
     }
 
+    // ------------------------------------------------- the welcome (PP-113)
+
+    /**
+     * PP-113: true while the setup page shows its one-line welcome. Only a new install shows it
+     * ([settleWelcome]), until it is dismissed ([dismissWelcome]).
+     */
+    fun getShowWelcome(): Boolean = prefs.getString(WELCOME_KEY, null) == WELCOME_NEW
+
+    /** The welcome is done for good on this phone: no reset or restore brings it back. */
+    fun dismissWelcome() {
+        if (prefs.getString(WELCOME_KEY, null) != WELCOME_DONE) prefs.edit().putString(WELCOME_KEY, WELCOME_DONE).apply()
+    }
+
+    /**
+     * Once ever, at the app's first start with the welcome (PP-113): [isNewInstall] says whether the
+     * phone holds no data from before, and only then does the welcome show. Every later start leaves
+     * the answer as it is, so data saved since never changes it.
+     */
+    fun settleWelcome(isNewInstall: () -> Boolean) {
+        if (prefs.contains(WELCOME_KEY)) return
+        prefs.edit().putString(WELCOME_KEY, if (isNewInstall()) WELCOME_NEW else WELCOME_DONE).apply()
+    }
+
     fun setGameDurationMinutes(minutes: Int) {
         prefs.edit().putInt(GAME_DURATION_MINUTES_KEY, minutes).apply()
     }
@@ -255,10 +278,11 @@ class TimerPreferences @Inject constructor(
         /**
          * Keys about this phone, not the game, that a backup leaves out and a restore leaves alone: the
          * running clock's monotonic reading and boot (meaningless on another phone, or after a restart),
-         * and whether this phone has asked for notifications (a new phone should ask again).
+         * whether this phone has asked for notifications (a new phone should ask again), and whether
+         * it shows the welcome (once dismissed, a restore never brings it back).
          */
         val PHONE_ONLY_KEYS: Set<String> =
-            setOf(CLOCK_REALTIME_MS_KEY, CLOCK_WALL_MS_KEY, CLOCK_BOOT_COUNT_KEY, NOTIFICATIONS_ASKED_KEY)
+            setOf(CLOCK_REALTIME_MS_KEY, CLOCK_WALL_MS_KEY, CLOCK_BOOT_COUNT_KEY, NOTIFICATIONS_ASKED_KEY, WELCOME_KEY)
 
         /**
          * This file's saved [values] as a backup keeps them: a running clock is saved paused where it
@@ -297,6 +321,11 @@ class TimerPreferences @Inject constructor(
 
         // PP-081: not part of the clock, so no reset clears it
         private const val NOTIFICATIONS_ASKED_KEY = "notifications_permission_asked"
+
+        // PP-113: absent until the first start settles it; no reset clears it
+        private const val WELCOME_KEY = "welcome"
+        private const val WELCOME_NEW = "new"
+        private const val WELCOME_DONE = "done"
 
         // v1.1.x clock, read once and migrated to the anchor
         private const val LEGACY_CURRENT_TIME_SECONDS_KEY = "current_time_seconds"

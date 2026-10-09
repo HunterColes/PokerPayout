@@ -28,13 +28,69 @@ class SoundManagerTest {
     private lateinit var player: RecordingPlayer
     private lateinit var sound: SoundManager
 
+    /** What the music was told: "dip" when a cue starts, "up" when it ends. */
+    private val music = mutableListOf<String>()
+    private val ducking = object : CueDucking {
+        override fun cueStarted() {
+            music += "dip"
+        }
+
+        override fun cueEnded() {
+            music += "up"
+        }
+    }
+
     @Before
     fun setUp() {
         val app: Context = ApplicationProvider.getApplicationContext()
+        app.getSharedPreferences("audio_prefs", Context.MODE_PRIVATE).edit().clear().commit()
         audioPreferences = AudioPreferences(app)
         player = RecordingPlayer()
-        sound = SoundManager(NoSoundFiles(app), audioPreferences)
+        sound = SoundManager(NoSoundFiles(app), audioPreferences, ducking)
         sound.newPlayer = { player }
+    }
+
+    @Test
+    fun `the music dips while a cue sounds and comes back up after`() {
+        sound.preloadSound(CHIME)
+        player.finishPreparing()
+
+        sound.playSound(CHIME)
+        assertEquals(listOf("dip"), music)
+
+        player.finishPlaying()
+        assertEquals(listOf("dip", "up"), music)
+    }
+
+    @Test
+    fun `a cue that fails lets the music back up`() {
+        sound.playSound(CHIME) // not loaded: loads, then starts once ready
+        player.finishPreparing()
+        assertEquals(listOf("dip"), music)
+
+        player.fail()
+        assertEquals(listOf("dip", "up"), music)
+    }
+
+    @Test
+    fun `with the sound off nothing dips`() {
+        audioPreferences.setMuted(true)
+        sound.preloadSound(CHIME)
+        player.finishPreparing()
+        sound.playSound(CHIME)
+        assertEquals(emptyList<String>(), music)
+    }
+
+    @Test
+    fun `a preview plays even with the sound off`() {
+        sound.preloadSound(CHIME)
+        player.finishPreparing()
+        player.calls.clear()
+
+        audioPreferences.setMuted(true)
+        sound.previewSound(CHIME)
+
+        assertEquals(listOf("volume 1.0", "start"), player.calls)
     }
 
     @Test
@@ -88,14 +144,34 @@ class SoundManagerTest {
     private class RecordingPlayer : MediaPlayer() {
         val calls = mutableListOf<String>()
         private var onPrepared: MediaPlayer.OnPreparedListener? = null
+        private var onCompletion: MediaPlayer.OnCompletionListener? = null
+        private var onError: MediaPlayer.OnErrorListener? = null
 
         fun finishPreparing() {
             onPrepared?.onPrepared(this)
         }
 
+        fun finishPlaying() {
+            onCompletion?.onCompletion(this)
+        }
+
+        fun fail() {
+            onError?.onError(this, MEDIA_ERROR_UNKNOWN, 0)
+        }
+
         override fun setOnPreparedListener(listener: MediaPlayer.OnPreparedListener?) {
             onPrepared = listener
         }
+
+        override fun setOnCompletionListener(listener: MediaPlayer.OnCompletionListener?) {
+            onCompletion = listener
+        }
+
+        override fun setOnErrorListener(listener: MediaPlayer.OnErrorListener?) {
+            onError = listener
+        }
+
+        override fun seekTo(msec: Int) = Unit
 
         override fun setAudioAttributes(attributes: AudioAttributes?) = Unit
 

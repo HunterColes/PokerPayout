@@ -1,0 +1,48 @@
+name: An idea
+description: Something that would make your poker nights easier.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are welcome. Tell us about the night it would help with; we'll work out the details together.
+        The app stays free, offline and private, so ideas that need the internet or an account won't fit.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      placeholder: "A clock for each table when we play two tables in one room."
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: When would it help?
+      description: What happens at your table today, and what's awkward about it.
+      placeholder: "The players at the second table can't see the phone, so we shout the blinds across the room."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where would it go?
+      options:
+        - Tournament
+        - Bank
+        - Payouts
+        - Tools
+        - Somewhere new
+        - Not sure
+    validations:
+      required: false
+
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else?
+      description: Sketches, screenshots of other apps, or how you do it on paper today.
+    validations:
+      required: false

@@ -1,12 +1,15 @@
 package com.huntercoles.pokerpayout.tools.presentation
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.design.components.SnackbarController
+import com.huntercoles.pokerpayout.core.domain.history.NightCsv
 import com.huntercoles.pokerpayout.core.domain.history.NightStore
+import com.huntercoles.pokerpayout.core.testing.FakeDocumentFiles
 import com.huntercoles.pokerpayout.tools.presentation.composable.HistoryFixtures
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -16,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,6 +40,7 @@ class HistoryViewModelTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val snackbars = SnackbarController()
     private val viewModels = ViewModelStore()
+    private val files = FakeDocumentFiles()
     private lateinit var store: NightStore
 
     @Before
@@ -60,7 +65,7 @@ class HistoryViewModelTest {
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                HistoryViewModel(store, snackbars, HistoryMessages(context)) as T
+                HistoryViewModel(store, snackbars, HistoryMessages(context), files, dispatcher) as T
         }
         return ViewModelProvider(viewModels, factory)[HistoryViewModel::class.java].also { settle() }
     }
@@ -146,6 +151,31 @@ class HistoryViewModelTest {
         settle()
         assertEquals(listOf(HistoryFixtures.holiday), viewModel.state.nights)
         assertEquals("1 Priya 5", viewModel.state.table().first())
+    }
+
+    @Test
+    fun `every night saved as a CSV file where the player picked, and the snackbar names it`() {
+        saveAll()
+        val viewModel = viewModel()
+        viewModel.send(HistoryIntent.SaveCsv(Uri.parse("content://downloads/poker-nights-2026-10-08.csv")))
+
+        val csv = files.texts.getValue("content://downloads/poker-nights-2026-10-08.csv")
+        assertEquals(NightCsv.of(HistoryFixtures.nights), csv)
+        assertTrue(csv.startsWith("date,structure,prize_pool,"))
+        val shown = requireNotNull(snackbars.hostState.currentSnackbarData) { "no snackbar" }
+        assertEquals("Saved poker-nights-2026-10-08.csv", shown.visuals.message)
+        assertNull("nothing to undo", shown.visuals.actionLabel)
+    }
+
+    @Test
+    fun `a CSV file that can't be written says so`() {
+        saveAll()
+        files.failWrites = true
+        viewModel().send(HistoryIntent.SaveCsv(Uri.parse("content://full/nights.csv")))
+        assertEquals(
+            "Couldn't save the file there. Try another place.",
+            snackbars.hostState.currentSnackbarData?.visuals?.message,
+        )
     }
 
     @Test

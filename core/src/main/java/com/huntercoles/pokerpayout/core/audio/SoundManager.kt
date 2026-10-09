@@ -12,96 +12,64 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Manages sound playback for the poker tournament app.
+ * Plays the clock's cue sounds (the chime, or the sound pack's sounds).
  * Uses MediaPlayer for longer audio files (10+ seconds) with proper audio focus management.
- * 
+ *
  * Note: SoundPool has a 1MB limit per sound (~5.6 seconds at 44.1kHz stereo),
  * so MediaPlayer is used instead for tournament notifications.
+ *
+ * While a cue sounds, [ducking] dips the music under it; the cue also asks for transient, duckable
+ * audio focus, so another app's music dips too.
  */
 @Singleton
 class SoundManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val audioPreferences: AudioPreferences
+    private val audioPreferences: AudioPreferences,
+    private val ducking: CueDucking,
 ) {
     private var mediaPlayer: MediaPlayer? = null
     private var currentSoundResId: Int = -1
     private var isPrepared = false
 
+    /** A cue is sounding: the music is dipped until it ends. */
+    private var sounding = false
+
     /** Makes each player; a test puts in one that records what it is asked to do. */
     internal var newPlayer: () -> MediaPlayer = { MediaPlayer() }
-    
+
     private val audioManager: AudioManager by lazy {
         context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
-    
+
     private val audioFocusRequest: AudioFocusRequest by lazy {
         AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).run {
-            setAudioAttributes(AudioAttributes.Builder().run {
-                setUsage(AudioAttributes.USAGE_GAME)
-                setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                build()
-            })
+            setAudioAttributes(attributes)
             build()
         }
     }
-    
+
+    private val attributes: AudioAttributes by lazy {
+        AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_GAME)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+    }
+
     /**
      * Preloads a sound effect without playing it.
      * Call this early to ensure sound is ready when needed.
      */
     fun preloadSound(@RawRes soundResId: Int) {
         try {
-            // Release any existing player
             releasePlayer()
-            
-            // Create and prepare new MediaPlayer
-            mediaPlayer = newPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_GAME)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
-                
-                // Set data source
-                val afd = context.resources.openRawResourceFd(soundResId)
-                afd?.use {
-                    setDataSource(it.fileDescriptor, it.startOffset, it.length)
-                }
-                
-                // Set volume based on preferences
-                val volume = audioPreferences.getVolume()
-                setVolume(volume, volume)
-                
-                // Prepare asynchronously
-                setOnPreparedListener {
-                    isPrepared = true
-                }
-                
-                setOnCompletionListener {
-                    // Reset to beginning after completion so it can be played again
-                    seekTo(0)
-                    isPrepared = true
-                    // Abandon audio focus after playback completes
-                    audioManager.abandonAudioFocusRequest(audioFocusRequest)
-                }
-                
-                setOnErrorListener { _, _, _ ->
-                    // Log error silently and reset state
-                    isPrepared = false
-                    true // Return true to indicate we handled the error
-                }
-                
-                prepareAsync()
-            }
-            
+            mediaPlayer = newPrepared(soundResId, startWhenReady = false)
             currentSoundResId = soundResId
-        } catch (e: Exception) {
-            // Silently handle any loading errors
+        } catch (ignored: Exception) {
+            // A sound that can't load stays silent; the clock carries on
             isPrepared = false
         }
     }
-    
+
     /**
      * Plays a sound effect from raw resources.
      * If the sound is already preloaded and prepared, plays immediately.
@@ -109,99 +77,90 @@ class SoundManager @Inject constructor(
      * Respects volume and mute settings and requests audio focus.
      */
     fun playSound(@RawRes soundResId: Int) {
+        if (!audioPreferences.getIsMuted()) start(soundResId)
+    }
+
+    /** Plays [soundResId] once so the host can hear it (the cue sound picker), even with the sound off. */
+    fun previewSound(@RawRes soundResId: Int) = start(soundResId)
+
+    private fun start(@RawRes soundResId: Int) {
         try {
-            // Check if muted
-            if (audioPreferences.getIsMuted()) {
-                return
-            }
-            
-            // Request audio focus before playing
-            val result = audioManager.requestAudioFocus(audioFocusRequest)
-            if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-                // Failed to get audio focus, don't play
-                return
-            }
-            
-            // If already prepared with the right sound, just play it
-            if (currentSoundResId == soundResId && isPrepared && mediaPlayer != null) {
-                mediaPlayer?.let { player ->
-                    if (player.isPlaying) {
-                        player.seekTo(0) // Restart if already playing
-                    }
-                    // The volume slider may have moved since the player was prepared (B12)
-                    val volume = audioPreferences.getVolume()
-                    player.setVolume(volume, volume)
-                    player.start()
-                }
-                return
-            }
-            
-            // Otherwise, prepare and play
-            releasePlayer()
-            
-            mediaPlayer = newPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_GAME)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build()
-                )
-                
-                // Set data source
-                val afd = context.resources.openRawResourceFd(soundResId)
-                afd?.use {
-                    setDataSource(it.fileDescriptor, it.startOffset, it.length)
-                }
-                
-                // Set volume based on preferences
+            if (audioManager.requestAudioFocus(audioFocusRequest) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) return
+            val ready = mediaPlayer?.takeIf { currentSoundResId == soundResId && isPrepared }
+            if (ready != null) {
+                if (ready.isPlaying) ready.seekTo(0) // Restart if already playing
+                // The volume slider may have moved since the player was prepared (B12)
                 val volume = audioPreferences.getVolume()
-                setVolume(volume, volume)
-                
-                // Prepare and play immediately
-                setOnPreparedListener { player ->
-                    isPrepared = true
-                    player.start()
-                }
-                
-                setOnCompletionListener {
-                    // Reset to beginning after completion
-                    seekTo(0)
-                    isPrepared = true
-                    // Abandon audio focus after playback completes
-                    audioManager.abandonAudioFocusRequest(audioFocusRequest)
-                }
-                
-                setOnErrorListener { _, _, _ ->
-                    // Log error silently and reset state
-                    isPrepared = false
-                    audioManager.abandonAudioFocusRequest(audioFocusRequest)
-                    true
-                }
-                
-                prepareAsync()
+                ready.setVolume(volume, volume)
+                begin(ready)
+            } else {
+                releasePlayer()
+                mediaPlayer = newPrepared(soundResId, startWhenReady = true)
+                currentSoundResId = soundResId
             }
-            
-            currentSoundResId = soundResId
-        } catch (e: Exception) {
+        } catch (ignored: Exception) {
             // Silently handle any playback errors and release audio focus
-            audioManager.abandonAudioFocusRequest(audioFocusRequest)
+            ended()
         }
     }
-    
+
+    /** A player for [soundResId] at the current volume, preparing; it starts once ready if [startWhenReady]. */
+    private fun newPrepared(@RawRes soundResId: Int, startWhenReady: Boolean): MediaPlayer = newPlayer().apply {
+        setAudioAttributes(attributes)
+        context.resources.openRawResourceFd(soundResId)?.use {
+            setDataSource(it.fileDescriptor, it.startOffset, it.length)
+        }
+        val volume = audioPreferences.getVolume()
+        setVolume(volume, volume)
+        setOnPreparedListener { player ->
+            isPrepared = true
+            if (startWhenReady) begin(player)
+        }
+        setOnCompletionListener {
+            // Back to the beginning, so it can be played again
+            seekTo(0)
+            isPrepared = true
+            ended()
+        }
+        setOnErrorListener { _, _, _ ->
+            isPrepared = false
+            ended()
+            true // handled
+        }
+        prepareAsync()
+    }
+
+    /** Starts [player], with the music dipped under it. */
+    private fun begin(player: MediaPlayer) {
+        if (!sounding) {
+            sounding = true
+            ducking.cueStarted()
+        }
+        player.start()
+    }
+
+    /** The cue is over (or failed): the music comes back up and the focus goes. */
+    private fun ended() {
+        if (sounding) {
+            sounding = false
+            ducking.cueEnded()
+        }
+        audioManager.abandonAudioFocusRequest(audioFocusRequest)
+    }
+
     /**
      * Releases all audio resources.
      * Should be called when the app is shutting down or audio is no longer needed.
      */
     fun release() {
         releasePlayer()
-        // Abandon audio focus when releasing
         try {
-            audioManager.abandonAudioFocusRequest(audioFocusRequest)
-        } catch (e: Exception) {
+            ended()
+        } catch (ignored: Exception) {
             // Ignore any errors during cleanup
         }
     }
-    
+
     /**
      * Internal helper to release the MediaPlayer instance.
      */
@@ -214,7 +173,7 @@ class SoundManager @Inject constructor(
                 reset()
                 release()
             }
-        } catch (e: Exception) {
+        } catch (ignored: Exception) {
             // Ignore any errors during cleanup
         } finally {
             mediaPlayer = null

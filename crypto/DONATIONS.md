@@ -1,8 +1,10 @@
-<h1 align="center">Donations</h1>
+<h1 align="center">Support Poker Payout</h1>
 
-<h4 align="center">
-  Thank you for your support! Your donations help us continue improving this free and open-source project.
-</h4>
+<p align="center">
+  Poker Payout is free, with no ads and nothing locked.<br/>
+  If it has made your poker nights easier and you'd like to say thanks, a donation is very welcome.<br/>
+  It pays for the time that goes into new features and fixes. Thank you!
+</p>
 
 ---
 
@@ -18,4 +20,17 @@
   <code>4ANUxAZ5Ra3FewyyiHnKKahetsvXLMgocCwEiYeK1qDLjCjxSJS275XRvpZ1JRMWjvLS5xDYzwjESY2qF4UE4v1R2cz1QeU</code>
 </p>
 
+<p align="center"><sub>Copy the address, or scan the code with your wallet. Check the first and last few characters before you send.</sub></p>
+
 ---
+
+## Other ways to help
+
+They cost nothing and help just as much:
+
+- **Star the repository** on GitHub, so more people find it.
+- **Tell your poker group**, or the next home game you play in.
+- **Report a bug or suggest an idea:** [open an issue](https://github.com/HunterColes/PokerPayout/issues/new/choose).
+- **Contribute code:** see [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+[Back to the README](../README.md)

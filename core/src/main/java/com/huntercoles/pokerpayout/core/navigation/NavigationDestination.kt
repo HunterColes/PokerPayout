@@ -37,6 +37,18 @@ sealed class NavigationDestination {
     @Serializable
     data object History : NavigationDestination()
 
+    /** The music: a playlist of the host's songs, and playing it with the clock (Tools > Sound). */
+    @Serializable
+    data object Music : NavigationDestination()
+
+    /** The cue sound packs, each sound heard before it's picked (Tools > Sound). */
+    @Serializable
+    data object CueSounds : NavigationDestination()
+
+    /** Everything the app saves, in one file: save a backup, open one and restore it. */
+    @Serializable
+    data object Backup : NavigationDestination()
+
     /** A countdown for each decision, with time-bank cards for slow players. */
     @Serializable
     data object ShotClock : NavigationDestination()

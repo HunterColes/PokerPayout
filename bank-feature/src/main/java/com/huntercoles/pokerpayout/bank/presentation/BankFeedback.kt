@@ -30,6 +30,7 @@ sealed interface KnockoutPay {
  * What the Bank says after an action ("Rita is out in 8th · bounty to Marcus"), on the app's one
  * snackbar, with Undo.
  */
+@Suppress("TooManyFunctions") // one small function per message
 class BankFeedback @Inject constructor(
     @ApplicationContext private val context: Context,
     private val snackbars: SnackbarController
@@ -92,4 +93,17 @@ class BankFeedback @Inject constructor(
         context.getString(R.string.bank_done_paid, name, FormatUtils.formatMoney(cents))
 
     fun unpaid(name: String): String = context.getString(R.string.bank_done_unpaid, name)
+
+    /** "Sam paid Dana $45", "The bank paid Dana $45", "Sam hasn't paid the bank yet"; null is the Bank. */
+    fun settlePayment(from: String?, to: String?, cents: Long, paid: Boolean): String {
+        val payer = from ?: context.getString(R.string.bank_settle_the_bank_first)
+        val payee = to ?: context.getString(R.string.bank_settle_the_bank)
+        return if (paid) {
+            context.getString(R.string.bank_done_settle_paid, payer, payee, FormatUtils.formatMoney(cents))
+        } else {
+            context.getString(R.string.bank_done_settle_unpaid, payer, payee)
+        }
+    }
+
+    fun square(): String = context.getString(R.string.bank_done_square)
 }

@@ -6,7 +6,6 @@ This directory contains all metadata files required for F-Droid submission.
 
 ```
 metadata/
-├── CHECKLIST.md                          # Pre-submission checklist
 ├── com.huntercoles.pokerpayout.yml       # Main metadata file for F-Droid
 └── en-US/                                # Localized content (English-US)
     ├── README.md                         # Instructions for adding images
@@ -35,7 +34,7 @@ Edit `com.huntercoles.pokerpayout.yml` and verify:
 - Repository URLs
 - Binary download URL pattern
 - Build configuration
-- Signing key fingerprint (use production key!)
+- Signing key fingerprint (`AllowedAPKSigningKeys`: the release key's certificate)
 
 ### 3. Follow Submission Guide
 
@@ -64,15 +63,11 @@ Contains all user-facing content that appears in the F-Droid app listing:
 - **featureGraphic.png**: Banner image at top of listing
 - **phoneScreenshots/**: Screenshots displayed in listing
 
-### `CHECKLIST.md`
-A quick checklist to track your F-Droid submission progress.
-
 ## Important Notes
 
-⚠️ **Production Signing Required**
-- The current `AllowedAPKSigningKeys` uses the **debug keystore**
-- You must create and use a production keystore before submission
-- See `../docs/FDROID_SUBMISSION.md` for instructions
+🔑 **Signing**
+- `AllowedAPKSigningKeys` pins the release key's certificate (the 2026 key, since 1.2.0)
+- Key changes: "The 2026 signing key change" in [docs/RELEASING.md](../docs/RELEASING.md)
 
 📦 **GitHub Release Required**
 - F-Droid downloads your signed APK from GitHub releases

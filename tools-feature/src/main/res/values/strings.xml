@@ -19,6 +19,8 @@
     <string name="tools_equity_quiz_description">Guess who\'s ahead, then see the real odds</string>
     <string name="tools_history_title">History</string>
     <string name="tools_history_description">Saved nights and the season\'s points</string>
+    <string name="tools_backup_title">Backup</string>
+    <string name="tools_backup_description">Save everything to a file, or restore from one</string>
     <string name="tools_sound_title">Sound</string>
     <string name="tools_sound_description">A chime %1$d s before each level, break and the end</string>
     <string name="tools_volume">Chime volume</string>

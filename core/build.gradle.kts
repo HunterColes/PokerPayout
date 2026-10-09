@@ -70,7 +70,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.hilt)
     implementation(libs.kotlin.coroutines)
-    implementation(libs.kotlin.serialization)
+    api(libs.kotlin.serialization) // backup sections (core/backup) are JSON objects in their API
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.navigation)
     implementation(libs.timber)

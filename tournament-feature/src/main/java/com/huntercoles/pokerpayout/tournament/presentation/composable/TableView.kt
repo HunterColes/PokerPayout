@@ -221,7 +221,7 @@ private fun TableSide(uiState: TimerUiState, blindsCap: Dp) {
             )
         }
         HorizontalDivider(color = PokerColors.FeltLine)
-        NextBlinds(uiState)
+        NextBlinds(uiState.blindsUp)
     } else {
         uiState.currentBreak?.let { segment ->
             breakDetails(segment, formatter)?.let {
@@ -241,7 +241,7 @@ private fun TableSide(uiState: TimerUiState, blindsCap: Dp) {
 private fun TableFooter(uiState: TimerUiState, controlsAlpha: Float, onIntent: (TimerIntent) -> Unit, onExit: () -> Unit) {
     val formatter = rememberChipFormatter()
     val table = uiState.table
-    val bigBlind = (uiState.currentLevelSegment ?: uiState.nextLevelSegment)?.level?.bigBlind ?: 0
+    val bigBlind = uiState.statsBigBlind
     val facts = listOfNotNull(
         stringResource(R.string.table_left, table.playersLeft, table.playerCount),
         if (table.averageStack > 0 && bigBlind > 0) {
@@ -270,7 +270,7 @@ private fun TableFooter(uiState: TimerUiState, controlsAlpha: Float, onIntent: (
             facts.forEach { Text(it, style = factStyle, color = PokerColors.Chalk) }
         }
         Row(Modifier.alpha(controlsAlpha), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PlayPauseButton(uiState, TableControl) { onIntent(TimerIntent.ToggleTimer) }
+            PlayPauseButton(uiState.buttons, TableControl) { onIntent(TimerIntent.ToggleTimer) }
             ExitButton(onExit)
         }
     }

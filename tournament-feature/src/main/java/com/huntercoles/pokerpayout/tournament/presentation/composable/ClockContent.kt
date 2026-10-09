@@ -82,8 +82,8 @@ private fun ClockMain(timer: TimerUiState, actions: TournamentActions, layout: C
         else -> {
             WithWidth(Modifier.fillMaxWidth()) { width -> ClockHero(timer, width, heroCap, actions.onTimerIntent) }
             ClockProgress(timer)
-            BlindsCard(timer, wide = layout == ClockLayout.TwoPane)
-            ClockControls(timer, actions.onTimerIntent, compact = layout == ClockLayout.Small)
+            BlindsCard(timer.blindsUp, wide = layout == ClockLayout.TwoPane)
+            ClockControls(timer.buttons, actions.onTimerIntent, compact = layout == ClockLayout.Small)
         }
     }
 }
@@ -91,7 +91,7 @@ private fun ClockMain(timer: TimerUiState, actions: TournamentActions, layout: C
 /** The table's numbers, the info list and the schedule. */
 @Composable
 private fun ClockSide(setup: TournamentConfigUiState, timer: TimerUiState, showSubs: Boolean) {
-    ClockStats(timer, setup.paidPlaces, showSubs = showSubs)
+    ClockStats(timer.table, timer.statsBigBlind, setup.paidPlaces, showSubs = showSubs)
     ClockInfo(timer)
     PokerEyebrow(stringResource(R.string.clock_schedule), modifier = Modifier.padding(top = 4.dp))
     ScheduleCard(timer)

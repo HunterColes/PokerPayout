@@ -62,7 +62,7 @@ internal fun BreakContent(uiState: TimerUiState, actions: TournamentActions, wid
                 enabled = !uiState.isFinished,
                 modifier = Modifier.weight(1f),
             )
-            PlayPauseButton(uiState, ControlSize) { actions.onTimerIntent(TimerIntent.ToggleTimer) }
+            PlayPauseButton(uiState.buttons, ControlSize) { actions.onTimerIntent(TimerIntent.ToggleTimer) }
         }
     }
 }

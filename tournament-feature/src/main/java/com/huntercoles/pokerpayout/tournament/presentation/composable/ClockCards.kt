@@ -32,6 +32,8 @@ import com.huntercoles.pokerpayout.core.design.components.Stat
 import com.huntercoles.pokerpayout.core.design.components.StatStrip
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
+import com.huntercoles.pokerpayout.tournament.presentation.BlindsUp
+import com.huntercoles.pokerpayout.tournament.presentation.TableStats
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import java.text.NumberFormat
 
@@ -42,10 +44,10 @@ internal val CardShape = RoundedCornerShape(PokerDimens.CornerCard)
  * dimmer, so the two can't be confused. [wide] lays all three out in one row (tablets, Z4).
  */
 @Composable
-internal fun BlindsCard(uiState: TimerUiState, modifier: Modifier = Modifier, wide: Boolean = false) {
+internal fun BlindsCard(blinds: BlindsUp, modifier: Modifier = Modifier, wide: Boolean = false) {
     val formatter = rememberChipFormatter()
-    val level = uiState.currentLevelSegment?.level ?: return
-    val blinds = blindsText(level, formatter)
+    val level = blinds.current?.level ?: return
+    val current = blindsText(level, formatter)
     val ante = level.ante.takeIf { it > 0 }?.let { formatter.format(it) }
     Column(
         modifier = modifier
@@ -58,23 +60,23 @@ internal fun BlindsCard(uiState: TimerUiState, modifier: Modifier = Modifier, wi
     ) {
         if (wide) {
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                CurrentBlinds(blinds, Modifier.weight(BLINDS_WEIGHT), cap = WideBlinds)
+                CurrentBlinds(current, Modifier.weight(BLINDS_WEIGHT), cap = WideBlinds)
                 ante?.let { AnteColumn(it, Modifier.weight(ANTE_WEIGHT), PokerType.DisplayM.fontSize) }
-                NextBlinds(uiState, Modifier.weight(NEXT_WEIGHT), alignEnd = true)
+                NextBlinds(blinds, Modifier.weight(NEXT_WEIGHT), alignEnd = true)
             }
         } else {
             WithWidth { width ->
                 // Blinds and ante share one fitted size, the ante a little smaller, so neither crowds out the other.
-                val together = listOfNotNull(blinds, ante).joinToString("  ")
+                val together = listOfNotNull(current, ante).joinToString("  ")
                 val size = rememberFittedSize(together, PokerType.DisplayL, width, PhoneBlinds)
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         PokerEyebrow(stringResource(R.string.clock_blinds))
                         WithWidth { column ->
                             val shared = with(LocalDensity.current) { size.toDp() }
-                            val fitted = rememberFittedSize(blinds, PokerType.DisplayL, column, shared)
+                            val fitted = rememberFittedSize(current, PokerType.DisplayL, column, shared)
                             Text(
-                                text = blinds,
+                                text = current,
                                 style = PokerType.DisplayL.copy(fontSize = fitted, lineHeight = fitted),
                                 color = PokerColors.CardWhite,
                                 maxLines = 1,
@@ -86,7 +88,7 @@ internal fun BlindsCard(uiState: TimerUiState, modifier: Modifier = Modifier, wi
                 }
             }
             HorizontalDivider(color = PokerColors.FeltLine)
-            NextBlinds(uiState, Modifier.fillMaxWidth())
+            NextBlinds(blinds, Modifier.fillMaxWidth())
         }
     }
 }
@@ -116,14 +118,14 @@ private fun AnteColumn(ante: String, modifier: Modifier, size: TextUnit) {
 /** "NEXT · LEVEL 7  400 / 800 ante 800", "NEXT · BREAK  10 min", or "Final level". */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun NextBlinds(uiState: TimerUiState, modifier: Modifier = Modifier, alignEnd: Boolean = false) {
+internal fun NextBlinds(blinds: BlindsUp, modifier: Modifier = Modifier, alignEnd: Boolean = false) {
     val formatter = rememberChipFormatter()
-    val upcomingBreak = uiState.timeline.segments.getOrNull(uiState.currentSegmentIndex + 1) as? BreakSegment
-    val next = uiState.nextLevelSegment
+    val upcomingBreak = blinds.upcomingBreak
+    val next = blinds.next
     val align = if (alignEnd) Alignment.End else Alignment.Start
     Column(modifier, horizontalAlignment = align, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         when {
-            uiState.isFinished || (upcomingBreak == null && next == null) ->
+            blinds.finished || (upcomingBreak == null && next == null) ->
                 PokerEyebrow(stringResource(R.string.clock_next_none))
             upcomingBreak != null -> {
                 PokerEyebrow(stringResource(R.string.clock_next_break))
@@ -170,12 +172,19 @@ internal fun breakDetails(segment: BreakSegment, formatter: NumberFormat): Strin
     return parts.takeIf { it.isNotEmpty() }?.joinToString(stringResource(R.string.strip_separator))
 }
 
-/** Players left, average stack (and in big blinds), prize pool (and places paid). */
+/**
+ * Players left, average stack (and in [bigBlind]s, [TimerUiState.statsBigBlind]), prize pool (and
+ * places paid). It takes the table's numbers, not the clock's whole state, so it skips the ticks.
+ */
 @Composable
-internal fun ClockStats(uiState: TimerUiState, paidPlaces: Int, modifier: Modifier = Modifier, showSubs: Boolean = true) {
+internal fun ClockStats(
+    table: TableStats,
+    bigBlind: Int,
+    paidPlaces: Int,
+    modifier: Modifier = Modifier,
+    showSubs: Boolean = true,
+) {
     val formatter = rememberChipFormatter()
-    val table = uiState.table
-    val bigBlind = (uiState.currentLevelSegment ?: uiState.nextLevelSegment)?.level?.bigBlind ?: 0
     val avg = table.averageStack
     StatStrip(
         stats = listOf(

@@ -37,6 +37,7 @@ import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerPill
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.tournament.R
+import com.huntercoles.pokerpayout.tournament.presentation.ClockButtons
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 
@@ -101,19 +102,20 @@ internal fun ClockProgress(uiState: TimerUiState, modifier: Modifier = Modifier,
 /**
  * Previous level, minus a minute, play/pause, plus a minute, next level (PP-046: play/pause has its
  * own big button, never on the digits; D5: the ±1 nudges). [compact] is for small phones: 48 dp.
+ * It takes [ClockButtons], not the clock's whole state, so it skips the clock's ticks.
  */
 @Composable
-internal fun ClockControls(uiState: TimerUiState, onIntent: (TimerIntent) -> Unit, compact: Boolean = false) {
-    val started = uiState.hasTimerStarted
-    val live = started && !uiState.isFinished
+internal fun ClockControls(buttons: ClockButtons, onIntent: (TimerIntent) -> Unit, compact: Boolean = false) {
+    val started = buttons.started
+    val live = started && !buttons.finished
     val small = if (compact) CompactControl else ControlSize
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val back = started && uiState.canGoBack
-        val forward = started && uiState.canGoForward
+        val back = started && buttons.canGoBack
+        val forward = started && buttons.canGoForward
         RoundControl(
             stringResource(R.string.clock_previous),
             back,
@@ -131,7 +133,7 @@ internal fun ClockControls(uiState: TimerUiState, onIntent: (TimerIntent) -> Uni
         ) {
             ControlLabel(stringResource(R.string.clock_minus_one), live)
         }
-        PlayPauseButton(uiState, if (compact) CompactPlay else PlayButtonSize) { onIntent(TimerIntent.ToggleTimer) }
+        PlayPauseButton(buttons, if (compact) CompactPlay else PlayButtonSize) { onIntent(TimerIntent.ToggleTimer) }
         RoundControl(
             stringResource(R.string.clock_plus_minute),
             live,
@@ -190,15 +192,15 @@ private fun ControlLabel(text: String, enabled: Boolean) {
 
 /** The gold play/pause button: "Start timer", "Pause timer" or "Resume timer" for TalkBack. */
 @Composable
-internal fun PlayPauseButton(uiState: TimerUiState, size: Dp, onClick: () -> Unit) {
+internal fun PlayPauseButton(buttons: ClockButtons, size: Dp, onClick: () -> Unit) {
     val description = stringResource(
         when {
-            !uiState.hasTimerStarted -> R.string.clock_start
-            uiState.isRunning -> R.string.clock_pause
+            !buttons.started -> R.string.clock_start
+            buttons.running -> R.string.clock_pause
             else -> R.string.clock_resume
         },
     )
-    val enabled = !uiState.isFinished
+    val enabled = !buttons.finished
     Box(
         modifier = Modifier
             .size(size)
@@ -209,7 +211,7 @@ internal fun PlayPauseButton(uiState: TimerUiState, size: Dp, onClick: () -> Uni
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = if (uiState.isRunning) PokerIcons.Pause else PokerIcons.Play,
+            imageVector = if (buttons.running) PokerIcons.Pause else PokerIcons.Play,
             contentDescription = null,
             tint = if (enabled) PokerColors.FeltDeep else PokerColors.ChalkDim,
             modifier = Modifier.size(size * ICON_SHARE),

@@ -74,6 +74,13 @@ class MusicPreferences @Inject constructor(@ApplicationContext context: Context)
 
     companion object {
         const val FILE = "music_prefs"
+
+        /**
+         * About this phone's files, not the night: the playlist and where a song was paused. Picked
+         * songs are loans from this phone's file picker, which don't move to another phone, so a
+         * backup leaves them out and a restore keeps this phone's own (core/backup).
+         */
+        val PHONE_ONLY_KEYS: Set<String> get() = setOf(PLAYLIST_KEY, POSITION_REF_KEY, POSITION_MS_KEY)
         const val DEFAULT_VOLUME = 0.8f
         val DEFAULT_BREAK_MUSIC = BreakMusic.KEEP
 

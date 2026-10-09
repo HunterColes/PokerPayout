@@ -71,7 +71,9 @@ There are none yet; Music says so ("None yet") until there are.
 
 ## Saved data
 
-New keys only; nothing older was renamed.
+New keys only; nothing older was renamed. A backup (Tools > Backup) takes the sound pack and the
+music's settings, but not the playlist or where a song was paused: picked songs are this phone's
+file loans, so a restore keeps the phone's own list (`MusicPreferences.PHONE_ONLY_KEYS`).
 
 | File | Key | What |
 |---|---|---|

@@ -64,19 +64,21 @@ object AccessibilityAssertions {
     }
 
     /**
-     * Every clickable, toggleable or selectable node has a name TalkBack can read (its own text,
-     * the text it merges, or a content description), and every text field has a label beside its
-     * value. A field read out only as "20, edit box" doesn't say what the 20 is.
+     * Every clickable, toggleable or selectable node has something TalkBack can read: its own text,
+     * the text it merges, or a content description. A text field may be read by its value (the
+     * Bank's name fields are), but an empty one with no label is read out as just "Edit box".
      */
     fun assertNamed(rule: SemanticsNodeInteractionsProvider, where: String) {
         val tappable = rule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick)).fetchSemanticsNodes()
         val unnamed = tappable.filter { it.isEditable().not() && it.spokenName().isBlank() }
             .map { "${it.describe()} has no name TalkBack can read: give it a text or a contentDescription" }
         val fields = rule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.SetText)).fetchSemanticsNodes()
-        val unlabelled = fields.filter { it.spokenName().isBlank() }
-            .map { "${it.describe()} is a field without a label: TalkBack reads only its value" }
+        val unlabelled = fields.filter { it.spokenName().isBlank() && it.value().isBlank() }
+            .map { "${it.describe()} is an empty field without a label: TalkBack reads only \"Edit box\"" }
         fail(where, "names for TalkBack", unnamed + unlabelled)
     }
+
+    private fun SemanticsNode.value(): String = config.getOrNull(SemanticsProperties.EditableText)?.text.orEmpty()
 
     /**
      * Every text that is drawn has at least 4.5:1 contrast with what is behind it, or 3:1 for large

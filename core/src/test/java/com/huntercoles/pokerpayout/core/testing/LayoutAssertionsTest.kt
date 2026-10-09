@@ -151,18 +151,24 @@ class LayoutAssertionsTest {
     }
 
     @Test
-    fun fieldWithoutALabelFails() {
+    fun emptyFieldWithoutALabelFails() {
         var labelled by mutableStateOf(false)
+        var value by mutableStateOf("")
         show {
             val label = if (labelled) Modifier.named("Buy-in") else Modifier
-            BasicTextField(value = "20", onValueChange = {}, modifier = Modifier.size(120.dp, 48.dp).then(label))
+            BasicTextField(value = value, onValueChange = {}, modifier = Modifier.size(120.dp, 48.dp).then(label))
         }
-        assertFails("a field without a label") {
+        assertFails("an empty field without a label") {
             LayoutAssertions.assertTouchTargets(screen.compose, "unlabelled", strict = false)
         }
+        // A label names it; so does a value ("Dana, edit box")
         labelled = true
         screen.compose.waitForIdle()
         LayoutAssertions.assertTouchTargets(screen.compose, "labelled", strict = false)
+        labelled = false
+        value = "Dana"
+        screen.compose.waitForIdle()
+        LayoutAssertions.assertTouchTargets(screen.compose, "with a value", strict = false)
     }
 
     @Test

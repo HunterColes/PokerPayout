@@ -1690,11 +1690,13 @@ s_shot_clock_run() {
   [[ "$paused" == "$later" ]] && (( paused > 0 && paused < 30 )) || { echo "[ui] FAIL the paused clock moved"; return 1; }
   ui scroll-to "desc=Play a card for Alice, 30 more seconds" --max 6 --in scrollable
   ui tap "desc=Play a card for Alice, 30 more seconds"
-  ui scroll-to "text=Give everyone their cards back" --max 4 --in scrollable
-  ui assert-text "desc=1 of 2 cards left" "text=Give everyone their cards back" || return 1
+  # Alice's row is still in view (her cards, then the face's seconds, from the same dump)
+  ui assert-text "desc=1 of 2 cards left" "re=^Shot clock, [0-9]+ seconds left, paused$" || return 1
   carded="$(shot_clock_seconds)"
   echo "after the card: ${carded}s"
   (( carded == paused + 30 )) || { echo "[ui] FAIL the card added $((carded - paused))s, not 30"; return 1; }
+  ui scroll-to "text=Give everyone their cards back" --max 4 --in scrollable
+  ui assert-text "text=Give everyone their cards back"
 }
 s_shot_clock_reset() {
   # Everyone's cards back (with Undo on the snackbar), then Reset: full and waiting again
@@ -1778,8 +1780,10 @@ s_equity_quiz_range() {
   ui tap "text=Three hands"
   ui scroll-to "text=How often" --max 4
   ui tap "text=How often"
-  ui scroll-to "text=How often does Hand A win?" --dir up --max 6
-  ui assert-text "text=Three hands · How often" "re=^Hand C: " "text=Under 20%" "text=40–60%" "text=Over 80%" || return 1
+  ui scroll-to "re=^Hand C: " --dir up --max 6
+  ui assert-text "text=Three hands · How often" "re=^Hand C: " || return 1
+  ui scroll-to "text=Over 80%" --max 6
+  ui assert-text "text=How often does Hand A win?" "text=Under 20%" "text=40–60%" "text=Over 80%" || return 1
   ui tap "text=40–60%"
   ui wait "re=^(Right!|Not this time)$" --timeout 30 || return 1
   ui scroll-to "text=Your pick: 40–60%" --max 4

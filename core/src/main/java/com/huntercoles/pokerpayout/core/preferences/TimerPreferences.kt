@@ -29,6 +29,14 @@ class TimerPreferences @Inject constructor(
     private val _timerRunning = MutableStateFlow(getTimerRunning())
     val timerRunning: Flow<Boolean> = _timerRunning.asStateFlow()
 
+    init {
+        // PP-137: whether to ask for notifications is the system's answer now (it is per phone and
+        // never restored from another one), so the flag older versions kept here goes, once.
+        if (prefs.contains(RETIRED_NOTIFICATIONS_ASKED_KEY)) {
+            prefs.edit().remove(RETIRED_NOTIFICATIONS_ASKED_KEY).apply()
+        }
+    }
+
     // ------------------------------------------------------------------ clock
 
     /** Mirrors the clock's running flag for observers (Bank locks while the clock runs). */
@@ -93,16 +101,6 @@ class TimerPreferences @Inject constructor(
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(Unit) }
         prefs.registerOnSharedPreferenceChangeListener(listener)
         awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
-    }
-
-    /**
-     * PP-081: true the first time it is called, ever, and false after: the first Start asks for
-     * permission to show the live clock notification once, and never again whatever the answer.
-     */
-    fun takeNotificationsAsk(): Boolean {
-        if (prefs.getBoolean(NOTIFICATIONS_ASKED_KEY, false)) return false
-        prefs.edit().putBoolean(NOTIFICATIONS_ASKED_KEY, true).apply()
-        return true
     }
 
     fun setGameDurationMinutes(minutes: Int) {
@@ -253,12 +251,16 @@ class TimerPreferences @Inject constructor(
         private const val SECONDS_PER_MINUTE = 60
 
         /**
-         * Keys about this phone, not the game, that a backup leaves out and a restore leaves alone: the
-         * running clock's monotonic reading and boot (meaningless on another phone, or after a restart),
-         * and whether this phone has asked for notifications (a new phone should ask again).
+         * Keys about this phone, not the game, that the in-app backup leaves out and a restore leaves
+         * alone: the running clock's monotonic reading and boot (meaningless on another phone, or after
+         * a restart), and the notifications flag older versions kept (retired, PP-137).
+         *
+         * Android's own backup takes this file whole, readings and all (it can only leave out whole
+         * files, and the clock saves its anchor in one write). On another phone the boot differs, so a
+         * clock restored running carries on by wall-clock time, as after a restart (ClockAnchor).
          */
         val PHONE_ONLY_KEYS: Set<String> =
-            setOf(CLOCK_REALTIME_MS_KEY, CLOCK_WALL_MS_KEY, CLOCK_BOOT_COUNT_KEY, NOTIFICATIONS_ASKED_KEY)
+            setOf(CLOCK_REALTIME_MS_KEY, CLOCK_WALL_MS_KEY, CLOCK_BOOT_COUNT_KEY, RETIRED_NOTIFICATIONS_ASKED_KEY)
 
         /**
          * This file's saved [values] as a backup keeps them: a running clock is saved paused where it
@@ -295,8 +297,8 @@ class TimerPreferences @Inject constructor(
         private const val BIG_BLIND_ANTE_FROM_LEVEL_KEY = "big_blind_ante_from_level"
         private const val COLOR_UP_DONE_KEY = "color_up_done_after_levels"
 
-        // PP-081: not part of the clock, so no reset clears it
-        private const val NOTIFICATIONS_ASKED_KEY = "notifications_permission_asked"
+        // PP-081's "asked for notifications" flag, retired by PP-137: removed once, never read
+        private const val RETIRED_NOTIFICATIONS_ASKED_KEY = "notifications_permission_asked"
 
         // v1.1.x clock, read once and migrated to the anchor
         private const val LEGACY_CURRENT_TIME_SECONDS_KEY = "current_time_seconds"

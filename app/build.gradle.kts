@@ -36,8 +36,14 @@ android {
         applicationId = "com.huntercoles.pokerpayout"
         minSdk = 26
         targetSdk = 34
-        versionCode = 47
-        versionName = "1.4.6"
+        versionCode = 48
+        versionName = "1.4.7"
+
+        // The app is in English only, so the libraries' own strings (Compose and Material's
+        // accessibility words, in about 80 languages) stay out of the APK: resources.arsc went
+        // from 501 to 95 KiB, the APK from 2.40 to 1.98 MB (1.3.14, device.yml's measure job).
+        // Add a language here when the app is translated.
+        resourceConfigurations += listOf("en")
     }
 
     dependenciesInfo {

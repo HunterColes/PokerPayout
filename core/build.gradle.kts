@@ -38,13 +38,6 @@ android {
         }
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            consumerProguardFiles("proguard-rules.pro")
-        }
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -67,7 +60,6 @@ android {
 dependencies {
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
-    implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.hilt)
     implementation(libs.kotlin.coroutines)
     api(libs.kotlin.serialization) // backup sections (core/backup) are JSON objects in their API

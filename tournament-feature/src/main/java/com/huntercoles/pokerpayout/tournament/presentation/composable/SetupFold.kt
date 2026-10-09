@@ -94,8 +94,8 @@ internal fun FoldScene(setup: TournamentConfigUiState, timer: TimerUiState, gutt
             },
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            BlindsCard(timer)
-            ClockControls(timer, onIntent = {})
+            BlindsCard(timer.blindsUp)
+            ClockControls(timer.buttons, onIntent = {})
         }
     }
 }

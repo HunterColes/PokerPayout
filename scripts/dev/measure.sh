@@ -12,7 +12,7 @@
 #   - method references per dex, and the defined methods and dex bytes by library (apkanalyzer,
 #     de-obfuscated with R8's mapping.txt)
 #   - the runtime dependency tree's size (distinct artifacts) and its widest libraries
-#   - Compose compiler metrics and the unstable classes each module reports (-PcomposeReports)
+#   - Compose compiler metrics and the composable parameters it can't compare by value (-PcomposeReports)
 #
 #   scripts/dev/measure.sh [out-dir]     default build/measure
 #
@@ -138,14 +138,16 @@ if mods:
     for f in mods:
         d = json.load(open(f))
         w(f"| {f.split('/')[0]} | " + " | ".join(str(d.get(k, "")) for k in keys) + " |")
-    unstable = []
-    for f in sorted(glob.glob("*/build/compose-reports/*-classes.txt")):
-        for m in re.finditer(r"^unstable class (\w+) \{(.*?)^\}", open(f).read(), re.M | re.S):
-            why = [l.strip() for l in m.group(2).splitlines() if l.strip().startswith(("unstable", "runtime"))]
-            unstable.append((f.split("/")[0], m.group(1), why))
-    w(f"\nUnstable classes: **{len(unstable)}**\n")
-    for mod, name, why in unstable:
-        w(f"- {mod}: `{name}`: " + "; ".join(f"`{x}`" for x in why[:4]) + (" ..." if len(why) > 4 else ""))
+    # What costs recompositions: composable parameters Compose can't compare by value (it compares
+    # them by identity, so an equal value built anew re-runs the composable)
+    params = defaultdict(int)
+    for f in sorted(glob.glob("*/build/compose-reports/*-composables.txt")):
+        mod = f.split("/")[0]
+        for m in re.finditer(r"^  unstable \w+: ([^=\n]+?)(?: = .*)?$", open(f).read(), re.M):
+            params[(mod, m.group(1).strip())] += 1
+    w(f"\nUnstable composable parameters: **{sum(params.values())}**. Most common:\n")
+    for (mod, t), n in sorted(params.items(), key=lambda x: -x[1])[:15]:
+        w(f"- {mod}: `{t}` x{n}")
     nonskip = []
     for f in sorted(glob.glob("*/build/compose-reports/*-composables.txt")):
         for m in re.finditer(r"^restartable (?!skippable)(?:\w+ )*fun (\w+)\(", open(f).read(), re.M):

@@ -66,6 +66,4 @@ measure_mode() { # $1 = mode name; prints a markdown row
   echo '```'
   adb_ shell dumpsys meminfo "$APP_ID" | tr -d '\r' | sed -n '/App Summary/,/TOTAL SWAP/p'
   echo '```'
-  echo
-  echo "StrictMode lines in logcat since boot: $(adb_ logcat -d 2>/dev/null | grep -c 'StrictMode' || true)"
 } | tee "$out"

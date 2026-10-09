@@ -46,7 +46,7 @@ s_side_pots() {
   ui back                                      # Outs & pot odds -> the Tools list
   ui scroll-to "text=Side pots" --max 4
   ui tap "text=Side pots"
-  ui assert-text "text=Side pots" desc=Back "text=Who put in what" "desc=Player 1 name" \
+  ui assert-text "text=Side pots" desc=Back "text=WHO PUT IN WHAT" "desc=Player 1 name" \
     "desc=Chips Player 1 put in" "desc=Player 3 folded" || return 1
   require_tab_selected Tools
 }
@@ -84,7 +84,7 @@ s_deal() {
   ui back                                      # Side pots -> the Tools list
   ui scroll-to "text=Deal maker" --max 4
   ui tap "text=Deal maker"
-  ui assert-text "text=Deal maker" desc=Back "text=Players left" "text=Typed for this deal" \
+  ui assert-text "text=Deal maker" desc=Back "text=PLAYERS LEFT" "text=Typed for this deal" \
     "desc=Chips Player 1 has" "desc=Start over" || return 1
   require_tab_selected Tools
 }

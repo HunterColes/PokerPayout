@@ -56,6 +56,21 @@ buildscript {
     }
 }
 
+// Compose compiler stability reports, on demand only: `-PcomposeReports` (the measure job in
+// .github/workflows/device.yml passes it). Each module writes build/compose-reports/ (which classes
+// are stable, which composables skip) and build/compose-metrics/. Off in every other build, so
+// release builds and F-Droid's rebuild never see it.
+if (providers.gradleProperty("composeReports").isPresent) {
+    subprojects {
+        plugins.withId("org.jetbrains.kotlin.plugin.compose") {
+            extensions.configure<org.jetbrains.kotlin.compose.compiler.gradle.ComposeCompilerGradlePluginExtension> {
+                reportsDestination.set(layout.buildDirectory.dir("compose-reports"))
+                metricsDestination.set(layout.buildDirectory.dir("compose-metrics"))
+            }
+        }
+    }
+}
+
 // Unit tests. Every module with tests applies the android-junit5 plugin, so its test tasks run on
 // the JUnit Platform with both engines from the common-test bundle: Jupiter for JUnit 5 tests and
 // Vintage for JUnit 4 tests (which includes every Robolectric test). See docs/TESTING.md.

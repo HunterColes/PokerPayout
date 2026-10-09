@@ -26,7 +26,8 @@ import javax.inject.Inject
  *
  * - shows the notification, re-posted only when it changes ([LiveClockDriver]);
  * - keeps the process in the foreground, so Android doesn't freeze or kill it, and the clock's cues
- *   (chime, vibration) keep sounding on time, from here or from the clock's own screen;
+ *   (chime, vibration) keep sounding on time, from here or from the clock's own screen; the music
+ *   plays on too ([TournamentMusicLink]);
  * - holds a partial wake lock while the clock runs, renewed at each look, so the CPU is awake when
  *   a cue is due even with the screen off.
  *
@@ -45,6 +46,8 @@ class LiveClockService : Service() {
 
     @Inject lateinit var controller: LiveClockController
 
+    @Inject lateinit var musicLink: TournamentMusicLink
+
     private val scope = MainScope()
     private var driver: LiveClockDriver? = null
     private var driving: Job? = null
@@ -56,6 +59,8 @@ class LiveClockService : Service() {
     override fun onCreate() {
         super.onCreate()
         controller.serviceRunning = true
+        // A process the system started for this service alone has no screen yet to start the music's link
+        musicLink.start()
         LiveClockNotification.createChannel(this)
     }
 
@@ -134,6 +139,7 @@ class LiveClockService : Service() {
         scope.cancel()
         keepAwake(null)
         controller.serviceRunning = false
+        musicLink.liveClockGone()
         super.onDestroy()
     }
 

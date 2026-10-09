@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-   Android 11 and older (Android 12 and up read data_extraction_rules.xml): backups take all of the
-   app's saved data, as Android does by default. Nothing is excluded.
+   Android's own backup on Android 11 and older (12 and up read data_extraction_rules.xml). Every
+   SharedPreferences file and the files folder, as the in-app backup file takes them; never the cache.
+   Unlike Android 12's rules, these don't ask for an encrypted cloud copy: the flag for it would also
+   leave the data out of a move to a new phone by cable on Android 9 to 11.
    See https://developer.android.com/guide/topics/data/autobackup
 -->
-<full-backup-content />
+<full-backup-content>
+    <include domain="sharedpref" path="." />
+    <include domain="file" path="." />
+</full-backup-content>

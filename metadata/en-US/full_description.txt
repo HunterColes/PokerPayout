@@ -14,7 +14,7 @@ PAYOUTS AND THE BANK
 • Top-heavy, standard and flat presets, or your own weights, rounded to $1, $5 or $10
 • Track buy-ins, rebuys, add-ons, knockouts, bounties and who has been paid, with Undo
 • Bounties three ways: standard, progressive (half now, half onto the winner's own bounty) or mystery envelopes
-• Cash games: buy-ins and top-ups, a chip count check, and who pays whom at the end
+• Settle up at the end: the fewest payments so everyone is square, with a tick for each
 • Share the payouts or the settle-up as text
 
 TOOLS

@@ -10,6 +10,7 @@ import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatusProvider
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.domain.settle.SettleUpUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.DrawEnvelopeUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
@@ -77,7 +78,8 @@ class BankTestKit(private val dispatcher: TestDispatcher) {
                 clock,
                 audioPreferences,
                 BankFeedback(context, snackbars),
-                DrawEnvelopeUseCase(draws)
+                DrawEnvelopeUseCase(draws),
+                SettleUpUseCase()
             ) as T
         }
         val viewModel = ViewModelProvider(store, factory)[BankViewModel::class.java]

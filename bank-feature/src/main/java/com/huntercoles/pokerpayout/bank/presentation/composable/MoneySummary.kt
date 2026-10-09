@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.bank.R
@@ -27,13 +28,15 @@ import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
  * The money at a glance (S5 v2): Collected (paid in against the whole pool) and Paid out (against
  * the prize and bounty pools), each gold when complete, then Breakdown and Payout structure. On a
  * tablet the breakdown and the payout table are open in the side pane, so the buttons go
- * ([buttons] null).
+ * ([buttons] null). Once the night is over with a buy-in still open, Settle up ([onSettleUp]) sits
+ * under the meters, on phones and tablets alike.
  */
 @Composable
 internal fun MoneySummary(
     state: BankUiState,
     buttons: SummaryButtons?,
     modifier: Modifier = Modifier,
+    onSettleUp: () -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -54,6 +57,16 @@ internal fun MoneySummary(
                 currentCents = state.totalPaidOutCents,
                 targetCents = state.payableCents,
                 modifier = Modifier.weight(1f),
+            )
+        }
+        if (state.offersSettleUp) {
+            val payments = state.settleUp?.transfers?.size ?: 0
+            PokerButton(
+                text = pluralStringResource(R.plurals.bank_settle_button, payments, payments),
+                onClick = onSettleUp,
+                size = PokerButtonSize.Small,
+                icon = PokerIcons.Swap,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
         if (buttons != null) ButtonRow {

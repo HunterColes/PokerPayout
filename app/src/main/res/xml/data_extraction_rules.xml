@@ -1,9 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-   Android 12 and up: backups and device-to-device transfers take all of the app's saved data, as
-   Android does by default. Nothing is excluded.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
+   Android's own backup of the app's data (Android 12 and up; backup_rules.xml is the same for older
+   versions). It takes what the in-app backup file takes (core/backup/BackupCatalog.kt): every
+   SharedPreferences file, so presets, History, the chip set, settings and tonight's game, plus any
+   file a later version keeps in its files folder. The cache (a preset just shared) is never taken.
+
+   Nothing in it is a secret: the app has no accounts, passwords or keys. It does hold the players'
+   names, so the copy in Google's cloud is made only when it is end-to-end encrypted (the phone has a
+   screen lock). Moving to a new phone by cable or Wi-Fi takes everything.
+   See https://developer.android.com/about/versions/12/backup-restore
 -->
 <data-extraction-rules>
-    <cloud-backup />
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <include domain="sharedpref" path="." />
+        <include domain="file" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="." />
+        <include domain="file" path="." />
+    </device-transfer>
 </data-extraction-rules>

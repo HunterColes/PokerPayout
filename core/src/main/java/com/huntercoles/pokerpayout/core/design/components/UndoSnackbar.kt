@@ -66,7 +66,7 @@ suspend fun SnackbarHostState.showUndo(message: String, actionLabel: String): Bo
 class SnackbarController @Inject constructor() {
     val hostState = SnackbarHostState()
 
-    /** The snackbar showing, or about to; the next [showUndo] takes its place. */
+    /** The snackbar showing, or about to; the next one takes its place. */
     private val latest = AtomicReference<Job?>(null)
 
     /**
@@ -74,14 +74,23 @@ class SnackbarController @Inject constructor() {
      * rule (PP-097): a new snackbar replaces the one showing at once, from any screen, instead of
      * queueing behind it. The one replaced goes with its Undo, and returns false.
      */
-    suspend fun showUndo(message: String, actionLabel: String): Boolean = coroutineScope {
-        val shown = async(start = CoroutineStart.UNDISPATCHED) { hostState.showUndo(message, actionLabel) }
+    suspend fun showUndo(message: String, actionLabel: String): Boolean =
+        replacingCurrent { hostState.showUndo(message, actionLabel) } ?: false
+
+    /** Shows [message] alone, with nothing to undo ("Backup saved"), for a few seconds; it too replaces the one showing. */
+    suspend fun showMessage(message: String) {
+        replacingCurrent { hostState.showSnackbar(message = message, duration = SnackbarDuration.Short) }
+    }
+
+    /** Runs [show] in place of the snackbar showing or waiting; null once a newer one has replaced it. */
+    private suspend fun <T : Any> replacingCurrent(show: suspend () -> T): T? = coroutineScope {
+        val shown = async(start = CoroutineStart.UNDISPATCHED) { show() }
         latest.getAndSet(shown)?.cancel()
         try {
             shown.await()
         } catch (expected: CancellationException) {
             ensureActive() // the caller was cancelled, not replaced: pass that on
-            false
+            null
         } finally {
             latest.compareAndSet(shown, null)
         }
@@ -92,10 +101,11 @@ class SnackbarController @Inject constructor() {
 @Composable
 fun PokerSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifier) {
     SnackbarHost(hostState = hostState, modifier = modifier) { data ->
+        // A message shown with SnackbarController.showMessage has no action: no UNDO button
         UndoSnackbar(
             message = data.visuals.message,
             onUndo = data::performAction,
-            actionLabel = data.visuals.actionLabel ?: stringResource(R.string.design_undo),
+            actionLabel = data.visuals.actionLabel,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
         )
     }
@@ -104,14 +114,14 @@ fun PokerSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifie
 /**
  * The snackbar itself: white text on FeltHigh, a gold "UNDO" (48 dp touch target), and the only
  * shadow in the app apart from sheets. The message wraps rather than truncates. TalkBack announces
- * it politely when it appears.
+ * it politely when it appears. A null [actionLabel] shows the message alone.
  */
 @Composable
 fun UndoSnackbar(
     message: String,
     onUndo: () -> Unit,
     modifier: Modifier = Modifier,
-    actionLabel: String = stringResource(R.string.design_undo),
+    actionLabel: String? = stringResource(R.string.design_undo),
 ) {
     Surface(
         modifier = modifier
@@ -132,12 +142,14 @@ fun UndoSnackbar(
             Box(Modifier.weight(1f).padding(vertical = 6.dp)) {
                 Text(text = message, style = MaterialTheme.typography.bodyMedium, color = PokerColors.CardWhite)
             }
-            PokerButton(
-                text = actionLabel.uppercase(Locale.ROOT),
-                onClick = onUndo,
-                variant = PokerButtonVariant.Text,
-                size = PokerButtonSize.Small,
-            )
+            if (actionLabel != null) {
+                PokerButton(
+                    text = actionLabel.uppercase(Locale.ROOT),
+                    onClick = onUndo,
+                    variant = PokerButtonVariant.Text,
+                    size = PokerButtonSize.Small,
+                )
+            }
         }
     }
 }

@@ -89,10 +89,10 @@ fun TournamentScreen(
     val presets by presetsViewModel.uiState.collectAsStateWithLifecycle()
     var ui by rememberSaveable { mutableStateOf(TournamentUi.initial(timerViewModel.uiState.value.hasTimerStarted)) }
     val askForNotifications = rememberNotificationsAsk(timerViewModel)
+    val onPresetIntent = rememberPresetIntents(presetsViewModel, presets.sharing)
     val context = LocalContext.current
     val actions = remember(
-        calculatorViewModel, timerViewModel, presetsViewModel, context, onOpenBank, onOpenPayouts, onOpenSound,
-        askForNotifications,
+        calculatorViewModel, timerViewModel, context, onOpenBank, onOpenPayouts, onOpenSound, askForNotifications, onPresetIntent,
     ) {
         TournamentActions(
             onSetupIntent = calculatorViewModel::acceptIntent,
@@ -110,7 +110,7 @@ fun TournamentScreen(
             openBank = onOpenBank,
             openPayouts = onOpenPayouts,
             openSound = onOpenSound,
-            onPresetIntent = presetsViewModel::acceptIntent,
+            onPresetIntent = onPresetIntent,
             shareText = { text -> shareSetup(context, text) },
         )
     }

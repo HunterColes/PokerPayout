@@ -3,6 +3,52 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.2 (on master, not published)
+
+- **Music** (Tools > Sound): a playlist of songs from your phone, added with the phone's file
+  picker (no new permission, still no internet). Play, pause, previous and next, shuffle, repeat
+  (all songs or one), move and remove songs, and a volume of its own. A song whose file has gone
+  says "File not found" and is skipped.
+- **Play with the clock:** the music starts when the clock runs and pauses when it's paused or
+  over; on breaks it keeps playing, pauses or plays quieter, as you choose. It dips under the
+  clock's sounds, plays on with the screen off, and keeps going in the background while the clock
+  runs.
+- **Cue sounds** (Tools > Sound): sound packs with a sound for each moment (a new level, a minute
+  left, a break starting and ending, the game over), each played on a tap. *Classic*, the default,
+  is the chime as before. Room for built-in songs and new packs (docs/SOUNDS.md); none ship yet.
+- Backups take the sound pack and the music's settings; the playlist stays with the phone.
+
+## 1.4.1 (on master, not published)
+
+- **Backup** (Tools): one file with everything the app saves (presets, History and the season's
+  points, the chip set, settings, sound and tonight's game), saved and opened through the phone's
+  file picker, so it can live in Drive, Downloads or on a computer. No permission and still no
+  internet. Opening one shows what it holds before anything changes, then *Add to this phone*
+  (the presets and nights the phone doesn't have, with Undo) or *Replace this phone's data* (the
+  app starts again on the backup's game; a running clock comes back paused). A file that isn't a
+  backup, is damaged or comes from a newer version is turned away with a plain reason.
+- **History's CSV as a file:** *Save as CSV file…* writes every night as a spreadsheet file (UTF-8,
+  a header row); *Share as CSV* (formerly *Export as CSV*) still sends it as text.
+- **Presets as files:** a preset's menu has *Share as file* ("Friday.json" for a friend), and the
+  presets list has *Open preset file…*, which adds its presets with Undo ("Friday 2" when the name
+  is taken by another setup). The Backup screen opens preset files too.
+- Android's own backup now takes the same data as the backup file, and on Android 12 and up copies
+  it to Google's cloud only when the copy is end-to-end encrypted, since it holds players' names.
+
+## 1.4.0 (on master, not published)
+
+- **The cash game folds into the Bank.** The Bank's Tournament / Cash game switch and the separate
+  cash page are gone: a home night runs one way, through the Tournament, Bank and Payouts tabs.
+- **Settle up:** once the night is over and someone's buy-in is still open, the Bank offers
+  "Settle up": who pays whom so that everyone is square, counting what the Bank took in and paid
+  out (it keeps the food money). It finds the true fewest payments (exactly, for nights of up to 10
+  players), with a tick for each payment and Share as text for the group chat. Ticking the last one
+  marks every buy-in and payout paid, so the night can go into History; Undo takes it back. When
+  everyone paid in at the start, the Paid column does the job as before.
+- Gone with the cash page: free-amount buy-ins and top-ups, the chip count check and splitting a
+  difference. A cash game saved by 1.3.14 is left untouched on the phone and no longer shown.
+- The store listing's fifth picture is now the settle-up.
+
 ## [1.3.14](https://github.com/HunterColes/PokerPayout/releases/tag/v1.3.14) (2026-10-07)
 
 A new look, cash games and a clock on your lock screen: everything in 1.3.1 to 1.3.13 below,

@@ -979,6 +979,47 @@ s_bank_paid() {
   ui wait-gone "text=Pay Alice"
   ui assert-text "desc=Alice, paid out" "text~=Paid Alice \$" "text~=Finished · Alice wins · "
 }
+
+# Settle up (1.4; it took over the cash game's) -------------------------------------------------------
+# The night is over and only Alice paid in ($25 and a $10 rebuy); the Bank has paid her $70, so it is
+# $60 short of keeping the $25 food money. Players 2 to 4 owe their $25 entry; Player 5 (2nd, $40)
+# owes $25 and is owed $40. The fewest payments that square everyone: four.
+s_bank_settle_up() {
+  ui wait-gone text=UNDO --timeout 12
+  ui scroll up --times 3
+  ui tap "text=Settle up · 4 payments"
+  ui assert-text "text=Settle up" "text=Tick each one when paid" "has=Player 2 pays the bank|\$25" \
+    "has=Player 3 pays the bank|\$25" "has=Player 4 pays Player 5|\$15" "has=Player 4 pays the bank|\$10" \
+    "text=Share as text" text=Close
+}
+s_bank_settle_tick() {
+  # A row is one checkbox: tick Player 2's payment, then untick it (the snackbar sits behind the sheet)
+  ui tap "has=Player 2 pays the bank|\$25"
+  ui assert "has=Player 2 pays the bank" checked || return 1
+  ui tap "has=Player 2 pays the bank|\$25"
+  ui wait-gone "has=Player 2 pays the bank" checked
+}
+s_bank_settle_share() {
+  ui tap "text=Share as text"
+  ui assert-text "text~=Poker night: settle up" || return 1
+  ui back
+  ui wait "text=Share as text"
+}
+s_bank_settle_square() {
+  # Tick all four: the last one records every buy-in and payout as paid, and the sheet says square.
+  # Close it, check the Bank, then the top bar's Undo puts the night back as it was.
+  ui tap "has=Player 2 pays the bank|\$25"
+  ui tap "has=Player 3 pays the bank|\$25"
+  ui tap "has=Player 4 pays Player 5|\$15"
+  ui tap "has=Player 4 pays the bank|\$10"
+  ui assert-text "text=Everyone is square: nobody owes anybody." || return 1
+  ui tap text=Close
+  ui wait-gone "text=Everyone is square: nobody owes anybody."
+  ui assert-text "text~=Finished · Alice wins · all paid" "desc=Player 2, buy-in, paid" || return 1
+  if ui find "text~=Settle up · " --timeout 1 >/dev/null 2>&1; then echo "[ui] FAIL Settle up still offered"; return 1; fi
+  ui tap "desc~=Undo: Everyone is square"
+  ui assert-text "text=Settle up · 4 payments" "desc=Player 2, buy-in, not paid" "text~=Finished · Alice wins · "
+}
 s_pool_summary() {
   # The pool and where it came from; the rebuy is inside the prize pool, not on top of it
   ui tap text=Breakdown
@@ -1105,108 +1146,6 @@ s_history_save() {
   ui assert-text "text=Seat draw" text=History
 }
 
-# Cash game in the Bank (S13, M7) ---------------------------------------------------------------
-# Its own ledger beside the tournament's: three players buy in, Theo tops up, everyone's chips are
-# counted ($120 in, $120 out), and the settle-up says who pays whom. Then back to the tournament,
-# which must be as the steps above left it.
-s_cash_mode() {
-  tab Bank
-  ui assert-text "desc=Alice, champion" || return 1   # the tournament's Bank, from the steps above
-  ui tap "text=Cash game"
-  ui assert-text "text=Nobody at the table yet" "text=Cash game · nobody in yet" "text=Add player" "desc=Nothing to undo"
-  ui assert "has=Cash game" checked             # the switch: its option is checked, not its label
-  require_tab_selected Bank
-}
-# The last snackbar gone (8 s), so it can't be over what the next tap aims at.
-cash_snackbar_gone() {
-  ui wait-gone text=UNDO --timeout 12
-}
-cash_add_player() { # $1 = name, $2 = buy-in in dollars
-  cash_snackbar_gone
-  ui scroll-to "text=Add player" --max 4
-  ui tap "text=Add player"
-  ui wait "text=Add a player"
-  ui set-text "desc=Name" --value "$1"
-  ui set-text "desc=Buy-in" --value "$2"
-  ui tap "text=Add $1"
-  ui wait-gone "text=Add a player"
-  ui assert-text "text=$1 bought in · \$$2" "has=$1|in \$$2|chips not counted yet"
-}
-s_cash_players() {
-  cash_add_player Dana 40
-  cash_add_player Sam 20
-  cash_add_player Theo 40
-  ui scroll up --times 4
-  ui assert-text "text=Cash game · 3 players · \$100 in play" "text=COUNTING" "text~=3 still to count: Dana, Sam, Theo"
-}
-s_cash_top_up() {
-  # Theo's sheet: the top-up starts at his last buy-in ($40); make it $20
-  ui scroll-to "has=Theo|in \$40" --max 4
-  ui tap "has=Theo|in \$40"
-  ui wait "text=BOUGHT IN · \$40"
-  ui set-text "desc=Top-up for Theo" --value 20
-  ui tap "text=Top up \$20"
-  ui assert-text "text=BOUGHT IN · \$60" "text=Top-up 1"   # (the snackbar is behind the sheet)
-}
-cash_count() { # $1 = name, $2 = chips counted out in dollars, $3 = what the sheet then says
-  ui set-text "desc=$1's chips counted out" --value "$2"
-  ui enter                                    # leaves the field: the count is saved
-  ui assert-text "text=$3" || return 1      # saved: the sheet says what it means for the night
-  ui tap text=Done
-  ui wait-gone "text=Done"
-}
-s_cash_count() {
-  cash_count Theo 45 "Down \$15 on the night"
-  ui scroll-to "has=Dana|in \$40" --max 4 --dir up
-  ui tap "has=Dana|in \$40"
-  cash_count Dana 75 "Up \$35 on the night"
-  ui scroll-to "has=Sam|in \$20" --max 4
-  ui tap "has=Sam|in \$20"
-  cash_count Sam 0 "Down \$20 on the night"
-  ui scroll up --times 4
-  # Each line reads to TalkBack as "Dana, in $40, out $75, up $35"
-  ui assert-text "text=BALANCED" "has=Dana|in \$40|out \$75|up \$35" "has=Sam|in \$20|out \$0|down \$20" \
-    "has=Theo|in \$60|out \$45|down \$15"
-}
-s_cash_settle() {
-  # Two payments for three players, largest debt first; tick Theo's
-  cash_snackbar_gone
-  ui scroll-to "text=Share as text" --max 6     # the whole settle-up card is then in view
-  ui assert-text "has=Sam pays Dana|\$20" "has=Theo pays Dana|\$15" "text=Tick each one when paid" || return 1
-  ui tap "has=Theo pays Dana|\$15"
-  ui assert "has=Theo pays Dana" checked
-  ui assert-text "text=Theo paid Dana \$15"
-}
-s_cash_share() {
-  cash_snackbar_gone
-  ui scroll-to "text=Share as text" --max 6
-  ui tap "text=Share as text"
-  ui assert-text "text~=Poker night: cash game" || return 1
-  ui back
-  ui wait "text=Share as text"
-}
-s_cash_undo() {
-  # Tick Sam's payment, then UNDO on the snackbar; then the top bar's Undo takes Theo's tick back
-  cash_snackbar_gone
-  ui scroll-to "text=Share as text" --max 6
-  ui tap "has=Sam pays Dana|\$20"
-  ui tap text=UNDO
-  ui wait-gone "has=Sam pays Dana" checked
-  ui scroll up --times 6
-  ui tap "desc=Undo: Theo paid Dana \$15"
-  ui scroll-to "has=Theo pays Dana|\$15" --max 4
-  ui wait-gone "has=Theo pays Dana" checked
-  ui assert-text "has=Theo pays Dana|\$15" "has=Sam pays Dana|\$20" "desc~=Undo: Sam cashed out"
-}
-s_cash_back_to_tournament() {
-  # The tournament's Bank is as it was: Alice the champion, paid
-  ui scroll up --times 6
-  ui tap text=Tournament                      # the switch: the topmost "Tournament" on screen
-  ui assert-text "desc=Alice, champion" "desc=Alice, paid out" "text~=Finished · Alice wins" "text=Payout structure" || return 1
-  ui assert "has=Tournament" checked
-  require_tab_selected Bank
-}
-
 # Clearing the Rebuy amount to retype it must not wipe recorded rebuys (PP-014).
 s_rebuy_retype() {
   tab Tournament
@@ -1264,6 +1203,99 @@ s_sound_on() {
   [[ "$state" == true ]] || { echo "[ui] FAIL the sound switch didn't turn back on"; return 1; }
   ui tap "Test chime"                          # plays the level chime once; must not crash
   ui assert-text "Test chime" "desc=Chime volume"
+}
+# Cue sounds and music (Tools > Sound) ----------------------------------------
+# "true" when the control holding the text $2 (a switch, a radio, a segment) is on, in dump $1.
+control_on() { # $1 = dump, $2 = text
+  python3 - "$1" "$2" <<'PY'
+import sys, xml.etree.ElementTree as ET
+for n in ET.parse(sys.argv[1]).iter("node"):
+    holds = any(d.get("text") == sys.argv[2] for d in n.iter("node"))
+    if holds and (n.get("checkable") == "true" or n.get("clickable") == "true"):
+        print("true" if "true" in (n.get("checked"), n.get("selected")) else "false")
+        break
+PY
+}
+s_cue_sounds() {
+  # S18: Cue sounds, from the Sound section: the classic pack picked, each moment's sound played
+  # on a tap, the minute warning's slot empty, Tools still selected.
+  ui scroll-to "text=Cue sounds" --max 4
+  ui tap "text=Cue sounds"
+  ui assert-text "text=Cue sounds" desc=Back "text=Classic" "desc=Play New level, Classic" "text=No sound" || return 1
+  require_tab_selected Tools || return 1
+  local picked; picked="$(control_on "$PP_UI_LAST_XML" Classic)"; echo "classic picked=$picked"
+  [[ "$picked" == true ]] || { echo "[ui] FAIL the classic pack isn't picked"; return 1; }
+  ui tap "desc=Play New level, Classic"        # plays the chime once; must not crash
+  ui assert-text "text=Classic" "desc=Play Game over, Classic"
+}
+s_music() {
+  # S18: Music, from the Sound section: no songs yet, nothing built in yet; Play with the clock
+  # switches on and breaks can be quieter; then off again for the steps after.
+  ui back                                      # Cue sounds -> the Tools list
+  ui scroll-to "text=No songs yet" --max 6
+  ui tap "text=Music"
+  ui assert-text "text=Music" desc=Back "text=Add songs below to play music here." "desc=Play music" || return 1
+  require_tab_selected Tools || return 1
+  ui scroll-to "text=Play with the clock" --max 4
+  ui tap "text=Play with the clock"
+  ui tap "text=Quieter"
+  ui assert "text=Quieter" || return 1
+  local on quieter
+  on="$(control_on "$PP_UI_LAST_XML" "Play with the clock")"
+  quieter="$(control_on "$PP_UI_LAST_XML" Quieter)"
+  echo "play with the clock=$on quieter=$quieter"
+  [[ "$on" == true && "$quieter" == true ]] || { echo "[ui] FAIL play with the clock or quieter didn't take"; return 1; }
+  ui tap "text=Play with the clock"
+  ui assert "text=Play with the clock" || return 1
+  on="$(control_on "$PP_UI_LAST_XML" "Play with the clock")"; echo "play with the clock=$on"
+  [[ "$on" == false ]] || { echo "[ui] FAIL play with the clock didn't switch off"; return 1; }
+  ui assert-text "text=None yet. Songs that come with the app will show here."
+}
+s_music_song() {
+  # A song from the phone: the system's file picker (no storage permission) lends the app a WAV the
+  # tour put in Downloads. It joins the list named after its file, plays (and still plays a few
+  # seconds later: no "File not found"), pauses, and Edit removes it again.
+  local wav="$OUT/.pp_tour_song.wav" focus="" try
+  python3 - "$wav" <<'PY'
+import math, struct, sys, wave
+with wave.open(sys.argv[1], "wb") as w:
+    w.setnchannels(1); w.setsampwidth(2); w.setframerate(8000)
+    w.writeframes(b"".join(struct.pack("<h", int(6000 * math.sin(2 * math.pi * 440 * i / 8000))) for i in range(8000 * 30)))
+PY
+  adb_ push "$wav" /sdcard/Download/pp_tour_song.wav >/dev/null
+  ui scroll-to "text=Add songs" --max 6
+  ui tap "text=Add songs"
+  for try in $(seq 20); do
+    focus="$(adb_ shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
+    [[ "$focus" =~ documentsui ]] && break
+    sleep 0.5
+  done
+  echo "focus: $focus"
+  [[ "$focus" =~ documentsui ]] || { echo "[ui] FAIL the file picker didn't open"; return 1; }
+  # The picker opens on its recent files or on a folder: Downloads from its roots, then the file
+  if ! ui find "text=pp_tour_song.wav" >/dev/null 2>&1; then
+    ui tap "desc=Show roots"
+    ui tap "text=Downloads"
+  fi
+  ui tap "text=pp_tour_song.wav" --timeout 20
+  ui assert-text "text=pp tour song" "text=1 song" || return 1
+  ui tap "desc=Play music"
+  ui assert "desc=Pause music" || return 1
+  sleep 3
+  if ui find "text=File not found" >/dev/null 2>&1; then echo "[ui] FAIL the song didn't play"; return 1; fi
+  ui assert-text "desc=Pause music" "text~=Now playing" "text~=1 song · playing" || return 1
+  ui tap "desc=Pause music"
+  ui assert "desc=Play music" || return 1
+  ui scroll-to "text=Edit" --max 6
+  ui tap "text=Edit"
+  ui tap "desc=Remove pp tour song"
+  ui scroll up --times 6 >/dev/null
+  ui assert-text "text=Add songs below to play music here." "text=No songs yet" || return 1
+  adb_ shell rm -f /sdcard/Download/pp_tour_song.wav >/dev/null 2>&1 || true
+  ui back                                      # Music -> the Tools list, back at its top
+  ui scroll up --times 6 >/dev/null
+  ui assert-text "text=Hand ranks" || return 1
+  require_tab_selected Tools
 }
 s_hand_ranks() {
   # S12: a tool's screen keeps Tools selected (B16) and has a back arrow. Each hand shows how often
@@ -1439,6 +1471,71 @@ s_seat_draw_back() {
   # Back returns to the Tools list, Tools still selected
   ui back
   ui assert-text text=Odds "text=Hand ranks" "text=Seat draw" || return 1
+  require_tab_selected Tools
+}
+
+# Backup (Tools) ---------------------------------------------------------------------------------------
+# Everything the app saves in one file, through the system's file picker (DocumentsUI, no permission):
+# a backup saved where the picker offers, opened again (its preview names what it holds: the tour's
+# preset Friday and its saved night), Add (nothing new: it is this phone's own), then Replace, which
+# starts the app again on the same game. Ends on the Tools list.
+BACKUP_FILE_RE='re=^poker-payout-[0-9]{4}-[0-9]{2}-[0-9]{2}( \([0-9]+\))?\.json$'
+picker_open() { # waits for the system's file picker to come to the front
+  local focus="" try
+  for try in $(seq 20); do
+    focus="$(adb_ shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
+    [[ "$focus" =~ documentsui ]] && break
+    sleep 0.5
+  done
+  echo "focus: $focus"
+  [[ "$focus" =~ documentsui ]] || { echo "[ui] FAIL the file picker didn't open"; return 1; }
+}
+s_backup() {
+  ui scroll-to "text=Backup" --max 5
+  ui tap "text=Backup"
+  ui assert-text "text=Save a backup" "text=Restore from a file" "text=Save backup…" "text=Open a file…" desc=Back || return 1
+  require_tab_selected Tools
+}
+s_backup_save() {
+  ui tap "text=Save backup…"
+  picker_open || return 1
+  ui tap "re=^(SAVE|Save)$" --timeout 15
+  ui wait "re=^Backup saved" --timeout 15
+}
+s_backup_open() {
+  ui wait-gone "re=^Backup saved" --timeout 12
+  ui tap "text=Open a file…"
+  picker_open || return 1
+  ui tap "$BACKUP_FILE_RE" --timeout 15
+  ui assert-text "text=Restore this file?" "text=1 preset" "text=1 night in History" \
+    "text=Tournament setup and tonight's game" || return 1
+}
+s_backup_add() {
+  # The backup is this phone's own: nothing to add, and the preview closes
+  ui scroll-to "text=Add to this phone" --max 3
+  ui tap "text=Add to this phone"
+  ui assert-text "text=Nothing new: this phone has it all already." || return 1
+  ui wait-gone "text=Restore this file?"
+}
+s_backup_replace() {
+  ui wait-gone "re=^Nothing new" --timeout 12
+  ui tap "text=Open a file…"
+  picker_open || return 1
+  ui tap "$BACKUP_FILE_RE" --timeout 15
+  ui scroll-to "text=Replace this phone's data" --max 3
+  ui tap "text=Replace this phone's data"
+  # A fresh process on the first tab, the same game: the Bank's champion, the preset, the night
+  PP_UI_SCROLL=0 ui wait "re=$TAB_RE" --timeout 30
+  echo "app pid after the restart: $(adb_ shell pidof "$APP_ID" | tr -d '\r')"
+  require_tab_selected Tournament || return 1
+  tab Bank
+  ui assert-text "desc=Alice, champion" || return 1
+  tab Tools
+  ui scroll-to text=History --max 4
+  ui tap text=History
+  ui assert-text "text=1 night saved" || return 1
+  ui back
+  ui assert-text text=Odds "text=Seat draw" || return 1
   require_tab_selected Tools
 }
 s_odds_empty() {
@@ -1786,6 +1883,10 @@ step bank-knockout-done   "Alice knocked Player 2 out; 5th badge clear of name" 
 step bank-champion        "Three more out; Alice is the champion"               s_bank_champion
 step bank-payout-sheet    "Pay-out sheet for the champion (S5c)"                s_bank_payout_sheet
 step bank-paid            "Mark paid: Paid column, finished subtitle"           s_bank_paid
+step bank-settle-up       "Settle up: four buy-ins open, the fewest payments"   s_bank_settle_up
+step bank-settle-tick     "Tick a payment, then untick it"                      s_bank_settle_tick
+step bank-settle-share    "Share the settle-up as text"                         s_bank_settle_share
+step bank-settle-square   "Tick all four: everyone square; Undo takes it back"  s_bank_settle_square
 step pool-summary         "Pool breakdown sheet"                                s_pool_summary
 step weights-editor       "Payout structure sheet from the Bank"                s_weights_editor
 step weights-closed       "Cancel the payout structure sheet"                   s_weights_close
@@ -1800,17 +1901,12 @@ step payouts-nav          "Payouts tab: the finished night by name, adds up"    
 step payouts-nav-editor   "Payouts tab: structure sheet opens and closes"       s_payouts_nav_editor
 step payouts-nav-back     "Back from a tab returns to Tournament (B16)"         s_payouts_nav_back
 step history-save         "Pay everyone: save the night once; it is in History" s_history_save
-step cash-mode            "Bank: switch to the cash game (S13), nobody in yet"   s_cash_mode
-step cash-players         "Cash: Dana \$40, Sam \$20, Theo \$40 buy in"           s_cash_players
-step cash-top-up          "Cash: Theo tops up \$20 from his sheet"              s_cash_top_up
-step cash-count           "Cash: chips counted, \$120 in, \$120 out: balanced"   s_cash_count
-step cash-settle          "Cash: settle-up, 2 payments; tick Theo's"            s_cash_settle
-step cash-share           "Cash: share the settle-up as text"                   s_cash_share
-step cash-undo            "Cash: UNDO on the snackbar, then the top bar's Undo" s_cash_undo
-step cash-tournament      "Back to Tournament: the tournament's Bank intact"    s_cash_back_to_tournament
 step tools                "Tools tab: tool list and Sound (S7)"                 s_tools
 step sound-off            "Sound off: switch off, volume and chime rest"        s_sound_off
 step sound-on             "Sound back on; test chime"                           s_sound_on
+step cue-sounds           "Cue sounds (S18): the classic pack, each sound plays" s_cue_sounds
+step music                "Music (S18): no songs yet; play with the clock"      s_music
+step music-song           "Music: a song from the file picker plays, pauses"    s_music_song
 step hand-ranks           "Hand ranks (S12): how often by the river, kickers"   s_hand_ranks
 step seat-draw            "Seat draw (S14): the Bank's players, Tools selected" s_seat_draw
 step seat-draw-seats      "Draw seats: everyone once, balanced tables"          s_seat_draw_seats
@@ -1818,6 +1914,11 @@ step seat-draw-button     "Deal for the button: high card, blinds by seat"      
 step seat-draw-undo       "Redraw seats, then Undo brings the draw back"        s_seat_draw_undo
 step seat-draw-share      "Share as text: the share sheet opens and closes"     s_seat_draw_share
 step seat-draw-back       "Back to the Tools list"                              s_seat_draw_back
+step backup               "Tools > Backup: save and restore, Tools selected"    s_backup
+step backup-save          "Save backup…: the file picker saves the file"        s_backup_save
+step backup-open          "Open it again: the preview names what it holds"      s_backup_open
+step backup-add           "Add to this phone: nothing new, nothing changed"     s_backup_add
+step backup-replace       "Replace: the app starts again on the same game"      s_backup_replace
 step odds-empty           "Odds: empty table, first slot waiting"              s_odds_empty
 step odds-card-picker     "Docked keypad: ranks, then suits that wait"          s_card_picker
 step odds-hole-cards      "Keypad: AsKs vs QhQd, auto-advance to the flop"      s_hole_cards

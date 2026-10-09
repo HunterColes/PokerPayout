@@ -46,13 +46,18 @@ class BackupCoverageTest {
         }
         assertTrue(unresolved.isEmpty(), "Can't tell which file these open; use a constant in the same file:\n$unresolved")
         assertTrue(opened.isNotEmpty(), "found no SharedPreferences at all under $root")
-        val missing = opened.keys - BackupCatalog.FILES
+        val missing = opened.keys - BackupCatalog.FILES - BackupCatalog.PHONE_ONLY_FILES
         assertTrue(
             missing.isEmpty(),
             "Not in any backup: ${missing.associateWith { opened[it] }}. List each in BackupCatalog (core/backup): " +
-                "SETTINGS to save it whole with a settings group, or COLLECTIONS with a BackupSection of its own.",
+                "SETTINGS to save it whole with a settings group, or COLLECTIONS with a BackupSection of its own " +
+                "(or PHONE_ONLY_FILES, with why, if a backup must leave it out).",
         )
-        assertEquals(BackupCatalog.FILES, opened.keys, "BackupCatalog lists a file nothing opens any more")
+        assertEquals(
+            BackupCatalog.FILES + BackupCatalog.PHONE_ONLY_FILES,
+            opened.keys,
+            "BackupCatalog lists a file nothing opens any more",
+        )
     }
 
     @Test
@@ -74,6 +79,7 @@ class BackupCoverageTest {
         val names = BackupCatalog.SETTINGS.map { it.name }
         assertEquals(names.distinct(), names, "a settings file listed twice")
         assertTrue(BackupCatalog.COLLECTIONS.keys.none { it in names }, "a file both saved whole and item by item")
+        assertTrue(BackupCatalog.PHONE_ONLY_FILES.none { it in BackupCatalog.FILES }, "a file both saved and left out")
         val keys = SettingsGroup.entries.map { it.key } + BackupCatalog.COLLECTIONS.values
         assertEquals(keys.distinct(), keys, "two sections with one key")
         SettingsGroup.entries.forEach { group -> assertTrue(BackupCatalog.filesOf(group).isNotEmpty(), "$group has no files") }

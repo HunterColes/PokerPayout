@@ -25,7 +25,7 @@ object MysteryBounty {
      */
     fun envelopes(players: Int, bountyCents: Long): List<Long> = when {
         players <= 0 || bountyCents <= 0L -> emptyList()
-        else -> deal(players, bountyCents)
+        else -> deal(players, players * bountyCents, unitFor(bountyCents))
     }
 
     /** [envelopes] without the ones already [drawn] (each drawn amount takes one envelope out). */
@@ -33,6 +33,27 @@ object MysteryBounty {
         val left = envelopes.toMutableList()
         drawn.forEach { cents -> left.remove(cents) }
         return left
+    }
+
+    /**
+     * The envelopes still in the pool for [players] players at [bountyCents] once [drawn] have been
+     * drawn: the deal without the drawn ones.
+     *
+     * A player joining or leaving after the first draw changes the deal, and an envelope already
+     * drawn may not be in the new one. Then the money left (the new pool minus everything drawn) is
+     * dealt again, the same way, into one envelope for each one not yet drawn (players minus
+     * envelopes drawn), so the envelopes left never hold more than the pool has left.
+     */
+    fun left(players: Int, bountyCents: Long, drawn: List<Long>): List<Long> {
+        val dealt = envelopes(players, bountyCents)
+        val rest = remaining(dealt, drawn)
+        val everyDrawFromThisDeal = rest.size + drawn.size == dealt.size
+        val count = players - drawn.size
+        return when {
+            everyDrawFromThisDeal -> rest
+            count <= 0 || bountyCents <= 0L -> emptyList()
+            else -> deal(count, (dealt.sum() - drawn.sum()).coerceAtLeast(0L), unitFor(bountyCents))
+        }
     }
 
     /** One of [envelopesLeft], each as likely as the next; null when there are none. */
@@ -45,23 +66,32 @@ object MysteryBounty {
             .map { (cents, count) -> EnvelopeGroup(cents, count) }
             .sortedByDescending { it.cents }
 
-    private fun deal(players: Int, bountyCents: Long): List<Long> {
-        val unit = unitFor(bountyCents)
-        val totalUnits = players * (bountyCents / unit)
-        val big = ((players + BIG_EVERY / 2) / BIG_EVERY).coerceIn(1, players)
-        val middle = ((players + MIDDLE_EVERY / 2) / MIDDLE_EVERY).coerceAtMost(players - big)
-        val small = players - big - middle
+    /**
+     * [count] envelopes (at least one) holding [totalCents] together, in whole [unit]s: a few big, some
+     * middling, many small, biggest first. Too little to split that way, it is split evenly. Units that
+     * don't divide evenly go to the first envelopes, one each; cents short of a unit (never in a first
+     * deal) go to the first.
+     */
+    private fun deal(count: Int, totalCents: Long, unit: Long): List<Long> {
+        val totalUnits = totalCents / unit
+        val big = ((count + BIG_EVERY / 2) / BIG_EVERY).coerceIn(1, count)
+        val middle = ((count + MIDDLE_EVERY / 2) / MIDDLE_EVERY).coerceAtMost(count - big)
+        val small = count - big - middle
         val smallUnits = totalUnits / (big * BIG_WEIGHT + middle * MIDDLE_WEIGHT + small)
-        return if (smallUnits < 1L) {
-            List(players) { bountyCents }
+        val units = if (smallUnits < 1L) {
+            spread(totalUnits, count)
         } else {
             val middleUnits = smallUnits * MIDDLE_WEIGHT
             val bigUnits = totalUnits - middle * middleUnits - small * smallUnits
-            // Units that don't divide evenly go to the first big envelopes, one each
-            val bigs = List(big) { index -> bigUnits / big + if (index < bigUnits % big) 1 else 0 }
-            (bigs + List(middle) { middleUnits } + List(small) { smallUnits }).map { it * unit }
+            spread(bigUnits, big) + List(middle) { middleUnits } + List(small) { smallUnits }
         }
+        val oddCents = totalCents % unit
+        return units.mapIndexed { index, share -> share * unit + if (index == 0) oddCents else 0L }
     }
+
+    /** [total] split into [count] parts as evenly as can be, the bigger ones first. */
+    private fun spread(total: Long, count: Int): List<Long> =
+        List(count) { index -> total / count + if (index < total % count) 1 else 0 }
 
     /** The biggest nice unit that divides the bounty and fits in it at least four times; else a cent. */
     private fun unitFor(bountyCents: Long): Long =

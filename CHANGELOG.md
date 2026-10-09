@@ -3,6 +3,30 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.5 (on master, not published)
+
+A test lab that found five bugs, all fixed:
+
+- **Mystery bounties:** a player joining after an envelope was drawn could make the night pay up to
+  $9 more in bounties than was collected (nine players' $15 envelope wasn't in ten players' deal).
+  The money not yet drawn is now dealt again into the envelopes still to come.
+- **Live clock:** leaving the app and coming straight back, over and over, with the clock running
+  could crash it (found by the monkey). The notification's service no longer stops while a new
+  start is on its way.
+- **Huge stacks:** overtime no longer doubles a big blind past what can be counted (a 500,000,000
+  stack showed a negative big blind), and the setup advice never suggests such a stack.
+- **Payout editor:** a turned tablet or a font change kept the weights and rounding you hadn't
+  saved yet, as every other sheet does.
+- **Payouts:** a place that would round to $0 isn't paid (27 players at $10 rounded to $10 paid 9th
+  nothing); the places stepper stops at the most places that each pay something.
+- **Easier to read:** each payout preset's 1st-place amount is full gold, the odds grid's cards
+  already on the table are lighter, and Music's "On breaks" heading stays readable with the clock
+  switch off.
+- **New tests:** property tests that throw thousands of random nights, setups and amounts at the
+  money and blind maths; checks on every screen for TalkBack names and WCAG text contrast; the
+  clock, the Bank and the odds table surviving the app being killed at random; a seeded monkey on
+  GitHub's emulator for every pull request; and mutation testing, by hand (79% of core's maths).
+
 ## 1.4.4 (on master, not published)
 
 House cleaning:

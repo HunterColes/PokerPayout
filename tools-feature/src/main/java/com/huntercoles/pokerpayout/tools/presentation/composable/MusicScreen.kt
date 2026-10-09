@@ -124,10 +124,9 @@ private fun WithTheClock(state: MusicUiState, onIntent: (MusicIntent) -> Unit) {
         checked = state.autoPlay,
         onChange = { onIntent(MusicIntent.SetAutoPlay(it)) },
     )
-    PokerEyebrow(
-        stringResource(R.string.music_on_breaks),
-        color = if (state.autoPlay) PokerColors.Chalk else PokerColors.ChalkDim,
-    )
+    // Always Chalk: the heading is read with the clock off too (ChalkDim was 3.3:1, under AA); the
+    // choices under it dim to show they're off
+    PokerEyebrow(stringResource(R.string.music_on_breaks), color = PokerColors.Chalk)
     val labels = mapOf(
         BreakMusic.KEEP to stringResource(R.string.music_break_keep),
         BreakMusic.PAUSE to stringResource(R.string.music_break_pause),

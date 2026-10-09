@@ -50,6 +50,13 @@ class BlindLadderException(val problem: LadderProblem, message: String) : Illega
 object BlindFittingAlgorithm {
 
     /**
+     * The biggest starting stack a ladder may end on: its big blind, twice the stack, must still be
+     * countable (an Int). The stack field takes up to 999,999,999, below this; a suggested stack
+     * (BlindSetupAdvisor) never goes above it either.
+     */
+    const val MAX_STARTING_CHIPS: Int = Int.MAX_VALUE / 2
+
+    /**
      * Fits blinds to the band and returns fitted values with quality score.
      *
      * @throws BlindLadderException if no in-band ladder exists, saying which way to adjust
@@ -84,20 +91,20 @@ object BlindFittingAlgorithm {
     /** True when [fitBlinds] would return a ladder for this configuration. */
     fun isFeasible(numRounds: Int, smallestChip: Int, startingChips: Int): Boolean =
         numRounds >= 2 && smallestChip > 0 && startingChips >= smallestChip &&
-            startingChips % smallestChip == 0 &&
+            startingChips <= MAX_STARTING_CHIPS && startingChips % smallestChip == 0 &&
             (startingChips / smallestChip).toLong() in BlindLadderSearch.feasibleTargets(numRounds)
 
     /**
      * Starting stacks that give an in-band ladder of [numRounds] levels from [smallestChip], or null if
-     * none fit in an Int. Every multiple of [smallestChip] in the range is feasible.
+     * none are [MAX_STARTING_CHIPS] or less. Every multiple of [smallestChip] in the range is feasible.
      */
     fun feasibleStackRange(numRounds: Int, smallestChip: Int): LongRange? {
         val targets = if (numRounds >= 2 && smallestChip > 0) BlindLadderSearch.feasibleTargets(numRounds) else null
         val low = targets?.let { it.first * smallestChip }
-        return if (targets == null || low == null || low > Int.MAX_VALUE) {
+        return if (targets == null || low == null || low > MAX_STARTING_CHIPS) {
             null
         } else {
-            low..minOf(targets.last, Int.MAX_VALUE.toLong() / smallestChip) * smallestChip
+            low..minOf(targets.last, MAX_STARTING_CHIPS.toLong() / smallestChip) * smallestChip
         }
     }
 
@@ -124,6 +131,11 @@ object BlindFittingAlgorithm {
                 LadderProblem.TOO_STEEP,
                 "Calculated growth rate %.3f is too high (max: %.2f). Try more rounds or smaller starting chips."
                     .format(Locale.ROOT, growthRate, maxRate)
+            )
+            startingChips > MAX_STARTING_CHIPS -> BlindLadderException(
+                LadderProblem.TOO_STEEP,
+                "Starting chips %d make a big blind too big to count (at most %d). Try smaller starting chips."
+                    .format(Locale.ROOT, startingChips, MAX_STARTING_CHIPS)
             )
             growthRate < minRate -> BlindLadderException(
                 LadderProblem.TOO_FLAT,

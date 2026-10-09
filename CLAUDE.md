@@ -66,7 +66,12 @@ JDK 21 toolchain (F-Droid's buildserver has only JDK 21; bytecode targets 17). T
   recorded on 6 cells (`DeviceMatrix.goldens`, plus `pinned` ones); review new ones by eye.
 - **Layout checks** (`core` test fixtures: `DeviceMatrix`, `ScreenTestRule`, `LayoutAssertions`) run
   every screen at 8 sizes x 3 font scales and fail on clipped, ellipsized, broken-word or off-screen
-  text, targets under 48 dp, and overlapping targets.
+  text, targets under 48 dp, overlapping targets, tappable things TalkBack can't name, and (on
+  `phone` at font 1.0) text under WCAG AA contrast.
+- **Property tests** (kotest-property through `forAll` in core's test fixtures): seeded, a failure
+  shrinks and prints its seed. For the maths, and for process death (`BankTestKit.restartProcess()`).
+- **Monkey** (`scripts/device/monkey.sh`, `monkey.yml` on every pull request): seeded chaos on the
+  emulator, failing on a crash or ANR. **Mutation testing**: `gh workflow run mutation.yml`, by hand.
 - **Device tour** on a headless emulator (never ask the owner to plug in a phone):
 
   ```bash

@@ -704,6 +704,23 @@ s_live_clock_back() {
   ui assert-text "text~=Level 1 of 9 · running" "text~=Level 1 · time left" || return 1
   wait_live_clock
 }
+s_live_clock_flap() {
+  # Away and back ten times in quick succession with the clock running. The monkey found it
+  # (seed 35): coming back sends the live clock's service Hide and leaving again sends Show, and a
+  # Hide that ended the service with the Show still pending made Android crash the app
+  # (ForegroundServiceDidNotStartInTimeException). One shell, no waits, so the trips overlap. The
+  # launcher's intent brings the task back, as the launcher does, rather than stacking new screens.
+  local trips="" i
+  for i in $(seq 1 10); do
+    trips+="input keyevent KEYCODE_HOME; "
+    trips+="am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n $APP_ID/$MAIN_ACTIVITY >/dev/null; "
+  done
+  adb_ shell "$trips" >/dev/null 2>&1 || true
+  sleep 12 # past Android's 10 s for a pending startForeground
+  ui wait "desc=Pause timer" --timeout 15 || return 1
+  ui assert-text "text~=Level 1 of 9 · running" || return 1
+  wait_live_clock
+}
 s_live_clock_locked() {
   # Opt-in: the screen locks with the clock running; the live clock shows (on the lock screen,
   # public), and goes again once the app is back in front
@@ -2004,6 +2021,7 @@ step start-fold           "Start: setup folds into the running clock (S2)"      
 step nudge                "-1 and +1: a minute off the level, and back"         s_nudge
 step live-clock-shade     "Home: the live clock notification (PP-081)"          s_live_clock_shade
 step live-clock-back      "Back to the app: still running; notification gone"   s_live_clock_back
+step live-clock-flap      "Away and back 10 times fast: no crash, still running" s_live_clock_flap
 step timer-next-level     "Skip to level 2"                                     s_timer_next_level
 step timer-break          "Skip to the first break (S4)"                        s_timer_break
 step timer-paused         "Pause on the break"                                  s_timer_paused

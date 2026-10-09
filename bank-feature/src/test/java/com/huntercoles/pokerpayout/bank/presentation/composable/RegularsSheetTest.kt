@@ -38,10 +38,10 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Tonight's players (S25, PP-110) over the Bank, inside the app's shell on every cell of the device
+ * Tonight's players (S26, PP-110) over the Bank, inside the app's shell on every cell of the device
  * matrix: text fits and isn't clipped at any scroll position, every target is 48 dp and named for
- * TalkBack. Goldens on [DeviceMatrix.goldens]: `S25_regulars` (six of nine seats named, twelve
- * regulars) and `S25_regulars_empty` (the first time). A name being typed, and every seat named, get
+ * TalkBack. Goldens on [DeviceMatrix.goldens]: `S26_regulars` (six of nine seats named, twelve
+ * regulars) and `S26_regulars_empty` (the first time). A name being typed, and every seat named, get
  * the layout checks too. The sheet is drawn as it looks open, over the Bank and its scrim (a modal
  * window doesn't capture under Robolectric); its states come from the real ViewModel ([BankScenes]).
  */
@@ -108,13 +108,13 @@ class RegularsSheetTest(private val config: ScreenConfig) {
     @Test
     fun regulars() {
         show(BankScenes.regulars(kit))
-        check("Tonight's players", golden = "S25_regulars")
+        check("Tonight's players", golden = "S26_regulars")
     }
 
     @Test
     fun firstTime() {
         show(BankScenes.noRegulars(kit))
-        check("Tonight's players, nobody yet", golden = "S25_regulars_empty")
+        check("Tonight's players, nobody yet", golden = "S26_regulars_empty")
     }
 
     @Test

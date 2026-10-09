@@ -71,7 +71,7 @@ internal object HistoryFixtures {
 
     val empty = HistoryUiState.of(emptyList())
 
-    // One person under two names (S25b, PP-110) ------------------------------------------------------
+    // One person under two names (S26b, PP-110) ------------------------------------------------------
 
     /** A short night after the three: Al won, then Jo and Sam ($150). */
     val october = SavedNight(

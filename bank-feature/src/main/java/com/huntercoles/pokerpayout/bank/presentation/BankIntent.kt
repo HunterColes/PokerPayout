@@ -70,7 +70,7 @@ sealed interface BankIntent {
     /** The top bar's bell: the clock's chime on or off. */
     data object ToggleMute : BankIntent
 
-    // Tonight's players (S25, PP-110) ----------------------------------------------------------------
+    // Tonight's players (S26, PP-110) ----------------------------------------------------------------
 
     /** The top bar's regulars: tonight's players, picked from everyone the host has played with. */
     data object ShowRegulars : BankIntent

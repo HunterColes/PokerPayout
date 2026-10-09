@@ -948,7 +948,7 @@ s_bank_rename() {
   tab Bank
   ui assert-text text=Alice
 }
-# Tonight's players (S25, PP-110): picked from the regulars rather than typed. Alice, typed a moment
+# Tonight's players (S26, PP-110): picked from the regulars rather than typed. Alice, typed a moment
 # ago, is a regular already and ticked; a name added in the sheet takes the first seat nobody named
 # (Player 2), and a tap frees that seat again, so the steps after still find Player 2.
 s_bank_regulars() {
@@ -1216,7 +1216,7 @@ s_history_save() {
   ui assert-text "text=Seat draw" text=History
 }
 
-# One person under two names (S25b, PP-110): Alice opened from the standings; Bea (added in the Bank's
+# One person under two names (S26b, PP-110): Alice opened from the standings; Bea (added in the Bank's
 # sheet, never at a saved night) could be her, and the seats nobody named are nobody. Picked, the sheet
 # asks which name to keep; Keep Alice merges at once, and UNDO takes it back. Ends on the Tools list.
 s_history_merge() {
@@ -2115,7 +2115,7 @@ step tournament-reset-ok  "Reset: setup unfolds, level 1 ready"                 
 step rebuy-amount         "Rebuy amount \$10 for the Bank steps"                 s_rebuy_amount
 step bank                 "Bank tab (S5 v2): labelled header, top bar"          s_bank
 step bank-rename          "Rename Player 1 to Alice, switch tabs, name kept"    s_bank_rename
-step bank-regulars        "Tonight's players (S25): Alice a regular already"    s_bank_regulars
+step bank-regulars        "Tonight's players (S26): Alice a regular already"    s_bank_regulars
 step bank-regulars-add    "Add Bea in the sheet: she takes Player 2's seat"     s_bank_regulars_add
 step bank-regulars-free   "Tap Bea again: Player 2 again; Done"                 s_bank_regulars_free
 step bank-buyin           "Buy-in in one tap; snackbar with UNDO"               s_bank_buyin
@@ -2144,7 +2144,7 @@ step payouts-nav          "Payouts tab: the finished night by name, adds up"    
 step payouts-nav-editor   "Payouts tab: structure sheet opens and closes"       s_payouts_nav_editor
 step payouts-nav-back     "Back from a tab returns to Tournament (B16)"         s_payouts_nav_back
 step history-save         "Pay everyone: save the night once; it is in History" s_history_save
-step history-merge        "History (S25b): could Alice be Bea? Which to keep"   s_history_merge
+step history-merge        "History (S26b): could Alice be Bea? Which to keep"   s_history_merge
 step history-merge-undo   "Keep Alice: merged at once; UNDO takes it back"      s_history_merge_undo
 step tools                "Tools tab: tool list and Sound (S7)"                 s_tools
 step sound-off            "Sound off: switch off, volume and chime rest"        s_sound_off

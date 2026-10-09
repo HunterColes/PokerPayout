@@ -64,7 +64,7 @@ internal fun RegularsSheet(
 }
 
 /**
- * Tonight's players (S25, PP-110): how many seats have a name, a field to add a name (it also
+ * Tonight's players (S26, PP-110): how many seats have a name, a field to add a name (it also
  * narrows the list as it is typed), then every regular, most nights lately first, each ticked when at
  * the table tonight. A tap seats a regular or frees their seat; the list keeps its order meanwhile.
  * With nobody yet, it says where regulars come from.

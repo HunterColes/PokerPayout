@@ -213,7 +213,7 @@ class HistoryViewModelTest {
         )
     }
 
-    // One person under two names (S25b, PP-110) ------------------------------------------------------
+    // One person under two names (S26b, PP-110) ------------------------------------------------------
 
     /** The fixtures' nights, and one more where "Dana R." beat Marcus heads-up: 2 points and a win. */
     private fun saveAllWithDanaR() {

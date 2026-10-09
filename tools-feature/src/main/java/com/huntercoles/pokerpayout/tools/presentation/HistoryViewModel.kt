@@ -41,7 +41,7 @@ import javax.inject.Inject
  * @property openNight the night shown in full, if one is open.
  * @property merges the names merged as one person (PP-110).
  * @property known the names the Bank has used (PP-110): someone a player could be, without a saved night.
- * @property player the player opened from the standings, to merge or separate their names (S25b).
+ * @property player the player opened from the standings, to merge or separate their names (S26b).
  */
 data class HistoryUiState(
     val nights: List<SavedNight> = emptyList(),
@@ -102,7 +102,7 @@ sealed interface HistoryIntent {
     /** The file picker made [uri] for the CSV: write every night to it. */
     data class SaveCsv(val uri: Uri) : HistoryIntent
 
-    // One person under two names (S25b, PP-110) --------------------------------------------------
+    // One person under two names (S26b, PP-110) --------------------------------------------------
 
     /** A player tapped in the standings: their names, and who they could be the same person as. */
     data class OpenPlayer(val name: String) : HistoryIntent

@@ -9,13 +9,13 @@ import com.huntercoles.pokerpayout.core.domain.players.Regular
 import com.huntercoles.pokerpayout.core.domain.players.Roster
 
 /**
- * Someone the player opened could be (S25b, PP-110): [name] as the regulars have them, and the saved
+ * Someone the player opened could be (S26b, PP-110): [name] as the regulars have them, and the saved
  * nights they played (none: only the Bank has used the name).
  */
 data class MergeCandidate(val name: String, val nights: Int)
 
 /**
- * A player opened from the standings (S25b, PP-110): their season, all time; the other names counted
+ * A player opened from the standings (S26b, PP-110): their season, all time; the other names counted
  * as them, each of which can be separated again; and everyone they could be the same person as,
  * likely spellings first ("Mike", "Mike R."), then by name. Players who played a night with them
  * can't be them, so they aren't offered ([leftOut] says how many).

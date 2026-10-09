@@ -332,7 +332,7 @@ sealed interface BankSheet {
     data object SettleUp : BankSheet
 
     /**
-     * S25 (PP-110): tonight's players, picked from the regulars ([RegularsModel]). [order]: the
+     * S26 (PP-110): tonight's players, picked from the regulars ([RegularsModel]). [order]: the
      * regulars' keys as the roster had them when the sheet opened, which the rows keep.
      */
     data class Regulars(val order: List<String>) : BankSheet

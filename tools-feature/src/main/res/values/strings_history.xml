@@ -84,7 +84,7 @@
     <string name="history_share_row">%1$s %2$s</string>
     <string name="history_share_row_won">%1$s %2$s: %3$s</string>
 
-    <!-- One person under two names (S25b, PP-110): merged so the season adds up, with Undo -->
+    <!-- One person under two names (S26b, PP-110): merged so the season adds up, with Undo -->
     <string name="history_merge_hint">Same person under two names? Tap one to merge them.</string>
     <string name="history_open_player">Open %1$s</string>
     <string name="history_also_counted">Also counted as %1$s</string>

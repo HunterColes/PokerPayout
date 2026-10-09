@@ -11,7 +11,7 @@ data class RegularRow(val regular: Regular, val seatId: Int?) {
 }
 
 /**
- * The tonight's players sheet (S25, PP-110): every regular, each at the table tonight or not, and how
+ * The tonight's players sheet (S26, PP-110): every regular, each at the table tonight or not, and how
  * many of the Bank's seats have a name. The rows keep the order they had when the sheet opened
  * ([BankSheet.Regulars.order]), so a tap never moves a name under the finger; a name new since then
  * (added, or typed in a row before 1.4 kept names) comes first.

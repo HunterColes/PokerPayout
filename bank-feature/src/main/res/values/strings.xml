@@ -299,7 +299,7 @@
         <item quantity="other">Clear %d players</item>
     </plurals>
 
-    <!-- Tonight's players, picked from the regulars (S25, PP-110) -->
+    <!-- Tonight's players, picked from the regulars (S26, PP-110) -->
     <string name="bank_regulars">Tonight\'s players</string>
     <string name="bank_regulars_pick">Pick tonight\'s players</string>
     <plurals name="bank_regulars_seats">

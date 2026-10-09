@@ -141,7 +141,7 @@ fun HistoryContent(
         )
     } else {
         NightsList(state, onIntent, onBack, onExport, modifier)
-        // A player from the standings: their names, to merge or separate (S25b, PP-110)
+        // A player from the standings: their names, to merge or separate (S26b, PP-110)
         state.player?.let { PlayerSheet(it, onIntent) }
     }
 }

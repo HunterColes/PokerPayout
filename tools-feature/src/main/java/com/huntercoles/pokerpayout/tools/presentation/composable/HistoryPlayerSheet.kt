@@ -45,7 +45,7 @@ internal fun PlayerSheet(panel: PlayerPanel, onIntent: (HistoryIntent) -> Unit) 
 }
 
 /**
- * One person under two names (S25b, PP-110): the player's season all time; their other names, each
+ * One person under two names (S26b, PP-110): the player's season all time; their other names, each
  * with Separate; and everyone who could be them (anyone who never played a night with them), likely
  * spellings first. One picked, the sheet asks which name to keep, and the merge applies at once with
  * Undo on the snackbar. The saved nights keep the names they were saved with.

@@ -30,7 +30,7 @@ import org.robolectric.annotation.GraphicsMode
  * never clipped at any scroll position, 48 dp targets that don't overlap. Goldens on
  * [DeviceMatrix.goldens]: `S16_history_list` (all time, two players level at the top),
  * `S16_history_night` (one night in full) and `S16_history_empty` (nothing saved yet). A year picked
- * gets the layout checks too. A player opened from the standings (S25b, PP-110): `S25b_history_player`
+ * gets the layout checks too. A player opened from the standings (S26b, PP-110): `S26b_history_player`
  * (their other name, and who could be them), and the question of which name to keep (layout only).
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -53,13 +53,13 @@ class HistoryScreenTest(private val config: ScreenConfig) {
     fun aYear() = check(name = null, HistoryFixtures.year)
 
     @Test
-    fun aPlayer() = checkPlayer("S25b_history_player", HistoryFixtures.player)
+    fun aPlayer() = checkPlayer("S26b_history_player", HistoryFixtures.player)
 
     @Test
     fun keepWhichName() = checkPlayer(name = null, HistoryFixtures.keepWhich)
 
     /**
-     * A player's sheet (S25b, PP-110) as it looks open over the standings and the scrim (a modal
+     * A player's sheet (S26b, PP-110) as it looks open over the standings and the scrim (a modal
      * window doesn't capture under Robolectric); then the sheet alone gets the checks.
      */
     private fun checkPlayer(name: String?, state: HistoryUiState) {
@@ -78,7 +78,7 @@ class HistoryScreenTest(private val config: ScreenConfig) {
                 }
             }
         }
-        val where = "${name ?: "S25b (layout only)"} on ${config.id}"
+        val where = "${name ?: "S26b (layout only)"} on ${config.id}"
         if (name != null && config in DeviceMatrix.goldens) screen.compose.onRoot().captureGolden(GROUP, name, config)
         behind.value = false
         screen.compose.waitForIdle()

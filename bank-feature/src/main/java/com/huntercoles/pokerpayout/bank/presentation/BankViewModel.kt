@@ -247,7 +247,7 @@ class BankViewModel @Inject constructor(
         updateCalculations()
     }
 
-    // Tonight's players (S25, PP-110) ------------------------------------------------------------
+    // Tonight's players (S26, PP-110) ------------------------------------------------------------
 
     /** At the table: their seat is nobody's again. Not yet: they sit down ([seat]). */
     private fun toggleRegular(name: String) {

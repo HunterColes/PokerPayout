@@ -21,7 +21,7 @@ import org.robolectric.annotation.Config
 import java.time.LocalDate
 
 /**
- * Tonight's players picked from the regulars (S25, PP-110), through the real Bank over Robolectric's
+ * Tonight's players picked from the regulars (S26, PP-110), through the real Bank over Robolectric's
  * preferences: the roster from History and the Bank's own names, regulars first, in an order that
  * holds while the sheet is open; a regular takes the first seat nobody named, or a new seat once all
  * have names (the Tournament tab's count too, up to 30), and a tap again frees the seat; quick add;

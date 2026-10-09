@@ -174,7 +174,7 @@ object BankScenes {
     }
 
     /**
-     * S25 (PP-110): setting up the next night from the regulars. Four saved nights this autumn and one
+     * S26 (PP-110): setting up the next night from the regulars. Four saved nights this autumn and one
      * in January (with Old Al and Mike R.), and Zoë typed in the Bank once; tonight nine seats, six
      * of them named so far (Dana, Marcus, Priya, Theo, Jo, Sam), with the sheet open.
      */

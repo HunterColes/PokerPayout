@@ -55,7 +55,11 @@ class ToolsTabScreenTest(private val config: ScreenConfig) {
     @Test
     fun toolsMusic() = check(
         "S7_tools_music",
-        ToolsHomeUiState(soundOn = true, volume = 0.7f, music = MusicSummary(songs = 5, playing = true, current = "Midnight Card Room")),
+        ToolsHomeUiState(
+            soundOn = true,
+            volume = 0.7f,
+            music = MusicSummary(songs = 5, playing = true, current = "Midnight Card Room"),
+        ),
     )
 
     private fun check(name: String, state: ToolsHomeUiState) {

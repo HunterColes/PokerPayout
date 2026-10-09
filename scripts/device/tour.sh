@@ -734,7 +734,9 @@ s_timer_break() {
   ui tap "desc=Next blind level"
   # S4: the break's own screen, with its note and End break now
   ui assert-text "text~=Break · back at Level 5" "text~=Break 1 ·" "text=Last rebuy" || return 1
-  ui assert 're=^(10:00|9:[0-9]{2})$'
+  # The break's countdown, any m:ss up to 10:00: on a slow cell (small-f2.0) a minute or more has
+  # gone by the time the screen is read
+  ui assert 're=^(10:00|[0-9]:[0-5][0-9])$'
 }
 s_timer_paused() {
   # PP-046: the play button has its own place (on a break, beside End break now), never the digits

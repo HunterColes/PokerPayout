@@ -743,19 +743,63 @@ s_live_clock_back() {
   ui assert-text "text~=Level 1 of 9 · running" "text~=Level 1 · time left" || return 1
   wait_live_clock
 }
+# What's in front (the top resumed activity, as `ui top` prints it) once it has stopped changing: the
+# same three looks in a row, a second apart, within about 20 s. Prints the last look either way.
+settled_front() {
+  local last="" now same=0 i
+  for i in $(seq 1 20); do
+    now="$(ui top 2>/dev/null || true)"
+    if [[ -n "$now" && "$now" == "$last" ]]; then
+      same=$((same + 1))
+      if (( same >= 2 )); then echo "$now"; return 0; fi
+    else
+      same=0
+    fi
+    last="$now"
+    sleep 1
+  done
+  echo "${last:-nothing}"
+  return 1
+}
+# Waits (up to ~15 s) for the app's screen to be the one in front.
+wait_app_in_front() {
+  local i
+  for i in $(seq 1 15); do
+    [[ "$(ui top 2>/dev/null || true)" == *"$APP_ID/"* ]] && return 0
+    sleep 1
+  done
+  echo "[ui] FAIL the app didn't come back in front: $(ui top 2>/dev/null || echo nothing)"
+  return 1
+}
 s_live_clock_flap() {
   # Away and back ten times in quick succession with the clock running. The monkey found it
   # (seed 35): coming back sends the live clock's service Hide and leaving again sends Show, and a
   # Hide that ended the service with the Show still pending made Android crash the app
   # (ForegroundServiceDidNotStartInTimeException). One shell, no waits, so the trips overlap. The
   # launcher's intent brings the task back, as the launcher does, rather than stacking new screens.
-  local trips="" i
+  #
+  # `input keyevent` returns before Android acts on Home (the launcher starts a moment later), so
+  # under load the last trip's Home can land after the last return and leave the launcher in front:
+  # the tour racing itself, not the app (#57's release tour: the launcher's start came 10 ms after
+  # the app's last one). So the step waits until what's in front stops changing. If it's the
+  # launcher, the app is away with the clock running, so the live clock must show; then the app is
+  # opened once more, as the host would. Either way the clock must be on screen and still running.
+  local trips="" i front
   for i in $(seq 1 10); do
     trips+="input keyevent KEYCODE_HOME; "
     trips+="am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n $APP_ID/$MAIN_ACTIVITY >/dev/null; "
   done
   adb_ shell "$trips" >/dev/null 2>&1 || true
   sleep 12 # past Android's 10 s for a pending startForeground
+  front="$(settled_front)" || { echo "[ui] FAIL what's in front never settled: $front"; return 1; }
+  if [[ "$front" == *"$APP_ID/"* ]]; then
+    echo "in front after the trips: the app"
+  else
+    echo "in front after the trips: ${front} (the last Home landed after the last return)"
+    wait_live_clock 'android\.title=.*\(Level [0-9]+\)' '"Pause"' || return 1
+    adb_ shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || return 1
+    wait_app_in_front || return 1
+  fi
   ui wait "desc=Pause timer" --timeout 15 || return 1
   ui assert-text "text~=Level 1 of 9 · running" || return 1
   wait_live_clock

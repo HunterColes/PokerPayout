@@ -363,7 +363,10 @@ SystemUI's demo mode on. The tour then returns to the app from the launcher (`li
 the clock must still be running and the notification gone. `live-clock-flap` then leaves and comes
 back ten times in one shell with no waits (the race the monkey found: a Hide that ended the service
 while a Show it owed `startForeground` for was pending crashed the app), and checks the clock is
-still running, the notification gone, and nothing crashed.
+still running, the notification gone, and nothing crashed. `input keyevent` returns before Android
+acts on Home, so the last Home can land after the last return and leave the launcher in front; the
+step waits for what's in front to settle (`settled_front`), and if it's the launcher, it checks
+that the live clock shows and opens the app once more before checking the clock.
 
 Pause and Open are tapped in the real shade (`cmd statusbar expand-notifications`, then
 uiautomator) only in the opt-in steps `live-clock-pause` and `live-clock-open`: on the API 34

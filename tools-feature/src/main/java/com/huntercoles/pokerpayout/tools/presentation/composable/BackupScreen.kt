@@ -90,8 +90,8 @@ fun BackupRoute(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel()
 private val OPEN_TYPES = arrayOf(BackupJson.MIME_TYPE, "text/plain", "application/octet-stream")
 
 /**
- * Backup, stateless: save a backup, open a file to restore, why the last file couldn't be used, and
- * where the files go (nowhere but where the player puts them).
+ * Backup, stateless: why the last file couldn't be used (on top, so it is seen), save a backup, open
+ * a file to restore, and where the files go (nowhere but where the player puts them).
  */
 @Composable
 fun BackupContent(
@@ -108,6 +108,8 @@ fun BackupContent(
             onBack = onBack,
         )
         HistoryPane {
+            // First, so it shows without scrolling whatever the text size
+            state.problem?.let { ProblemNote(stringResource(it)) }
             BackupCard(
                 icon = PokerIcons.Save,
                 heading = stringResource(R.string.backup_save_heading),
@@ -135,7 +137,6 @@ fun BackupContent(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            state.problem?.let { ProblemNote(stringResource(it)) }
             Text(
                 text = stringResource(R.string.backup_private),
                 style = MaterialTheme.typography.bodySmall,

@@ -24,7 +24,7 @@
     <!-- The line under the face, read out by TalkBack when it changes -->
     <string name="shot_clock_status_ready">Tap the clock to start</string>
     <string name="shot_clock_status_running">Tap the clock for the next decision</string>
-    <string name="shot_clock_status_low">Ten seconds left</string>
+    <string name="shot_clock_status_low">Last ten seconds</string>
     <string name="shot_clock_status_paused">Paused</string>
     <string name="shot_clock_status_time_up">Time\'s up. Tap the clock for the next decision.</string>
 

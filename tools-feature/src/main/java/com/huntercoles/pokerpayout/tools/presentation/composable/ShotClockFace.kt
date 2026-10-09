@@ -16,8 +16,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -150,8 +152,11 @@ private fun FaceFlash(flashes: Int) {
     val reduced = LocalReducedMotion.current
     val glow = remember { Animatable(0f) }
     var framed by remember { mutableStateOf(false) }
+    // A flash already shown (before the screen turned, say) isn't shown again
+    var shown by rememberSaveable { mutableIntStateOf(flashes) }
     LaunchedEffect(flashes) {
-        if (flashes == 0) return@LaunchedEffect
+        if (flashes <= shown) return@LaunchedEffect
+        shown = flashes
         if (reduced) {
             framed = true
             delay(STEADY_FRAME_MILLIS)

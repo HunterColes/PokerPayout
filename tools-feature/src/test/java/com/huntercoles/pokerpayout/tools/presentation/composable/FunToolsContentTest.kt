@@ -80,7 +80,7 @@ class FunToolsContentTest {
     fun lowOnTimeTheLineSaysSoAndCardsCanBePlayed() {
         showShotClock(ShotClockFixtures.low)
         compose.onNodeWithContentDescription("Shot clock, 8 seconds left").assertExists()
-        compose.onNodeWithText("Ten seconds left").assertExists()
+        compose.onNodeWithText("Last ten seconds").assertExists()
         compose.onNodeWithText("Pause").performClick()
         compose.onNodeWithText("Reset").performClick()
         compose.onNodeWithContentDescription("Play a card for Marcus, 30 more seconds").performScrollTo()

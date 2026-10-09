@@ -2,9 +2,7 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.domain.model.TableSeats
-import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
@@ -29,10 +27,6 @@ import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockTimeline
 import com.huntercoles.pokerpayout.tournament.domain.clock.LevelSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.SilentCue
-import com.huntercoles.pokerpayout.tournament.domain.moments.BigMoment
-import com.huntercoles.pokerpayout.tournament.domain.moments.Field
-import com.huntercoles.pokerpayout.tournament.domain.moments.MomentLook
-import com.huntercoles.pokerpayout.tournament.domain.moments.MomentTracker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -63,7 +57,7 @@ import javax.inject.Inject
  *
  * Big moments (PP-111): the knockouts the Bank records (from its tab or the table view's Knock out)
  * bring the bubble, in the money, the final table, heads-up and the champion; each shows on the
- * clock once ([MomentTracker]), and an Undo takes it back.
+ * clock once ([ClockMoments]), and an Undo takes it back.
  */
 @HiltViewModel
 @Suppress("LongParameterList") // one injected source per thing the clock reads
@@ -98,17 +92,12 @@ class TimerViewModel @Inject constructor(
     private var tableConfig = tournamentPreferences.getCurrentTournamentConfig()
     private var bank = BankCounts()
 
-    /** The one payout calculation (stateless), for how many places are paid. */
-    private val payouts = CalculatePayoutsUseCase()
+    /** The table's numbers and the night's big moments (PP-111) they bring. */
+    private val clockTable = ClockTable(bankPreferences, tableSeats, timerPreferences, cues)
 
     /** The chip set the color-ups follow; null for a common home set's chips. */
     private var chipSet: ChipSetChips? = chipSets.current()
 
-    /** PP-111: which big moments the field has reached, saved so none is marked twice. */
-    private val moments = MomentTracker(timerPreferences)
-
-    /** Moments shown so far in this process; each banner's id. */
-    private var momentsShown = 0
 
     init {
         cues.preload()
@@ -716,8 +705,6 @@ class TimerViewModel @Inject constructor(
 
     // ------------------------------------------------------------------ table numbers and settings
 
-    private data class BankCounts(val eliminated: List<Int> = emptyList(), val rebuys: Int = 0, val addOns: Int = 0)
-
     private fun observeTable() {
         tableConfig = tournamentPreferences.getCurrentTournamentConfig()
         bank = BankCounts(
@@ -766,65 +753,7 @@ class TimerViewModel @Inject constructor(
     }
 
     private fun refreshTable() {
-        val players = tableConfig.numPlayers
-        val outIds = bank.eliminated.filter { it in 1..players }.toSet()
-        val stillIn = (1..players).filter { it !in outIds }
-        val left = stillIn.size
-        val stacks = players.toLong() + bank.rebuys + bank.addOns
-        val chips = stacks * _uiState.value.config.startingChips
-        val prizePool = PoolBreakdown.withRecordedPurchases(
-            tableConfig.money,
-            players,
-            bankPreferences.getRecordedRebuyCents(),
-            bankPreferences.getRecordedAddOnCents(),
-        ).prizePoolCents
-        // The places that table pays, from the one payout calculation (PP-135: the bubble)
-        val paid = payouts(prizePool, tableConfig.payoutWeights, players, tableConfig.payoutRounding).places
-        val table = TableStats(
-            playerCount = players,
-            playersLeft = left,
-            averageStack = if (left > 0) (chips / left).toInt() else 0,
-            // The same prize pool the Payouts table splits (buy-ins, rebuys and add-ons at the prices
-            // they were bought at; no food or bounty)
-            prizePoolCents = prizePool,
-            paidPlaces = paid.size,
-            championName = stillIn.singleOrNull()?.takeIf { players > 1 }?.let(bankPreferences::getPlayerName)
-        )
-        val purchases = Purchases(
-            rebuyCents = tableConfig.money.rebuyCents,
-            addOnCents = tableConfig.money.addOnCents,
-            rebuysTaken = bank.rebuys,
-            addOnsTaken = bank.addOns
-        )
-        _uiState.update { it.copy(table = table, purchases = purchases) }
-        val look = moments.look(Field(players, left, paid.size, tableSeats.seatsPerTable()))
-        showMoments(look, stillIn, lowestPrizeCents = paid.minOfOrNull { it.amountCents } ?: 0L)
-    }
-
-    /**
-     * PP-111: the biggest moment the field has newly reached shows on the clock with its cue (the
-     * champion opens the winner's screen), once a clock exists; before its first start a moment is
-     * only noted. A moment the field no longer reaches (an Undo, a player brought back) goes.
-     */
-    private fun showMoments(look: MomentLook, stillIn: List<Int>, lowestPrizeCents: Long) {
-        val headline = look.headline?.takeIf { _uiState.value.hasTimerStarted }
-        val banner = headline?.takeIf { it != BigMoment.CHAMPION }?.let { moment ->
-            MomentBanner(
-                moment = moment,
-                id = ++momentsShown,
-                playersLeft = stillIn.size,
-                names = if (moment == BigMoment.HEADS_UP) stillIn.map(bankPreferences::getPlayerName) else emptyList(),
-                lowestPrizeCents = lowestPrizeCents,
-            )
-        }
-        headline?.let { cues.playMoment(it.cue) }
-        val champion = BigMoment.CHAMPION in look.reached
-        _uiState.update {
-            it.copy(
-                moment = banner ?: it.moment?.takeIf { shown -> headline == null && shown.moment in look.reached },
-                winnerOpen = champion && (it.winnerOpen || headline == BigMoment.CHAMPION),
-            )
-        }
+        _uiState.value = clockTable.refreshed(_uiState.value, tableConfig, bank)
     }
 
     private companion object {

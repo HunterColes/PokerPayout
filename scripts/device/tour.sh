@@ -1217,7 +1217,7 @@ s_history_save() {
   ui back                                      # the night -> History
   ui assert-text "text=1 night saved" || return 1
   ui back                                      # History -> the Tools list
-  ui assert-text "text=Seat draw" text=History
+  ui assert-text "text=Saved nights and the season's points" text=History   # the History row: more tools since 1.4.8 can push Seat draw out of view
 }
 
 # Clearing the Rebuy amount to retype it must not wipe recorded rebuys (PP-014).

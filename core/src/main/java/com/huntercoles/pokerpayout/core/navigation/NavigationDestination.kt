@@ -37,6 +37,10 @@ sealed class NavigationDestination {
     @Serializable
     data object History : NavigationDestination()
 
+    /** Everything the app saves, in one file: save a backup, open one and restore it. */
+    @Serializable
+    data object Backup : NavigationDestination()
+
     @Serializable
     data object Back : NavigationDestination()
 }

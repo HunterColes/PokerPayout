@@ -248,6 +248,12 @@ are:
    next seats post the blinds (heads-up the button posts the small one) and "Button: NAME, seat N"
    names it; Redraw seats then Undo brings back the same draw; Share opens the system share sheet,
    and Back closes it with the draw still there; Back to the Tools list.
+   Then **Backup** (5 steps): Tools > Backup (Tools still selected); Save backup… must open the
+   system's file picker (DocumentsUI) and its Save must bring back "Backup saved"; Open a file…
+   picks that file and the preview must name what it holds ("1 preset", "1 night in History",
+   "Tournament setup and tonight's game"); Add to this phone must find nothing new; Replace this
+   phone's data must start the app again on the first tab with the same game (Alice the Bank's
+   champion, the night in History), ending on the Tools list.
 5. **Odds.** Empty state, with the slot being filled on screen above the keypad without
    scrolling; card picker; AsKs vs QhQd; a JsTs2c flop (the picker scrolls to find 2c); calculate
    and require the exact answer, **56.06%** under Player 1 and **43.94%** under Player 2 (555 and

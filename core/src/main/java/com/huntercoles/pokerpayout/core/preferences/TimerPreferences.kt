@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
 import com.huntercoles.pokerpayout.core.time.ClockAnchor
+import com.huntercoles.pokerpayout.core.time.TimeSource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -250,6 +251,32 @@ class TimerPreferences @Inject constructor(
         const val DEFAULT_BREAK_EVERY_LEVELS = 0
         const val DEFAULT_BREAK_LENGTH_MINUTES = 10
         private const val SECONDS_PER_MINUTE = 60
+
+        /**
+         * Keys about this phone, not the game, that a backup leaves out and a restore leaves alone: the
+         * running clock's monotonic reading and boot (meaningless on another phone, or after a restart),
+         * and whether this phone has asked for notifications (a new phone should ask again).
+         */
+        val PHONE_ONLY_KEYS: Set<String> =
+            setOf(CLOCK_REALTIME_MS_KEY, CLOCK_WALL_MS_KEY, CLOCK_BOOT_COUNT_KEY, NOTIFICATIONS_ASKED_KEY)
+
+        /**
+         * This file's saved [values] as a backup keeps them: a running clock is saved paused where it
+         * stands at [time], since what it runs from ([PHONE_ONLY_KEYS]) isn't saved. Restored, the
+         * game waits on Start at the time it had.
+         */
+        fun pausedForBackup(values: Map<String, Any?>, time: TimeSource): Map<String, Any?> {
+            val elapsed = values[CLOCK_ELAPSED_MS_KEY] as? Long
+            if (values[TIMER_RUNNING_KEY] != true || elapsed == null) return values
+            val anchor = ClockAnchor(
+                elapsedMillis = elapsed,
+                running = true,
+                realtimeMillis = values[CLOCK_REALTIME_MS_KEY] as? Long ?: 0L,
+                wallMillis = values[CLOCK_WALL_MS_KEY] as? Long ?: 0L,
+                bootCount = values[CLOCK_BOOT_COUNT_KEY] as? Int ?: -1,
+            )
+            return values + mapOf(CLOCK_ELAPSED_MS_KEY to anchor.elapsedAt(time), TIMER_RUNNING_KEY to false)
+        }
 
         private const val TIMER_RUNNING_KEY = "timer_running"
         private const val GAME_DURATION_MINUTES_KEY = "game_duration_minutes"

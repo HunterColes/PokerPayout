@@ -40,8 +40,9 @@ android {
         versionName = "1.3.14"
 
         // The app is in English only, so the libraries' own strings (Compose and Material's
-        // accessibility words, in about 80 languages) stay out of the APK: resources.arsc goes
-        // from 501 KiB to (see the measure job). Add a language here when the app is translated.
+        // accessibility words, in about 80 languages) stay out of the APK: resources.arsc went
+        // from 501 to 95 KiB, the APK from 2.40 to 1.98 MB (1.3.14, device.yml's measure job).
+        // Add a language here when the app is translated.
         resourceConfigurations += listOf("en")
     }
 

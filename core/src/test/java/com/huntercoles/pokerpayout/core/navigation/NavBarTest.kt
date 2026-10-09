@@ -53,6 +53,8 @@ class NavBarTest {
             NavigationDestination.ChipCalculator,
             NavigationDestination.SeatDraw,
             NavigationDestination.History,
+            NavigationDestination.Music,
+            NavigationDestination.CueSounds,
             NavigationDestination.Backup,
         ).forEach { assertEquals("$it", NavTab.Tools, it.tab) }
         assertNull(NavigationDestination.Back.tab)

@@ -131,7 +131,7 @@ fun ToolsHomeContent(
                     onClick = { onOpenTool(tool.destination) },
                 )
             }
-            SoundSection(state = state, onIntent = onIntent, onAllowNotifications = onAllowNotifications)
+            SoundSection(state = state, onIntent = onIntent, onAllowNotifications = onAllowNotifications, onOpen = onOpenTool)
             Text(
                 text = stringResource(R.string.tools_footer, versionName),
                 style = MaterialTheme.typography.bodySmall,

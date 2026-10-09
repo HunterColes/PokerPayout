@@ -9,6 +9,7 @@ import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.testing.forEachScrollPosition
+import com.huntercoles.pokerpayout.tools.presentation.MusicSummary
 import com.huntercoles.pokerpayout.tools.presentation.ToolsHomeUiState
 import org.junit.Rule
 import org.junit.Test
@@ -48,6 +49,17 @@ class ToolsTabScreenTest(private val config: ScreenConfig) {
     fun toolsNotificationsOff() = check(
         "S7_tools_notifications_off",
         ToolsHomeUiState(soundOn = false, volume = 0.7f, canVibrate = false, notificationsOff = true),
+    )
+
+    /** Songs in the list, one playing: the Music row with its pause button. */
+    @Test
+    fun toolsMusic() = check(
+        "S7_tools_music",
+        ToolsHomeUiState(
+            soundOn = true,
+            volume = 0.7f,
+            music = MusicSummary(songs = 5, playing = true, current = "Midnight Card Room"),
+        ),
     )
 
     private fun check(name: String, state: ToolsHomeUiState) {

@@ -238,9 +238,14 @@ are:
    full (Share, Alice and Player 5), Back closes it, and Back again returns to the Tools list. It
    scrolls to the night's row before tapping it, since a swipe flings less on GitHub's emulator.
 
-4. **Tools** (4 steps). The tool list and the Sound section (S7); turn the sound off (the
-   volume and Test chime rest) and on again, and play the test chime; Hand ranks (S12), with a
-   back arrow, the Tools tab still selected, "1 in 30,940" for a royal flush and a kicker.
+4. **Tools** (7 steps). The tool list and the Sound section (S7); turn the sound off (the
+   volume and Test chime rest) and on again, and play the test chime; Cue sounds (S18): the
+   classic pack picked, a sound played, the minute's slot empty; Music (S18): no songs yet,
+   Play with the clock and Quieter take; a song from the phone: the tour puts a WAV in
+   Downloads, picks it in the system's file picker, and it must join the list, play (still
+   playing three seconds later, no "File not found"), pause, and go again with Edit; Hand ranks
+   (S12), with a back arrow, the Tools tab still selected, "1 in 30,940" for a royal flush and a
+   kicker.
    Then **Seat draw** (S14, 6 steps): the Bank's players ("Alice, Player 2, ..."); seats per table
    down to half the players, so there are two tables; the draw must seat every player once, from
    seat 1 at each table, with the tables within one of each other; after the deal for the button
@@ -688,7 +693,8 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 
 | Module | Class | Goldens (`src/test/screenshots/screens/`) | Layout checks |
 |---|---|---|---|
-| `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted`, `S7_tools_cues_off`, `S7_tools_notifications_off` (PP-081/083: the Vibrate and Flash rows, and the way back to notifications; the History row, PP-037) | S7: all three, at every scroll position |
+| `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted`, `S7_tools_cues_off`, `S7_tools_notifications_off` (PP-081/083: the Vibrate and Flash rows, and the way back to notifications; the History row, PP-037), `S7_tools_music` (the Cue sounds and Music rows, a song playing) | S7: all three, at every scroll position |
+| `tools-feature` | `MusicScreenTest` | `S18_music_empty` (a fresh install: no songs, nothing built in), `S18_music_playing` (five songs, one playing, one whose file has gone, shuffle and repeat on, with the clock and quieter on breaks), `S18_music_editing` (move and remove), `S18_cue_sounds`, `S18_cue_sounds_off` (the sound switched off) | Music and Cue sounds: all three, at every scroll position, on all 24 cells; also every file gone and the built-in songs (none ship yet). Fixtures in `MusicFixtures` |
 | `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
 | `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end`, `S11_chipset_settings` (the stack settings unfolded, keeping back the Tournament's estimate) | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
 | `tools-feature` | `HistoryScreenTest` | `S16_history_list` (all time, two players level at the top), `S16_history_night` (one night in full), `S16_history_empty` (nothing saved yet) | History (PP-037): all three, at every scroll position, on all 24 cells; also a year picked. Fixtures in `HistoryFixtures`: three nights over two years with the mockups' players |
@@ -721,7 +727,12 @@ mockups' game (9 players, $40 buy-in, and so on), so a golden shows what the app
 | `LayoutAssertionsTest` | 11 | The checks themselves catch what they claim |
 | `ScreenOrientationTest` | 3 | Phones portrait unless the screen on show asks for more, and portrait again when it goes; free from 600 dp; a screen can take the full width beside the rail, or the whole window |
 | `SystemBarsTest` | 1 | Light status and navigation bar icons on the dark app (B13) |
-| `SoundManagerTest` | 3 | A loaded chime plays at the slider's volume now, not the one it had when loaded (B12); silent at 0 and with the sound off. The player is a recording fake |
+| `SoundManagerTest` | 7 | A loaded chime plays at the slider's volume now, not the one it had when loaded (B12); silent at 0 and with the sound off; the music dips while a cue sounds and comes back up when it ends or fails; a preview plays with the sound off. The player is a recording fake |
+| `SoundPacksTest` | 5 | The classic pack is today's sounds (the chime at every change, nothing with a minute left); every pack has its own id and a name; an unknown saved id plays the default; `sound_pack` is a key of its own |
+| `PlaylistTest` | 18 | The playlist as a value: adding (no doubles), moving and removing keep the place; the end of a song, Next and Previous with repeat off, all and one; songs whose files have gone passed over; shuffle on seeded randoms: the current song first, the same seed the same order, every song once a pass, never one song twice in a row across passes (200 seeds), songs added mid-pass come later |
+| `MusicAutoPlayTest` | 11 | Play with the clock against the clock's states: starts and pauses with the clock, breaks keep playing, pause or play quieter, acts only on changes (the host's own pause stands), never pauses music it didn't start, does nothing when off |
+| `MusicPreferencesTest` | 8 | `music_prefs`: defaults, the playlist back exactly as saved, the settings under their own keys, unreadable or half-broken text read safely; titles from file names |
+| `MusicPlayerTest` | 20 | The music player with recording players and a library whose files can go: loads and starts the current song, keeps the place on a pause and across a restart, goes on at the end of a song and stops at the end of the list, passes over gone and failing files (stops when none is left), removes the song playing, saves the list, and dips under a cue (back up after 15 s if the cue never ends) and on a quiet break |
 
 ## 10. The device matrix: real screens, sizes, fonts and rotation
 

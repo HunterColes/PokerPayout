@@ -31,6 +31,8 @@ val NavigationDestination.tab: NavTab?
         NavigationDestination.ChipCalculator,
         NavigationDestination.SeatDraw,
         NavigationDestination.History,
+        NavigationDestination.Music,
+        NavigationDestination.CueSounds,
         NavigationDestination.Backup,
         -> NavTab.Tools
         NavigationDestination.Back -> null
@@ -47,6 +49,8 @@ val ScreenDestinations: List<NavigationDestination> = listOf(
     NavigationDestination.ChipCalculator,
     NavigationDestination.SeatDraw,
     NavigationDestination.History,
+    NavigationDestination.Music,
+    NavigationDestination.CueSounds,
     NavigationDestination.Backup,
 )
 

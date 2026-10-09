@@ -64,6 +64,9 @@
     <string name="card_slot_empty">Empty card slot</string>
     <string name="card_slot_next">Next card</string>
     <string name="card_slot_random">Random card</string>
+    <!-- Cue sound packs (core/audio/packs/SoundPacks.kt): a name and one line on what it plays -->
+    <string name="sound_pack_classic">Classic</string>
+    <string name="sound_pack_classic_description">The chime at every change. No sound with a minute left.</string>
 
     <!-- Backup files (core/backup): why a file can't be read or saved -->
     <string name="backup_problem_not_backup">This isn\'t a Poker Payout backup.</string>

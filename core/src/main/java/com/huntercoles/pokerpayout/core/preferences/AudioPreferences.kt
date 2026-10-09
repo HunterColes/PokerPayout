@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout.core.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.huntercoles.pokerpayout.core.audio.packs.SoundPacks
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,9 +12,11 @@ import javax.inject.Singleton
 
 /**
  * The Sound section's settings (Tools, S7): the chime's volume and mute, and the quiet cues (PP-083)
- * that vibrate the phone and flash the clock at each level change and with one minute left.
+ * that vibrate the phone and flash the clock at each level change and with one minute left; and the
+ * cue sound pack the clock plays.
  */
 @Singleton
+@Suppress("TooManyFunctions") // a getter and a setter per saved setting
 class AudioPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
@@ -30,6 +33,11 @@ class AudioPreferences @Inject constructor(
 
     private val _flashCues = MutableStateFlow(getFlashCues())
     val flashCues: Flow<Boolean> = _flashCues.asStateFlow()
+
+    private val _soundPack = MutableStateFlow(getSoundPack())
+
+    /** The id of the cue sound pack the clock plays ([SoundPacks]). */
+    val soundPack: Flow<String> = _soundPack.asStateFlow()
 
     fun setVolume(volume: Float) {
         val clampedVolume = volume.coerceIn(0f, 1f)
@@ -70,6 +78,14 @@ class AudioPreferences @Inject constructor(
         _flashCues.value = on
     }
 
+    /** The cue sound pack's id. One no pack has any more plays the default ([SoundPacks.byId]). */
+    fun getSoundPack(): String = prefs.getString(SOUND_PACK_KEY, null) ?: SoundPacks.default.id
+
+    fun setSoundPack(id: String) {
+        prefs.edit().putString(SOUND_PACK_KEY, id).apply()
+        _soundPack.value = id
+    }
+
     companion object {
         private const val VOLUME_KEY = "volume"
         private const val IS_MUTED_KEY = "is_muted"
@@ -80,5 +96,8 @@ class AudioPreferences @Inject constructor(
         private const val FLASH_CUES_KEY = "flash_cues"
         const val DEFAULT_VIBRATE_CUES = true
         const val DEFAULT_FLASH_CUES = true
+
+        // Sound packs: one more key beside the others. With none saved the clock plays what it always did.
+        private const val SOUND_PACK_KEY = "sound_pack"
     }
 }

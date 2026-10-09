@@ -37,6 +37,18 @@ sealed class NavigationDestination {
     @Serializable
     data object History : NavigationDestination()
 
+    /** Outs as exact chances, and pot odds (S20). */
+    @Serializable
+    data object Outs : NavigationDestination()
+
+    /** Main and side pots from what each player put in (S21). */
+    @Serializable
+    data object SidePots : NavigationDestination()
+
+    /** The chop: ICM and chip chop for the players left (S22). */
+    @Serializable
+    data object DealMaker : NavigationDestination()
+
     @Serializable
     data object Back : NavigationDestination()
 }

@@ -11,6 +11,12 @@
     <string name="tools_ranks_description">What beats what, best to worst</string>
     <string name="tools_seats_title">Seat draw</string>
     <string name="tools_seats_description">Random seats and the button</string>
+    <string name="tools_outs_title">Outs &amp; pot odds</string>
+    <string name="tools_outs_description">Your chance to hit, and the price of a call</string>
+    <string name="tools_side_pots_title">Side pots</string>
+    <string name="tools_side_pots_description">Who can win what when someone is all in</string>
+    <string name="tools_deal_title">Deal maker</string>
+    <string name="tools_deal_description">Chop the prizes left by ICM or by chips</string>
     <string name="tools_history_title">History</string>
     <string name="tools_history_description">Saved nights and the season\'s points</string>
     <string name="tools_sound_title">Sound</string>

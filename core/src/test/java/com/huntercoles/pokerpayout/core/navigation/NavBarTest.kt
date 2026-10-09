@@ -53,6 +53,9 @@ class NavBarTest {
             NavigationDestination.ChipCalculator,
             NavigationDestination.SeatDraw,
             NavigationDestination.History,
+            NavigationDestination.Outs,
+            NavigationDestination.SidePots,
+            NavigationDestination.DealMaker,
         ).forEach { assertEquals("$it", NavTab.Tools, it.tab) }
         assertNull(NavigationDestination.Back.tab)
     }
@@ -103,6 +106,9 @@ class NavBarTest {
             NavigationDestination.ChipCalculator,
             NavigationDestination.SeatDraw,
             NavigationDestination.History,
+            NavigationDestination.Outs,
+            NavigationDestination.SidePots,
+            NavigationDestination.DealMaker,
         ).forEach { destination ->
             navigate(destination)
             compose.onNodeWithText(SCREEN + destination).assertExists()
@@ -195,6 +201,9 @@ class NavBarTest {
                 builder.composable<NavigationDestination.ChipCalculator> { Text(SCREEN + NavigationDestination.ChipCalculator) }
                 builder.composable<NavigationDestination.SeatDraw> { Text(SCREEN + NavigationDestination.SeatDraw) }
                 builder.composable<NavigationDestination.History> { Text(SCREEN + NavigationDestination.History) }
+                builder.composable<NavigationDestination.Outs> { Text(SCREEN + NavigationDestination.Outs) }
+                builder.composable<NavigationDestination.SidePots> { Text(SCREEN + NavigationDestination.SidePots) }
+                builder.composable<NavigationDestination.DealMaker> { Text(SCREEN + NavigationDestination.DealMaker) }
             }
         }
     }

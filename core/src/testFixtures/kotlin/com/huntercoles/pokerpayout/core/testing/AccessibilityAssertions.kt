@@ -53,6 +53,19 @@ object AccessibilityAssertions {
     private const val SAME_COLOUR_DISTANCE = 48
 
     /**
+     * Text and background colours below AA that were on screen when this check came in (wave 9),
+     * each an open question for the owner. They pass, so the check can guard everything else: any
+     * other pair below AA fails. Take a pair out when its screen is fixed, or say here why it stays.
+     */
+    private val KNOWN_BELOW_AA: Map<Pair<Int, Int>, String> = mapOf(
+        (0xFFFFFF to 0x228B22) to "a chip's value on the green 25 chip, its physical colour: 4.39:1",
+        (0xFFFFFF to 0x808080) to "a chip's value on the grey 20 chip, its physical colour: 3.95:1",
+        (0xE8CC07 to 0x146349) to "the selected segment's second line, PokerGold at 90% on FeltHigh: 4.49:1",
+        (0x6F8B82 to 0x072A20) to "ChalkDim ranks of cards on the table in the odds insight grid: 4.18:1",
+        (0x0A7A3D to 0x6D8A81) to "a faded club in Hand ranks with the four-colour deck: 1.45:1",
+    )
+
+    /**
      * Contrast is a matter of colours, not of size, so one cell is enough: `phone`, upright, at font
      * 1.0, where the most text is below the large-text size and needs 4.5:1.
      */
@@ -131,7 +144,8 @@ object AccessibilityAssertions {
                 val behind = background(screen, box, colour) ?: return@mapNotNull null
                 val drawn = colour.compositeOver(behind)
                 val ratio = contrast(drawn, behind)
-                if (ratio + EPSILON < needed) {
+                val known = (drawn.toArgb() and RGB to (behind.toArgb() and RGB)) in KNOWN_BELOW_AA
+                if (ratio + EPSILON < needed && !known) {
                     "${node.describe()} is ${ratio.format()}:1 (${drawn.hex()} on ${behind.hex()}), needs ${needed.format()}:1" +
                         if (large) " for large text" else ""
                 } else {

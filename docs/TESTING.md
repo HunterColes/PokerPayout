@@ -725,7 +725,11 @@ class ClockScreenTest(private val config: ScreenConfig) {
   text has 4.5:1 against what is behind it, or 3:1 at 18 sp and up (14 sp bold), WCAG 2.1 AA.
   The text's colour is the one its style declares (blended if see-through); what is behind is
   the commonest other colour in its box on the rendered screen. Text in a disabled control is
-  exempt. Google's Accessibility Test Framework (through Roborazzi) was the other way to do it;
+  exempt. The colour pairs below AA that were on screen when the check came in (wave 9: chip
+  values on the green and grey chips, the selected segment's 90% gold second line, ChalkDim cards
+  in the odds insight grid, a faded club in Hand ranks) are listed in `KNOWN_BELOW_AA`, each an
+  open question for the owner; any other pair below AA fails.
+  Google's Accessibility Test Framework (through Roborazzi) was the other way to do it;
   this needs no new dependency, reads the colour the text really has instead of guessing it from
   anti-aliased pixels, and gives a message that names the text and both colours.
 * `captureGolden` refuses to capture something taller than the window, because the picture

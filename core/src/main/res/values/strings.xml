@@ -64,4 +64,26 @@
     <string name="card_slot_empty">Empty card slot</string>
     <string name="card_slot_next">Next card</string>
     <string name="card_slot_random">Random card</string>
+
+    <!-- Backup files (core/backup): why a file can't be read or saved -->
+    <string name="backup_problem_not_backup">This isn\'t a Poker Payout backup.</string>
+    <string name="backup_problem_damaged">This backup is damaged and can\'t be read.</string>
+    <string name="backup_problem_newer">This backup is from a newer Poker Payout. Update the app, then try again.</string>
+    <string name="backup_problem_too_big">This file is too big to be a backup.</string>
+    <string name="backup_problem_empty">There\'s nothing in this file to restore.</string>
+    <string name="backup_problem_cant_read">Couldn\'t open that file. Try again, or pick another.</string>
+    <string name="backup_problem_cant_write">Couldn\'t save the file there. Try another place.</string>
+    <!-- What a backup holds, one line each in its preview -->
+    <plurals name="backup_line_presets">
+        <item quantity="one">%d preset</item>
+        <item quantity="other">%d presets</item>
+    </plurals>
+    <plurals name="backup_line_nights">
+        <item quantity="one">%d night in History</item>
+        <item quantity="other">%d nights in History</item>
+    </plurals>
+    <string name="backup_line_chip_set">Chip set</string>
+    <string name="backup_line_game">Tournament setup and tonight\'s game</string>
+    <string name="backup_line_sound">Sound settings</string>
+    <string name="backup_line_tools">Odds and seat draw</string>
 </resources>

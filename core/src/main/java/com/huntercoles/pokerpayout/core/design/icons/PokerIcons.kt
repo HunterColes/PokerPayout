@@ -249,6 +249,22 @@ object PokerIcons {
     /** Down delta (drawn for Poker Payout). */
     val TriangleDown: ImageVector by lazy { icon("TriangleDown", "M12 19 4 7h16z") }
 
+    /** A file saved: a backup, a CSV (Material "save"). */
+    val Save: ImageVector by lazy {
+        icon(
+            "Save",
+            "M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z",
+        )
+    }
+
+    /** A file opened to restore (Material "folder_open"). */
+    val FolderOpen: ImageVector by lazy {
+        icon(
+            "FolderOpen",
+            "M20 6h-8l-2-2H4a2 2 0 0 0-1.99 2L2 18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm0 12H4V8h16v10z",
+        )
+    }
+
     private fun icon(name: String, vararg paths: String): ImageVector =
         ImageVector.Builder(
             name = "PokerIcons.$name",

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the FileProvider may hand to another app: the files shared from the app (a preset file),
+     written to cache/shared by core/backup/DocumentFiles.kt. Nothing else in the app's storage. -->
+<paths>
+    <cache-path name="shared" path="shared/" />
+</paths>

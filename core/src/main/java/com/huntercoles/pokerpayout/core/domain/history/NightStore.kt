@@ -41,6 +41,39 @@ class NightStore @Inject constructor(@ApplicationContext context: Context) {
         _nights.value = readAll()
     }
 
+    /** Saves [nights] as new nights, each with an id of its own, in one write (a backup merged in). */
+    fun addAll(nights: List<SavedNight>): List<SavedNight> {
+        var next = nextId()
+        val saved = nights.map { night ->
+            while (prefs.contains("$KEY_PREFIX$next")) next++
+            night.copy(id = next++)
+        }
+        val editor = prefs.edit().putLong(NEXT_ID_KEY, next)
+        saved.forEach { editor.putString("$KEY_PREFIX${it.id}", NightCodec.encode(it)) }
+        editor.apply()
+        _nights.value = readAll()
+        return saved
+    }
+
+    /** Deletes [ids] in one write (Undo after a backup's nights were added). */
+    fun deleteAll(ids: Collection<Long>) {
+        val editor = prefs.edit()
+        ids.forEach { editor.remove("$KEY_PREFIX$it") }
+        editor.apply()
+        _nights.value = readAll()
+    }
+
+    /**
+     * Makes the saved nights exactly [nights], ids and all (a backup restored in place of these), in one
+     * write that is on disk when it returns. Nights this version can't read go too.
+     */
+    fun replaceAll(nights: List<SavedNight>) {
+        val editor = prefs.edit().clear()
+        nights.forEach { editor.putString("$KEY_PREFIX${it.id}", NightCodec.encode(it)) }
+        editor.commit()
+        _nights.value = readAll()
+    }
+
     /** Every readable night; one whose key and id disagree is as unreadable as a corrupt one. */
     private fun readAll(): List<SavedNight> = prefs.all.mapNotNull { (key, value) ->
         val id = key.removePrefix(KEY_PREFIX).toLongOrNull()?.takeIf { key.startsWith(KEY_PREFIX) }

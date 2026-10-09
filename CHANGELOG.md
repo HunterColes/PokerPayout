@@ -3,6 +3,22 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.6 (on master, not published)
+
+Knockouts from the full-screen clock:
+
+- **Knock out on the clock:** the full-screen clock has a Knock out button beside pause: who's out,
+  then who knocked them out (or Nobody), in two taps, with no need to leave the clock. It is the
+  Bank's own knockout, so the place, the bounty (progressive too), the mystery envelope, the players
+  left and the payouts come out exactly as from the Bank; a mystery knockout opens its envelope
+  right there. At large text on a phone the button is the skull alone.
+- **Undo on the clock:** the snackbar now shows on the full-screen clock too, bottom left, clear of
+  the time and the controls. The Bank and the clock share one Bank, so the Bank's top-bar Undo can
+  take back a knockout made from the clock as well.
+- **The bubble:** the clock says "On the bubble" when the next player out finishes one place short
+  of the money, then "In the money": beside the players left on the full-screen clock, beside the
+  level on the upright clock.
+
 ## 1.4.5 (on master, not published)
 
 A test lab that found five bugs, all fixed:

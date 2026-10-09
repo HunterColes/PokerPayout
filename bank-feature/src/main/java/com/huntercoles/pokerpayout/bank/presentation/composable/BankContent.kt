@@ -41,6 +41,7 @@ import com.huntercoles.pokerpayout.bank.presentation.BankSection
 import com.huntercoles.pokerpayout.bank.presentation.BankSheet
 import com.huntercoles.pokerpayout.bank.presentation.BankSummary
 import com.huntercoles.pokerpayout.bank.presentation.BankUiState
+import com.huntercoles.pokerpayout.bank.presentation.RegularsModel
 import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
@@ -63,12 +64,12 @@ import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 import com.huntercoles.pokerpayout.core.R as CoreR
 
 /**
- * The Bank (S5 v2), stateless: the top bar (live subtitle, Undo, the chime bell and ⋮), the money
- * summary, the labelled sticky header and one line per player, in sections. Below 360 dp closed
- * columns fold into the line under each name (Z2); from 840 dp the list gets wider columns with In
- * and Owed, and the meters, pool breakdown and payout table sit open in a side pane (Z5). Once the
- * night is over with a buy-in still open, the summary offers Settle up: who pays whom, with
- * [onShareSettleUp] for Share as text.
+ * The Bank (S5 v2), stateless: the top bar (live subtitle, tonight's players from the regulars, Undo,
+ * the chime bell and ⋮), the money summary, the labelled sticky header and one line per player, in
+ * sections. Below 360 dp closed columns fold into the line under each name (Z2); from 840 dp the list
+ * gets wider columns with In and Owed, and the meters, pool breakdown and payout table sit open in a
+ * side pane (Z5). Once the night is over with a buy-in still open, the summary offers Settle up: who
+ * pays whom, with [onShareSettleUp] for Share as text.
  */
 @Composable
 fun BankContent(
@@ -98,6 +99,11 @@ fun BankContent(
 @Composable
 private fun BankTopBar(state: BankUiState, onIntent: (BankIntent) -> Unit) {
     PokerTopBar(title = stringResource(CoreR.string.navigation_bank), subtitle = subtitle(state.summary)) {
+        PokerIconButton(
+            icon = PokerIcons.People,
+            contentDescription = stringResource(R.string.bank_regulars),
+            onClick = { onIntent(BankIntent.ShowRegulars) },
+        )
         PokerIconButton(
             icon = PokerIcons.Undo,
             contentDescription = state.undoLabel?.let { stringResource(R.string.bank_undo_last, it) }
@@ -344,6 +350,12 @@ private fun BankSheets(state: BankUiState, onIntent: (BankIntent) -> Unit, onSha
             onDismiss = dismiss,
             onConfirm = { onIntent(BankIntent.ConfirmReset) },
             destructive = true,
+        )
+        is BankSheet.Regulars -> RegularsSheet(
+            model = RegularsModel.of(state, sheet.order),
+            onToggle = { onIntent(BankIntent.ToggleRegular(it)) },
+            onAdd = { onIntent(BankIntent.AddRegular(it)) },
+            onDismiss = dismiss,
         )
         null -> Unit
     }

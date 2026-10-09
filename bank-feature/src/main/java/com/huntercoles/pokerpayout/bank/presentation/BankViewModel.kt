@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout.bank.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.huntercoles.pokerpayout.core.constants.TournamentConstants
 import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
@@ -11,6 +12,8 @@ import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import com.huntercoles.pokerpayout.core.domain.model.ProgressiveBounty
 import com.huntercoles.pokerpayout.core.domain.model.PurchaseWindow
 import com.huntercoles.pokerpayout.core.domain.model.Settlement
+import com.huntercoles.pokerpayout.core.domain.players.PlayerNames
+import com.huntercoles.pokerpayout.core.domain.players.Regulars
 import com.huntercoles.pokerpayout.core.domain.settle.SettleUp
 import com.huntercoles.pokerpayout.core.domain.settle.SettleUpUseCase
 import com.huntercoles.pokerpayout.core.domain.settle.Transfer
@@ -49,10 +52,14 @@ import javax.inject.Inject
  *   ([SettleUpUseCase]; the Bank is a party), with a tick per payment. Ticks are part of what Undo
  *   restores; a tick goes when its payment drops out of the settle-up (something else changed), and
  *   the last tick records every buy-in and payout as paid.
+ * - **Regulars** (PP-110). Tonight's players picked from everyone the host has played with
+ *   ([Regulars]): a regular takes the first seat nobody named, or a new seat once every seat has a
+ *   name (the Tournament tab's player count goes up, as a late entry there would). Every name the Bank
+ *   uses joins the regulars. Like a rename, a seat given back isn't an undoable action.
  */
 @HiltViewModel
 // One small function per action, and one injected source per thing the Bank reads (settings, records,
-// the clock, the chime, the snackbar, the envelope draw, the settle-up).
+// the clock, the chime, the snackbar, the envelope draw, the settle-up, the regulars).
 @Suppress("TooManyFunctions", "LongParameterList")
 class BankViewModel @Inject constructor(
     private val tournamentPreferences: TournamentPreferences,
@@ -63,7 +70,8 @@ class BankViewModel @Inject constructor(
     private val audioPreferences: AudioPreferences,
     private val feedback: BankFeedback,
     private val drawEnvelope: DrawEnvelopeUseCase,
-    private val settleUp: SettleUpUseCase
+    private val settleUp: SettleUpUseCase,
+    private val regulars: Regulars
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BankUiState())
@@ -114,6 +122,14 @@ class BankViewModel @Inject constructor(
         viewModelScope.launch {
             audioPreferences.isMuted.collect { muted -> _uiState.update { it.copy(isMuted = muted) } }
         }
+
+        // The regulars follow History (a night saved, two names merged) and the names used here.
+        viewModelScope.launch {
+            regulars.roster.collect { roster -> _uiState.update { it.copy(roster = roster) } }
+        }
+        viewModelScope.launch {
+            regulars.merges.collect { merges -> _uiState.update { it.copy(merges = merges) } }
+        }
     }
 
     fun acceptIntent(intent: BankIntent) {
@@ -150,6 +166,9 @@ class BankViewModel @Inject constructor(
             BankIntent.DismissSheet -> showSheet(null)
             BankIntent.Undo -> undo(expected = null)
             BankIntent.ToggleMute -> audioPreferences.toggleMute()
+            BankIntent.ShowRegulars -> showSheet(BankSheet.Regulars(order = _uiState.value.roster.map { it.key }))
+            is BankIntent.ToggleRegular -> toggleRegular(intent.name)
+            is BankIntent.AddRegular -> addRegular(intent.name)
         }
     }
 
@@ -217,13 +236,55 @@ class BankViewModel @Inject constructor(
 
     // Actions ------------------------------------------------------------------------------------
 
+    /** A name typed in a row, or a seat given to a regular (or back); a real name joins the regulars. */
     private fun updatePlayerName(playerId: Int, name: String) {
         val normalized = name.ifBlank { "Player $playerId" }
         bankPreferences.savePlayerName(playerId, normalized)
         _uiState.update { state ->
             state.copy(players = state.players.map { if (it.id == playerId) it.copy(name = normalized) else it })
         }
+        if (!PlayerNames.isPlaceholder(normalized)) regulars.remember(normalized)
         updateCalculations()
+    }
+
+    // Tonight's players (S25, PP-110) ------------------------------------------------------------
+
+    /** At the table: their seat is nobody's again. Not yet: they sit down ([seat]). */
+    private fun toggleRegular(name: String) {
+        val state = _uiState.value
+        val person = state.merges.key(name)
+        val held = state.players.lastOrNull { !PlayerNames.isPlaceholder(it.name) && state.merges.key(it.name) == person }
+        if (held != null) updatePlayerName(held.id, "") else seat(name)
+    }
+
+    /** A name typed in the sheet: a regular's spelling seats that regular; a new name seats a new regular. */
+    private fun addRegular(typed: String) {
+        val name = PlayerNames.clean(typed)
+        if (PlayerNames.isPlaceholder(name)) return
+        val state = _uiState.value
+        val person = state.merges.key(name)
+        if (state.players.any { !PlayerNames.isPlaceholder(it.name) && state.merges.key(it.name) == person }) return
+        seat(state.roster.firstOrNull { it.key == person }?.name ?: name)
+    }
+
+    /**
+     * [name] takes the first seat nobody named. With every seat named, a seat is added for them (up
+     * to the Tournament tab's most players): the player count goes up, there too.
+     */
+    private fun seat(name: String) {
+        val state = _uiState.value
+        val open = state.players.firstOrNull { PlayerNames.isPlaceholder(it.name) }
+        val count = state.players.size
+        when {
+            open != null -> updatePlayerName(open.id, name)
+            count < TournamentConstants.MAX_PLAYERS -> {
+                // Named before the count goes up, so the new row reads its name as it appears
+                bankPreferences.savePlayerName(count + 1, name)
+                regulars.remember(name)
+                tournamentPreferences.setPlayerCount(count + 1)
+                updatePlayerCount(count + 1)
+            }
+        }
     }
 
     private fun toggleBuyIn(playerId: Int) {

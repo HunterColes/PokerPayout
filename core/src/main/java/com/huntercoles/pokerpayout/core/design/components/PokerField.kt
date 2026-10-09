@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -50,7 +51,7 @@ import kotlinx.coroutines.flow.flowOf
  * Stateless: the caller owns [value]. Callers that commit on blur (money fields, B18) watch focus
  * through [interactionSource]; [keyboardActions] and [fieldModifier] (the text field itself, for
  * key handling and its TalkBack name) are theirs too. A field for words rather than numbers (a
- * name) passes [textStyle] to type in the body face.
+ * name) passes [textStyle] to type in the body face, and [capitalization] to start each word upper case.
  */
 @Suppress("LongParameterList") // a component API: one parameter per visual option
 @Composable
@@ -68,6 +69,7 @@ fun PokerField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     fieldModifier: Modifier = Modifier,
     textStyle: TextStyle? = null,
+    capitalization: KeyboardCapitalization = KeyboardCapitalization.None,
 ) {
     val focused by interactionSource.collectIsFocusedAsState()
     val shape = RoundedCornerShape(PokerDimens.CornerControl)
@@ -86,7 +88,11 @@ fun PokerField(
                 .semantics { if (isError && supportingText != null) error(supportingText) },
             textStyle = textStyle?.copy(color = PokerColors.CardWhite) ?: FieldValue,
             singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
+            keyboardOptions = KeyboardOptions(
+                capitalization = capitalization,
+                keyboardType = keyboardType,
+                imeAction = ImeAction.Done,
+            ),
             keyboardActions = keyboardActions,
             interactionSource = interactionSource,
             cursorBrush = SolidColor(PokerColors.PokerGold),

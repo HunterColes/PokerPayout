@@ -491,7 +491,7 @@ fun `the table adds up to the pool to the cent`() =
 |---|---|---|
 | core | `PayoutPropertiesTest` | Any pool, field, structure and rounding: the table adds up to the pool, whole units below 1st within one unit of each share, no place above the one before it (falling weights), the same for 50/30/20 and 5/3/2, exact shares for exact pools; more or fewer places always give weights the editor accepts |
 | core | `SettlementPropertiesTest` | Random Bank nights in all three bounty modes, step by step: nothing owed beyond the pools, nothing negative, every cent owned once there is a champion, also with late registration; renumbering or reordering the players changes nothing; one more knockout never takes money from anyone |
-| core | `CashPropertiesTest` | The cash settle-up pays the same, scaled, in bigger money; ids are labels; a player who broke even changes no payment |
+| core | `SettleUpPropertiesTest` | The settle-up (1.4, `MinimumPayments`) pays the same, scaled, in bigger money; ids are labels; a party already square changes no payment; any finished Bank night, with any entries ticked and winners paid, settles square in no more payments than the greedy pass |
 | core | `BlindPropertiesTest` | Every setup the Tournament tab allows: the advisor and the calculator agree, every ladder keeps every rule (overtime included), every fix offered works |
 | core | `MoneyPropertiesTest` | A money field in any JVM locale types back key by key; nothing typed throws; "$1,234.56" reads back; v1.1's Floats come back to the cent |
 | core | `HistoryPropertiesTest` | Every night the Bank can finish saves and reads back; the CSV reads back with every name intact (Robolectric) |

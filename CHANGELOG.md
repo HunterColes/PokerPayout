@@ -3,6 +3,25 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.11 (on master, not published)
+
+Your currency: €, £, kr, ₹, ¥ or none:
+
+- **Pick how money shows** in Tools > Currency: $, € (12,50 € or €12.50), £, ₹ (in lakhs:
+  ₹1,23,456), R$, kr, ¥ for the yen (whole yen, no cents), ¥ for the yuan, CHF, zł, ₽, or no symbol
+  at all for a game played for points or chips. Each one is written its own way, the symbol before
+  or after and the digits grouped as people expect. The Tools list shows which one is picked.
+- **Everywhere at once:** the Bank, the payouts, the setup's money fields, the clock, History, the
+  snackbars, TalkBack and every shared text follow the pick. Only the look changes: the amounts
+  saved stay exactly as they were, so switching back changes nothing.
+- **Yen:** money fields take whole yen, amounts show in whole yen, and the payout rounding steps are
+  ¥100, ¥500 and ¥1,000.
+- **Your phone's currency on a new install:** euros in Germany, rupees in India, yen in Japan, and so
+  on; plain numbers where the app doesn't have the currency. Anyone updating keeps the $ they had.
+- **The History CSV** gets a currency column (the symbol); the amounts stay plain numbers.
+- **Backups** keep the currency with tonight's game.
+- The Bank's Paid column icon is now a banknote with a tick, so it fits every currency.
+
 ## 1.4.10 (on master, not published)
 
 Starter structures and a one-line welcome:

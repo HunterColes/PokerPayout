@@ -3,6 +3,23 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.12 (on master, not published)
+
+Regulars: tonight's players in a few taps:
+
+- **Pick tonight's players:** while a seat in the Bank has no name, "Pick tonight's players" sits
+  above the list (⋮ has it any time, for a late arrival). It lists everyone you've played with, from
+  your saved nights and every name typed in the Bank, the ones who came to most of the last ten
+  nights first. A tap seats someone in the first seat with no name, or adds a seat once every seat
+  has one (up to 30); a tap again frees the seat. Type a new name to add them. Typing a name in the
+  Bank still works, and remembers the name.
+- **One person, two names:** in History, tap a player in the standings to merge their two
+  spellings ("Mike" and "Mike R."), keeping whichever name you like, so their nights, points and
+  wins add up. It applies at once with Undo, and Separate takes it apart later. Two people who
+  played the same night can't be merged, and saved nights keep the names they were saved with.
+- **In your backups:** the names and merges travel in the backup file (Tools > Backup) and in
+  Android's own backup.
+
 ## 1.4.11 (on master, not published)
 
 Your currency: €, £, kr, ₹, ¥ or none:

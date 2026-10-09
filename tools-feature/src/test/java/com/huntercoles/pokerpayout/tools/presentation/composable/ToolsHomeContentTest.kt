@@ -54,6 +54,9 @@ class ToolsHomeContentTest {
         compose.onNodeWithText("Chip set").performClick()
         compose.onNodeWithText("Hand ranks").performClick()
         compose.onNodeWithText("Seat draw").performClick()
+        compose.onNodeWithText("Shot clock").performScrollTo().performClick()
+        compose.onNodeWithText("Dealer's choice").performScrollTo().performClick()
+        compose.onNodeWithText("Equity quiz").performScrollTo().performClick()
         compose.onNodeWithText("History").performScrollTo().performClick()
         assertEquals(
             listOf(
@@ -61,6 +64,9 @@ class ToolsHomeContentTest {
                 NavigationDestination.ChipCalculator,
                 NavigationDestination.HandRanks,
                 NavigationDestination.SeatDraw,
+                NavigationDestination.ShotClock,
+                NavigationDestination.DealersChoice,
+                NavigationDestination.EquityQuiz,
                 NavigationDestination.History,
             ),
             opened,
@@ -70,7 +76,7 @@ class ToolsHomeContentTest {
     @Test
     fun theSoundRowIsOneSwitch() {
         show(ToolsHomeUiState(soundOn = true))
-        val soundSwitch = compose.onNode(hasText("Sound") and isSwitch)
+        val soundSwitch = compose.onNode(hasText("Sound") and isSwitch).performScrollTo()
         soundSwitch.assertIsOn()
         soundSwitch.performClick()
         assertEquals(listOf<ToolsHomeIntent>(ToolsHomeIntent.SetSoundOn(false)), intents)
@@ -89,7 +95,7 @@ class ToolsHomeContentTest {
     fun testChimeAsksForTheChime() {
         show(ToolsHomeUiState(soundOn = true))
         compose.onNode(hasContentDescription("Chime volume")).assertIsEnabled()
-        compose.onNodeWithText("Test chime").performClick()
+        compose.onNodeWithText("Test chime").performScrollTo().performClick()
         assertEquals(listOf<ToolsHomeIntent>(ToolsHomeIntent.TestChime), intents)
     }
 

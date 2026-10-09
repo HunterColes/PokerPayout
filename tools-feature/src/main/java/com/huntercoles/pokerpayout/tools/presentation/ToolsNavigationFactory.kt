@@ -11,10 +11,13 @@ import com.huntercoles.pokerpayout.core.navigation.NavigationDestination
 import com.huntercoles.pokerpayout.core.navigation.NavigationFactory
 import com.huntercoles.pokerpayout.core.navigation.NavigationManager
 import com.huntercoles.pokerpayout.tools.presentation.composable.ChipSetRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.DealersChoiceRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.EquityQuizRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.HandRanksScreen
 import com.huntercoles.pokerpayout.tools.presentation.composable.HistoryRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.OddsCalculatorScreen
 import com.huntercoles.pokerpayout.tools.presentation.composable.SeatDrawRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.ShotClockRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ToolsHomeScreen
 import javax.inject.Inject
 
@@ -47,6 +50,18 @@ class ToolsNavigationFactory @Inject constructor(
 
         builder.composable<NavigationDestination.SeatDraw> {
             SeatDrawRoute(onBack = navigationManager::navigateBack)
+        }
+
+        builder.composable<NavigationDestination.ShotClock> {
+            ShotClockRoute(onBack = navigationManager::navigateBack)
+        }
+
+        builder.composable<NavigationDestination.DealersChoice> {
+            DealersChoiceRoute(onBack = navigationManager::navigateBack)
+        }
+
+        builder.composable<NavigationDestination.EquityQuiz> {
+            EquityQuizRoute(onBack = navigationManager::navigateBack)
         }
 
         // Saved nights and the season's points (PP-037)

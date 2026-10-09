@@ -23,8 +23,9 @@ class MainApplication : Application() {
     /**
      * Every saved settings file (SharedPreferences) starts loading on a background thread as the app
      * starts, so the clock, the bank and the tools find them in memory instead of each waiting on
-     * the disk on the main thread when its screen first opens (StrictMode showed 8 such waits in the
-     * device tour). It only reads: the files and their keys are untouched.
+     * the disk on the main thread when its screen first opens (the device tour's StrictMode log showed
+     * one for every file). A file never written yet has nothing to load. It only reads: the files
+     * and their keys are untouched.
      */
     private fun warmUpSavedSettings() {
         thread(name = "settings-warm-up", isDaemon = true) {

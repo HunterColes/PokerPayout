@@ -2045,7 +2045,7 @@ bank_counts() {
 open_late_entry() {
   ui scroll-to "text=Late entry" --max 4
   ui tap "text=Late entry"
-  ui assert-text "text~=to sit down ·" "text=Open all night." "text=Or re-enter a player who is out" "text~=Out in"
+  ui assert-text "text~=to sit down ·" "text=Open all night." "text~=Or re-enter a player who is out" "text~=Out in"
 }
 s_bank_late_entry() {
   tab Tournament
@@ -2056,7 +2056,7 @@ s_bank_late_entry() {
   open_late_entry || return 1
   ui set-text "desc=Late arrival's name" --value Kai
   ui tap "text~=Add · "
-  ui wait-gone "text=Or re-enter a player who is out"
+  ui wait-gone "text~=Or re-enter a player who is out"
   ui assert-text "text~=Kai joins late · \$" "text~=$((BANK_LEFT + 1)) of $((BANK_OF + 1)) left" || return 1
   ui scroll-to "desc=Kai, buy-in, paid" --max 4
   ui assert-text "desc=Kai, buy-in, paid"
@@ -2065,7 +2065,7 @@ s_bank_re_entry() {
   bank_counts || return 1
   open_late_entry || return 1
   ui tap "text~=Out in"
-  ui wait-gone "text=Or re-enter a player who is out"
+  ui wait-gone "text~=Or re-enter a player who is out"
   ui assert-text "text~=Player 2 re-enters · \$" "text~=$((BANK_LEFT + 1)) of $((BANK_OF + 1)) left" || return 1
   # The first entry stays out, last of the field now, with nothing to bring back; the new one plays on
   local place=$((BANK_OF + 1))

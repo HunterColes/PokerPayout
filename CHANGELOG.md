@@ -3,6 +3,21 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.10 (on master, not published)
+
+Starter structures and a one-line welcome:
+
+- **Starter nights:** the Presets sheet now lists four ready-made nights under your saved ones:
+  Turbo (2 hours of 10-minute levels), Classic (3 hours of 20-minute levels with two breaks), Deep
+  stack (4 hours, twice the stack, an ante from level 7) and Bounty night (Classic with a $5
+  bounty). Each one fits the smallest chip you play with, so its blinds always climb cleanly from
+  your chip to the stack. A tap loads one, with Undo; if you've changed the setup it asks first.
+  Starters can't be changed, but ⋮ copies one into your presets, where you can rename and change it.
+- **A welcome on a new install:** the first time the app opens, one line above the ticket says to set
+  up tonight and press Start, or begin with a starter, and that everything stays on the phone. See
+  starters opens them; ✕ hides it for good, and so does the first Start. Anyone updating from an
+  earlier version never sees it.
+
 ## 1.4.9 (on master, not published)
 
 A restored phone asks for notifications again:

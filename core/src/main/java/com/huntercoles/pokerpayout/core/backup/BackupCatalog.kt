@@ -41,6 +41,8 @@ object BackupCatalog {
     val COLLECTIONS: Map<String, String> = mapOf(
         "tournament_presets" to "presets",
         "night_history" to HistoryBackup.KEY,
+        // The regulars (PP-110): the names the Bank has used, and the names merged in History
+        "regulars" to RegularsBackup.KEY,
     )
 
     /** Every file a backup saves. */

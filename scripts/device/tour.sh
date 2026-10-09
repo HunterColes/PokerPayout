@@ -978,6 +978,28 @@ s_bank_rename() {
   tab Bank
   ui assert-text text=Alice
 }
+# Tonight's players (S26, PP-110): picked from the regulars rather than typed. Alice, typed a moment
+# ago, is a regular already and ticked; a name added in the sheet takes the first seat nobody named
+# (Player 2), and a tap frees that seat again, so the steps after still find Player 2.
+s_bank_regulars() {
+  ui tap "text=Pick tonight's players"
+  ui assert-text "text=Tonight's players" "re=^1 of [0-9]+ seats named" "text=REGULARS" "desc=Add a name" || return 1
+  ui assert "has=Alice|No saved night yet" checked
+}
+s_bank_regulars_add() {
+  ui set-text "desc=Add a name" --value Bea
+  ui tap text=Add
+  ui assert-text "re=^2 of [0-9]+ seats named" || return 1
+  ui assert "has=Bea|No saved night yet" checked
+}
+s_bank_regulars_free() {
+  ui tap "has=Bea|No saved night yet"
+  ui wait-gone "has=Bea|No saved night yet" checked
+  ui assert-text "re=^1 of [0-9]+ seats named" || return 1
+  ui tap text=Done
+  ui wait-gone "text=Tonight's players"
+  ui assert-text text=Alice "text=Player 2"
+}
 s_bank_buyin() {
   # No confirm dialog any more: the tap records the buy-in, and the snackbar says what happened
   ui tap "desc=Alice, buy-in, not paid"
@@ -1220,6 +1242,26 @@ s_history_save() {
   ui assert-text "desc=Share this night" Alice "Player 5" || return 1
   ui back                                      # the night -> History
   ui assert-text "text=1 night saved" || return 1
+  ui back                                      # History -> the Tools list
+  ui assert-text "text=Seat draw" text=History
+}
+
+# One person under two names (S26b, PP-110): Alice opened from the standings; Bea (added in the Bank's
+# sheet, never at a saved night) could be her, and the seats nobody named are nobody. Picked, the sheet
+# asks which name to keep; Keep Alice merges at once, and UNDO takes it back. Ends on the Tools list.
+s_history_merge() {
+  ui scroll-to text=History --max 4
+  ui tap text=History
+  ui tap "desc=1st, Alice, 5 points, 1 night · 1 win"
+  ui assert-text "text=SAME PERSON AS…" "text~=Pick their other name" || return 1
+  ui tap "has=Bea|No saved night yet"
+  ui assert-text "text~=Alice and Bea are one person" "text=Keep Alice" "text=Keep Bea" || return 1
+}
+s_history_merge_undo() {
+  ui tap "text=Keep Alice"
+  ui assert-text "text=Bea now counts as Alice" text=UNDO "desc=1st, Alice, 5 points, 1 night · 1 win" || return 1
+  ui tap text=UNDO
+  ui wait-gone "text=Bea now counts as Alice"
   ui back                                      # History -> the Tools list
   ui assert-text "text=Seat draw" text=History
 }
@@ -2148,6 +2190,9 @@ step tournament-reset-ok  "Reset: setup unfolds, level 1 ready"                 
 step rebuy-amount         "Rebuy amount \$10 for the Bank steps"                 s_rebuy_amount
 step bank                 "Bank tab (S5 v2): labelled header, top bar"          s_bank
 step bank-rename          "Rename Player 1 to Alice, switch tabs, name kept"    s_bank_rename
+step bank-regulars        "Tonight's players (S26): Alice a regular already"    s_bank_regulars
+step bank-regulars-add    "Add Bea in the sheet: she takes Player 2's seat"     s_bank_regulars_add
+step bank-regulars-free   "Tap Bea again: Player 2 again; Done"                 s_bank_regulars_free
 step bank-buyin           "Buy-in in one tap; snackbar with UNDO"               s_bank_buyin
 step bank-undo            "UNDO takes the buy-in back; record it again"         s_bank_undo
 step bank-rebuy           "Record a rebuy in one tap"                           s_bank_rebuy
@@ -2174,6 +2219,8 @@ step payouts-nav          "Payouts tab: the finished night by name, adds up"    
 step payouts-nav-editor   "Payouts tab: structure sheet opens and closes"       s_payouts_nav_editor
 step payouts-nav-back     "Back from a tab returns to Tournament (B16)"         s_payouts_nav_back
 step history-save         "Pay everyone: save the night once; it is in History" s_history_save
+step history-merge        "History (S26b): could Alice be Bea? Which to keep"   s_history_merge
+step history-merge-undo   "Keep Alice: merged at once; UNDO takes it back"      s_history_merge_undo
 step currency             "Tools > Currency (S25): pick the euro, row says so"  s_currency
 step currency-payouts     "Payouts in euros: 1.234,50 €, rows still add up"     s_currency_payouts
 step currency-back        "Back to the dollar: Payouts in dollars again"        s_currency_back

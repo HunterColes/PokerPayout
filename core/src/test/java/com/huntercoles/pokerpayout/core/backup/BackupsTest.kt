@@ -11,6 +11,8 @@ import com.huntercoles.pokerpayout.core.domain.history.Nights.night
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import com.huntercoles.pokerpayout.core.domain.players.PlayerMerges
+import com.huntercoles.pokerpayout.core.domain.players.RegularsStore
 import com.huntercoles.pokerpayout.core.domain.settle.Transfer
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.MusicPreferences
@@ -39,6 +41,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.LocalDate
 import kotlin.random.Random
 
 /**
@@ -54,6 +57,7 @@ class BackupsTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val time = Clock()
     private lateinit var nights: NightStore
+    private lateinit var regulars: RegularsStore
 
     private val friday =
         night("2026-10-02", listOf("Dana", "Marcus", "Priya"), prizes = listOf(9_000L, 3_000L), structure = "Friday")
@@ -64,7 +68,8 @@ class BackupsTest {
 
     /** The app's core sections, as Hilt builds them. */
     private fun backups(): Backups {
-        val sections = BackupModule.settingsSections(context, time) + BackupModule.historySection(HistoryBackup(nights))
+        val sections = BackupModule.settingsSections(context, time) + BackupModule.historySection(HistoryBackup(nights)) +
+            BackupModule.regularsSection(RegularsBackup(regulars))
         return Backups(sections, time, context)
     }
 
@@ -72,6 +77,7 @@ class BackupsTest {
     fun wipe() {
         (BackupCatalog.FILES + BackupCatalog.PHONE_FILES).forEach { prefs(it).edit().clear().commit() }
         nights = NightStore(context)
+        regulars = RegularsStore(context)
     }
 
     /** A night in progress and a phone set up every way the core saves: every setter, off its default. */
@@ -82,6 +88,9 @@ class BackupsTest {
         // The currency (PP-114), as CurrencyPreferences saves it
         prefs(CurrencyPreferences.FILE).edit().putString("currency", "euro").commit()
         listOf(holiday, friday, saturday).forEach { nights.add(it) }
+        // The regulars (PP-110): names the Bank used, and a merge made in History
+        regulars.rememberAll(listOf("Dana", "Zoë, \"Ace\""), LocalDate.parse("2026-10-08"))
+        regulars.setMerges(PlayerMerges.NONE.merge("Mike R.", "Mike"))
     }
 
     /** The setup and the clock. */
@@ -217,6 +226,9 @@ class BackupsTest {
 
         assertEquals(before, settings())
         assertEquals(savedNights, NightStore(context).nights.value)
+        val names = RegularsStore(context)
+        assertEquals(listOf("Dana", "Zoë, \"Ace\""), names.players.value.map { it.name })
+        assertEquals(PlayerMerges.NONE.merge("Mike R.", "Mike"), names.merges.value)
     }
 
     @Test
@@ -255,6 +267,8 @@ class BackupsTest {
         assertEquals(
             listOf(
                 BackupLine.Counted(R.plurals.backup_line_nights, 3),
+                // Dana, Zoë and Mike (Mike R. is Mike)
+                BackupLine.Counted(R.plurals.backup_line_regulars, 3),
                 BackupLine.Named(R.string.backup_line_chip_set),
                 BackupLine.Named(R.string.backup_line_game),
                 BackupLine.Named(R.string.backup_line_sound),
@@ -329,13 +343,38 @@ class BackupsTest {
         val later = nights.add(night("2026-10-09", listOf("Sam", "Jo"), prizes = listOf(4_000L)))
 
         val result = backups().merge(backups().open(text))
-        assertEquals(mapOf(HistoryBackup.KEY to 2), result.added)
+        assertEquals(mapOf(HistoryBackup.KEY to 2, RegularsBackup.KEY to 0), result.added)
         assertEquals(4, nights.nights.value.size)
         assertTrue(mine in nights.nights.value)
         assertEquals(0, backups().merge(backups().open(text)).total)
 
         result.undo()
         assertEquals(listOf(later, mine), NightStore(context).nights.value)
+    }
+
+    @Test
+    fun `merging adds the regulars and merges the phone doesn't have, once, and Undo takes them out (PP-110)`() {
+        val day = LocalDate.parse("2026-10-08")
+        regulars.rememberAll(listOf("Dana", "Sam"), day)
+        regulars.setMerges(PlayerMerges.NONE.merge("Mike R.", "Mike").merge("Dan", "Danny"))
+        val text = backups().export()
+        wipe()
+        // This phone: Dana already, and Danny kept the other way round
+        regulars.remember("dana", day.minusDays(3))
+        val mine = PlayerMerges.NONE.merge("Danny", "Dan")
+        regulars.setMerges(mine)
+
+        val result = backups().merge(backups().open(text))
+        // Sam, and Mike R. as Mike; Dana is here already, and Dan and Danny are one person already
+        assertEquals(2, result.added[RegularsBackup.KEY])
+        assertEquals(listOf("Sam", "dana"), regulars.players.value.map { it.name })
+        assertEquals("Mike", regulars.merges.value.resolve("Mike R."))
+        assertEquals("Dan", regulars.merges.value.resolve("Danny"))
+        assertEquals(0, backups().merge(backups().open(text)).total)
+
+        result.undo()
+        assertEquals(listOf("dana"), RegularsStore(context).players.value.map { it.name })
+        assertEquals(mine, RegularsStore(context).merges.value)
     }
 
     @Test

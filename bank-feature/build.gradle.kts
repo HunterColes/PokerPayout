@@ -63,6 +63,8 @@ dependencies {
     testImplementation(libs.bundles.common.test)
     testImplementation(libs.bundles.screenshot.test)
     testImplementation(testFixtures(project(":core"))) // device matrix, layout checks, goldens
+    // PP-111: the clock's big moments from the Bank's own knockouts, Undo and restarts (BankBigMomentsTest)
+    testImplementation(project(":tournament-feature"))
     testImplementation(libs.test.robolectric)
     testImplementation(libs.test.androidx.core)
     androidTestImplementation(libs.bundles.common.android.test)

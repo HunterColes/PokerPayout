@@ -149,8 +149,9 @@ internal fun PresetsSheetBody(
 }
 
 /**
- * Save, share, and the saved presets, the last used first: a tap loads one; ⋮ renames or deletes it.
- * Once the clock has started a preset can't be loaded, and the list says why.
+ * Save, share, open a preset file, and the saved presets, the last used first: a tap loads one; ⋮
+ * renames, shares as a file or deletes it. Once the clock has started a preset can't be loaded, and
+ * the list says why. A preset file that couldn't be opened says why under its button.
  */
 @Composable
 private fun PresetsList(state: PresetsUiState, onIntent: (PresetsIntent) -> Unit, onShare: () -> Unit) {
@@ -158,7 +159,7 @@ private fun PresetsList(state: PresetsUiState, onIntent: (PresetsIntent) -> Unit
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
-        if (!state.canLoad) LockedNote()
+        if (!state.canLoad) ListNote(stringResource(R.string.presets_locked))
         PokerButton(
             text = stringResource(R.string.presets_save_as),
             onClick = { onIntent(PresetsIntent.StartSave) },
@@ -173,6 +174,14 @@ private fun PresetsList(state: PresetsUiState, onIntent: (PresetsIntent) -> Unit
             icon = PokerIcons.Share,
             modifier = Modifier.fillMaxWidth(),
         )
+        PokerButton(
+            text = stringResource(R.string.presets_open_file),
+            onClick = { onIntent(PresetsIntent.PickFile) },
+            variant = PokerButtonVariant.Secondary,
+            icon = PokerIcons.FolderOpen,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        state.fileProblem?.let { ListNote(stringResource(it), problem = true) }
         if (state.presets.isEmpty()) {
             Text(stringResource(R.string.presets_none), style = MaterialTheme.typography.bodyMedium, color = PokerColors.Chalk)
         } else {
@@ -187,19 +196,26 @@ private fun PresetsList(state: PresetsUiState, onIntent: (PresetsIntent) -> Unit
     }
 }
 
-/** Why a preset can't be loaded mid-game. */
+/**
+ * A note on the list with its icon: why a preset can't be loaded mid-game (a gold lock), or why the
+ * preset file just opened couldn't be used ([problem]: a red sign, in white).
+ */
 @Composable
-private fun LockedNote() {
+private fun ListNote(text: String, problem: Boolean = false) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Icon(
-            PokerIcons.Lock,
+            if (problem) PokerIcons.Info else PokerIcons.Lock,
             contentDescription = null,
-            tint = PokerColors.PokerGold,
+            tint = if (problem) PokerColors.Danger else PokerColors.PokerGold,
             modifier = Modifier
                 .padding(top = 2.dp)
                 .size(18.dp),
         )
-        Text(stringResource(R.string.presets_locked), style = MaterialTheme.typography.bodyMedium, color = PokerColors.Chalk)
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (problem) PokerColors.CardWhite else PokerColors.Chalk,
+        )
     }
 }
 
@@ -237,7 +253,7 @@ private fun PresetItem(preset: TournamentPreset, canLoad: Boolean, onIntent: (Pr
     }
 }
 
-/** ⋮: Rename… and Delete (at once, with Undo). Both work mid-game: neither touches the game. */
+/** ⋮: Rename…, Share as file and Delete (at once, with Undo). All work mid-game: none touches the game. */
 @Composable
 private fun PresetMenu(preset: TournamentPreset, onIntent: (PresetsIntent) -> Unit) {
     var open by remember { mutableStateOf(false) }
@@ -253,6 +269,13 @@ private fun PresetMenu(preset: TournamentPreset, onIntent: (PresetsIntent) -> Un
                 onClick = {
                     open = false
                     onIntent(PresetsIntent.StartRename(preset.id))
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.presets_share_file_action), color = PokerColors.CardWhite) },
+                onClick = {
+                    open = false
+                    onIntent(PresetsIntent.ShareFile(preset.id))
                 },
             )
             DropdownMenuItem(

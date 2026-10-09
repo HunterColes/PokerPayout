@@ -48,7 +48,9 @@ data class TournamentConfigUiState(
     val addOnPurchases: Int = 0,
     val selectedPanel: String = "player",
     /** Someone is out in the Bank: the bounty type is fixed now (PP-035). */
-    val knockoutsRecorded: Boolean = false
+    val knockoutsRecorded: Boolean = false,
+    /** The Bank has drawn at least one mystery envelope for a knockout (PP-035). */
+    val envelopesDrawn: Boolean = false
 ) {
     val money: MoneySettings get() = config.money
     val playerCount: Int get() = config.numPlayers
@@ -63,4 +65,11 @@ data class TournamentConfigUiState(
 
     /** Mystery bounties: the envelopes these players and this bounty make, biggest first. */
     val envelopes: List<Long> get() = MysteryBounty.envelopes(playerCount, money.bountyCents)
+
+    /**
+     * Mystery bounties: once an envelope is drawn, the player count can't go lower. Fewer players
+     * would deal fewer envelopes, and the ones already drawn could leave the champion nothing.
+     * Raising it (a late entry) is still allowed.
+     */
+    val playerCountCantGoLower: Boolean get() = envelopesDrawn && bountyMode == BountyMode.MYSTERY
 }

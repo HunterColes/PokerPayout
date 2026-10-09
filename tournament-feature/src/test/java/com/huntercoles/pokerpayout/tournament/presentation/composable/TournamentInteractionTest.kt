@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -120,6 +121,28 @@ class TournamentInteractionTest {
         tapText("Mystery")
         assertTrue(setupIntents.isEmpty())
         compose.onNodeWithText("Fixed now that someone is out.", substring = true).assertExists()
+    }
+
+    /** PP-035: once a mystery envelope is drawn, the players stepper only goes up, and says why. */
+    @Test
+    fun `the player count can't go lower once a mystery envelope is drawn`() {
+        val open = fixture.setupState()
+        val mystery = open.copy(config = open.config.copy(money = open.money.copy(bountyMode = BountyMode.MYSTERY)))
+        show(fixture.ready, TournamentUi(), mystery.copy(envelopesDrawn = true))
+
+        compose.onNodeWithText("Can't go lower now that envelopes are drawn").scrolledTo().assertExists()
+        compose.onNodeWithContentDescription("Decrease Players").scrolledTo().assertIsNotEnabled()
+        tap("Decrease Players")
+        assertTrue(setupIntents.isEmpty())
+        tap("Increase Players")
+        assertEquals(listOf(TournamentConfigIntent.UpdatePlayerCount(open.playerCount + 1)), setupIntents)
+
+        // Before any envelope is drawn it goes both ways, with the usual hint
+        setupIntents.clear()
+        show(fixture.ready, TournamentUi(), mystery)
+        compose.onNodeWithText("Bank gets one row per player").scrolledTo().assertExists()
+        tap("Decrease Players")
+        assertEquals(listOf(TournamentConfigIntent.UpdatePlayerCount(open.playerCount - 1)), setupIntents)
     }
 
     @Test

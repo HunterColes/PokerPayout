@@ -80,6 +80,7 @@ dependencies {
     testImplementation(libs.bundles.common.test)
     testImplementation(libs.bundles.screenshot.test)
     testImplementation(libs.test.androidx.core)
+    testImplementation(libs.test.kotest.property)
     androidTestImplementation(libs.bundles.common.android.test)
 
     testFixturesImplementation(platform(libs.compose.bom))

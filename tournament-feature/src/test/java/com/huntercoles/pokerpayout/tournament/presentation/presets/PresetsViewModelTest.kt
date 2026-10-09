@@ -1,11 +1,14 @@
 package com.huntercoles.pokerpayout.tournament.presentation.presets
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
+import com.huntercoles.pokerpayout.core.R as CoreR
 import com.huntercoles.pokerpayout.core.audio.SoundManager
+import com.huntercoles.pokerpayout.core.backup.Backups
 import com.huntercoles.pokerpayout.core.design.components.SnackbarController
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
@@ -13,11 +16,14 @@ import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.ChipCalculatorPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
+import com.huntercoles.pokerpayout.core.testing.FakeDocumentFiles
 import com.huntercoles.pokerpayout.core.time.TimeSource
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCues
 import com.huntercoles.pokerpayout.tournament.domain.clock.CueVibrator
 import com.huntercoles.pokerpayout.tournament.domain.presets.CurrentSetup
+import com.huntercoles.pokerpayout.tournament.domain.presets.PresetFiles
 import com.huntercoles.pokerpayout.tournament.domain.presets.PresetStore
+import com.huntercoles.pokerpayout.tournament.domain.presets.PresetsBackup
 import com.huntercoles.pokerpayout.tournament.presentation.FakeChipSets
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
@@ -82,8 +88,13 @@ class PresetsViewModelTest {
 
     private fun settle() = dispatcher.scheduler.runCurrent()
 
+    private val files = FakeDocumentFiles()
+
     private fun viewModel(): PresetsViewModel = inStore("presets") {
-        PresetsViewModel(presets, CurrentSetup(tournament, timer, chips, bank), snackbars, PresetMessages(context), clock)
+        val section = PresetsBackup(presets)
+        val presetFiles = PresetFiles(Backups(setOf(section), clock, context), section, files, dispatcher)
+        val setup = CurrentSetup(tournament, timer, chips, bank)
+        PresetsViewModel(presets, setup, snackbars, PresetMessages(context), clock, presetFiles)
     }
 
     /** A ViewModel in [store], so [tearDown] cancels its coroutines. */
@@ -308,6 +319,54 @@ class PresetsViewModelTest {
         snackbar(undo = true)
         assertEquals(15, clockViewModel.uiState.value.config.roundLengthMinutes)
         assertTrue(clockViewModel.uiState.value.isRunning)
+    }
+
+    @Test
+    fun `a preset shared as a file is a file of that preset alone, named after it`() {
+        val viewModel = viewModel()
+        val friday = savedFriday(viewModel)
+        viewModel.send(PresetsIntent.Open, PresetsIntent.ShareFile(friday))
+
+        val file = requireNotNull(viewModel.state.sharing)
+        assertEquals("Friday.json", file.name)
+        assertTrue(file.text.contains("\"name\": \"Friday\""))
+        assertEquals("the sheet stays open", PresetSheet.List, viewModel.state.sheet)
+        viewModel.send(PresetsIntent.FileShared)
+        assertNull(viewModel.state.sharing)
+    }
+
+    @Test
+    fun `a preset file opened adds its presets, closes the sheet, and Undo takes them out`() {
+        val viewModel = viewModel()
+        val friday = savedFriday(viewModel)
+        viewModel.send(PresetsIntent.ShareFile(friday))
+        files.texts["content://chat/Friday.json"] = requireNotNull(viewModel.state.sharing).text
+        presets.delete(friday)
+        viewModel.send(PresetsIntent.Open, PresetsIntent.ImportFile(Uri.parse("content://chat/Friday.json")))
+
+        assertEquals(listOf("Friday"), viewModel.state.presets.map { it.name })
+        assertNull(viewModel.state.sheet)
+        assertEquals("Added 1 preset", snackbar(undo = true))
+        assertTrue(presets.presets.value.isEmpty())
+    }
+
+    @Test
+    fun `a preset file already here, or one that won't do, says so`() {
+        val viewModel = viewModel()
+        val friday = savedFriday(viewModel)
+        viewModel.send(PresetsIntent.ShareFile(friday))
+        files.texts["content://chat/Friday.json"] = requireNotNull(viewModel.state.sharing).text
+        files.texts["content://chat/notes.txt"] = "Bring chips"
+
+        viewModel.send(PresetsIntent.Open, PresetsIntent.ImportFile(Uri.parse("content://chat/Friday.json")))
+        assertEquals("You have these presets already", snackbar())
+        assertEquals(1, presets.presets.value.size)
+
+        viewModel.send(PresetsIntent.Open, PresetsIntent.ImportFile(Uri.parse("content://chat/notes.txt")))
+        assertEquals(CoreR.string.backup_problem_not_backup, viewModel.state.fileProblem)
+        assertEquals("the list stays open to say why", PresetSheet.List, viewModel.state.sheet)
+        viewModel.send(PresetsIntent.Close, PresetsIntent.Open)
+        assertNull("a fresh list forgets it", viewModel.state.fileProblem)
     }
 
     /** A wall clock a test sets by hand. */

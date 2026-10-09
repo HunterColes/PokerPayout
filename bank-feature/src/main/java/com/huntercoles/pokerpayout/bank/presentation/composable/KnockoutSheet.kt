@@ -131,7 +131,7 @@ private const val ONE_PER_ROW_ABOVE = 1.15f
 private const val CONFIRM_WEIGHT = 1.4f
 
 /** There is a bounty to pay out: an amount, or (mystery) envelopes left in the pool. */
-private val BankSheet.Knockout.hasBounty: Boolean
+internal val BankSheet.Knockout.hasBounty: Boolean
     get() = if (mode == BountyMode.MYSTERY) envelopesLeft > 0 else bountyCents > 0L
 
 /** Where the bounty goes, in the game's bounty mode (PP-035). */
@@ -149,7 +149,7 @@ private fun introText(sheet: BankSheet.Knockout): String {
 
 /** "Nobody", and where the bounty goes then: to the champion, or (mystery) back in the pool for them. */
 @Composable
-private fun nobodyLabel(sheet: BankSheet.Knockout): String = stringResource(
+internal fun nobodyLabel(sheet: BankSheet.Knockout): String = stringResource(
     when {
         !sheet.hasBounty -> R.string.bank_ko_nobody
         sheet.mode == BountyMode.MYSTERY -> R.string.bank_ko_nobody_envelope

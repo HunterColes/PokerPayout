@@ -14,7 +14,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +40,18 @@ import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 
 private const val MAX_WEIGHT_VALUE = 999
+
+/** An unsaved structure as the activity's saved state keeps it: weights, preset and rounding by name. */
+private val DraftSaver: Saver<PayoutSettings, Any> = listSaver(
+    save = { listOf(it.weights.joinToString(","), it.preset?.name.orEmpty(), it.rounding.name) },
+    restore = { (weights, preset, rounding) ->
+        PayoutSettings(
+            weights = weights.split(",").map(String::toInt),
+            preset = PayoutPreset.entries.firstOrNull { it.name == preset },
+            rounding = PayoutRounding.valueOf(rounding),
+        )
+    },
+)
 
 /** Save takes a little more of the row than Cancel. */
 private const val SAVE_WEIGHT = 1.4f
@@ -75,7 +89,8 @@ fun PayoutStructureContent(
     isLocked: Boolean = false
 ) {
     val maxPlaces = PayoutPlaces.maxFor(preview.playerCount)
-    var draft by remember(current, maxPlaces) {
+    // Saveable, like every other sheet's draft: a rotation or a font change keeps the edits
+    var draft by rememberSaveable(current, maxPlaces, stateSaver = DraftSaver) {
         mutableStateOf(current.copy(weights = current.weights.take(maxPlaces).ifEmpty { listOf(1) }))
     }
     val invalid = detectInvalidWeights(draft.weights)

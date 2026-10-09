@@ -1,0 +1,121 @@
+{
+  "format": "com.huntercoles.pokerpayout.backup",
+  "schema": 1,
+  "appVersion": "1.4.0",
+  "created": "2026-10-08T21:14:03Z",
+  "sections": {
+    "presets": {
+      "version": 1,
+      "presets": [
+        {
+          "format": 1,
+          "id": 1,
+          "name": "Friday",
+          "lastUsed": 1791460800000,
+          "money": { "buyIn": 4000, "food": 500, "bounty": 0, "rebuy": 2000, "addOn": 0, "rebuyUntil": 4 },
+          "blinds": {
+            "minutes": 180,
+            "levelMinutes": 20,
+            "smallestChip": 25,
+            "stack": 5000,
+            "breakEvery": 4,
+            "breakMinutes": 10,
+            "breakNote": "Last rebuy",
+            "anteFrom": 0
+          },
+          "payouts": { "weights": [50, 30, 20], "roundingCents": 100, "followsPlayers": false }
+        }
+      ]
+    },
+    "history": {
+      "version": 1,
+      "nights": [
+        {
+          "format": 1,
+          "id": 4,
+          "date": "2026-10-02",
+          "structure": "Friday",
+          "prizePool": 12000,
+          "players": [
+            {
+              "name": "Dana",
+              "place": 1,
+              "entry": 5000,
+              "rebuys": 1,
+              "rebuyCents": 2000,
+              "addOns": 0,
+              "addOnCents": 0,
+              "prize": 9000,
+              "knockouts": 1,
+              "bounties": 0
+            },
+            {
+              "name": "Zoë, \"Ace\"",
+              "place": 2,
+              "entry": 5000,
+              "rebuys": 0,
+              "rebuyCents": 0,
+              "addOns": 0,
+              "addOnCents": 0,
+              "prize": 3000,
+              "knockouts": 0,
+              "bounties": 0
+            }
+          ]
+        }
+      ]
+    },
+    "chipSet": {
+      "version": 1,
+      "files": {
+        "chip_calculator_prefs": {
+          "chip_inventory": { "string": "white:25:200;red:100:150;green:500:50" },
+          "chip_inventory_reviewed": { "boolean": true },
+          "denomination_count": { "int": 4 },
+          "stack_shape": { "string": "bell" }
+        }
+      }
+    },
+    "game": {
+      "version": 1,
+      "files": {
+        "tournament_prefs": {
+          "bounty_mode": { "string": "mystery" },
+          "buy_in": { "float": 12.5 },
+          "player_count": { "int": 9 },
+          "rebuy_per_player": { "float": 10.0 },
+          "round_length_minutes": { "int": 20 }
+        },
+        "timer_prefs": {
+          "break_every_levels": { "int": 4 },
+          "break_message": { "string": "Last rebuy" },
+          "clock_elapsed_ms": { "long": 2400000 },
+          "has_timer_started": { "boolean": true },
+          "timer_running": { "boolean": false }
+        },
+        "bank_prefs": {
+          "player_buyin_1": { "boolean": true },
+          "player_name_1": { "string": "Dana" },
+          "player_rebuys_1": { "int": 2 }
+        }
+      }
+    },
+    "sound": {
+      "version": 1,
+      "files": {
+        "audio_prefs": {
+          "is_muted": { "boolean": false },
+          "vibrate_cues": { "boolean": false },
+          "volume": { "float": 0.6 }
+        }
+      }
+    },
+    "tools": {
+      "version": 1,
+      "files": {
+        "odds_calculator_prefs": { "four_colour_deck": { "boolean": true } },
+        "seat_draw_prefs": { "seats_per_table": { "int": 6 } }
+      }
+    }
+  }
+}

@@ -102,8 +102,8 @@ FULL_EXTRAS_BEFORE_app_alive="ime ime-done rotate rotate-upright nav-layout"
 # window to 720 dp and expect the bottom bar back; the tour's own table-view and rotate-to-table
 # steps expect a phone's rules (landscape, the turned clock as the table view). On wide profiles
 # nav-layout, table-view-land and rotate-clock check the wide rules instead.
-PHONE_ONLY="rail rail-tools rail-payouts rail-restored table-view table-view-resume table-view-exit
-  rotate-to-table rotate-back"
+PHONE_ONLY="rail rail-tools rail-payouts rail-restored table-view table-view-resume table-view-knockout
+  table-view-ko-undo table-view-exit rotate-to-table rotate-back"
 # The contact sheet's columns (one that no profile ran is left out).
 KEY_SCREENS="launch payouts-tab blinds ready-ticket start-fold timer-break table-view-land rotate-clock
   setup-panel bank bank-knockout-sheet pool-summary ime payouts-screen tools hand-ranks odds-results

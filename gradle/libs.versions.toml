@@ -27,6 +27,10 @@ test-robolectric                    = "4.14.1"
 # Take the latest once Kotlin is >= 2.2 (PP-023).
 test-roborazzi                      = "1.60.0"
 test-androidx-core                  = "1.6.1"
+# Property-based tests (seeded generators that shrink a failing case). Test-only, on the JUnit 5
+# platform through plain @Test methods. 5.9.1 is the newest whose Kotlin metadata (1.9) Kotlin 2.0 reads;
+# 6.x needs Kotlin 2.2.
+test-kotest                         = "5.9.1"
 
 # android test libraries
 test-android-compose-ui-test        = "1.7.5"
@@ -75,6 +79,7 @@ test-mockk-agent                   = { group = "io.mockk", name = "mockk-agent-j
 test-robolectric                    = { group = "org.robolectric", name = "robolectric", version.ref = "test-robolectric" }
 test-androidx-core                  = { group = "androidx.test", name = "core", version.ref = "test-androidx-core" }
 test-compose-ui                     = { group = "androidx.compose.ui", name = "ui-test-junit4", version.ref = "test-android-compose-ui-test" } # Compose UI tests on the JVM (Robolectric)
+test-kotest-property                = { group = "io.kotest", name = "kotest-property", version.ref = "test-kotest" }
 test-roborazzi                      = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "test-roborazzi" }
 test-roborazzi-compose              = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "test-roborazzi" }
 test-roborazzi-junit-rule           = { group = "io.github.takahirom.roborazzi", name = "roborazzi-junit-rule", version.ref = "test-roborazzi" }

@@ -7,8 +7,7 @@ import java.time.LocalDate
 /**
  * A finished tournament night as History keeps it (PP-037): the day it was played, the name of the
  * setup it was played with, the prize pool, and every player in finishing order with what they paid
- * and what they took home. Amounts are whole cents. A saved night is never edited; the cash game is
- * never saved.
+ * and what they took home. Amounts are whole cents. A saved night is never edited.
  *
  * @property id stable while the night is kept; 0 until [NightStore] gives it one.
  * @property structureName the preset the setup came from, or null when it matched none.

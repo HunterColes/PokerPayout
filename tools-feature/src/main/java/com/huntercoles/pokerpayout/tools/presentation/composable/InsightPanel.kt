@@ -181,7 +181,8 @@ private fun GridCell(card: Int, kind: CellKind, focusName: String, labels: OddsL
         val (ink, strike) = when (kind) {
             CellKind.TakesLead -> PokerColors.FeltDeep to false
             CellKind.Stays -> PokerColors.Chalk to false
-            CellKind.OnTable -> PokerColors.ChalkDim to true
+            // Chalk, struck through: ChalkDim is for disabled controls, and at 4.2:1 it was under AA
+            CellKind.OnTable -> PokerColors.Chalk to true
         }
         GridText(rankText(rankOf(card)), ink, Modifier.clearAndSetSemantics { }, strike)
     }

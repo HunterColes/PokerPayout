@@ -130,6 +130,28 @@ class PayoutsViewModelTest {
         assertTrue(viewModel.state().addsUp)
     }
 
+    /**
+     * A place that would round to $0 isn't paid (1.4.5), so the stepper stops below it: 9 players at
+     * $40 rounded to $10 pay 9th $3.60, which rounds to nothing. 8 places is the most there.
+     */
+    @Test
+    fun thePlacesStopWhereAPlaceWouldGetNothing() {
+        val viewModel = game.viewModel()
+        viewModel.send(PayoutsIntent.SelectRounding(PayoutRounding.TEN_DOLLARS))
+        viewModel.send(PayoutsIntent.SetPlaces(9))
+
+        val state = viewModel.state()
+        assertEquals(8, state.maxPlaces)
+        assertEquals(8, state.places)
+        assertTrue("every place pays: ${state.rows}", state.rows.all { it.amountCents > 0L })
+        assertTrue(state.addsUp)
+        assertFalse(state.canPlaceMore)
+
+        // $1 rounding pays 9th $4: all nine places again
+        viewModel.send(PayoutsIntent.SelectRounding(PayoutRounding.ONE_DOLLAR))
+        assertEquals(9, viewModel.state().maxPlaces)
+    }
+
     @Test
     fun thePayAboutAThirdShortcutUsesPP086() {
         game.tournament.setPlayerCount(5)

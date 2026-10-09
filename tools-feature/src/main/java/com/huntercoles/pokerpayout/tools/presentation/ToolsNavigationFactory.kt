@@ -10,11 +10,17 @@ import androidx.navigation.compose.composable
 import com.huntercoles.pokerpayout.core.navigation.NavigationDestination
 import com.huntercoles.pokerpayout.core.navigation.NavigationFactory
 import com.huntercoles.pokerpayout.core.navigation.NavigationManager
+import com.huntercoles.pokerpayout.tools.presentation.composable.BackupRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ChipSetRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.CueSoundsRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.DealersChoiceRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.EquityQuizRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.HandRanksScreen
 import com.huntercoles.pokerpayout.tools.presentation.composable.HistoryRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.MusicRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.OddsCalculatorScreen
 import com.huntercoles.pokerpayout.tools.presentation.composable.SeatDrawRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.ShotClockRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ToolsHomeScreen
 import javax.inject.Inject
 
@@ -49,9 +55,35 @@ class ToolsNavigationFactory @Inject constructor(
             SeatDrawRoute(onBack = navigationManager::navigateBack)
         }
 
+        builder.composable<NavigationDestination.ShotClock> {
+            ShotClockRoute(onBack = navigationManager::navigateBack)
+        }
+
+        builder.composable<NavigationDestination.DealersChoice> {
+            DealersChoiceRoute(onBack = navigationManager::navigateBack)
+        }
+
+        builder.composable<NavigationDestination.EquityQuiz> {
+            EquityQuizRoute(onBack = navigationManager::navigateBack)
+        }
+
         // Saved nights and the season's points (PP-037)
         builder.composable<NavigationDestination.History> {
             HistoryRoute(onBack = navigationManager::navigateBack)
+        }
+
+        // From the Sound section: the music, and the cue sound packs
+        builder.composable<NavigationDestination.Music> {
+            MusicRoute(onBack = navigationManager::navigateBack)
+        }
+
+        builder.composable<NavigationDestination.CueSounds> {
+            CueSoundsRoute(onBack = navigationManager::navigateBack)
+        }
+
+        // Everything the app saves, in one file: save it, open it and restore it
+        builder.composable<NavigationDestination.Backup> {
+            BackupRoute(onBack = navigationManager::navigateBack)
         }
     }
 }

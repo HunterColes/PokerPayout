@@ -10,11 +10,13 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.huntercoles.pokerpayout.core.design.PokerTheme
 import com.huntercoles.pokerpayout.core.navigation.NavigationDestination
+import com.huntercoles.pokerpayout.tools.presentation.MusicSummary
 import com.huntercoles.pokerpayout.tools.presentation.ToolsHomeIntent
 import com.huntercoles.pokerpayout.tools.presentation.ToolsHomeUiState
 import org.junit.Assert.assertEquals
@@ -54,14 +56,22 @@ class ToolsHomeContentTest {
         compose.onNodeWithText("Chip set").performClick()
         compose.onNodeWithText("Hand ranks").performClick()
         compose.onNodeWithText("Seat draw").performClick()
+        compose.onNodeWithText("Shot clock").performScrollTo().performClick()
+        compose.onNodeWithText("Dealer's choice").performScrollTo().performClick()
+        compose.onNodeWithText("Equity quiz").performScrollTo().performClick()
         compose.onNodeWithText("History").performScrollTo().performClick()
+        compose.onNodeWithText("Backup").performScrollTo().performClick()
         assertEquals(
             listOf(
                 NavigationDestination.OddsCalculator,
                 NavigationDestination.ChipCalculator,
                 NavigationDestination.HandRanks,
                 NavigationDestination.SeatDraw,
+                NavigationDestination.ShotClock,
+                NavigationDestination.DealersChoice,
+                NavigationDestination.EquityQuiz,
                 NavigationDestination.History,
+                NavigationDestination.Backup,
             ),
             opened,
         )
@@ -70,9 +80,9 @@ class ToolsHomeContentTest {
     @Test
     fun theSoundRowIsOneSwitch() {
         show(ToolsHomeUiState(soundOn = true))
-        val soundSwitch = compose.onNode(hasText("Sound") and isSwitch)
+        val soundSwitch = compose.onNode(hasText("Sound") and isSwitch).performScrollTo()
         soundSwitch.assertIsOn()
-        soundSwitch.performClick()
+        soundSwitch.performScrollTo().performClick()
         assertEquals(listOf<ToolsHomeIntent>(ToolsHomeIntent.SetSoundOn(false)), intents)
     }
 
@@ -89,7 +99,7 @@ class ToolsHomeContentTest {
     fun testChimeAsksForTheChime() {
         show(ToolsHomeUiState(soundOn = true))
         compose.onNode(hasContentDescription("Chime volume")).assertIsEnabled()
-        compose.onNodeWithText("Test chime").performClick()
+        compose.onNodeWithText("Test chime").performScrollTo().performClick()
         assertEquals(listOf<ToolsHomeIntent>(ToolsHomeIntent.TestChime), intents)
     }
 
@@ -149,6 +159,39 @@ class ToolsHomeContentTest {
         show(ToolsHomeUiState(notificationsOff = false))
         compose.onNodeWithText("Turn on notifications").assertDoesNotExist()
         compose.onNodeWithText("Clock on the lock screen").assertDoesNotExist()
+    }
+
+    @Test
+    fun theCueSoundsRowNamesThePickedPackAndOpensThePacks() {
+        show(ToolsHomeUiState())
+        compose.onNodeWithText("Cue sounds").performScrollTo().assertExists()
+        compose.onNodeWithText("Classic").assertExists()
+        compose.onNodeWithText("Cue sounds").performClick()
+        assertEquals(listOf<NavigationDestination>(NavigationDestination.CueSounds), opened)
+    }
+
+    @Test
+    fun withNoSongsTheMusicRowSaysSoAndOpensTheMusic() {
+        show(ToolsHomeUiState())
+        compose.onNodeWithText("No songs yet").performScrollTo().assertExists()
+        compose.onNodeWithContentDescription("Play music").assertDoesNotExist()
+        compose.onNodeWithText("Music").performScrollTo().performClick()
+        assertEquals(listOf<NavigationDestination>(NavigationDestination.Music), opened)
+    }
+
+    @Test
+    fun withSongsTheMusicRowSaysWhatPlaysAndPlaysOrPauses() {
+        show(ToolsHomeUiState(music = MusicSummary(songs = 3, playing = true, current = "Night Owl")))
+        compose.onNodeWithText("Playing: Night Owl").performScrollTo().assertExists()
+        compose.onNodeWithContentDescription("Pause music").performScrollTo().performClick()
+        assertEquals(listOf<ToolsHomeIntent>(ToolsHomeIntent.ToggleMusic), intents)
+    }
+
+    @Test
+    fun pausedTheMusicRowCountsTheSongs() {
+        show(ToolsHomeUiState(music = MusicSummary(songs = 3, playing = false, current = "Night Owl")))
+        compose.onNodeWithText("3 songs").performScrollTo().assertExists()
+        compose.onNodeWithContentDescription("Play music").assertExists()
     }
 
     private val isSwitch = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)

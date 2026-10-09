@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shot clock: a countdown for each decision, with time-bank cards -->
+    <string name="shot_clock_title">Shot clock</string>
+    <!-- "30 s to act · 2 cards each" -->
+    <string name="shot_clock_subtitle">%1$d s to act · %2$s</string>
+    <plurals name="shot_clock_cards_each">
+        <item quantity="one">%1$d card each</item>
+        <item quantity="other">%1$d cards each</item>
+    </plurals>
+    <string name="shot_clock_no_time_bank">no time bank</string>
+
+    <!-- The face: one big button -->
+    <string name="shot_clock_time_word">TIME</string>
+    <!-- TalkBack: "Shot clock, 27 seconds left" -->
+    <plurals name="shot_clock_face_description">
+        <item quantity="one">Shot clock, %1$d second left</item>
+        <item quantity="other">Shot clock, %1$d seconds left</item>
+    </plurals>
+    <string name="shot_clock_face_time_up">Shot clock, time is up</string>
+    <string name="shot_clock_face_paused">%1$s, paused</string>
+    <string name="shot_clock_face_action_start">Start the clock</string>
+    <string name="shot_clock_face_action_next">Start the next decision</string>
+    <!-- The line under the face, read out by TalkBack when it changes -->
+    <string name="shot_clock_status_ready">Tap the clock to start</string>
+    <string name="shot_clock_status_running">Tap the clock for the next decision</string>
+    <string name="shot_clock_status_low">Last ten seconds</string>
+    <string name="shot_clock_status_paused">Paused</string>
+    <string name="shot_clock_status_time_up">Time\'s up. Tap the clock for the next decision.</string>
+
+    <string name="shot_clock_pause">Pause</string>
+    <string name="shot_clock_resume">Resume</string>
+    <string name="shot_clock_reset">Reset</string>
+
+    <!-- Time to act -->
+    <string name="shot_clock_time_to_act">Time to act</string>
+    <string name="shot_clock_seconds_option">%1$d s</string>
+    <string name="shot_clock_applies_next">From the next decision</string>
+
+    <!-- Time bank -->
+    <string name="shot_clock_time_bank">Time bank</string>
+    <!-- "Each card adds 30 s" -->
+    <string name="shot_clock_card_adds">Each card adds %1$d s</string>
+    <string name="shot_clock_cards_each_label">Cards each</string>
+    <string name="shot_clock_time_bank_off">Off. Give each player a few cards, and they can play one for more time on a hard decision.</string>
+    <!-- The button on a player's row: "+30 s" -->
+    <string name="shot_clock_play_card">+%1$d s</string>
+    <!-- TalkBack for that button: "Play a card for Dana, 30 more seconds" -->
+    <string name="shot_clock_play_card_description">Play a card for %1$s, %2$d more seconds</string>
+    <!-- TalkBack for a player's cards: "2 of 2 cards left" -->
+    <string name="shot_clock_cards_left">%1$d of %2$d cards left</string>
+    <string name="shot_clock_give_back">Give everyone their cards back</string>
+    <string name="shot_clock_how">A warning at 10 seconds and when time is up, with the Sound settings in Tools.</string>
+
+    <!-- What the ViewModel shows itself -->
+    <string name="shot_clock_snackbar_cards_back">Cards given back</string>
+    <string name="shot_clock_undo">Undo</string>
+    <string name="shot_clock_default_player">Player %1$d</string>
+</resources>

@@ -137,6 +137,105 @@ class TournamentBountyModeTest {
         assertEquals(5_000L, viewModel.state.envelopes.sum())
     }
 
+    /** The Bank knocks [victim] out, credits [eliminator], and draws the [cents] envelope for it. */
+    private fun drawEnvelope(victim: Int, eliminator: Int, cents: Long) {
+        bankPreferences.savePlayerOutStatus(victim, true)
+        bankPreferences.savePlayerEliminatedBy(victim, eliminator)
+        bankPreferences.savePlayerBountyDraw(victim, cents)
+        bankPreferences.saveEliminationOrder(bankPreferences.getEliminationOrder() + victim)
+        settle()
+    }
+
+    /**
+     * Fewer players deal fewer envelopes: 9 at $5 make $45, 3 make $15, so the $15 envelope already
+     * drawn would leave the champion $0. Once one is drawn the count can't go lower; a late entry
+     * still can come in.
+     */
+    @Test
+    fun theCountCantGoLowerOnceAMysteryEnvelopeIsDrawn() {
+        tournamentPreferences.setBountyMode(BountyMode.MYSTERY)
+        val viewModel = createViewModel()
+        assertFalse(viewModel.state.playerCountCantGoLower)
+
+        drawEnvelope(victim = 9, eliminator = 1, cents = 1_500)
+        assertTrue(viewModel.state.envelopesDrawn)
+        assertTrue(viewModel.state.playerCountCantGoLower)
+
+        viewModel.send(TournamentConfigIntent.UpdatePlayerCount(3))
+        assertEquals(9, tournamentPreferences.getPlayerCount())
+        assertEquals(9, viewModel.state.playerCount)
+        assertEquals(1_500L, bankPreferences.getPlayerBountyDraw(9))
+        assertEquals(listOf(9), bankPreferences.getEliminationOrder())
+
+        viewModel.send(TournamentConfigIntent.UpdatePlayerCount(10))
+        assertEquals(10, tournamentPreferences.getPlayerCount())
+        assertTrue("still locked at the new count", viewModel.state.playerCountCantGoLower)
+        viewModel.send(TournamentConfigIntent.UpdatePlayerCount(9))
+        assertEquals(10, tournamentPreferences.getPlayerCount())
+    }
+
+    @Test
+    fun theCountCanGoLowerAgainOnceTheDrawIsUndone() {
+        tournamentPreferences.setBountyMode(BountyMode.MYSTERY)
+        val viewModel = createViewModel()
+        drawEnvelope(victim = 9, eliminator = 1, cents = 1_500)
+        assertTrue(viewModel.state.playerCountCantGoLower)
+
+        // The Bank's Undo (or "back in") takes the knockout back, envelope and all
+        bankPreferences.savePlayerBountyDraw(9, null)
+        bankPreferences.savePlayerEliminatedBy(9, null)
+        bankPreferences.savePlayerOutStatus(9, false)
+        bankPreferences.saveEliminationOrder(emptyList())
+        settle()
+        assertFalse(viewModel.state.playerCountCantGoLower)
+        viewModel.send(TournamentConfigIntent.UpdatePlayerCount(8))
+        assertEquals(8, tournamentPreferences.getPlayerCount())
+
+        // So does the Bank's reset
+        drawEnvelope(victim = 8, eliminator = 1, cents = 1_500)
+        assertTrue(viewModel.state.playerCountCantGoLower)
+        bankPreferences.resetAllBankData()
+        settle()
+        assertFalse(viewModel.state.playerCountCantGoLower)
+        viewModel.send(TournamentConfigIntent.UpdatePlayerCount(7))
+        assertEquals(7, tournamentPreferences.getPlayerCount())
+    }
+
+    @Test
+    fun aNewTournamentStillResetsTheCountAfterADraw() {
+        tournamentPreferences.setPlayerCount(20)
+        tournamentPreferences.setBountyMode(BountyMode.MYSTERY)
+        val viewModel = createViewModel()
+        drawEnvelope(victim = 20, eliminator = 1, cents = 1_500)
+        assertTrue(viewModel.state.playerCountCantGoLower)
+
+        viewModel.send(TournamentConfigIntent.ShowResetDialog, TournamentConfigIntent.ConfirmReset)
+
+        assertEquals(TournamentConfigUiState().playerCount, tournamentPreferences.getPlayerCount())
+        assertFalse(viewModel.state.playerCountCantGoLower)
+    }
+
+    @Test
+    fun onlyAMysteryDrawLocksTheCount() {
+        // A knockout credited to nobody draws no envelope
+        tournamentPreferences.setBountyMode(BountyMode.MYSTERY)
+        bankPreferences.savePlayerOutStatus(9, true)
+        bankPreferences.saveEliminationOrder(listOf(9))
+        val viewModel = createViewModel()
+        assertFalse(viewModel.state.playerCountCantGoLower)
+        viewModel.send(TournamentConfigIntent.UpdatePlayerCount(8))
+        assertEquals(8, tournamentPreferences.getPlayerCount())
+
+        // Standard bounties have no envelopes to protect
+        bankPreferences.resetAllBankData()
+        settle()
+        viewModel.send(TournamentConfigIntent.UpdateBountyMode(BountyMode.STANDARD))
+        drawEnvelope(victim = 8, eliminator = 1, cents = 500)
+        assertFalse(viewModel.state.playerCountCantGoLower)
+        viewModel.send(TournamentConfigIntent.UpdatePlayerCount(7))
+        assertEquals(7, tournamentPreferences.getPlayerCount())
+    }
+
     @Test
     fun aResetPutsTheBountyTypeBackToStandard() {
         val viewModel = createViewModel()

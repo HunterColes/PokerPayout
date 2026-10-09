@@ -73,14 +73,17 @@ object BlindStructureCalculator {
      * @param currentSchedule The schedule so far (including any overtime already added)
      * @param roundLengthMinutes Duration of each round
      * @param bigBlindAnteFromLevel As in [BlindStructureInput]; 0 for no ante
-     * @return The next overtime level, or null for an empty schedule
+     * @return The next overtime level, or null for an empty schedule or when its big blind would be
+     *   too big to count (over 2,147,483,647 chips: a starting stack above 134,217,727 gets there
+     *   within three overtime levels), so overtime stops instead of showing negative blinds
      */
     fun generateNextOvertimeLevel(
         currentSchedule: List<BlindLevel>,
         roundLengthMinutes: Int,
         bigBlindAnteFromLevel: Int = 0
     ): BlindLevel? {
-        val lastLevel = currentSchedule.lastOrNull() ?: return null
+        val lastLevel = currentSchedule.lastOrNull()
+        if (lastLevel == null || lastLevel.smallBlind * 2L * 2L > Int.MAX_VALUE) return null
         val levelNumber = currentSchedule.size + 1
         val smallBlind = lastLevel.smallBlind * 2
         val bigBlind = smallBlind * 2

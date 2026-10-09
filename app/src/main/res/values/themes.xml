@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.PokerPayout" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+      The window behind the app. Until Compose draws the first frame it is the launch screen, so it
+      is the felt green (PokerColors.FeltGreen), never a white flash, in light and dark system
+      themes alike. The parent is dark, so the system bars start with light icons; MainActivity then
+      draws edge to edge. Android 12 and up show their splash screen on the same green (values-v31).
+    -->
+    <style name="Base.Theme.PokerPayout" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/poker_felt_green</item>
+        <item name="android:statusBarColor">@color/poker_felt_green</item>
+        <item name="android:navigationBarColor">@color/poker_felt_green</item>
+    </style>
+
+    <style name="Theme.PokerPayout" parent="Base.Theme.PokerPayout" />
 </resources>

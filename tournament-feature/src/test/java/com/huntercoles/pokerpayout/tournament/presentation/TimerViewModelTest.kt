@@ -658,8 +658,9 @@ class TimerViewModelTest {
         tournamentPreferences.setBuyIn(20.0)
         tournamentPreferences.setRebuyAmount(10.0)
         val viewModel = newViewModel()
+        // 10 players pay 3 places by default (PP-135: the table view's bubble)
         assertEquals(
-            TableStats(playerCount = 10, playersLeft = 10, averageStack = 5_000, prizePoolCents = 20_000L),
+            TableStats(playerCount = 10, playersLeft = 10, averageStack = 5_000, prizePoolCents = 20_000L, paidPlaces = 3),
             viewModel.state.table
         )
 
@@ -669,7 +670,7 @@ class TimerViewModelTest {
 
         // 12 stacks of 5,000 among 8 players; 10 buy-ins and 2 rebuys in the pool
         assertEquals(
-            TableStats(playerCount = 10, playersLeft = 8, averageStack = 7_500, prizePoolCents = 22_000L),
+            TableStats(playerCount = 10, playersLeft = 8, averageStack = 7_500, prizePoolCents = 22_000L, paidPlaces = 3),
             viewModel.state.table
         )
     }

@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tournament.presentation.composable
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -33,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +44,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -49,10 +52,12 @@ import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.design.components.LocalShellSnackbars
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerPill
 import com.huntercoles.pokerpayout.core.design.components.PokerPillTone
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
+import com.huntercoles.pokerpayout.core.presentation.LocalTableKnockouts
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
@@ -67,6 +72,11 @@ import kotlinx.coroutines.delay
  *
  * It is a full-screen state of the Tournament tab (no `Dialog` window), shown when a phone is turned
  * sideways with a clock running, or with ⤢; ✕ leaves it.
+ *
+ * PP-135: Knock out, beside pause, opens the Bank's knockout over the clock ([LocalTableKnockouts]):
+ * who is out, then who knocked them out. While it is open the clock is only to look at (TalkBack
+ * skips it) and Back puts the knockout away. The snackbar's Undo shows bottom left; the players left
+ * say when it is the bubble.
  */
 @Composable
 internal fun TableViewContent(
@@ -88,33 +98,43 @@ internal fun TableViewContent(
         animationSpec = if (reduced) snap() else tween(FADE_MILLIS),
         label = "tableControls",
     )
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .background(PokerColors.PokerBlack)
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        awaitPointerEvent(PointerEventPass.Initial)
-                        touches++
+    val knockouts = LocalTableKnockouts.current
+    var knockoutAsked by rememberSaveable { mutableStateOf(false) }
+    val canKnockOut = knockouts != null && uiState.table.playersLeft > 1
+    val knockoutOpen = knockoutAsked && canKnockOut
+    BackHandler(enabled = knockoutOpen) { knockoutAsked = false }
+    BoxWithConstraints(modifier.fillMaxSize().background(PokerColors.PokerBlack)) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitPointerEvent(PointerEventPass.Initial)
+                            touches++
+                        }
                     }
                 }
-            }
-            .windowInsetsPadding(WindowInsets.displayCutout)
-            .padding(horizontal = 24.dp, vertical = 12.dp),
-    ) {
-        val width = maxWidth
-        val height = maxHeight
-        Column(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                if (width > height) {
-                    LandscapeBody(uiState, heroCap = height * HERO_MAX_HEIGHT_LANDSCAPE, width = width)
-                } else {
-                    PortraitBody(uiState, heroCap = height * HERO_MAX_HEIGHT_PORTRAIT, width = width)
+                .windowInsetsPadding(WindowInsets.displayCutout)
+                .padding(horizontal = 24.dp, vertical = 12.dp)
+                .then(if (knockoutOpen) Modifier.clearAndSetSemantics {} else Modifier),
+        ) {
+            val width = maxWidth
+            val height = maxHeight
+            Column(Modifier.fillMaxSize()) {
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    if (width > height) {
+                        LandscapeBody(uiState, heroCap = height * HERO_MAX_HEIGHT_LANDSCAPE, width = width)
+                    } else {
+                        PortraitBody(uiState, heroCap = height * HERO_MAX_HEIGHT_PORTRAIT, width = width)
+                    }
                 }
+                val openKnockout = { knockoutAsked = true }
+                TableFooter(uiState, controlsAlpha, onIntent, onExit, onKnockOut = openKnockout.takeIf { canKnockOut })
             }
-            TableFooter(uiState, controlsAlpha, onIntent, onExit)
         }
+        if (knockoutOpen) knockouts?.Panel(onClose = { knockoutAsked = false })
+        TableSnackbars()
     }
 }
 
@@ -235,10 +255,19 @@ private fun TableSide(uiState: TimerUiState, blindsCap: Dp) {
     }
 }
 
-/** "7 of 9 left | Avg 10,714 · 18 BB | Pool $450 | Break in 52:41", pause and exit. */
+/**
+ * "7 of 9 left | Avg 10,714 · 18 BB | Pool $450 | Break in 52:41", with the bubble beside the
+ * players left; Knock out (while two or more are left), pause and exit.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TableFooter(uiState: TimerUiState, controlsAlpha: Float, onIntent: (TimerIntent) -> Unit, onExit: () -> Unit) {
+private fun TableFooter(
+    uiState: TimerUiState,
+    controlsAlpha: Float,
+    onIntent: (TimerIntent) -> Unit,
+    onExit: () -> Unit,
+    onKnockOut: (() -> Unit)?,
+) {
     val formatter = rememberChipFormatter()
     val table = uiState.table
     val bigBlind = uiState.statsBigBlind
@@ -261,15 +290,27 @@ private fun TableFooter(uiState: TimerUiState, controlsAlpha: Float, onIntent: (
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        // A snackbar (Undo after a knockout) sits over the numbers: they make way, not peek out beside it
+        val snackbarUp = LocalShellSnackbars.current?.currentSnackbarData != null
         FlowRow(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .alpha(if (snackbarUp) 0f else 1f),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             val factStyle = PokerType.NumberS.copy(fontSize = PokerType.NumberM.fontSize)
-            facts.forEach { Text(it, style = factStyle, color = PokerColors.Chalk) }
+            facts.forEachIndexed { index, fact ->
+                Text(fact, style = factStyle, color = PokerColors.Chalk, modifier = Modifier.align(Alignment.CenterVertically))
+                if (index == 0) MoneyStagePill(table.moneyStage, Modifier.align(Alignment.CenterVertically))
+            }
         }
-        Row(Modifier.alpha(controlsAlpha), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.alpha(controlsAlpha),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            onKnockOut?.let { KnockOutButton(it) }
             PlayPauseButton(uiState.buttons, TableControl) { onIntent(TimerIntent.ToggleTimer) }
             ExitButton(onExit)
         }

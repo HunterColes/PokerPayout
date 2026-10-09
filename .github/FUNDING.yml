@@ -1,0 +1,5 @@
+# The repository's "Sponsor" button. It opens the donation page, which lists the Ethereum and
+# Monero addresses with their QR codes. Add a platform here (github, liberapay, ko_fi, ...) only
+# once its account exists.
+custom:
+  - https://github.com/HunterColes/PokerPayout/blob/master/crypto/DONATIONS.md

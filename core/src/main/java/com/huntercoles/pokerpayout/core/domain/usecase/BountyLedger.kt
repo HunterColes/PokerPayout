@@ -97,6 +97,7 @@ internal class BountyLedger(
         /**
          * Each credited knockout wins the envelope drawn for it. Knockouts nobody was credited with
          * draw nothing, so their envelopes stay in the pool; the champion takes whatever is left.
+         * A player joining after envelopes were drawn adds to the pool ([MysteryBounty.left]).
          */
         private fun mystery(
             byId: Map<Int, BankPlayer>,
@@ -104,7 +105,7 @@ internal class BountyLedger(
             champion: Int?,
             bounty: Long,
         ): BountyLedger {
-            val envelopes = MysteryBounty.envelopes(byId.size, bounty)
+            val pool = MysteryBounty.envelopes(byId.size, bounty).sum()
             val claimed = knockouts.mapNotNull { (victim, eliminator) ->
                 eliminator?.let { Draw(it, byId[victim]?.bountyDrawCents?.coerceAtLeast(0L)) }
             }
@@ -115,9 +116,9 @@ internal class BountyLedger(
                     .mapValues { (_, cents) -> cents.sum() },
                 heads = emptyMap(),
                 // The envelopes left, as the pool holds them: everything dealt minus everything drawn
-                championCents = if (champion != null) (envelopes.sum() - drawn.sum()).coerceAtLeast(0L) else 0L,
+                championCents = if (champion != null) (pool - drawn.sum()).coerceAtLeast(0L) else 0L,
                 unclaimedCents = 0L,
-                envelopesLeft = MysteryBounty.remaining(envelopes, drawn),
+                envelopesLeft = MysteryBounty.left(byId.size, bounty, drawn),
             )
         }
 

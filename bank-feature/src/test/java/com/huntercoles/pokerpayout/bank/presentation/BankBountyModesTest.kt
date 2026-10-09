@@ -274,6 +274,35 @@ class BankBountyModesTest {
         viewModel.payOutSheet(champion).owed.kingsBountyCents
     }
 
+    /**
+     * Late registration in a mystery game (found by core's SettlementPropertiesTest): nine players at
+     * $5 deal 1 x $15, 2 x $6, 6 x $3; the first knockout draws the $15; then a tenth player sits
+     * down. Ten players deal 1 x $17, 2 x $6, 7 x $3, which has no $15, so the drawn envelope used to
+     * come out of nothing: ten envelopes worth the whole $50 were left on top of the $15 paid, and the
+     * night paid out up to $9 more in bounties than went in. Now the $35 left is dealt again.
+     */
+    @Test
+    fun aPlayerJoiningAfterADrawLeavesOnlyTheMoneyNotYetDrawn() = with(kit) {
+        // A seed whose first draw from the nine envelopes is the first one, the $15
+        draws = Random((0..1_000).first { Random(it).nextInt(9) == 0 })
+        val viewModel = night(BountyMode.MYSTERY, players = 9)
+        viewModel.knockOut(9, 1)
+        assertEquals(1_500L, viewModel.player(9).bountyDrawCents)
+        viewModel.send(BankIntent.DismissSheet)
+
+        tournamentPreferences.setPlayerCount(10)
+        settle()
+        assertEquals(10 * 500L - 1_500L, viewModel.uiState.value.envelopesLeft.sum())
+        assertEquals(9, viewModel.uiState.value.envelopesLeft.size)
+
+        (listOf(10) + (8 downTo 2)).forEach { id ->
+            viewModel.knockOut(id, 1)
+            viewModel.send(BankIntent.DismissSheet)
+        }
+        val owed = (1..10).map { viewModel.payOutSheet(it).owed }
+        assertEquals(10 * 500L, owed.sumOf { it.knockoutBountyCents + it.kingsBountyCents + it.unclaimedBountyCents })
+    }
+
     @Test
     fun envelopesNeverRunOutAndTheChampionTakesTheLast() = with(kit) {
         val viewModel = night(BountyMode.MYSTERY, players = 9)

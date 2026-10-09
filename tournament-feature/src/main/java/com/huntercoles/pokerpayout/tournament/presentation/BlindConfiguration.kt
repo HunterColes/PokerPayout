@@ -27,5 +27,22 @@ data class TableStats(
     /** Chips in play / players left, counting each buy-in, rebuy and add-on as one starting stack. */
     val averageStack: Int = 0,
     /** Buy-ins, rebuys and add-ons, in cents: the pool the Payouts table splits. */
-    val prizePoolCents: Long = 0L
-)
+    val prizePoolCents: Long = 0L,
+    /** How many places the Payouts table pays. */
+    val paidPlaces: Int = 0
+) {
+    /**
+     * PP-135: where the players left stand against the paid places, for the table view. Nothing to
+     * say while everyone would be paid anyway, or once there is a champion.
+     */
+    val moneyStage: MoneyStage
+        get() = when {
+            paidPlaces <= 0 || playerCount <= paidPlaces || playersLeft <= 1 -> MoneyStage.NONE
+            playersLeft == paidPlaces + 1 -> MoneyStage.BUBBLE
+            playersLeft <= paidPlaces -> MoneyStage.IN_THE_MONEY
+            else -> MoneyStage.NONE
+        }
+}
+
+/** The bubble (the next player out finishes just short of the money), then in the money. */
+enum class MoneyStage { NONE, BUBBLE, IN_THE_MONEY }

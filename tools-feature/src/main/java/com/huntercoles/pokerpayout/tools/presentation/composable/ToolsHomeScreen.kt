@@ -74,7 +74,26 @@ private val Tools = listOf(
     Tool(NavigationDestination.ChipCalculator, PokerIcons.Chip, R.string.tools_chips_title, R.string.tools_chips_description),
     Tool(NavigationDestination.HandRanks, PokerIcons.List, R.string.tools_ranks_title, R.string.tools_ranks_description),
     Tool(NavigationDestination.SeatDraw, PokerIcons.Seat, R.string.tools_seats_title, R.string.tools_seats_description),
+    Tool(
+        NavigationDestination.ShotClock,
+        PokerIcons.Hourglass,
+        R.string.tools_shot_clock_title,
+        R.string.tools_shot_clock_description,
+    ),
+    Tool(
+        NavigationDestination.DealersChoice,
+        PokerIcons.Wheel,
+        R.string.tools_dealers_choice_title,
+        R.string.tools_dealers_choice_description,
+    ),
+    Tool(
+        NavigationDestination.EquityQuiz,
+        PokerIcons.Quiz,
+        R.string.tools_equity_quiz_title,
+        R.string.tools_equity_quiz_description,
+    ),
     Tool(NavigationDestination.History, PokerIcons.Trophy, R.string.tools_history_title, R.string.tools_history_description),
+    Tool(NavigationDestination.Backup, PokerIcons.Save, R.string.tools_backup_title, R.string.tools_backup_description),
 )
 
 /** The Tools tab (S7): the tools as a list, then the Sound section, then the app's promise. */
@@ -130,7 +149,7 @@ fun ToolsHomeContent(
                     onClick = { onOpenTool(tool.destination) },
                 )
             }
-            SoundSection(state = state, onIntent = onIntent, onAllowNotifications = onAllowNotifications)
+            SoundSection(state = state, onIntent = onIntent, onAllowNotifications = onAllowNotifications, onOpen = onOpenTool)
             Text(
                 text = stringResource(R.string.tools_footer, versionName),
                 style = MaterialTheme.typography.bodySmall,

@@ -89,6 +89,20 @@ class CalculatePayoutsUseCaseTest {
         assertEquals(listOf(3_000L, 1_000L, 1_000L, 1_000L), amounts(6_000, listOf(1, 1, 1, 1), 4, PayoutRounding.TEN_DOLLARS))
     }
 
+    /**
+     * Found by PayoutPropertiesTest: 27 players at $10, the standard 9 places, rounded to $10. 9th's
+     * share is $2.70, which rounds to $0, so 9th was "paid" nothing. Now 8 places are paid.
+     */
+    @Test
+    fun `a place that would round to nothing isn't paid`() {
+        val table = amounts(27_000, TournamentConstants.DEFAULT_PAYOUT_WEIGHTS, 27, PayoutRounding.TEN_DOLLARS)
+        assertEquals(listOf(9_000L, 5_000L, 4_000L, 3_000L, 2_000L, 2_000L, 1_000L, 1_000L), table)
+        // With $1 rounding 9th gets $3, so all 9 places are paid
+        assertEquals(9, amounts(27_000, TournamentConstants.DEFAULT_PAYOUT_WEIGHTS, 27).size)
+        // A pool too small for any lower place pays 1st alone
+        assertEquals(listOf(500L), amounts(500, listOf(50, 30, 20), 9, PayoutRounding.TEN_DOLLARS))
+    }
+
     @Test
     fun `no weights, no players or no money`() {
         assertEquals(emptyList(), amounts(10_000, emptyList(), 5))
@@ -129,6 +143,7 @@ class CalculatePayoutsUseCaseTest {
             val positive = weights.filter { it > 0 }
             if (positive == positive.sortedDescending()) {
                 assertTrue(table.places.zipWithNext().all { (a, b) -> a.amountCents >= b.amountCents }, context)
+                if (pool > 0) assertTrue(table.places.all { it.amountCents > 0 }, "a place paid nothing: $context")
             }
         }
     }

@@ -39,6 +39,9 @@ object LayoutAssertions {
      * the screen. Texts marked [MayTruncate] (a top-bar subtitle) may ellipsize.
      *
      * Holds whether or not the node is scrolled into view.
+     *
+     * On the contrast check's reference cell (`phone` at font 1.0) it also checks that every text
+     * has the contrast WCAG AA asks of it ([AccessibilityAssertions.assertTextContrast]).
      */
     fun assertTextFits(rule: SemanticsNodeInteractionsProvider, where: String) {
         val nodes = rule.onAllNodes(hasTextLayout, useUnmergedTree = true).fetchSemanticsNodes()
@@ -72,6 +75,7 @@ object LayoutAssertions {
             }
         }
         failIfAny(where, "text that doesn't fit", problems)
+        if (AccessibilityAssertions.isReferenceCell()) AccessibilityAssertions.assertTextContrast(rule, where)
     }
 
     /**
@@ -100,6 +104,9 @@ object LayoutAssertions {
      * Compose's hit test sees it: expanded around its centre to [min], which only works if nothing
      * else is within reach, so the overlap check still catches crowded targets. Overlap is judged
      * on the part of each target that is in view (a target scrolled under a bar can't be tapped).
+     *
+     * Every target also needs a name TalkBack can read, and every text field a label
+     * ([AccessibilityAssertions.assertNamed]).
      */
     fun assertTouchTargets(rule: SemanticsNodeInteractionsProvider, where: String, strict: Boolean, min: Dp = 48.dp) {
         val nodes = rule.onAllNodes(hasClick, useUnmergedTree = true).fetchSemanticsNodes()
@@ -128,6 +135,7 @@ object LayoutAssertions {
             }
         }
         failIfAny(where, "touch targets", tooSmall + overlapping)
+        AccessibilityAssertions.assertNamed(rule, where)
     }
 
     private val hasTextLayout = SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult)

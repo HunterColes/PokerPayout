@@ -249,8 +249,8 @@ release.
 | Words | The three `.txt` files, by hand |
 
 `listing.sh` plays one home game with the tour (`--list` shows the steps): nine named players, a $5
-progressive bounty and $20 rebuys, the clock on level 3 with two rebuys and two knockouts, then a cash
-game and the tools. Its `listing-shot-*` steps (`steps-listing.sh`) each end on a clean screen (no
+progressive bounty and $20 rebuys (seven pay in at the start), the clock on level 3 with two rebuys and
+two knockouts, then the night played out to its settle-up, and the tools. Its `listing-shot-*` steps (`steps-listing.sh`) each end on a clean screen (no
 snackbar or keyboard, the status bar in boot.sh's demo mode: 12:00, full battery), and their
 screenshots become `01_clock.png` to `08_seat_draw.png` (`02_table_view.png` is landscape). Only a
 run where every step passed copies them; it then removes any other picture in the folder. A failed

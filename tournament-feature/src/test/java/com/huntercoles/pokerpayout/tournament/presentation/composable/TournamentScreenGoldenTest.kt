@@ -100,6 +100,14 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         check("S1_setup_invalid", fixture.invalid(), TournamentUi())
     }
 
+    /** PP-113: a new install's setup page, the welcome above the ticket. */
+    @Test
+    fun setupWelcome() {
+        showAndCheck("S1_setup_welcome", scroll = true) {
+            TournamentContent(setup.copy(showWelcome = true), fixture.ready, TournamentUi(), TournamentActions())
+        }
+    }
+
     /**
      * PP-035: mystery bounties picked before anyone is out, so the bounty type is open and the
      * envelopes are listed under it (1 × $15 · 2 × $6 · 6 × $3).

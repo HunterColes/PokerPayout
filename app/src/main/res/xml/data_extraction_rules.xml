@@ -10,7 +10,8 @@
    screen lock). Moving to a new phone by cable or Wi-Fi takes everything else.
 
    What's about this phone alone stays on it, in the cloud and in a move (PP-137): phone_prefs, the
-   music's picked songs, which are this phone's file loans and can't play on another one
+   music's picked songs, which are this phone's file loans and can't play on another one, and whether
+   this phone shows the welcome (PP-113: a restored phone's data says it isn't new to the app)
    (BackupCatalog.PHONE_FILES; AndroidBackupRulesTest checks every one is left out of each). Whether
    to ask for notifications isn't saved at all: the app asks Android each time, so a new phone asks.
    See https://developer.android.com/about/versions/12/backup-restore

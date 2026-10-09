@@ -43,4 +43,7 @@ sealed class TournamentConfigIntent {
     object ShowResetDialog : TournamentConfigIntent()
     object HideResetDialog : TournamentConfigIntent()
     object ConfirmReset : TournamentConfigIntent()
+
+    /** ✕ on the welcome (PP-113): it never shows again on this phone. */
+    object DismissWelcome : TournamentConfigIntent()
 }

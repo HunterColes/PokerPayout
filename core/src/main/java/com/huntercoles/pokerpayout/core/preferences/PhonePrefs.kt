@@ -6,7 +6,8 @@ import android.content.SharedPreferences
 /**
  * PP-137: the one SharedPreferences file about this phone rather than the night (`phone_prefs`):
  * the music playlist's picked songs and where one was paused, which are loans from this phone's
- * file picker and can't play on another phone. Android's own backup and phone-to-phone transfer
+ * file picker and can't play on another phone, and whether this phone shows the setup page's
+ * welcome (PP-113, [TimerPreferences.getShowWelcome]). Android's own backup and phone-to-phone transfer
  * leave this file out (res/xml/data_extraction_rules.xml and backup_rules.xml), and so does the
  * in-app backup (core/backup/BackupCatalog.PHONE_FILES), so a new or restored phone starts it empty.
  *

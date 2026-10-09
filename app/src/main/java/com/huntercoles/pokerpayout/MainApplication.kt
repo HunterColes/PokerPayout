@@ -2,14 +2,20 @@ package com.huntercoles.pokerpayout
 
 import android.app.Application
 import android.os.StrictMode
+import com.huntercoles.pokerpayout.core.preferences.FirstRun
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import timber.log.Timber.DebugTree
 import java.io.File
+import javax.inject.Inject
 import kotlin.concurrent.thread
 
 @HiltAndroidApp
 class MainApplication : Application() {
+
+    /** PP-113: a new install or an update, told apart before anything saves a thing. */
+    @Inject
+    lateinit var firstRun: FirstRun
 
     override fun onCreate() {
         if (BuildConfig.DEBUG) {
@@ -18,6 +24,8 @@ class MainApplication : Application() {
         }
         warmUpSavedSettings()
         super.onCreate()
+        // Injected now, and nothing else has run: the files hold only what earlier versions saved
+        firstRun.settle()
     }
 
     /**

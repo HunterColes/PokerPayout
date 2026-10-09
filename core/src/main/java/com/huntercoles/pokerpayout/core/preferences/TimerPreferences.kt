@@ -26,6 +26,9 @@ class TimerPreferences @Inject constructor(
 ) {
     private val prefs: SharedPreferences = context.getSharedPreferences("timer_prefs", Context.MODE_PRIVATE)
 
+    /** PP-113: the welcome is about this phone, so its state lives in [PhonePrefs.FILE], which no backup takes. */
+    private val phone: SharedPreferences = PhonePrefs.open(context)
+
     private val _timerRunning = MutableStateFlow(getTimerRunning())
     val timerRunning: Flow<Boolean> = _timerRunning.asStateFlow()
 
@@ -101,6 +104,29 @@ class TimerPreferences @Inject constructor(
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(Unit) }
         prefs.registerOnSharedPreferenceChangeListener(listener)
         awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
+    // ------------------------------------------------- the welcome (PP-113)
+
+    /**
+     * PP-113: true while the setup page shows its one-line welcome. Only a new install shows it
+     * ([settleWelcome]), until it is dismissed ([dismissWelcome]).
+     */
+    fun getShowWelcome(): Boolean = phone.getString(WELCOME_KEY, null) == WELCOME_NEW
+
+    /** The welcome is done for good on this phone: no reset or restore brings it back. */
+    fun dismissWelcome() {
+        if (phone.getString(WELCOME_KEY, null) != WELCOME_DONE) phone.edit().putString(WELCOME_KEY, WELCOME_DONE).apply()
+    }
+
+    /**
+     * Once ever, at the app's first start with the welcome (PP-113): [isNewInstall] says whether the
+     * phone holds no data from before, and only then does the welcome show. Every later start leaves
+     * the answer as it is, so data saved since never changes it.
+     */
+    fun settleWelcome(isNewInstall: () -> Boolean) {
+        if (phone.contains(WELCOME_KEY)) return
+        phone.edit().putString(WELCOME_KEY, if (isNewInstall()) WELCOME_NEW else WELCOME_DONE).apply()
     }
 
     fun setGameDurationMinutes(minutes: Int) {
@@ -299,6 +325,11 @@ class TimerPreferences @Inject constructor(
 
         // PP-081's "asked for notifications" flag, retired by PP-137: removed once, never read
         private const val RETIRED_NOTIFICATIONS_ASKED_KEY = "notifications_permission_asked"
+
+        // PP-113, in PhonePrefs.FILE: absent until the first start settles it; no reset clears it
+        private const val WELCOME_KEY = "welcome"
+        private const val WELCOME_NEW = "new"
+        private const val WELCOME_DONE = "done"
 
         // v1.1.x clock, read once and migrated to the anchor
         private const val LEGACY_CURRENT_TIME_SECONDS_KEY = "current_time_seconds"

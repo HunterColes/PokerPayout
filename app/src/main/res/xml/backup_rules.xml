@@ -6,7 +6,7 @@
    leave the data out of a move to a new phone by cable on Android 9 to 11.
 
    phone_prefs is about this phone alone (the music's picked songs, which are this phone's file
-   loans): left out, as in data_extraction_rules.xml (core/backup/BackupCatalog.PHONE_FILES;
+   loans, and whether it shows the welcome): left out, as in data_extraction_rules.xml (core/backup/BackupCatalog.PHONE_FILES;
    AndroidBackupRulesTest checks every one is left out here).
    See https://developer.android.com/guide/topics/data/autobackup
 -->

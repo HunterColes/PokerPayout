@@ -1,19 +1,22 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Android's own backup of the app's data (Android 12 and up; backup_rules.xml is the same for older
+   versions). It takes what the in-app backup file takes (core/backup/BackupCatalog.kt): every
+   SharedPreferences file, so presets, History, the chip set, settings and tonight's game, plus any
+   file a later version keeps in its files folder. The cache (a preset just shared) is never taken.
+
+   Nothing in it is a secret: the app has no accounts, passwords or keys. It does hold the players'
+   names, so the copy in Google's cloud is made only when it is end-to-end encrypted (the phone has a
+   screen lock). Moving to a new phone by cable or Wi-Fi takes everything.
+   See https://developer.android.com/about/versions/12/backup-restore
 -->
 <data-extraction-rules>
-    <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <include domain="sharedpref" path="." />
+        <include domain="file" path="." />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <include domain="sharedpref" path="." />
+        <include domain="file" path="." />
     </device-transfer>
-    -->
 </data-extraction-rules>

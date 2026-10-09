@@ -3,6 +3,21 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.2 (on master, not published)
+
+- **Music** (Tools > Sound): a playlist of songs from your phone, added with the phone's file
+  picker (no new permission, still no internet). Play, pause, previous and next, shuffle, repeat
+  (all songs or one), move and remove songs, and a volume of its own. A song whose file has gone
+  says "File not found" and is skipped.
+- **Play with the clock:** the music starts when the clock runs and pauses when it's paused or
+  over; on breaks it keeps playing, pauses or plays quieter, as you choose. It dips under the
+  clock's sounds, plays on with the screen off, and keeps going in the background while the clock
+  runs.
+- **Cue sounds** (Tools > Sound): sound packs with a sound for each moment (a new level, a minute
+  left, a break starting and ending, the game over), each played on a tap. *Classic*, the default,
+  is the chime as before. Room for built-in songs and new packs (docs/SOUNDS.md); none ship yet.
+- Backups take the sound pack and the music's settings; the playlist stays with the phone.
+
 ## 1.4.1 (on master, not published)
 
 - **Backup** (Tools): one file with everything the app saves (presets, History and the season's

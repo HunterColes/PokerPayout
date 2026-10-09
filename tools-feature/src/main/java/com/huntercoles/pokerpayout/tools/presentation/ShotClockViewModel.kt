@@ -105,7 +105,7 @@ class ShotClockViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(
         store.seconds().let { seconds ->
-            ShotClockUiState(seconds = seconds, cardsEach = store.cardsEach()).withPlayers()
+            ShotClockUiState(seconds = seconds, cardsEach = store.cardsEach()).withTimeBank(names, used)
         },
     )
     val uiState: StateFlow<ShotClockUiState> = _uiState.asStateFlow()
@@ -118,9 +118,9 @@ class ShotClockViewModel @Inject constructor(
 
     fun acceptIntent(intent: ShotClockIntent) {
         when (intent) {
-            ShotClockIntent.NextDecision -> setCountdown(Countdown.startedAt(_uiState.value.seconds * MILLIS, now()))
-            ShotClockIntent.Pause -> setCountdown(_uiState.value.countdown.pausedAt(now()))
-            ShotClockIntent.Resume -> setCountdown(_uiState.value.countdown.resumedAt(now()))
+            ShotClockIntent.NextDecision -> setCountdown(Countdown.startedAt(_uiState.value.seconds * MILLIS, now))
+            ShotClockIntent.Pause -> setCountdown(_uiState.value.countdown.pausedAt(now))
+            ShotClockIntent.Resume -> setCountdown(_uiState.value.countdown.resumedAt(now))
             ShotClockIntent.Reset -> setCountdown(Countdown.ready(_uiState.value.seconds * MILLIS))
             is ShotClockIntent.SetSeconds -> setSeconds(intent.seconds)
             is ShotClockIntent.SetCardsEach -> setCardsEach(intent.cards)
@@ -129,7 +129,8 @@ class ShotClockViewModel @Inject constructor(
         }
     }
 
-    private fun now(): Long = time.elapsedRealtimeMillis()
+    /** Now, on the monotonic clock. */
+    private val now: Long get() = time.elapsedRealtimeMillis()
 
     /** Puts [countdown] on the clock, takes a fresh look, and counts while it runs. */
     private fun setCountdown(countdown: Countdown) {
@@ -153,10 +154,10 @@ class ShotClockViewModel @Inject constructor(
 
     /** Shows the time left now and where the decision stands; returns the signed time left. */
     private fun look(): Long {
-        val now = now()
+        val at = now
         val countdown = _uiState.value.countdown
-        val signed = countdown.signedLeftAt(now)
-        _uiState.update { it.copy(leftMillis = signed.coerceAtLeast(0), phase = countdown.phaseAt(now)) }
+        val signed = countdown.signedLeftAt(at)
+        _uiState.update { it.copy(leftMillis = signed.coerceAtLeast(0), phase = countdown.phaseAt(at)) }
         return signed
     }
 
@@ -171,7 +172,7 @@ class ShotClockViewModel @Inject constructor(
     private fun setCardsEach(cards: Int) {
         val wanted = cards.coerceIn(0, ShotClockStore.MAX_CARDS_EACH)
         store.setCardsEach(wanted)
-        _uiState.update { it.copy(cardsEach = wanted).withPlayers() }
+        _uiState.update { it.copy(cardsEach = wanted).withTimeBank(names, used) }
     }
 
     private fun playCard(player: Int) {
@@ -179,7 +180,7 @@ class ShotClockViewModel @Inject constructor(
         val target = state.players.getOrNull(player) ?: return
         if (!state.canPlayCards || target.cardsLeft <= 0) return
         setUsed(used + (target.name to (used[target.name] ?: 0) + 1))
-        setCountdown(state.countdown.extendedAt(now(), ShotClockStore.CARD_SECONDS * MILLIS))
+        setCountdown(state.countdown.extendedAt(now, ShotClockStore.CARD_SECONDS * MILLIS))
     }
 
     private fun giveCardsBack() {
@@ -195,11 +196,8 @@ class ShotClockViewModel @Inject constructor(
     private fun setUsed(next: Map<String, Int>) {
         used = next
         store.setUsed(next)
-        _uiState.update { it.withPlayers() }
+        _uiState.update { it.withTimeBank(names, used) }
     }
-
-    private fun ShotClockUiState.withPlayers(): ShotClockUiState =
-        copy(players = names.map { name -> TimeBankPlayer(name, (cardsEach - (used[name] ?: 0)).coerceAtLeast(0)) })
 
     override fun onCleared() {
         alerts.release()
@@ -210,6 +208,10 @@ class ShotClockViewModel @Inject constructor(
         const val DEFAULT_PLAYERS = 9
     }
 }
+
+/** The players' time bank: each of [names] with the cards they have left, [used] being the cards played. */
+private fun ShotClockUiState.withTimeBank(names: List<String>, used: Map<String, Int>): ShotClockUiState =
+    copy(players = names.map { name -> TimeBankPlayer(name, (cardsEach - (used[name] ?: 0)).coerceAtLeast(0)) })
 
 /** The strings the shot clock's ViewModel needs itself: its snackbar and default names. */
 class ShotClockMessages @Inject constructor(@ApplicationContext private val context: Context) {

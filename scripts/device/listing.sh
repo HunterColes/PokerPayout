@@ -14,13 +14,14 @@
 # On GitHub: gh workflow run listing.yml --ref <branch> (commits the pictures to the branch).
 #
 # It plays one home game through the app with tour.sh: some of the tour's own steps and the opt-in
-# listing steps in steps-listing.sh (nine named players, a running clock with rebuys and knockouts, a
-# cash game, the tools). Each `listing-shot-*` step leaves a clean screen with the status bar in demo
-# mode (12:00, full battery); its screenshot becomes one picture, under the stable name below. Only
-# when every step passed are the pictures copied (as RGB and optimised, if Pillow is there), and then
-# any other picture in phoneScreenshots/ (an old set) is removed. A failed run changes nothing.
+# listing steps in steps-listing.sh (nine named players, a running clock with rebuys and knockouts,
+# the night played out to its settle-up, the tools). Each `listing-shot-*` step leaves a clean screen
+# with the status bar in demo mode (12:00, full battery); its screenshot becomes one picture, under
+# the stable name below. Only when every step passed are the pictures copied (as RGB and optimised,
+# if Pillow is there), and then any other picture in phoneScreenshots/ (an old set) is removed.
 #
-# The tour's report (screenshots, UI dumps, logcat) goes to build/device-reports/listing-<timestamp>/.
+# A failed run changes nothing. The tour's report (screenshots, UI dumps, logcat) goes to
+# build/device-reports/listing-<timestamp>/.
 set -euo pipefail
 
 DEVICE_SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,7 +33,7 @@ STEPS=(
   launch listing-money blinds smallest-chip breaks ready-ticket
   listing-bank-names listing-buy-ins listing-start listing-midgame
   listing-shot-clock listing-shot-table-view listing-shot-bank listing-shot-payouts
-  listing-cash listing-shot-settle-up
+  listing-finish listing-shot-settle-up listing-settle-close
   tools odds-empty odds-card-picker odds-hole-cards odds-flop odds-results listing-shot-odds
   chip-calc listing-shot-chip-set
   listing-shot-seat-draw
@@ -44,7 +45,7 @@ SHOTS=(
   "listing-shot-table-view  02_table_view.png"
   "listing-shot-bank        03_bank.png"
   "listing-shot-payouts     04_payouts.png"
-  "listing-shot-settle-up   05_cash_settle_up.png"
+  "listing-shot-settle-up   05_settle_up.png"
   "listing-shot-odds        06_odds.png"
   "listing-shot-chip-set    07_chip_set.png"
   "listing-shot-seat-draw   08_seat_draw.png"
@@ -62,7 +63,7 @@ while (( $# )); do
     --list)
       printf '%s\n' "${SHOTS[@]}" | awk '{ printf "%-24s %s\n", $2, $1 }'
       echo; echo "steps: ${STEPS[*]}"; exit 0 ;;
-    -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
     *) die "unknown option: $1" ;;
   esac
   shift

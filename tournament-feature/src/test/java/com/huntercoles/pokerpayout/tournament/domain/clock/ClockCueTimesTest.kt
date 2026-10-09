@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tournament.domain.clock
 
+import com.huntercoles.pokerpayout.core.audio.packs.CueEvent
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
 import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
 import com.huntercoles.pokerpayout.core.utils.BlindStructureInput
@@ -78,11 +79,31 @@ class ClockCueTimesTest {
         assertEquals(
             listOf(
                 ClockCue(ClockCueKind.ONE_MINUTE, breakEnd - 60_000),
-                ClockCue(ClockCueKind.CHIME, breakEnd - 4_000),
-                ClockCue(ClockCueKind.LEVEL_CHANGE, breakEnd),
+                ClockCue(ClockCueKind.CHIME, breakEnd - 4_000, CueEvent.BREAK_END),
+                ClockCue(ClockCueKind.LEVEL_CHANGE, breakEnd, CueEvent.BREAK_END),
             ),
             everySecond(withBreaks, breakOne.startSeconds * 1_000L, breakEnd),
         )
+    }
+
+    @Test
+    fun `each change says what it is, for the sound pack`() {
+        // Breaks after levels 4 and 8; 12 levels, the last three overtime
+        val withBreaks = timeline(BreakSettings(everyLevels = 4, lengthMinutes = 10))
+        val changes = everySecond(withBreaks, 0L, withBreaks.endSeconds * 1_000L)
+            .filter { it.kind == ClockCueKind.CHIME }
+            .map { it.event }
+        val level = CueEvent.LEVEL_UP
+        assertEquals(
+            listOf(level, level, level, CueEvent.BREAK_START, CueEvent.BREAK_END) +
+                listOf(level, level, level, CueEvent.BREAK_START, CueEvent.BREAK_END) +
+                List(3) { level } + CueEvent.GAME_OVER,
+            changes,
+        )
+        // The change itself names the same event as its chime; the minute warning is its own
+        val all = everySecond(withBreaks, 0L, withBreaks.endSeconds * 1_000L)
+        assertEquals(changes, all.filter { it.kind == ClockCueKind.LEVEL_CHANGE }.map { it.event })
+        assertTrue(all.filter { it.kind == ClockCueKind.ONE_MINUTE }.all { it.event == CueEvent.ONE_MINUTE })
     }
 
     @Test

@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.TextRange
 import com.huntercoles.pokerpayout.bank.presentation.BankIntent
 import com.huntercoles.pokerpayout.bank.presentation.BankScenes
@@ -24,6 +25,7 @@ import com.huntercoles.pokerpayout.bank.presentation.BankTestKit
 import com.huntercoles.pokerpayout.bank.presentation.BankUiState
 import com.huntercoles.pokerpayout.bank.presentation.Purchase
 import com.huntercoles.pokerpayout.core.design.PokerTheme
+import com.huntercoles.pokerpayout.core.domain.settle.Transfer
 import com.huntercoles.pokerpayout.core.navigation.NavTab
 import com.huntercoles.pokerpayout.core.testing.InAppShell
 import kotlinx.coroutines.Dispatchers
@@ -192,6 +194,46 @@ class BankContentTest {
         compose.onNodeWithContentDescription("Increase Rebuys").performClick()
         compose.onNodeWithText("Set 3 rebuys").performClick()
         assertEquals(listOf(3), answers)
+    }
+
+    @Test
+    fun settleUpIsOfferedOnceTheNightIsOverWithBuyInsStillOpen() {
+        val state = BankScenes.settleUp(kit).uiState.value
+        show(state)
+        val payments = state.settleUp!!.transfers.size
+        compose.onNodeWithText("Settle up · $payments payments").performScrollTo().performClick()
+        assertEquals(listOf(BankIntent.ShowSettleUp), sent)
+    }
+
+    @Test
+    fun withEveryoneBoughtInThePaidColumnIsTheWayAndSettleUpStaysAway() {
+        show(BankScenes.champion(kit).uiState.value)
+        compose.onNodeWithText("Settle up", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun theSettleUpSheetTicksAPaymentAndShares() {
+        val state = BankScenes.settleUp(kit).uiState.value
+        val first = state.settleUp!!.transfers.first()
+        val ticks = mutableListOf<Pair<Transfer, Boolean>>()
+        var shared = 0
+        setContent {
+            SettleUpSheetContent(
+                settleUp = state.settleUp!!,
+                state = state,
+                onSetPaid = { transfer, paid -> ticks += transfer to paid },
+                onShare = { shared++ },
+                onDismiss = {},
+            )
+        }
+        compose.onNodeWithText("Tick each one when paid").assertExists()
+        // The Bank owes the most, so it pays first: "The bank pays Dana", one checkbox with its amount
+        compose.onNodeWithText("The bank pays Dana")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.Off))
+            .performClick()
+        compose.onNodeWithText("Share as text").performScrollTo().performClick()
+        assertEquals(listOf(first to true), ticks)
+        assertEquals(1, shared)
     }
 
     @Test

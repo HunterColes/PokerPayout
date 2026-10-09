@@ -1,7 +1,9 @@
 package com.huntercoles.pokerpayout.tournament.domain.clock
 
-import com.huntercoles.pokerpayout.core.R
 import com.huntercoles.pokerpayout.core.audio.SoundManager
+import com.huntercoles.pokerpayout.core.audio.packs.CueEvent
+import com.huntercoles.pokerpayout.core.audio.packs.SoundPack
+import com.huntercoles.pokerpayout.core.audio.packs.SoundPacks
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.time.TimeSource
 import kotlinx.coroutines.channels.BufferOverflow
@@ -25,8 +27,11 @@ fun interface CueVibrator {
     fun vibrate(cue: SilentCue)
 }
 
-/** What the cues crossed at one look set off, given the Sound section's switches. At most one of each. */
-data class CueActions(val chime: Boolean, val vibrate: SilentCue?, val flash: SilentCue?) {
+/**
+ * What the cues crossed at one look set off, given the Sound section's switches: the [sound] of one
+ * event from the sound pack (null for none), and at most one vibration and one flash.
+ */
+data class CueActions(val sound: CueEvent?, val vibrate: SilentCue?, val flash: SilentCue?) {
     companion object {
         fun of(crossed: List<ClockCue>, vibrateOn: Boolean, flashOn: Boolean): CueActions {
             val kinds = crossed.map { it.kind }.toSet()
@@ -36,8 +41,11 @@ data class CueActions(val chime: Boolean, val vibrate: SilentCue?, val flash: Si
                 ClockCueKind.ONE_MINUTE in kinds -> SilentCue.ONE_MINUTE
                 else -> null
             }
+            // So does the change's sound (the chime's moment) over the minute's
+            val sound = crossed.firstOrNull { it.kind == ClockCueKind.CHIME }?.event
+                ?: crossed.firstOrNull { it.kind == ClockCueKind.ONE_MINUTE }?.event
             return CueActions(
-                chime = ClockCueKind.CHIME in kinds,
+                sound = sound,
                 vibrate = silent?.takeIf { vibrateOn },
                 flash = silent?.takeIf { flashOn },
             )
@@ -46,9 +54,10 @@ data class CueActions(val chime: Boolean, val vibrate: SilentCue?, val flash: Si
 }
 
 /**
- * Plays the clock's cues: the chime (muted or not, as the Sound section says, inside [SoundManager]),
- * the vibration and the flash. Two clocks may report the same cue: the clock's screen while the app
- * is alive, and the live clock notification's service in the background (PP-081). Each cue plays
+ * Plays the clock's cues: each change's sound from the chosen sound pack ([SoundPacks]; muted or
+ * not, as the Sound section says, inside [SoundManager]), the vibration and the flash. Two clocks
+ * may report the same cue: the clock's screen while the app is alive, and the live clock
+ * notification's service in the background (PP-081). Each cue plays
  * once: one reported again within [SAME_CUE_MILLIS] (on the monotonic clock) is the same moment.
  * Called on the main thread.
  */
@@ -70,8 +79,16 @@ class ClockCues @Inject constructor(
     /** The cues played lately, with when (monotonic). */
     private val played = mutableMapOf<ClockCue, Long>()
 
-    /** Loads the chime ahead of its first use. */
-    fun preload() = soundManager.preloadSound(R.raw.blind_level_up)
+    /** The packs to pick from; a test puts in its own. */
+    internal var packs: List<SoundPack> = SoundPacks.all
+
+    /** The pack the host picked; the default if it is gone. */
+    private fun pack(): SoundPack = packs.firstOrNull { it.id == audioPreferences.getSoundPack() } ?: SoundPacks.default
+
+    /** Loads the pack's level sound (the chime) ahead of its first use. */
+    fun preload() {
+        pack().soundFor(CueEvent.LEVEL_UP)?.let(soundManager::preloadSound)
+    }
 
     /** Plays what the [crossed] cues call for, leaving out any already played. */
     fun play(crossed: List<ClockCue>) {
@@ -81,7 +98,7 @@ class ClockCues @Inject constructor(
         val fresh = crossed.filter { it !in played }
         fresh.forEach { played[it] = now }
         val actions = CueActions.of(fresh, audioPreferences.getVibrateCues(), audioPreferences.getFlashCues())
-        if (actions.chime) soundManager.playSound(R.raw.blind_level_up)
+        actions.sound?.let { event -> pack().soundFor(event)?.let(soundManager::playSound) }
         actions.vibrate?.let { vibrator.vibrate(it) }
         actions.flash?.let { flashEvents.tryEmit(it) }
     }

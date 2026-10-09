@@ -36,8 +36,8 @@ android {
         applicationId = "com.huntercoles.pokerpayout"
         minSdk = 26
         targetSdk = 34
-        versionCode = 40
-        versionName = "1.3.14"
+        versionCode = 43
+        versionName = "1.4.2"
     }
 
     dependenciesInfo {

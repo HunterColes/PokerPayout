@@ -21,6 +21,17 @@
     <string name="presets_delete_action">Delete</string>
     <string name="presets_with_chip_set">chip set</string>
 
+    <!-- A preset as a small file, for a friend: shared, and opened -->
+    <string name="presets_share_file_action">Share as file</string>
+    <string name="presets_share_file_title">Share preset</string>
+    <string name="presets_open_file">Open preset file…</string>
+    <string name="presets_file_none">There\'s no preset in this file.</string>
+    <plurals name="presets_file_added">
+        <item quantity="one">Added %d preset</item>
+        <item quantity="other">Added %d presets</item>
+    </plurals>
+    <string name="presets_file_nothing_new">You have these presets already</string>
+
     <!-- Save and rename -->
     <string name="presets_save_title">Save as preset</string>
     <string name="presets_rename_title">Rename preset</string>

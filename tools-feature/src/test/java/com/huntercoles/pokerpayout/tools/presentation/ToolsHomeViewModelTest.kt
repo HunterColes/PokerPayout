@@ -6,11 +6,18 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.audio.SoundManager
+import com.huntercoles.pokerpayout.core.audio.music.MusicPlayer
+import com.huntercoles.pokerpayout.core.audio.music.MusicState
+import com.huntercoles.pokerpayout.core.audio.music.MusicTrack
+import com.huntercoles.pokerpayout.core.audio.music.Playlist
+import com.huntercoles.pokerpayout.core.audio.packs.SoundPacks
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -22,6 +29,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.random.Random
 import com.huntercoles.pokerpayout.core.R as CoreR
 
 /**
@@ -35,6 +43,8 @@ class ToolsHomeViewModelTest {
     private val store = ViewModelStore()
     private val soundManager: SoundManager = mockk(relaxed = true)
     private lateinit var context: Context
+    private val musicState = MutableStateFlow(MusicState())
+    private val music: MusicPlayer = mockk(relaxed = true) { every { state } returns musicState }
 
     @Before
     fun setUp() {
@@ -140,11 +150,41 @@ class ToolsHomeViewModelTest {
         verify(exactly = 1) { soundManager.playSound(CoreR.raw.blind_level_up) }
     }
 
+    @Test
+    fun aFreshInstallPlaysTheClassicPackAndHasNoSongs() {
+        val state = newViewModel().uiState.value
+        assertEquals(SoundPacks.CLASSIC_ID, state.soundPack)
+        assertEquals(MusicSummary(), state.music)
+    }
+
+    @Test
+    fun theMusicRowSaysWhatPlaysAndItsButtonPlaysOrPauses() {
+        val viewModel = newViewModel()
+        val songs = listOf(MusicTrack("content://music/1", "Night Owl"), MusicTrack("content://music/2", "Rain"))
+        musicState.value = MusicState(playlist = Playlist().add(songs, Random(0)).select(songs[1].ref), playing = true)
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(MusicSummary(songs = 2, playing = true, current = "Rain"), viewModel.uiState.value.music)
+
+        viewModel.acceptIntent(ToolsHomeIntent.ToggleMusic)
+        verify(exactly = 1) { music.toggle() }
+    }
+
+    @Test
+    fun thePickedPackShowsAndItsChimeIsTheTestChime() {
+        AudioPreferences(context).setSoundPack("a pack from a later version")
+        val viewModel = newViewModel()
+        // A pack no longer here plays the default, and the test chime is its chime
+        viewModel.acceptIntent(ToolsHomeIntent.TestChime)
+        verify(exactly = 1) { soundManager.playSound(CoreR.raw.blind_level_up) }
+        assertEquals("a pack from a later version", viewModel.uiState.value.soundPack)
+    }
+
     private fun newViewModel(): ToolsHomeViewModel {
         val preferences = AudioPreferences(context)
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T = ToolsHomeViewModel(preferences, soundManager) as T
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                ToolsHomeViewModel(preferences, soundManager, music) as T
         }
         return ViewModelProvider(store, factory)[ToolsHomeViewModel::class.java].also {
             dispatcher.scheduler.advanceUntilIdle()

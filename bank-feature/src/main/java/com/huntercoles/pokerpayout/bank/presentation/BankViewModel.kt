@@ -6,10 +6,14 @@ import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatusProvider
+import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import com.huntercoles.pokerpayout.core.domain.model.ProgressiveBounty
 import com.huntercoles.pokerpayout.core.domain.model.PurchaseWindow
 import com.huntercoles.pokerpayout.core.domain.model.Settlement
+import com.huntercoles.pokerpayout.core.domain.settle.SettleUp
+import com.huntercoles.pokerpayout.core.domain.settle.SettleUpUseCase
+import com.huntercoles.pokerpayout.core.domain.settle.Transfer
 import com.huntercoles.pokerpayout.core.domain.usecase.DrawEnvelopeUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
@@ -41,10 +45,14 @@ import javax.inject.Inject
  *   Undo and a restart give them back exactly. A mystery knockout draws its envelope when it is
  *   recorded, keeps it with the knocked-out player, and shows it ([BankSheet.Envelope]); Undo or
  *   Bring back puts the envelope back in the pool.
+ * - **Settle up.** Once the night is over, who pays whom so that everyone is square
+ *   ([SettleUpUseCase]; the Bank is a party), with a tick per payment. Ticks are part of what Undo
+ *   restores; a tick goes when its payment drops out of the settle-up (something else changed), and
+ *   the last tick records every buy-in and payout as paid.
  */
 @HiltViewModel
 // One small function per action, and one injected source per thing the Bank reads (settings, records,
-// the clock, the chime, the snackbar, the envelope draw).
+// the clock, the chime, the snackbar, the envelope draw, the settle-up).
 @Suppress("TooManyFunctions", "LongParameterList")
 class BankViewModel @Inject constructor(
     private val tournamentPreferences: TournamentPreferences,
@@ -54,7 +62,8 @@ class BankViewModel @Inject constructor(
     private val clockStatus: ClockStatusProvider,
     private val audioPreferences: AudioPreferences,
     private val feedback: BankFeedback,
-    private val drawEnvelope: DrawEnvelopeUseCase
+    private val drawEnvelope: DrawEnvelopeUseCase,
+    private val settleUp: SettleUpUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BankUiState())
@@ -131,6 +140,8 @@ class BankViewModel @Inject constructor(
             is BankIntent.SetPaid -> setPaid(intent.playerId, intent.paid)
             BankIntent.ShowPoolBreakdown -> showSheet(BankSheet.PoolBreakdown)
             BankIntent.ShowPayoutStructure -> showSheet(BankSheet.PayoutStructure)
+            BankIntent.ShowSettleUp -> if (_uiState.value.settleUp != null) showSheet(BankSheet.SettleUp)
+            is BankIntent.SetSettlePaid -> setSettlePaid(intent.transfer, intent.paid)
             is BankIntent.UpdatePayoutSettings -> updatePayoutSettings(intent.settings)
             BankIntent.ShowResetConfirm -> if (_uiState.value.canReset) {
                 showSheet(BankSheet.ResetConfirm(_uiState.value.players.size))
@@ -171,7 +182,9 @@ class BankViewModel @Inject constructor(
         if (normalizedOrder != bankPreferences.getEliminationOrder()) {
             bankPreferences.saveEliminationOrder(normalizedOrder)
         }
-        _uiState.update { it.copy(players = players, eliminationOrder = normalizedOrder) }
+        _uiState.update {
+            it.copy(players = players, eliminationOrder = normalizedOrder, settlePaid = bankPreferences.getSettlePaid())
+        }
         updateCalculations()
     }
 
@@ -399,6 +412,38 @@ class BankViewModel @Inject constructor(
         record(message) { players, order -> players.replace(player.copy(paidOut = paid)) to order }
     }
 
+    /**
+     * Ticks a settle-up payment as paid, or takes the tick back. The last tick means everyone has
+     * paid what they owed: every buy-in and every payout is recorded as paid, which squares the night
+     * (and empties the settle-up), as one action.
+     */
+    private fun setSettlePaid(transfer: Transfer, paid: Boolean) {
+        val state = _uiState.value
+        val transfers = state.settleUp?.transfers.orEmpty()
+        if (transfer !in transfers || state.isPaid(transfer) == paid) return
+        val ticks = if (paid) state.settlePaid + transfer else state.settlePaid - transfer
+        if (ticks.containsAll(transfers)) {
+            recordSquare()
+        } else {
+            val from = settleName(transfer.fromId)
+            val message = feedback.settlePayment(from, settleName(transfer.toId), transfer.amountCents, paid)
+            commit(message, BankSnapshot(state.players, state.eliminationOrder, ticks))
+        }
+    }
+
+    /** Every buy-in paid and every winner paid out: nobody owes anybody, so no ticks are left to keep. */
+    private fun recordSquare() {
+        val state = _uiState.value
+        val square = state.players.map { player ->
+            val winnings = settlement?.forPlayer(player.id)?.winningsCents ?: 0L
+            player.copy(buyIn = true, paidOut = player.paidOut || winnings > 0L)
+        }
+        commit(feedback.square(), BankSnapshot(square, state.eliminationOrder, emptySet()))
+    }
+
+    /** A player's name in the settle-up; null for the Bank. */
+    private fun settleName(id: Int): String? = if (id == SettleUp.BANK_ID) null else player(id)?.name.orEmpty()
+
     private fun updatePayoutSettings(settings: PayoutSettings) {
         showSheet(null)
         if (_uiState.value.isTimerRunning) return
@@ -422,8 +467,8 @@ class BankViewModel @Inject constructor(
 
     private class UndoEntry(val before: BankSnapshot, val message: String)
 
-    /** What an action can change: everything recorded except names. */
-    private data class BankSnapshot(val players: List<PlayerData>, val eliminationOrder: List<Int>)
+    /** What an action can change: everything recorded except names, and the settle-up's ticks. */
+    private data class BankSnapshot(val players: List<PlayerData>, val eliminationOrder: List<Int>, val settlePaid: Set<Transfer>)
 
     /**
      * Applies [change] to the players and the elimination order, saves the result, and offers Undo
@@ -432,22 +477,33 @@ class BankViewModel @Inject constructor(
     private fun record(message: String, change: (List<PlayerData>, List<Int>) -> Pair<List<PlayerData>, List<Int>>) {
         val state = _uiState.value
         val (players, order) = change(state.players, state.eliminationOrder)
-        if (players == state.players && order == state.eliminationOrder) return
-        val entry = UndoEntry(BankSnapshot(state.players, state.eliminationOrder), message)
+        commit(message, BankSnapshot(players, order, state.settlePaid))
+    }
+
+    /** Saves [after] and offers Undo with [message], unless it changes nothing. */
+    private fun commit(message: String, after: BankSnapshot) {
+        val state = _uiState.value
+        val before = BankSnapshot(state.players, state.eliminationOrder, state.settlePaid)
+        if (after == before) return
+        val entry = UndoEntry(before, message)
         undoStack.addLast(entry)
         while (undoStack.size > MAX_UNDO) undoStack.removeFirst()
-        save(players, order)
+        save(after)
         offerUndo(entry)
     }
 
     /** State first, then preferences: a write bumps the Bank revision, and its reload must find nothing new. */
-    private fun save(players: List<PlayerData>, order: List<Int>) {
+    private fun save(after: BankSnapshot) {
         val before = _uiState.value.players.associateBy { it.id }
         ownWrites++
         try {
-            _uiState.update { it.copy(players = players, eliminationOrder = order) }
-            players.forEach { player -> persist(before[player.id], player) }
+            _uiState.update {
+                it.copy(players = after.players, eliminationOrder = after.eliminationOrder, settlePaid = after.settlePaid)
+            }
+            after.players.forEach { player -> persist(before[player.id], player) }
+            val order = after.eliminationOrder
             if (order != bankPreferences.getEliminationOrder()) bankPreferences.saveEliminationOrder(order)
+            if (after.settlePaid != bankPreferences.getSettlePaid()) bankPreferences.saveSettlePaid(after.settlePaid)
         } finally {
             ownWrites--
         }
@@ -488,7 +544,7 @@ class BankViewModel @Inject constructor(
         // Names may have changed since; keep today's.
         val names = _uiState.value.players.associate { it.id to it.name }
         val restored = entry.before.players.map { it.copy(name = names[it.id] ?: it.name) }
-        save(restored, entry.before.eliminationOrder)
+        save(entry.before.copy(players = restored))
         // A mystery envelope taken back is back in the pool: its reveal goes too
         if (_uiState.value.sheet is BankSheet.Envelope) showSheet(null)
     }
@@ -527,8 +583,9 @@ class BankViewModel @Inject constructor(
     private fun updateCalculations() {
         val state = _uiState.value
         val config = tournamentPreferences.getCurrentTournamentConfig()
+        val bankPlayers = state.players.map { it.toBankPlayer() }
         val result = settleTournament(
-            players = state.players.map { it.toBankPlayer() },
+            players = bankPlayers,
             eliminationOrder = state.eliminationOrder,
             money = config.money,
             weights = config.payoutWeights,
@@ -539,6 +596,8 @@ class BankViewModel @Inject constructor(
             BankRowInput(state.players, state.eliminationOrder, result, config.money, state.rebuyWindow, state.addOnWindow)
         )
         val canReset = !bankPreferences.isInDefaultState(state.players.size)
+        val plan = settleUp(result, bankPlayers, config.money)
+        val ticks = keptTicks(state.settlePaid, plan)
         _uiState.update {
             it.copy(
                 pool = result.pool,
@@ -557,10 +616,33 @@ class BankViewModel @Inject constructor(
                 rows = rows,
                 canReset = canReset,
                 undoLabel = undoStack.lastOrNull()?.message,
-                envelopesLeft = result.envelopesLeft
+                envelopesLeft = result.envelopesLeft,
+                settleUp = plan?.let { settleUpModel(it, result, state.players, config.money) },
+                settlePaid = ticks,
+                sheet = it.sheet.takeUnless { sheet -> sheet == BankSheet.SettleUp && plan == null }
             )
         }
     }
+
+    /**
+     * The ticks for payments [plan] still lists; the others go (their payment changed, or the night
+     * isn't over any more), from storage too. Undo still has them.
+     */
+    private fun keptTicks(ticks: Set<Transfer>, plan: SettleUp?): Set<Transfer> {
+        val kept = plan?.transfers?.let { transfers -> ticks.filterTo(mutableSetOf()) { it in transfers } }.orEmpty()
+        if (kept != ticks) bankPreferences.saveSettlePaid(kept)
+        return kept
+    }
+
+    private fun settleUpModel(plan: SettleUp, result: Settlement, players: List<PlayerData>, money: MoneySettings) =
+        SettleUpModel(
+            transfers = plan.transfers,
+            nights = players.map { player ->
+                val owed = result.forPlayer(player.id)
+                PlayerNight(player.id, player.name, owed?.costCents ?: money.entryCents, owed?.winningsCents ?: 0L)
+            },
+            foodCents = result.pool.foodCents
+        )
 
     private companion object {
         /** How many actions Undo can take back. */

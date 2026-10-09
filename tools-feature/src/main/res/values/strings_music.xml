@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tools > Sound: the rows that open the cue sounds and the music -->
+    <string name="tools_cue_sounds_title">Cue sounds</string>
+    <string name="tools_music_title">Music</string>
+    <string name="tools_music_none">No songs yet</string>
+    <plurals name="tools_music_songs">
+        <item quantity="one">%d song</item>
+        <item quantity="other">%d songs</item>
+    </plurals>
+    <string name="tools_music_playing">Playing: %1$s</string>
+    <string name="music_play">Play music</string>
+    <string name="music_pause">Pause music</string>
+
+    <!-- Music (S17) -->
+    <string name="music_title">Music</string>
+    <string name="music_subtitle_playing">%1$s · playing</string>
+    <string name="music_now_playing">Now playing</string>
+    <string name="music_up_next">Up next</string>
+    <string name="music_no_song">Add songs below to play music here.</string>
+    <string name="music_position">Song %1$d of %2$d</string>
+    <string name="music_previous">Previous song</string>
+    <string name="music_next">Next song</string>
+    <string name="music_shuffle">Shuffle</string>
+    <string name="music_repeat_off">Repeat: off</string>
+    <string name="music_repeat_all">Repeat: all songs</string>
+    <string name="music_repeat_one">Repeat: this song</string>
+    <string name="music_volume">Music volume</string>
+    <string name="music_with_clock_title">Play with the clock</string>
+    <string name="music_with_clock_description">Starts when the clock runs and pauses when it\'s paused or over.</string>
+    <string name="music_on_breaks">On breaks</string>
+    <string name="music_break_keep">Keep playing</string>
+    <string name="music_break_pause">Pause</string>
+    <string name="music_break_quiet">Quieter</string>
+    <string name="music_background">The music plays on with the screen off. If you leave the app, it pauses unless the clock is running.</string>
+    <string name="music_songs">Songs</string>
+    <string name="music_edit">Edit</string>
+    <string name="music_done">Done</string>
+    <string name="music_songs_empty">No songs yet. Add music files from your phone: any song it can play.</string>
+    <string name="music_add_songs">Add songs</string>
+    <string name="music_missing">File not found</string>
+    <string name="music_none_playable">None of these songs can be found. They may have been moved or deleted.</string>
+    <string name="music_play_song">Play %1$s</string>
+    <string name="music_move_up">Move %1$s up</string>
+    <string name="music_move_down">Move %1$s down</string>
+    <string name="music_remove">Remove %1$s</string>
+    <string name="music_built_in">Built-in songs</string>
+    <string name="music_built_in_empty">None yet. Songs that come with the app will show here.</string>
+    <string name="music_add">Add</string>
+    <string name="music_add_named">Add %1$s</string>
+    <string name="music_in_list">In your list</string>
+
+    <!-- Cue sounds (S18) -->
+    <string name="cue_sounds_title">Cue sounds</string>
+    <string name="cue_sounds_subtitle">What the clock plays at each change</string>
+    <string name="cue_sounds_off">Sound is off, so the clock plays none of these. Turn it on in Tools.</string>
+    <string name="cue_sounds_more">More sound packs will come with updates.</string>
+    <string name="cue_sounds_empty_slot">No sound</string>
+    <string name="cue_sounds_preview">Play %1$s, %2$s</string>
+    <string name="cue_event_level_up">New level</string>
+    <string name="cue_event_one_minute">1 minute left</string>
+    <string name="cue_event_break_start">Break starts</string>
+    <string name="cue_event_break_end">Break ends</string>
+    <string name="cue_event_game_over">Game over</string>
+</resources>

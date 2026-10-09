@@ -52,6 +52,8 @@ internal fun TournamentTopBar(
     wide: Boolean,
 ) {
     val reset = { actions.onSetupIntent(TournamentConfigIntent.ShowResetDialog) }
+    // The actions read only the bell, so they skip the clock's ticks (the subtitle is a plain string).
+    val muted = timer.isMuted
     PokerTopBar(
         title = stringResource(CoreR.string.navigation_tournament),
         subtitle = subtitle(timer, mode, wide),
@@ -62,9 +64,9 @@ internal fun TournamentTopBar(
                 contentDescription = stringResource(R.string.tournament_reset),
                 onClick = reset,
             )
-            MoreMenu(actions, timer, newTournament = null, bellInMenu = false)
+            MoreMenu(actions, muted, newTournament = null, bellInMenu = false)
         } else {
-            if (!small) BellButton(timer.isMuted, actions)
+            if (!small) BellButton(muted, actions)
             PokerIconButton(
                 icon = PokerIcons.Fullscreen,
                 contentDescription = stringResource(R.string.clock_table_view),
@@ -73,7 +75,7 @@ internal fun TournamentTopBar(
                     actions.onTimerIntent(TimerIntent.SetTableView(true))
                 },
             )
-            MoreMenu(actions, timer, newTournament = reset, bellInMenu = small)
+            MoreMenu(actions, muted, newTournament = reset, bellInMenu = small)
         }
     }
 }
@@ -149,7 +151,7 @@ private fun Modifier.slashed(): Modifier = drawWithContent {
 }
 
 @Composable
-private fun MoreMenu(actions: TournamentActions, timer: TimerUiState, newTournament: (() -> Unit)?, bellInMenu: Boolean) {
+private fun MoreMenu(actions: TournamentActions, muted: Boolean, newTournament: (() -> Unit)?, bellInMenu: Boolean) {
     var open by remember { mutableStateOf(false) }
     Box {
         PokerIconButton(
@@ -159,7 +161,7 @@ private fun MoreMenu(actions: TournamentActions, timer: TimerUiState, newTournam
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = PokerColors.DarkGreen) {
             if (bellInMenu) {
-                MenuItem(stringResource(if (timer.isMuted) R.string.clock_unmute else R.string.clock_mute)) {
+                MenuItem(stringResource(if (muted) R.string.clock_unmute else R.string.clock_mute)) {
                     open = false
                     actions.onTimerIntent(TimerIntent.ToggleMute)
                 }

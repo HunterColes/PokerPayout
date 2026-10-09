@@ -85,8 +85,12 @@ class ClockTimeline private constructor(
     fun segmentAt(elapsedSeconds: Int): ClockSegment? = segments.getOrNull(segmentIndexAt(elapsedSeconds))
 
     /** The first level after segment [segmentIndex], or null at the end. */
-    fun nextLevelAfter(segmentIndex: Int): LevelSegment? =
-        segments.drop(segmentIndex + 1).firstOrNull { it is LevelSegment } as LevelSegment?
+    fun nextLevelAfter(segmentIndex: Int): LevelSegment? {
+        for (i in (segmentIndex + 1).coerceAtLeast(0) until segments.size) {
+            (segments[i] as? LevelSegment)?.let { return it }
+        }
+        return null
+    }
 
     /** Overtime levels that have started by [elapsedSeconds]; later ones stay hidden. */
     fun overtimeLevelsRevealedAt(elapsedSeconds: Int): Int =

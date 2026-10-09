@@ -198,6 +198,14 @@ finish() {
   local fatal anr
   fatal=$(grep -c "FATAL EXCEPTION" "$OUT/logcat.txt" || true)
   anr=$(grep -c "ANR in $APP_ID" "$OUT/logcat.txt" || true)
+  # Debug builds log main-thread disk work and leaks (MainApplication's StrictMode): the app's own
+  # lines (by its uid; other apps log theirs too) go to strictmode.txt. A count, not a failure.
+  local uid strict=0
+  uid="$(adb_ shell pm list packages -U "$APP_ID" 2>/dev/null | tr -d '\r' | sed -n "s/^package:$APP_ID uid://p" | head -1 || true)"
+  if [[ -n "$uid" ]]; then
+    adb_ logcat -d --uid="$uid" -v threadtime -s 'StrictMode:*' > "$OUT/strictmode.txt" 2>/dev/null || true
+    strict=$(grep -c "StrictMode policy violation" "$OUT/strictmode.txt" || true)
+  fi
   local total_secs; total_secs=$(since "$T0")
   local verdict=PASS
   (( FAILED > 0 || fatal > 0 || anr > 0 || ABORTED )) && verdict=FAIL
@@ -211,6 +219,7 @@ finish() {
     echo "- Device: $ANDROID_SERIAL, AVD \`$PP_AVD\`, Android $(adb_ shell getprop ro.build.version.release | tr -d '\r') (API $(adb_ shell getprop ro.build.version.sdk | tr -d '\r')), $(adb_ shell wm size | awk '{print $NF}' | tr -d '\r') @ $(adb_ shell wm density | awk '{print $NF}' | tr -d '\r')dpi"
     echo "- Steps: $PASSED passed, $FAILED failed, of $STEP_NO run$( (( ABORTED )) && echo ' (interrupted)')"
     echo "- Logcat: $fatal FATAL EXCEPTION, $anr ANR (full log: [logcat.txt](logcat.txt))"
+    echo "- StrictMode: $strict warnings (debug builds only: [strictmode.txt](strictmode.txt))"
     echo "- Timing: boot ${BOOT_SECS}s, build+install ${INSTALL_SECS}s, total ${total_secs}s"
     echo
     echo "Each step has a screenshot (\`NN-name.png\`) and a UI tree dump (\`NN-name.xml\`)."

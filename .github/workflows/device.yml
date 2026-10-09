@@ -13,11 +13,19 @@
 # Dispatched runs with different inputs run side by side; the same inputs again replace the
 # earlier run.
 #
+# Measure (by hand only): what the release build weighs and how fast it starts, for the code grade.
+#   gh workflow run device.yml --ref <branch> -f job=measure
+# It builds the release APK, rebuilds it F-Droid style in a fresh clone and compares the two
+# (reproducible?), compiles again with the Compose compiler reports on (-PcomposeReports, never on
+# in a real release), runs scripts/dev/measure.sh (the APK by kind, method references, dex bytes
+# by library, the runtime dependency tree, Compose stability), then times cold starts on the
+# tour's emulator (scripts/device/startup.sh). The run's summary page shows the results.
+#
 # Not a required check yet. The report (screenshots, ui dumps, logcat, tour.log) is uploaded as an
 # artifact either way. The release build is debug-signed here, since CI has no keystore.
 name: Device tour
 # In the runs list: a dispatched run says what it runs; a pull request's keeps the PR's title.
-run-name: "${{ github.event_name == 'workflow_dispatch' && format('Device {0} on {1}', inputs.job == 'tour' && format('tour ({0})', inputs.variant) || inputs.job == 'matrix' && format('matrix ({0})', inputs.profiles) || format('tour ({0}) and matrix ({1})', inputs.variant, inputs.profiles), github.ref_name) || github.event.pull_request.title }}"
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('Device {0} on {1}', inputs.job == 'tour' && format('tour ({0})', inputs.variant) || inputs.job == 'matrix' && format('matrix ({0})', inputs.profiles) || inputs.job == 'measure' && 'measure' || format('tour ({0}) and matrix ({1})', inputs.variant, inputs.profiles), github.ref_name) || github.event.pull_request.title }}"
 
 on:
   pull_request:
@@ -33,9 +41,9 @@ on:
         type: string
         default: ""
       job:
-        description: "The tour, the device matrix, or both"
+        description: "The tour, the device matrix, or both; or measure (size and cold start)"
         type: choice
-        options: [tour, matrix, both]
+        options: [tour, matrix, both, measure]
         default: tour
       profiles:
         description: "Matrix only: a set (focused, daily, all) or profiles, comma-separated (matrix.sh --list)"
@@ -54,7 +62,7 @@ concurrency:
 jobs:
   tour:
     name: Device tour (${{ matrix.variant }})
-    if: github.event_name == 'pull_request' || inputs.job != 'matrix'
+    if: github.event_name == 'pull_request' || inputs.job == 'tour' || inputs.job == 'both'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     strategy:
@@ -139,7 +147,7 @@ jobs:
     # A plain name: a skipped job (every pull request) shows its name unevaluated, so the profiles
     # in it showed on PRs as the raw expression. They are in the step's name and the run's name.
     name: Device matrix
-    if: github.event_name == 'workflow_dispatch' && inputs.job != 'tour'
+    if: github.event_name == 'workflow_dispatch' && (inputs.job == 'matrix' || inputs.job == 'both')
     runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:
@@ -231,5 +239,102 @@ jobs:
           path: |
             build/device-reports/
             build/device/*.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  measure:
+    # By hand only (-f job=measure). About 35 minutes: two release builds, then 16 cold starts.
+    name: Measure
+    if: github.event_name == 'workflow_dispatch' && inputs.job == 'measure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Release APK
+        run: ./gradlew :app:assembleRelease --console=plain
+
+      # What F-Droid does with the release tag (release.sh --repro-check does the same before a
+      # release): a fresh clone, signing configs stripped, `gradle clean assembleRelease` from app/.
+      # Every byte outside the signing block must match, or F-Droid rejects the release.
+      - name: F-Droid-style rebuild, compared
+        run: |
+          repro="$RUNNER_TEMP/repro"
+          git clone --quiet --no-hardlinks . "$repro"
+          git -C "$repro" checkout --quiet --detach "$GITHUB_SHA"
+          python3 scripts/release/lib/fdroid_strip_signing.py "$repro"
+          (cd "$repro/app" && ../gradlew clean --console=plain -q && ../gradlew assembleRelease --no-build-cache --console=plain -q)
+          mkdir -p build/measure
+          ours="$(ls app/build/outputs/apk/release/*.apk | head -1)"
+          theirs="$(ls "$repro"/app/build/outputs/apk/release/*.apk | head -1)"
+          if python3 scripts/release/lib/apkdiff.py "$ours" "$theirs" > build/measure/repro.txt 2>&1; then
+            verdict="identical outside the signing block"
+          else
+            verdict="DIFFERENT: F-Droid would reject this build"
+          fi
+          { echo "## Reproducible build"; echo; echo "F-Droid-style rebuild: **$verdict**"; echo;
+            echo '```'; tail -5 build/measure/repro.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          cat build/measure/repro.txt
+          [[ "$verdict" == identical* ]]
+
+      - name: Compose compiler reports
+        if: success() || failure()
+        run: ./gradlew compileReleaseKotlin -PcomposeReports --console=plain
+
+      - name: Runtime dependency tree
+        run: |
+          mkdir -p build/measure
+          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --console=plain \
+            > build/measure/deps-release.txt
+
+      - name: What the APK is made of
+        run: |
+          scripts/dev/measure.sh build/measure > /dev/null
+          cat build/measure/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules > /dev/null
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Emulator and system image
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" --install emulator platform-tools \
+            "system-images;android-34;google_apis_playstore;x86_64" > /dev/null
+
+      - name: Cold start
+        env:
+          PP_BOOT_TIMEOUT: "600"
+        run: |
+          scripts/device/boot.sh
+          scripts/device/install.sh --release --no-build
+          sleep 60 # let the boot's background work (other apps' dexopt, Play services) settle
+          scripts/device/startup.sh 8
+          cat build/device/startup.md >> "$GITHUB_STEP_SUMMARY"
+          scripts/device/stop.sh || true
+
+      - name: Upload the measurements
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: measure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/measure/
+            build/device/startup.md
+            build/device/*.log
+            */build/compose-reports/
+            */build/compose-metrics/
+            app/build/outputs/mapping/release/usage.txt
           if-no-files-found: ignore
           retention-days: 14

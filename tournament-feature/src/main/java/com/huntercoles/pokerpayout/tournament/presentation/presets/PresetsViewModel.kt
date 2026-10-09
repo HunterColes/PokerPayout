@@ -79,7 +79,6 @@ class PresetsViewModel @Inject constructor(
             }
             close()
             if (result.total == 0) {
-                snackbars.hostState.currentSnackbarData?.dismiss()
                 snackbars.showMessage(messages.nothingNew)
             } else {
                 offerUndo(messages.added(result.total)) { result.undo() }

@@ -105,6 +105,25 @@ class UndoSnackbarTest {
     }
 
     @Test
+    fun `a plain message and an Undo snackbar replace each other too`() = runTest {
+        val controller = SnackbarController()
+        val undo = async { controller.showUndo("Night deleted", "Undo") }
+        runCurrent()
+        val message = launch { controller.showMessage("Backup saved") }
+        runCurrent()
+        assertEquals("Backup saved", controller.hostState.currentSnackbarData?.visuals?.message)
+        assertFalse(undo.await(), "the Undo replaced by a message is gone")
+
+        val next = async { controller.showUndo("New hand", "Undo") }
+        runCurrent()
+        assertEquals("New hand", controller.hostState.currentSnackbarData?.visuals?.message)
+        assertTrue(message.isCompleted && !message.isCancelled, "the message's caller just carries on")
+        assertEquals(0L, currentTime)
+        controller.hostState.currentSnackbarData?.performAction()
+        assertTrue(next.await())
+    }
+
+    @Test
     fun `a caller cancelled takes its snackbar away and stays cancelled`() = runTest {
         val controller = SnackbarController()
         val job = launch { controller.showUndo("Reset to defaults", "Undo") }

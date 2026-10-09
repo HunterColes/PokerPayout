@@ -125,7 +125,6 @@ class HistoryViewModel @Inject constructor(
             } catch (expected: BackupException) {
                 messages.problem(expected.problem)
             }
-            snackbars.hostState.currentSnackbarData?.dismiss()
             snackbars.showMessage(message)
         }
     }

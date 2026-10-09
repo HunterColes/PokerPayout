@@ -151,13 +151,10 @@ class TournamentConfigViewModel @Inject constructor(
                 rebuyPurchases = rebuys,
                 addOnPurchases = addOns,
                 knockoutsRecorded = bankPreferences.getEliminationOrder().isNotEmpty(),
-                envelopesDrawn = envelopesDrawn(config.numPlayers)
+                envelopesDrawn = bankPreferences.hasBountyDraws(config.numPlayers)
             )
         }
     }
-
-    /** True once the Bank has drawn a mystery envelope for any of [players]' knockouts (PP-035). */
-    private fun envelopesDrawn(players: Int): Boolean = (1..players).any { bankPreferences.getPlayerBountyDraw(it) != null }
 
     /** The bounty amount; with mystery bounties, fixed once envelopes have been drawn (PP-035). */
     private fun updateBounty(cents: Long) {
@@ -182,7 +179,7 @@ class TournamentConfigViewModel @Inject constructor(
     private fun updatePlayerCount(count: Int) {
         val current = tournamentPreferences.getPlayerCount()
         val mystery = tournamentPreferences.getBountyMode() == BountyMode.MYSTERY
-        if (count < current && mystery && envelopesDrawn(current)) return
+        if (count < current && mystery && bankPreferences.hasBountyDraws(current)) return
         tournamentPreferences.setPlayerCount(count)
         // Removed players are gone for good, in the Bank too (they used to come back after a restart).
         bankPreferences.removePlayersAbove(count)

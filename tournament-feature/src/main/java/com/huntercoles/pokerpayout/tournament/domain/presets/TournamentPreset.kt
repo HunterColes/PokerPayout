@@ -49,10 +49,13 @@ data class PresetSetup(
      * This setup as loading it leaves it tonight: the payouts for [players] players
      * ([PresetPayouts.settingsFor]), the smallest chip on a real chip, and a rebuy or add-on the preset
      * turns off kept at its current amount while the Bank holds purchases of it ([keepRebuyCents] and
-     * [keepAddOnCents], null when it holds none), so no recorded purchase is left worth nothing.
+     * [keepAddOnCents], null when it holds none), so no recorded purchase is left worth nothing. With
+     * mystery envelopes already drawn, the bounty that dealt them stays as it is ([keepBountyCents],
+     * PP-035; null when none are drawn).
      */
-    fun resolved(players: Int, keepRebuyCents: Long?, keepAddOnCents: Long?): PresetSetup = copy(
+    fun resolved(players: Int, keepRebuyCents: Long?, keepAddOnCents: Long?, keepBountyCents: Long? = null): PresetSetup = copy(
         money = money.copy(
+            bountyCents = keepBountyCents ?: money.bountyCents,
             rebuyCents = money.rebuyCents.takeIf { it > 0L } ?: keepRebuyCents ?: 0L,
             addOnCents = money.addOnCents.takeIf { it > 0L } ?: keepAddOnCents ?: 0L,
         ),

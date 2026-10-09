@@ -112,6 +112,13 @@ class BankPreferences @Inject constructor(
         return if (prefs.contains(key)) prefs.getLong(key, 0L).coerceAtLeast(0L) else null
     }
 
+    /**
+     * Mystery bounties (PP-035): true once an envelope has been drawn for any of players 1 to
+     * [playerCount]. From then on the envelopes are dealt, so the bounty and the player count that
+     * made them stay put (the count can still go up for a late entry).
+     */
+    fun hasBountyDraws(playerCount: Int): Boolean = (1..playerCount).any { prefs.contains("$PLAYER_BOUNTY_DRAW_PREFIX$it") }
+
     fun savePlayerBountyDraw(playerId: Int, cents: Long?) {
         val editor = prefs.edit()
         if (cents == null) {

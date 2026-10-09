@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Tip the dealer (S25, PP-112). Plain and kind: no guilt, no urgency, and the app is the same either way. -->
+    <!-- Tip the dealer (S28, PP-112). Plain and kind: no guilt, no urgency, and the app is the same either way. -->
     <string name="tip_title">Tip the dealer</string>
     <string name="tip_subtitle">No ads, no tracking</string>
     <string name="tip_intro">If Poker Payout has made your poker nights easier, a tip is a kind way to say thanks. It pays for the time that goes into new features and fixes. Nothing is locked, and nothing changes if you don\'t.</string>

@@ -266,7 +266,7 @@ are:
    "Tournament setup and tonight's game"); Add to this phone must find nothing new; Replace this
    phone's data must start the app again on the first tab with the same game (Alice the Bank's
    champion, the night in History), ending on the Tools list.
-   Then **Tip the dealer** (S25, PP-112, 3 steps): the row at the foot of the Tools list opens the
+   Then **Tip the dealer** (S28, PP-112, 3 steps): the row at the foot of the Tools list opens the
    page (Tools still selected) with "Open the donation page" and both addresses under their QR codes
    ("QR code for the Ethereum address", "... Monero ..."); Copy the Monero address must say "Copied"
    for that one only; Open the donation page must hand the page to the browser (a VIEW intent to
@@ -785,7 +785,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | Module | Class | Goldens (`src/test/screenshots/screens/`) | Layout checks |
 |---|---|---|---|
 | `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted`, `S7_tools_cues_off`, `S7_tools_notifications_off` (PP-081/083: the Vibrate and Flash rows, and the way back to notifications; the History row, PP-037), `S7_tools_music` (the Cue sounds and Music rows, a song playing) | S7: all three, at every scroll position |
-| `tools-feature` | `TipScreenTest` (+ `TipContentTest`, what each control sends; `TipMethodsTest`) | `S25_tip` (why a tip helps, the donation page), `S25_tip_copied` (the Ethereum code, its address just copied) | Tip the dealer (PP-112): all three, at every scroll position, on all 24 cells; also no browser on the phone. `TipMethodsTest` checks every way to tip is the repository's (`crypto/DONATIONS.md`, `.github/FUNDING.yml`) and decodes each QR code the app shows back to its address |
+| `tools-feature` | `TipScreenTest` (+ `TipContentTest`, what each control sends; `TipMethodsTest`) | `S28_tip` (why a tip helps, the donation page), `S28_tip_copied` (the Ethereum code, its address just copied) | Tip the dealer (PP-112): all three, at every scroll position, on all 24 cells; also no browser on the phone. `TipMethodsTest` checks every way to tip is the repository's (`crypto/DONATIONS.md`, `.github/FUNDING.yml`) and decodes each QR code the app shows back to its address |
 | `tools-feature` | `MusicScreenTest` | `S18_music_empty` (a fresh install: no songs, nothing built in), `S18_music_playing` (five songs, one playing, one whose file has gone, shuffle and repeat on, with the clock and quieter on breaks), `S18_music_editing` (move and remove), `S18_cue_sounds`, `S18_cue_sounds_off` (the sound switched off) | Music and Cue sounds: all three, at every scroll position, on all 24 cells; also every file gone and the built-in songs (none ship yet). Fixtures in `MusicFixtures` |
 | `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
 | `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end`, `S11_chipset_settings` (the stack settings unfolded, keeping back the Tournament's estimate) | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |

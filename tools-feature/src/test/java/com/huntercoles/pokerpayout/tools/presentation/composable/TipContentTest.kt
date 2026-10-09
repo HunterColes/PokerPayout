@@ -28,7 +28,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * What Tip the dealer's controls do (S25, PP-112) and what TalkBack hears: each Copy names its coin
+ * What Tip the dealer's controls do (S28, PP-112) and what TalkBack hears: each Copy names its coin
  * and says when it has copied, each page opens in the browser as a plain VIEW intent (the app has no
  * internet permission), and the route really puts the address on the clipboard.
  */

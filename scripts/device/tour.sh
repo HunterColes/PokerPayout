@@ -1592,7 +1592,7 @@ s_backup_replace() {
   ui assert-text text=Odds "text=Seat draw" || return 1
   require_tab_selected Tools
 }
-# Tip the dealer (S25, PP-112) ---------------------------------------------------------------------------
+# Tip the dealer (S28, PP-112) ---------------------------------------------------------------------------
 # A quiet row at the foot of the Tools list opens the page: the donation page, both addresses with the
 # repository's own QR codes, the free ways to help. Copy puts an address on the clipboard and says so;
 # the donation page goes to the browser as a VIEW intent (the app has no internet permission), and the
@@ -2168,7 +2168,7 @@ step backup-save          "Save backup…: the file picker saves the file"      
 step backup-open          "Open it again: the preview names what it holds"      s_backup_open
 step backup-add           "Add to this phone: nothing new, nothing changed"     s_backup_add
 step backup-replace       "Replace: the app starts again on the same game"      s_backup_replace
-step tip                  "Tip the dealer (S25): page, addresses, QR codes"     s_tip
+step tip                  "Tip the dealer (S28): page, addresses, QR codes"     s_tip
 step tip-copy             "Copy the Monero address: Copied, for that one only"  s_tip_copy
 step tip-page             "Donation page opens in the browser; the app returns" s_tip_page
 step odds-empty           "Odds: empty table, first slot waiting"              s_odds_empty

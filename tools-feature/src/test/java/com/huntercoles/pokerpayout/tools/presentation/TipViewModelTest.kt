@@ -17,7 +17,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Tip the dealer (S25, PP-112): a copied address says so, a page no app could open says why, and
+ * Tip the dealer (S28, PP-112): a copied address says so, a page no app could open says why, and
  * using a way to tip (an address copied, the donation page opened) means the Payouts tab's card never
  * asks again, saved at once so it holds after process death. A star or an idea doesn't count.
  */

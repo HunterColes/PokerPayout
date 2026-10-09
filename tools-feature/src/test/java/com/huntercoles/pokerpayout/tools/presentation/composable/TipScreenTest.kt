@@ -26,10 +26,10 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Tip the dealer (S25, PP-112) inside the app's shell on every cell of the device matrix: text fits
+ * Tip the dealer (S28, PP-112) inside the app's shell on every cell of the device matrix: text fits
  * and is never clipped at any scroll position, 48 dp targets that don't overlap, every one named for
- * TalkBack, and AA contrast. Goldens on [DeviceMatrix.goldens]: `S25_tip` (the top: why a tip helps,
- * the donation page) and `S25_tip_copied` (scrolled to the Ethereum code, its address just copied).
+ * TalkBack, and AA contrast. Goldens on [DeviceMatrix.goldens]: `S28_tip` (the top: why a tip helps,
+ * the donation page) and `S28_tip_copied` (scrolled to the Ethereum code, its address just copied).
  * A phone with no browser gets the layout checks too.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -42,25 +42,25 @@ class TipScreenTest(private val config: ScreenConfig) {
     @Test
     fun theTop() {
         render(TipUiState())
-        golden("S25_tip")
-        check("S25")
+        golden("S28_tip")
+        check("S28")
     }
 
     @Test
     fun anAddressCopied() {
         render(TipUiState(copied = TipCoin.ETH))
         scrollToTop("Ethereum (ETH)")
-        golden("S25_tip_copied")
-        check("S25, copied")
+        golden("S28_tip_copied")
+        check("S28, copied")
     }
 
     @Test
     fun noBrowser() {
         render(TipUiState(noBrowser = TipLink.DONATION_PAGE))
-        check("S25, no browser for the page")
+        check("S28, no browser for the page")
         shown.value = TipUiState(noBrowser = TipLink.IDEAS)
         screen.compose.waitForIdle()
-        check("S25, no browser for an idea")
+        check("S28, no browser for an idea")
     }
 
     private val shown = mutableStateOf(TipUiState())

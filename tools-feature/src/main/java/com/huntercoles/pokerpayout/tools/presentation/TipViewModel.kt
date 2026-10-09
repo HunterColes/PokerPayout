@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
-/** What the Tip the dealer page (S25) can be told. The route does the copying and the opening. */
+/** What the Tip the dealer page (S28) can be told. The route does the copying and the opening. */
 sealed interface TipIntent {
     /** [coin]'s address is on the clipboard. */
     data class Copied(val coin: TipCoin) : TipIntent
@@ -20,7 +20,7 @@ sealed interface TipIntent {
     data class Opened(val link: TipLink, val opened: Boolean) : TipIntent
 }
 
-/** The Tip the dealer page (S25). */
+/** The Tip the dealer page (S28). */
 data class TipUiState(
     /** The address just copied: its button says so. */
     val copied: TipCoin? = null,
@@ -29,7 +29,7 @@ data class TipUiState(
 )
 
 /**
- * Tip the dealer (S25, PP-112): the donation page, the addresses with their QR codes, and the free
+ * Tip the dealer (S28, PP-112): the donation page, the addresses with their QR codes, and the free
  * ways to help. Copying an address or opening the donation page means the host has found the page,
  * so the "Tip the dealer?" card on the Payouts tab never asks them again ([TipJar.stopAsking]).
  */

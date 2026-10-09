@@ -94,7 +94,7 @@ private fun openInBrowser(context: Context, url: String): Boolean = try {
 }
 
 /**
- * Tip the dealer (S25, PP-112), stateless: why a tip helps (and that nothing changes without one),
+ * Tip the dealer (S28, PP-112), stateless: why a tip helps (and that nothing changes without one),
  * the donation page, each address with its QR code and a Copy button, how to check an address, and
  * the free ways to help.
  */

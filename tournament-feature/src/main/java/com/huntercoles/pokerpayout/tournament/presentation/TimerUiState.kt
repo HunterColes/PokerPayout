@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tournament.presentation
 
+import androidx.compose.runtime.Immutable
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
 import com.huntercoles.pokerpayout.core.utils.BlindSetupProblem
 import com.huntercoles.pokerpayout.core.utils.ChipSetChips
@@ -33,6 +34,41 @@ sealed interface RebuyState {
     data class Closed(val afterLevel: Int, override val taken: Int) : RebuyState
 }
 
+/**
+ * What the clock's buttons show (back, the nudges, play/pause, next). It changes when the clock
+ * starts, pauses, finishes or moves to another level; not every second, so the buttons skip the
+ * clock's ticks.
+ */
+@Immutable
+data class ClockButtons(
+    val started: Boolean = false,
+    val running: Boolean = false,
+    val finished: Boolean = false,
+    val canGoBack: Boolean = false,
+    val canGoForward: Boolean = false
+)
+
+/**
+ * The blinds being played and what comes next: the blinds card's whole input. It changes at a level
+ * change, not every second.
+ */
+@Immutable
+data class BlindsUp(
+    /** The level being played, or during a break the one just played. */
+    val current: LevelSegment? = null,
+    /** The break right after the current segment, if one is next. */
+    val upcomingBreak: BreakSegment? = null,
+    /** The level after the current segment (after a break: the level it leads into). */
+    val next: LevelSegment? = null,
+    val finished: Boolean = false
+)
+
+/**
+ * The clock's state. A new one comes every second while the clock runs (only [elapsedSeconds]
+ * changes), so the parts of the screen that don't show the time take narrower inputs ([buttons],
+ * [blindsUp], [table]) and skip the tick.
+ */
+@Immutable
 data class TimerUiState(
     val config: BlindConfiguration = BlindConfiguration(),
     /** Seconds of play since the start, pauses excluded. The one clock value; all else derives from it. */
@@ -80,7 +116,13 @@ data class TimerUiState(
 
     /** The next break after the current segment, or null when none is left. */
     val nextBreak: BreakSegment?
-        get() = timeline.segments.drop(currentSegmentIndex + 1).firstOrNull { it is BreakSegment } as BreakSegment?
+        get() {
+            val segments = timeline.segments
+            for (i in currentSegmentIndex + 1 until segments.size) {
+                (segments[i] as? BreakSegment)?.let { return it }
+            }
+            return null
+        }
 
     /** Seconds of play until the next break starts, or null when none is left. */
     val nextBreakInSeconds: Int? get() = nextBreak?.let { it.startSeconds - elapsedSeconds }
@@ -128,9 +170,11 @@ data class TimerUiState(
     /** The level being played, or during a break the one just played. */
     val currentLevelSegment: LevelSegment?
         get() {
-            val index = currentSegmentIndex
-            if (index < 0) return null
-            return timeline.segments.take(index + 1).lastOrNull { it is LevelSegment } as LevelSegment?
+            val segments = timeline.segments
+            for (i in currentSegmentIndex downTo 0) {
+                (segments[i] as? LevelSegment)?.let { return it }
+            }
+            return null
         }
 
     val currentBlindLevelIndex: Int get() = currentLevelSegment?.index ?: 0
@@ -141,6 +185,28 @@ data class TimerUiState(
     val nextLevelSegment: LevelSegment? get() = timeline.nextLevelAfter(currentSegmentIndex)
 
     val nextBlindLevel: BlindLevel? get() = nextLevelSegment?.level
+
+    /** The big blind the table's stats count stacks in: this level's, or before the start the first one's. */
+    val statsBigBlind: Int get() = (currentLevelSegment ?: nextLevelSegment)?.level?.bigBlind ?: 0
+
+    /** The buttons' input: see [ClockButtons]. */
+    val buttons: ClockButtons
+        get() = ClockButtons(
+            started = hasTimerStarted,
+            running = isRunning,
+            finished = isFinished,
+            canGoBack = canGoBack,
+            canGoForward = canGoForward
+        )
+
+    /** The blinds card's input: see [BlindsUp]. */
+    val blindsUp: BlindsUp
+        get() = BlindsUp(
+            current = currentLevelSegment,
+            upcomingBreak = timeline.segments.getOrNull(currentSegmentIndex + 1) as? BreakSegment,
+            next = nextLevelSegment,
+            finished = isFinished
+        )
 
     val overtimeLevelsRevealed: Int get() = timeline.overtimeLevelsRevealedAt(elapsedSeconds)
 

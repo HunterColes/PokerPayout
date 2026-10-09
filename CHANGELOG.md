@@ -3,6 +3,23 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.7 (on master, not published)
+
+Lighter and faster:
+
+- **A smaller app:** the download is 2.14 MB, about 0.4 MB less than it would be. The app is in
+  English, and it no longer carries the libraries' own few words (like "Dismiss") in 80 other
+  languages.
+- **A calmer clock:** while the clock runs, only what shows the time (the time left, the bar, the
+  next break and the schedule) is redrawn each second; the blinds, the buttons, the table's numbers
+  and the top bar stay put until something changes.
+- **Quicker to open:** your saved settings start loading in the background as the app opens,
+  instead of each screen waiting on them the first time it shows.
+- **Behind the scenes:** an unused icon library is gone (the test build is 7 MB smaller), the
+  tournament and tools code build side by side, and a new job on GitHub measures the app's size, its
+  start-up time and whether F-Droid's rebuild still matches byte for byte. Test builds report any
+  slow work on the main thread.
+
 ## 1.4.6 (on master, not published)
 
 Knockouts from the full-screen clock:

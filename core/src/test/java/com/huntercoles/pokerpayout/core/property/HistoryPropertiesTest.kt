@@ -69,6 +69,7 @@ class HistoryPropertiesTest {
      * An independent RFC 4180 reader: fields split on commas, a quoted field may hold commas, line
      * breaks and doubled quotes, records end in CRLF.
      */
+    @Suppress("CyclomaticComplexMethod") // one state machine, clearer in one piece
     private fun readCsv(text: String): List<List<String>> {
         val records = mutableListOf<List<String>>()
         var fields = mutableListOf<String>()

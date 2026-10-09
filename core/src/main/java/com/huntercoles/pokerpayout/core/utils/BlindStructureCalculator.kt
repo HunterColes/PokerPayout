@@ -82,9 +82,9 @@ object BlindStructureCalculator {
         roundLengthMinutes: Int,
         bigBlindAnteFromLevel: Int = 0
     ): BlindLevel? {
-        val lastLevel = currentSchedule.lastOrNull() ?: return null
+        val lastLevel = currentSchedule.lastOrNull()
+        if (lastLevel == null || lastLevel.smallBlind * 2L * 2L > Int.MAX_VALUE) return null
         val levelNumber = currentSchedule.size + 1
-        if (lastLevel.smallBlind * 2L * 2L > Int.MAX_VALUE) return null
         val smallBlind = lastLevel.smallBlind * 2
         val bigBlind = smallBlind * 2
         return BlindLevel(

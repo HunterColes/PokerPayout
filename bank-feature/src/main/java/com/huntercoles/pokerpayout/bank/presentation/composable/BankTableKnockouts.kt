@@ -41,13 +41,7 @@ class BankTableKnockouts @Inject constructor() : TableKnockouts {
 fun QuickKnockoutRoute(onClose: () -> Unit, viewModel: BankViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     // Put away, the Bank's sheet goes too, so the next knockout starts at "Who's out?"
-    DisposableEffect(viewModel) {
-        android.util.Log.w("PP135", "panel on vm=${System.identityHashCode(viewModel)}")
-        onDispose {
-            android.util.Log.w("PP135", "panel off vm=${System.identityHashCode(viewModel)}")
-            viewModel.acceptIntent(BankIntent.DismissSheet)
-        }
-    }
+    DisposableEffect(viewModel) { onDispose { viewModel.acceptIntent(BankIntent.DismissSheet) } }
     var revealing by rememberSaveable { mutableStateOf(false) }
     val close by rememberUpdatedState(onClose)
     LaunchedEffect(viewModel) {

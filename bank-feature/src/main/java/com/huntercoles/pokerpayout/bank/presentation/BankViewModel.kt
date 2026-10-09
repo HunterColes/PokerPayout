@@ -493,13 +493,7 @@ class BankViewModel @Inject constructor(
         if (_uiState.value.sheet is BankSheet.Envelope) showSheet(null)
     }
 
-    override fun onCleared() {
-        android.util.Log.w("PP135", "BankViewModel cleared ${System.identityHashCode(this)}", Throwable())
-        super.onCleared()
-    }
-
     private fun forgetHistory() {
-        android.util.Log.w("PP135", "forgetHistory ${System.identityHashCode(this)}", Throwable())
         undoStack.clear()
         snackbar?.cancel()
         snackbar = null

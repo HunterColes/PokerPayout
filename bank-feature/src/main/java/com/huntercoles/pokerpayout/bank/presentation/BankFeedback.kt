@@ -35,17 +35,8 @@ class BankFeedback @Inject constructor(
     private val snackbars: SnackbarController
 ) {
     /** Shows [message] with Undo; true if the player pressed Undo before it went away. */
-    suspend fun showUndo(message: String): Boolean {
-        android.util.Log.w("PP135", "showUndo start '$message' feedback=${System.identityHashCode(this)}")
-        try {
-            val undone = snackbars.showUndo(message, context.getString(R.string.bank_undo))
-            android.util.Log.w("PP135", "showUndo end '$message' undone=$undone")
-            return undone
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            android.util.Log.w("PP135", "showUndo cancelled '$message': $e", e)
-            throw e
-        }
-    }
+    suspend fun showUndo(message: String): Boolean =
+        snackbars.showUndo(message, context.getString(R.string.bank_undo))
 
     fun buyIn(name: String, cents: Long): String =
         context.getString(R.string.bank_done_buy_in, name, FormatUtils.formatMoney(cents))

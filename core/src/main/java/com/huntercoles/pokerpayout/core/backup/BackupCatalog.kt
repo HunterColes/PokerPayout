@@ -14,7 +14,7 @@ object BackupCatalog {
 
     /** Settings files, saved whole (every key, with its type) by their group's section. */
     val SETTINGS: List<SettingsFile> = listOf(
-        // The tournament setup and tonight's game: the Bank (players, purchases, the cash game) and the clock
+        // The tournament setup and tonight's game: the Bank (players, purchases, the settle-up) and the clock
         SettingsFile("tournament_prefs", SettingsGroup.GAME),
         SettingsFile("timer_prefs", SettingsGroup.GAME, phoneOnly = TimerPreferences.PHONE_ONLY_KEYS),
         SettingsFile("bank_prefs", SettingsGroup.GAME),

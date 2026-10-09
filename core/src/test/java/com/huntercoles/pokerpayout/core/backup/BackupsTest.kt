@@ -3,16 +3,12 @@ package com.huntercoles.pokerpayout.core.backup
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.R
-import com.huntercoles.pokerpayout.core.domain.cash.BankMode
-import com.huntercoles.pokerpayout.core.domain.cash.CashGame
-import com.huntercoles.pokerpayout.core.domain.cash.CashLedger
-import com.huntercoles.pokerpayout.core.domain.cash.CashPlayer
-import com.huntercoles.pokerpayout.core.domain.cash.CashTransfer
 import com.huntercoles.pokerpayout.core.domain.history.NightStore
 import com.huntercoles.pokerpayout.core.domain.history.Nights.night
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import com.huntercoles.pokerpayout.core.domain.settle.Transfer
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.ChipCalculatorPreferences
@@ -118,7 +114,7 @@ class BackupsTest {
         return tournament
     }
 
-    /** Tonight's players, their purchases and knockouts, and a cash game. */
+    /** Tonight's players, their purchases and knockouts, and the settle-up's ticked payments. */
     private fun fillBank() {
         with(BankPreferences(context)) {
             savePlayerName(1, "Dana")
@@ -133,16 +129,7 @@ class BackupsTest {
             savePlayerAddonPrices(1, listOf(1_500L))
             savePlayerOutLevel(2, 3)
             saveEliminationOrder(listOf(2))
-            saveBankMode(BankMode.CASH)
-            saveCashGame(
-                CashGame(
-                    CashLedger(
-                        listOf(CashPlayer(1, "Sam", listOf(4_000L, 2_000L), 7_500L), CashPlayer(2, "Theo", listOf(4_000L))),
-                    ),
-                    paid = setOf(CashTransfer(2, 1, 1_500L)),
-                    splitCents = 0L,
-                ),
-            )
+            saveSettlePaid(setOf(Transfer(2, 0, 1_500L), Transfer(0, 1, 9_000L)))
         }
     }
 
@@ -219,8 +206,7 @@ class BackupsTest {
         assertEquals("Zoë, \"Ace\"", bank.getPlayerName(2))
         assertEquals(listOf(2_000L, 2_500L), bank.getPlayerRebuyPrices(1))
         assertEquals(750L, bank.getPlayerBountyDraw(2))
-        assertEquals(BankMode.CASH, bank.getBankMode())
-        assertEquals(setOf(CashTransfer(2, 1, 1_500L)), bank.getCashGame().paid)
+        assertEquals(setOf(Transfer(2, 0, 1_500L), Transfer(0, 1, 9_000L)), bank.getSettlePaid())
         val chips = ChipCalculatorPreferences(context, tournament).current()
         assertEquals(ChipDistributionCurve.BellCurve, chips.shape)
         assertEquals(2, chips.reserveOverride)

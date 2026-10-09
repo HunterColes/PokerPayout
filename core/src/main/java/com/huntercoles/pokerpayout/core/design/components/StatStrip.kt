@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import java.util.Locale
 
 /**
@@ -141,14 +142,14 @@ internal fun StatStripPreview() {
                 stats = listOf(
                     Stat("Players", "7", "of 9"),
                     Stat("Avg stack", "10,714", "18 BB"),
-                    Stat("Prize pool", "$450", "3 paid", valueColor = PokerColors.PokerGold),
+                    Stat("Prize pool", FormatUtils.formatMoney(45_000L), "3 paid", valueColor = PokerColors.PokerGold),
                 ),
             )
             StatStrip(
                 stats = listOf(
                     Stat("Players", "7", "of 9"),
                     Stat("Avg", "10,714", "18 BB"),
-                    Stat("Pool", "$450", "3 paid", valueColor = PokerColors.PokerGold),
+                    Stat("Pool", FormatUtils.formatMoney(45_000L), "3 paid", valueColor = PokerColors.PokerGold),
                 ),
                 showSubs = false,
             )

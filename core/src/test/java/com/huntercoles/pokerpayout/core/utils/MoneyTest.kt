@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.core.utils
 
+import com.huntercoles.pokerpayout.core.testing.withCurrency
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -124,7 +125,6 @@ class MoneyTest {
         listOf(Locale.US, Locale.GERMANY, Locale.FRANCE).forEach { locale ->
             inLocale(locale) {
                 assertEquals("$1,234.56", FormatUtils.formatCents(123456), "$locale")
-                assertEquals("$1,234.56", FormatUtils.formatCurrency(1234.56), "$locale")
                 assertEquals("-$10.50", FormatUtils.formatCents(-1050), "$locale")
                 assertEquals("$0.05", FormatUtils.formatCents(5), "$locale")
                 assertEquals("$1,000,000.00", FormatUtils.formatCents(100_000_000), "$locale")
@@ -136,7 +136,47 @@ class MoneyTest {
 
     @Test
     fun `negative currency has the sign before the dollar sign`() {
-        assertEquals("-$10.50", FormatUtils.formatCurrency(-10.5))
-        assertEquals("$0.00", FormatUtils.formatCurrency(-0.001))
+        assertEquals("-$10.50", FormatUtils.formatCents(-1050))
+        assertEquals("-$0.01", FormatUtils.formatCents(-1))
+        assertEquals("$0.00", FormatUtils.formatCents(0))
+        assertEquals("-$10", FormatUtils.formatMoney(-1000))
+    }
+
+    // ---- money fields in a currency without cents (the yen, PP-114)
+
+    @Test
+    fun `in yen a field takes whole numbers only`() {
+        listOf("", "1", "12", "3000", "999999999").forEach { assertTrue(MoneyInput.isAcceptable(it, decimals = 0), "'$it'") }
+        listOf("12.", "12,", "12.5", ",5", "1,000", "1234567890", "-5").forEach {
+            assertFalse(MoneyInput.isAcceptable(it, decimals = 0), "'$it'")
+        }
+        assertEquals(300_000L, MoneyInput.parseCents("3000", decimals = 0))
+        assertNull(MoneyInput.parseCents("12.50", decimals = 0))
+        assertNull(MoneyInput.parseCents("", decimals = 0))
+    }
+
+    @Test
+    fun `in yen a field shows whole yen, rounded half up, and parses back to whole yen`() {
+        assertEquals("3000", MoneyInput.format(300_000, Locale.JAPAN, decimals = 0))
+        assertEquals("13", MoneyInput.format(1_250, Locale.JAPAN, decimals = 0))
+        assertEquals("12", MoneyInput.format(1_249, Locale.JAPAN, decimals = 0))
+        assertEquals("0", MoneyInput.format(0, Locale.JAPAN, decimals = 0))
+        listOf(0L, 100L, 300_000L, 99_999_999_900L).forEach { cents ->
+            assertEquals(cents, MoneyInput.parseCents(MoneyInput.format(cents, Locale.JAPAN, decimals = 0), decimals = 0), "$cents")
+        }
+    }
+
+    @Test
+    fun `fields follow the picked currency's cents by default`() {
+        withCurrency(AppCurrency.YEN) {
+            assertFalse(MoneyInput.isAcceptable("12.5"))
+            assertEquals("13", MoneyInput.format(1_250, Locale.US))
+            assertEquals(1_200L, MoneyInput.parseCents("12"))
+        }
+        withCurrency(AppCurrency.EURO) {
+            assertTrue(MoneyInput.isAcceptable("12,5"))
+            assertEquals("12,50", MoneyInput.format(1_250, Locale.GERMANY))
+            assertEquals(1_250L, MoneyInput.parseCents("12,50"))
+        }
     }
 }

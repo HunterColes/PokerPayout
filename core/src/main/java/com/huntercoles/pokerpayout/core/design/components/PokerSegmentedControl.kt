@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.utils.FormatUtils
 
 /**
  * One choice out of a few, side by side (payout presets, rounding, the Bank mode). Replaces
@@ -159,10 +160,10 @@ private val ThumbPadding = 4.dp
 /** Each segment's padding plus its thumb's: the room a label loses inside its share of the track. */
 private val SegmentInset = TrackPadding + ThumbPadding
 
-private enum class PreviewPreset(val label: String, val firstPlace: String) {
-    TopHeavy("Top-heavy", "$270"),
-    Standard("Standard", "$225"),
-    Flat("Flat", "$200"),
+private enum class PreviewPreset(val label: String, val firstPlaceCents: Long) {
+    TopHeavy("Top-heavy", 27_000L),
+    Standard("Standard", 22_500L),
+    Flat("Flat", 20_000L),
 }
 
 @Preview(name = "PokerSegmentedControl", widthDp = 360, showBackground = true, backgroundColor = 0xFF0B0B0B)
@@ -175,11 +176,11 @@ internal fun PokerSegmentedControlPreview() {
                 selected = PreviewPreset.Standard,
                 onSelect = {},
                 label = { it.label },
-                secondary = { it.firstPlace },
+                secondary = { FormatUtils.formatMoney(it.firstPlaceCents) },
             )
             PokerSegmentedControl(
-                options = listOf("$1", "$5", "$10"),
-                selected = "$5",
+                options = listOf(100L, 500L, 1_000L).map(FormatUtils::formatMoney),
+                selected = FormatUtils.formatMoney(500L),
                 onSelect = {},
                 label = { it },
             )

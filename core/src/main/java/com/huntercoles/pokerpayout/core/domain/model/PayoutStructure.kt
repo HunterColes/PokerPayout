@@ -1,15 +1,20 @@
 package com.huntercoles.pokerpayout.core.domain.model
 
 import com.huntercoles.pokerpayout.core.constants.TournamentConstants
+import com.huntercoles.pokerpayout.core.utils.FormatUtils
 
 /**
  * What the prize pool is rounded to. Every place below 1st gets a multiple of [unitCents], and 1st
- * gets whatever is left, so the table always adds up to the pool to the cent.
+ * gets whatever is left, so the table always adds up to the pool to the cent. The names are saved
+ * data (they say dollars, but a unit is one of whatever the host's currency is, PP-114).
  */
-enum class PayoutRounding(val unitCents: Long, val label: String) {
-    ONE_DOLLAR(unitCents = 100L, label = "$1"),
-    FIVE_DOLLARS(unitCents = 500L, label = "$5"),
-    TEN_DOLLARS(unitCents = 1_000L, label = "$10");
+enum class PayoutRounding(val unitCents: Long) {
+    ONE_DOLLAR(unitCents = 100L),
+    FIVE_DOLLARS(unitCents = 500L),
+    TEN_DOLLARS(unitCents = 1_000L);
+
+    /** "$1", "5 €", "¥10": the unit in the host's currency. */
+    val label: String get() = FormatUtils.formatMoney(unitCents)
 
     companion object {
         val DEFAULT = ONE_DOLLAR

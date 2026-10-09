@@ -197,6 +197,17 @@ class LayoutAssertionsTest {
     }
 
     @Test
+    fun textOutOfViewIsNotJudged() {
+        // All but a 2 dp sliver clipped away (scrolled under a bar): judged where it shows, not here
+        show {
+            Box(Modifier.padding(top = 100.dp).height(2.dp).clipToBounds().background(Color(0xFF333333))) {
+                Text("Hidden note", color = Color(0xFF666666), modifier = Modifier.wrapContentHeight(unbounded = true))
+            }
+        }
+        LayoutAssertions.assertTextFits(screen.compose, "out of view")
+    }
+
+    @Test
     fun textInADisabledControlIsExempt() {
         show {
             Box(Modifier.background(Color(0xFF333333)).semantics { disabled() }) {

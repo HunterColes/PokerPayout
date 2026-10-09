@@ -49,6 +49,9 @@ object AccessibilityAssertions {
     private const val MIN_ALPHA = 0.1f
     private const val MIN_PIXELS = 4
 
+    /** A text is judged when at least this much of it is in view (not scrolled out or under a bar). */
+    private const val MIN_VISIBLE_SHARE = 0.9f
+
     /** Pixels this close to the text's own colour are its glyphs and their anti-aliased edges, not what is behind. */
     private const val SAME_COLOUR_DISTANCE = 48
 
@@ -128,7 +131,10 @@ object AccessibilityAssertions {
 
     private fun contrastProblems(node: SemanticsNode, screen: Screen): List<String> {
         val box = node.boundsInRoot.intersect(Rect(0f, 0f, screen.width.toFloat(), screen.height.toFloat()))
-        if (box.width * box.height < MIN_PIXELS) return emptyList()
+        val laidOut = node.unclippedBoundsInRoot()
+        // Only text in view: a text scrolled under a bar shows as a sliver of whatever is on top of it
+        val inView = box.width * box.height >= MIN_VISIBLE_SHARE * laidOut.width * laidOut.height
+        if (box.width * box.height < MIN_PIXELS || !inView) return emptyList()
         val layouts = mutableListOf<TextLayoutResult>()
         node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
         return layouts.flatMap { layout ->

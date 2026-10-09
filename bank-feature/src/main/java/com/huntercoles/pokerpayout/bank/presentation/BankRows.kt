@@ -27,6 +27,9 @@ internal fun buildBankRows(input: BankRowInput): List<BankRowModel> {
     val names = input.players.associate { it.id to it.name }
     val ordered = buildPlayerDisplayModels(input.players, input.eliminationOrder).map { it.player }
     val champion = ordered.filter { it.id == championId }
+    // Re-entries (PP-116): which entry each is, and the entries they replaced (out for good)
+    val entryNumbers = BankEntries.numbers(input.players)
+    val replaced = BankEntries.replaced(input.players)
     return (champion + ordered.filterNot { it.id == championId }).map { player ->
         val owed = input.settlement.forPlayer(player.id)
         val isChampion = player.id == championId
@@ -43,7 +46,7 @@ internal fun buildBankRows(input: BankRowInput): List<BankRowModel> {
             buyIn = BankCell(if (player.buyIn) CellStatus.Done else CellStatus.Open),
             rebuy = purchaseCell(player.rebuys, input.money.rebuyCents > 0L, input.rebuyWindow),
             addOn = purchaseCell(player.addons, input.money.addOnCents > 0L, input.addOnWindow),
-            out = outCell(player, isChampion, place),
+            out = outCell(player, isChampion, place, canBringBack = player.id !in replaced),
             paid = paidCell(player, finished = player.out || isChampion, winnings),
             knockouts = owed?.knockouts ?: 0,
             rebuys = player.rebuys,
@@ -51,10 +54,11 @@ internal fun buildBankRows(input: BankRowInput): List<BankRowModel> {
             place = place,
             knockedOutByName = player.eliminatedBy?.takeIf { player.out }?.let { names[it] },
             outAtLevel = player.outLevel?.takeIf { player.out },
-            paidInCents = (if (player.buyIn) input.money.entryCents else 0L) +
+            paidInCents = (if (player.buyIn) player.entryCents(input.money) else 0L) +
                 player.rebuyPrices.sum() + player.addOnPrices.sum(),
             owedCents = if (player.paidOut) 0L else winnings,
-            bountyCents = owed?.headBountyCents?.takeIf { input.showsBounties && (isChampion || !player.out) }
+            bountyCents = owed?.headBountyCents?.takeIf { input.showsBounties && (isChampion || !player.out) },
+            entryNumber = entryNumbers[player.id]
         )
     }
 }
@@ -75,10 +79,13 @@ private fun purchaseCell(count: Int, enabled: Boolean, window: PurchaseWindow): 
     else -> BankCell(CellStatus.ClosedNotTaken, enabled = false)
 }
 
-/** Out: the place disc (tap to bring back), the champion's crown (can't be knocked out), or open. */
-private fun outCell(player: PlayerData, isChampion: Boolean, place: Int?): BankCell = when {
+/**
+ * Out: the place disc (tap to bring back, unless the player has re-entered since, PP-116), the
+ * champion's crown (can't be knocked out), or open.
+ */
+private fun outCell(player: PlayerData, isChampion: Boolean, place: Int?, canBringBack: Boolean): BankCell = when {
     isChampion -> BankCell(CellStatus.Champion, place = 1, enabled = false)
-    player.out -> BankCell(CellStatus.OutPlace, place = place ?: 0)
+    player.out -> BankCell(CellStatus.OutPlace, place = place ?: 0, enabled = canBringBack)
     else -> BankCell(CellStatus.Open)
 }
 

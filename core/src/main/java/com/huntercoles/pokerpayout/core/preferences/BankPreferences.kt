@@ -2,7 +2,10 @@ package com.huntercoles.pokerpayout.core.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
+import com.huntercoles.pokerpayout.core.domain.model.EntryPrice
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
+import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.domain.settle.Transfer
 import com.huntercoles.pokerpayout.core.utils.Money
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -123,6 +126,85 @@ class BankPreferences @Inject constructor(
             editor.remove("$PLAYER_BOUNTY_DRAW_PREFIX$playerId")
         } else {
             editor.putLong("$PLAYER_BOUNTY_DRAW_PREFIX$playerId", cents.coerceAtLeast(0L))
+        }
+        editor.apply()
+        changed()
+    }
+
+    /**
+     * Late entries and re-entries (PP-116): what [playerId]'s entry paid to sit down, recorded when
+     * it was made once the clock was running; null for an entry from before the start, which pays
+     * today's amounts. Stored as "buyIn,food,bounty" in cents.
+     */
+    fun getPlayerEntryPrice(playerId: Int): EntryPrice? {
+        val parts = prefs.getString("$PLAYER_ENTRY_PRICE_PREFIX$playerId", null)?.split(",").orEmpty()
+        val cents = parts.mapNotNull { it.trim().toLongOrNull()?.coerceAtLeast(0L) }
+        // Unreadable: an entry at today's amounts, as before PP-116
+        val readable = parts.size == ENTRY_PRICE_PARTS && cents.size == ENTRY_PRICE_PARTS
+        return if (readable) EntryPrice(cents[0], cents[1], cents[2]) else null
+    }
+
+    fun savePlayerEntryPrice(playerId: Int, price: EntryPrice?) {
+        val editor = prefs.edit()
+        if (price == null) {
+            editor.remove("$PLAYER_ENTRY_PRICE_PREFIX$playerId")
+        } else {
+            val parts = listOf(price.buyInCents, price.foodCents, price.bountyCents).map { it.coerceAtLeast(0L) }
+            editor.putString("$PLAYER_ENTRY_PRICE_PREFIX$playerId", parts.joinToString(","))
+        }
+        editor.apply()
+        changed()
+    }
+
+    /** The recorded prices of the late entries and re-entries among players 1 to [playerCount] (PP-116). */
+    fun getRecordedEntryPrices(playerCount: Int): List<EntryPrice> = (1..playerCount).mapNotNull(::getPlayerEntryPrice)
+
+    /**
+     * Entries 1 to [playerCount] as the settlement reads them, for screens that settle the Bank
+     * without it (the Payouts tab, the deal maker): with each late entry's price and who each
+     * re-entry belongs to (PP-116), so they settle exactly as the Bank does.
+     */
+    fun recordedPlayers(playerCount: Int): List<BankPlayer> = (1..playerCount).map { id ->
+        BankPlayer(
+            id = id,
+            boughtIn = getPlayerBuyInStatus(id),
+            paidOut = getPlayerPayedOutStatus(id),
+            eliminatedBy = getPlayerEliminatedBy(id),
+            rebuyPricesCents = getPlayerRebuyPrices(id),
+            addOnPricesCents = getPlayerAddonPrices(id),
+            bountyDrawCents = getPlayerBountyDraw(id),
+            entryPrice = getPlayerEntryPrice(id),
+            reEntryOf = getPlayerReEntryOf(id),
+        )
+    }
+
+    /**
+     * The pool for [playerCount] entries at [money]'s amounts, as the Bank recorded it: rebuys and
+     * add-ons at the prices they were bought at (PP-085), late entries and re-entries at theirs
+     * (PP-116). For screens that read the Bank without settling it (the Tournament tab, the clock);
+     * the settlement works out the same pool from the same records.
+     */
+    fun recordedPool(money: MoneySettings, playerCount: Int): PoolBreakdown = PoolBreakdown.withRecordedPurchases(
+        money = money,
+        playerCount = playerCount,
+        rebuyCents = getRecordedRebuyCents(),
+        addOnCents = getRecordedAddOnCents(),
+        recordedEntries = getRecordedEntryPrices(playerCount),
+    )
+
+    /**
+     * A re-entry (PP-116): the first entry of the player [playerId] re-entered for; null for a first
+     * entry. Only an earlier entry counts.
+     */
+    fun getPlayerReEntryOf(playerId: Int): Int? =
+        prefs.getInt("$PLAYER_REENTRY_OF_PREFIX$playerId", 0).takeIf { it in 1 until playerId }
+
+    fun savePlayerReEntryOf(playerId: Int, firstEntryId: Int?) {
+        val editor = prefs.edit()
+        if (firstEntryId == null || firstEntryId <= 0) {
+            editor.remove("$PLAYER_REENTRY_OF_PREFIX$playerId")
+        } else {
+            editor.putInt("$PLAYER_REENTRY_OF_PREFIX$playerId", firstEntryId)
         }
         editor.apply()
         changed()
@@ -278,9 +360,12 @@ class BankPreferences @Inject constructor(
                 getPlayerOutStatus(playerId) ||
                 getPlayerPayedOutStatus(playerId)
             val hasRebuyAddon = getPlayerRebuys(playerId) > 0 || getPlayerAddons(playerId) > 0
-            val hasEliminationAssignment = getPlayerEliminatedBy(playerId) != null
+            // A knockout credited, or a late entry or re-entry (PP-116)
+            val hasEntryRecords = getPlayerEliminatedBy(playerId) != null ||
+                getPlayerEntryPrice(playerId) != null ||
+                getPlayerReEntryOf(playerId) != null
 
-            if (hasStatusChange || hasRebuyAddon || hasEliminationAssignment) {
+            if (hasStatusChange || hasRebuyAddon || hasEntryRecords) {
                 return false
             }
         }
@@ -462,6 +547,14 @@ class BankPreferences @Inject constructor(
 
         /** PP-035, mystery bounties: a new key; never rename it. */
         private const val PLAYER_BOUNTY_DRAW_PREFIX = "player_bounty_draw_"
+
+        /**
+         * PP-116, late entries and re-entries: new keys; never rename them. They start with "player_",
+         * so the Bank's reset and removing players clear them with the rest of the player.
+         */
+        private const val PLAYER_ENTRY_PRICE_PREFIX = "player_entry_price_"
+        private const val PLAYER_REENTRY_OF_PREFIX = "player_reentry_of_"
+        private const val ENTRY_PRICE_PARTS = 3
 
         /** The settle-up's ticked payments (1.4): a new key; never rename it. */
         private const val SETTLE_PAID_KEY = "settle_paid"

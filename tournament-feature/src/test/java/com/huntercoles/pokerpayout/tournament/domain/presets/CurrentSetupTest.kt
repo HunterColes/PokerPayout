@@ -78,6 +78,7 @@ class CurrentSetupTest {
         tournament.setRebuyCents(3_500L)
         tournament.setAddOnCents(1_000L)
         tournament.setRebuyUntilLevel(4)
+        tournament.setLateEntryUntilLevel(3)
         tournament.setPayoutSettings(topHeavyFour(PayoutRounding.FIVE_DOLLARS))
         tournament.setGameDurationHours(4)
         timer.setGameDurationMinutes(240)
@@ -118,6 +119,7 @@ class CurrentSetupTest {
         assertEquals(saved, current.capture(includeChipSet = true))
         assertEquals(MoneySettings(4_050L, 550L, 500L, 3_500L, 1_000L), tournament.getMoneySettings())
         assertEquals(4, tournament.getRebuyUntilLevel())
+        assertEquals("the late entry cutoff (PP-116)", 3, tournament.getLateEntryUntilLevel())
         assertEquals(topHeavyFour(PayoutRounding.FIVE_DOLLARS), tournament.getPayoutSettings())
         assertEquals(listOf(4, 15, 25, 10_000), with(tournament) {
             listOf(getGameDurationHours(), getRoundLengthMinutes(), getSmallestChip(), getStartingChips())

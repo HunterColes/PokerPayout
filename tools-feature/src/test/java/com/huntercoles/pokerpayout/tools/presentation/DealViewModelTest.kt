@@ -5,7 +5,6 @@ import android.content.SharedPreferences
 import com.huntercoles.pokerpayout.core.design.components.SnackbarController
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
-import com.huntercoles.pokerpayout.core.preferences.BankPlayerNamesProvider
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.tools.table.BankTonight
@@ -194,7 +193,7 @@ class DealViewModelTest {
         names.forEachIndexed { index, name -> bank.savePlayerName(index + 1, name) }
         bank.saveEliminationOrder(listOf(6, 2, 5))
         val settle = SettleTournamentUseCase(CalculatePayoutsUseCase())
-        val source = BankTonight(tournament, bank, settle, BankPlayerNamesProvider(tournament, bank))
+        val source = BankTonight(tournament, bank, settle)
 
         // Six at $20: $120, paid 50 / 30 / 20. Rita, Marcus and Jo are out.
         val expected = Tonight(playersLeft = listOf("Dana", "Sam", "Theo"), prizes = listOf(6_000, 3_600, 2_400, 0, 0, 0))

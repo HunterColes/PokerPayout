@@ -3,6 +3,29 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.13 (on master, not published)
+
+Late arrivals and re-entries:
+
+- **Late entry in the Bank:** once the clock runs, Late entry under the list takes a player who
+  arrives late: their name, the buy-in paid at today's price ("Add · $50 paid") and a starting
+  stack. One tap re-enters a player who is out as a new entry, with a new stack and a new buy-in;
+  the entry that went out keeps its place and who knocked it out, and the new one says "Entry 2".
+  Undo takes either back.
+- **Late entry until:** a cutoff beside "Rebuys until" in setup (and in the panel over a running
+  clock): no cutoff, or the end of a level. Re-entries follow it too. Presets save it; older
+  presets load with no cutoff.
+- **Re-entry on the clock:** the full-screen clock's Knock out offers Re-entry while anyone is out:
+  who's back in, one tap, and the clock again.
+- **Every amount counts entries:** the prize pool, the places paid, the payouts, the players left
+  and the average stack all count each entry; each entry keeps the price it paid, as rebuys do. A
+  knockout pays the bounty of the entry knocked out; a progressive re-entry starts with a fresh
+  bounty; in a mystery game a late entry or re-entry adds one envelope with its bounty and never
+  deals the others again.
+- **One player, one line:** a player who re-entered settles up once for both entries, History lists
+  them once at their best place (season points once), and the seat draw, the time bank and the
+  deal maker name them once.
+
 ## 1.4.12 (on master, not published)
 
 Regulars: tonight's players in a few taps:

@@ -50,6 +50,11 @@ class TournamentPreferences @Inject constructor(
     /** The last blind level at which rebuys are allowed; 0 means no cutoff. */
     val rebuyUntilLevel: StateFlow<Int> = _rebuyUntilLevel.asStateFlow()
 
+    private val _lateEntryUntilLevel = MutableStateFlow(getLateEntryUntilLevel())
+
+    /** The last blind level at which a player can join late or re-enter (PP-116); 0 means no cutoff. */
+    val lateEntryUntilLevel: StateFlow<Int> = _lateEntryUntilLevel.asStateFlow()
+
     private val _config = MutableStateFlow(getCurrentTournamentConfig())
 
     /** Everything the pool and payout math reads; emits after any change to it. */
@@ -206,6 +211,14 @@ class TournamentPreferences @Inject constructor(
 
     fun getRebuyUntilLevel(): Int = prefs.getInt(REBUY_UNTIL_LEVEL_KEY, 0).coerceAtLeast(0)
 
+    fun setLateEntryUntilLevel(level: Int) {
+        val value = level.coerceAtLeast(0)
+        prefs.edit().putInt(LATE_ENTRY_UNTIL_LEVEL_KEY, value).apply()
+        _lateEntryUntilLevel.value = value
+    }
+
+    fun getLateEntryUntilLevel(): Int = prefs.getInt(LATE_ENTRY_UNTIL_LEVEL_KEY, 0).coerceAtLeast(0)
+
     fun setIsConfigExpanded(expanded: Boolean) {
         prefs.edit().putBoolean(IS_CONFIG_EXPANDED_KEY, expanded).apply()
         _isConfigExpanded.value = expanded
@@ -317,6 +330,7 @@ class TournamentPreferences @Inject constructor(
             .putString(SELECTED_PANEL_KEY, "player")
             .putBoolean(IS_CONFIG_EXPANDED_KEY, true)
             .remove(REBUY_UNTIL_LEVEL_KEY)
+            .remove(LATE_ENTRY_UNTIL_LEVEL_KEY)
             .remove(BOUNTY_MODE_KEY)
             .apply()
 
@@ -326,6 +340,7 @@ class TournamentPreferences @Inject constructor(
         _payoutWeights.value = defaultPayoutWeightsFor(DEFAULT_PLAYER_COUNT)
         _isConfigExpanded.value = true
         _rebuyUntilLevel.value = 0
+        _lateEntryUntilLevel.value = 0
         publish()
     }
 
@@ -374,6 +389,9 @@ class TournamentPreferences @Inject constructor(
         private const val STARTING_CHIPS_KEY = "starting_chips"
         private const val SELECTED_PANEL_KEY = "selected_panel"
         private const val REBUY_UNTIL_LEVEL_KEY = "rebuy_until_level"
+
+        /** PP-116: the late entry cutoff; a new key, absent (no cutoff) on old installs. Never rename it. */
+        private const val LATE_ENTRY_UNTIL_LEVEL_KEY = "late_entry_until_level"
 
         /** PP-035: "standard", "progressive" or "mystery" ([BountyMode.key]); absent means standard. */
         private const val BOUNTY_MODE_KEY = "bounty_mode"

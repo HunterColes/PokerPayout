@@ -52,7 +52,9 @@ data class TournamentConfigUiState(
     /** The Bank has drawn at least one mystery envelope for a knockout (PP-035). */
     val envelopesDrawn: Boolean = false,
     /** PP-113: the setup page's one-line welcome, on a new install until dismissed or the first clock starts. */
-    val showWelcome: Boolean = false
+    val showWelcome: Boolean = false,
+    /** The last level a player can join late or re-enter at (PP-116); 0 = no cutoff. */
+    val lateEntryUntilLevel: Int = 0
 ) {
     val money: MoneySettings get() = config.money
     val playerCount: Int get() = config.numPlayers

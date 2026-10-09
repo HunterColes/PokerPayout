@@ -1307,7 +1307,7 @@ s_history_merge_undo() {
   ui tap text=UNDO
   ui wait-gone "text=Bea now counts as Alice"
   ui back                                      # History -> the Tools list
-  ui assert-text "text=Seat draw" text=History
+  ui assert-text "text=Saved nights and the season's points" text=History   # the History row: the list stays scrolled to it
 }
 
 # Currency (PP-114) ---------------------------------------------------------------------------------
@@ -2186,6 +2186,57 @@ s_bank_pko() {
   ui wait-gone "text=Player 2 is out"
   ui assert-text "text~=Player 1 takes \$2.50, bounty now \$7.50" "has=Player 1|bounty \$7.50, 1 knockout"
 }
+
+# Late entries and re-entries (PP-116), after bank-pko (Player 2 is out, by Player 1). With the clock
+# running, Late entry under the Bank's list takes a late arrival at today's entry, or buys a player
+# who is out back in as a new entry; the players left and the places count entries, and Undo takes
+# a re-entry back. Each reads the subtitle's "N of M left" first, so any field size works.
+BANK_LEFT=0
+BANK_OF=0
+bank_counts() {
+  local line; line="$(ui texts | grep -oE '[0-9]+ of [0-9]+ left' | head -1)"
+  [[ "$line" =~ ^([0-9]+)\ of\ ([0-9]+)\ left$ ]] || { echo "[ui] FAIL no \"N of M left\" in the Bank's top bar"; return 1; }
+  BANK_LEFT=${BASH_REMATCH[1]}
+  BANK_OF=${BASH_REMATCH[2]}
+}
+open_late_entry() {
+  ui scroll-to "text=Late entry" --max 4
+  ui tap "text=Late entry"
+  ui assert-text "text~=to sit down ·" "text=Open all night." "text~=Or re-enter a player who is out" "text~=Out in"
+}
+s_bank_late_entry() {
+  tab Tournament
+  ui tap "Start clock"
+  ui wait "desc=Pause timer" || return 1
+  tab Bank
+  bank_counts || return 1
+  open_late_entry || return 1
+  ui set-text "desc=Late arrival's name" --value Kai
+  ui tap "text~=Add · "
+  ui wait-gone "text~=Or re-enter a player who is out"
+  ui assert-text "text~=Kai joins late · \$" "text~=$((BANK_LEFT + 1)) of $((BANK_OF + 1)) left" || return 1
+  ui scroll-to "desc=Kai, buy-in, paid" --max 4
+  ui assert-text "desc=Kai, buy-in, paid"
+}
+s_bank_re_entry() {
+  bank_counts || return 1
+  open_late_entry || return 1
+  ui tap "text~=Out in"
+  ui wait-gone "text~=Or re-enter a player who is out"
+  ui assert-text "text~=Player 2 re-enters · \$" "text~=$((BANK_LEFT + 1)) of $((BANK_OF + 1)) left" || return 1
+  # The first entry stays out, last of the field now, with nothing to bring back; the new one plays on
+  local place=$((BANK_OF + 1))
+  ui scroll-to "desc=Player 2, out, ${place}th, knocked out by Player 1" --max 4
+  ui assert-text "desc=Player 2, out, ${place}th, knocked out by Player 1" "Entry 2"
+}
+s_bank_re_entry_undo() {
+  # The top bar's Undo (the snackbar may have gone): the new entry goes, the first can come back
+  ui tap "desc~=Undo: Player 2 re-enters"
+  ui wait-gone "Entry 2"
+  bank_counts || return 1
+  ui scroll-to "desc=Player 2, out, ${BANK_OF}th, knocked out by Player 1. Bring back" --max 4
+  ui assert-text "desc=Player 2, out, ${BANK_OF}th, knocked out by Player 1. Bring back"
+}
 s_app_alive() {
   local pid; pid="$(adb_ shell pidof "$APP_ID" | tr -d '\r')"
   [[ -n "$pid" ]] || { echo "app process is not running"; return 1; }
@@ -2318,7 +2369,10 @@ step rail-tools           "Rail: Tools tab"                                     
 step rail-payouts         "Rail: Payouts tab, table adds up"                    s_rail_payouts
 step rail-restored        "Phone width again: bottom bar back, tab kept"        s_rail_restored
 step bank-pko             "PKO: Player 1 takes \$2.50, bounty up to \$7.50"     s_bank_pko
-step app-alive            "App process still alive"                             s_app_alive
+step bank-late-entry      "Clock on; Late entry: Kai joins at today's entry"    s_bank_late_entry
+step bank-re-entry        "Re-entry: Player 2 buys back in; the bust stays"     s_bank_re_entry
+step bank-re-entry-undo   "Undo the re-entry: the first entry can come back"     s_bank_re_entry_undo
+step app-alive           "App process still alive"                             s_app_alive
 
 extra_step live-clock-pause "Pause from the shade: paused, Resume offered"      s_live_clock_pause
 extra_step live-clock-open  "Open: paused on screen too; notification gone"     s_live_clock_open

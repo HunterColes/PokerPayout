@@ -32,6 +32,9 @@ data class SettleUp(val balancesCents: Map<Int, Long>, val transfers: List<Trans
  * the party in the middle: it holds what came in, pays what went out, and keeps the food money, so
  * its balance is whatever squares the rest. When everyone paid in and the Bank pays the winners, the
  * settle-up is just "the Bank pays each winner"; when nobody paid in, the players pay each other.
+ *
+ * A player who re-entered (PP-116) settles once, for all their entries together, under their first
+ * entry's id ([BankPlayer.personId]); each entry owes what it cost to sit down then.
  */
 class SettleUpUseCase @Inject constructor() {
 
@@ -39,11 +42,13 @@ class SettleUpUseCase @Inject constructor() {
     operator fun invoke(settlement: Settlement, players: List<BankPlayer>, money: MoneySettings): SettleUp? {
         if (!settlement.isComplete) return null
         val balances = LinkedHashMap<Int, Long>()
+        val person = BankPlayer.people(players)
         players.forEach { player ->
             val owed = settlement.forPlayer(player.id)?.winningsCents ?: 0L
             val toReceive = if (player.paidOut) 0L else owed
-            val toPay = if (player.boughtIn) 0L else money.entryCents
-            balances[player.id] = toReceive - toPay
+            val toPay = if (player.boughtIn) 0L else player.entry(money).totalCents
+            val party = person.getValue(player.id)
+            balances[party] = (balances[party] ?: 0L) + toReceive - toPay
         }
         balances[SettleUp.BANK_ID] = -balances.values.sum()
         return SettleUp(balances, MinimumPayments.of(balances))

@@ -112,13 +112,14 @@ internal fun PresetsSheet(
     }
 }
 
-/** "Presets", "Save as preset", "Rename preset", "Load Friday?". */
+/** "Presets", "Save as preset", "Rename preset", "Load Friday?", "Load Turbo?". */
 @Composable
 internal fun presetsSheetTitle(state: PresetsUiState, sheet: PresetSheet): String = when (sheet) {
     PresetSheet.List -> stringResource(R.string.presets_title)
     PresetSheet.Save -> stringResource(R.string.presets_save_title)
     is PresetSheet.Rename -> stringResource(R.string.presets_rename_title)
     is PresetSheet.ConfirmLoad -> stringResource(R.string.presets_load_title, state.preset(sheet.id)?.name.orEmpty())
+    is PresetSheet.ConfirmStarter -> stringResource(R.string.presets_load_title, stringResource(sheet.starter.title))
 }
 
 /** What the open sheet shows, under its title: the list, a form, or the load question. */
@@ -145,13 +146,21 @@ internal fun PresetsSheetBody(
                 onConfirm = { onIntent(PresetsIntent.ConfirmLoad(preset.id)) },
             )
         }
+        is PresetSheet.ConfirmStarter -> ConfirmSheetContent(
+            body = stringResource(R.string.presets_load_body),
+            dismissLabel = stringResource(R.string.presets_keep_mine),
+            confirmLabel = stringResource(R.string.presets_load_starter_confirm),
+            onDismiss = { onIntent(PresetsIntent.Open) },
+            onConfirm = { onIntent(PresetsIntent.ConfirmLoadStarter(sheet.starter)) },
+        )
     }
 }
 
 /**
  * Save, share, open a preset file, and the saved presets, the last used first: a tap loads one; ⋮
- * renames, shares as a file or deletes it. Once the clock has started a preset can't be loaded, and
- * the list says why. A preset file that couldn't be opened says why under its button.
+ * renames, shares as a file or deletes it. Then the starters (PP-113): a tap loads one, ⋮ copies it
+ * into the saved presets. Once the clock has started neither can be loaded, and the list says why. A
+ * preset file that couldn't be opened says why under its button.
  */
 @Composable
 private fun PresetsList(state: PresetsUiState, onIntent: (PresetsIntent) -> Unit, onShare: () -> Unit) {
@@ -193,6 +202,7 @@ private fun PresetsList(state: PresetsUiState, onIntent: (PresetsIntent) -> Unit
                 }
             }
         }
+        StartersList(state, onIntent)
     }
 }
 

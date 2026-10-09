@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -340,5 +341,40 @@ class TournamentConfigViewModelTest {
         assertEquals(0, viewModel.state.rebuyPurchases)
         assertEquals(0, bankPreferences.getPlayerRebuys(10))
         assertEquals("Player 10", bankPreferences.getPlayerName(10))
+    }
+
+    // The welcome (PP-113): the app's first start settles it (FirstRun, FirstRunTest)
+
+    @Test
+    fun welcomeShowsOnANewInstallAndOnceDismissedNeverAgain() {
+        timerPreferences.settleWelcome { true }
+        val viewModel = createViewModel()
+        assertTrue(viewModel.state.showWelcome)
+
+        viewModel.send(TournamentConfigIntent.DismissWelcome)
+        assertFalse(viewModel.state.showWelcome)
+        assertFalse("the tab again, the same phone", createViewModel().state.showWelcome)
+        timerPreferences.settleWelcome { true }
+        assertFalse("the next start leaves it dismissed", createViewModel().state.showWelcome)
+    }
+
+    @Test
+    fun welcomeNeverShowsAfterAnUpdate() {
+        timerPreferences.settleWelcome { false }
+        assertFalse(createViewModel().state.showWelcome)
+    }
+
+    @Test
+    fun theFirstClockStartedEndsTheWelcome() {
+        timerPreferences.settleWelcome { true }
+        val viewModel = createViewModel()
+        timerPreferences.setTimerRunning(true)
+        settle()
+        assertFalse(viewModel.state.showWelcome)
+
+        // New tournament…: setup again, without the welcome
+        timerPreferences.resetTimer()
+        tournamentPreferences.resetAllTournamentData()
+        assertFalse(createViewModel().state.showWelcome)
     }
 }

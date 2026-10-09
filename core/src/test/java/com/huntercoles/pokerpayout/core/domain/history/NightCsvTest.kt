@@ -94,12 +94,13 @@ class NightCsvTest {
     fun `the last column is the money symbol the app shows, the amounts plain numbers in every currency`() {
         val night = night("2026-10-05", listOf("Dana", "Marcus"), id = 1, prizes = listOf(7_000L, 3_000L))
         fun firstRow(currency: AppCurrency) = NightCsv.of(listOf(night), currency).split("\r\n")[1]
-        assertEquals("2026-10-05,,100.00,2,1,Dana,2,50.00,0,0.00,0,0.00,50.00,70.00,0,0.00,70.00,20.00,$", firstRow(AppCurrency.DOLLAR))
-        assertEquals("2026-10-05,,100.00,2,1,Dana,2,50.00,0,0.00,0,0.00,50.00,70.00,0,0.00,70.00,20.00,€", firstRow(AppCurrency.EURO))
-        assertEquals("2026-10-05,,100.00,2,1,Dana,2,50.00,0,0.00,0,0.00,50.00,70.00,0,0.00,70.00,20.00,R$", firstRow(AppCurrency.REAL))
+        val amounts = "2026-10-05,,100.00,2,1,Dana,2,50.00,0,0.00,0,0.00,50.00,70.00,0,0.00,70.00,20.00,"
+        assertEquals(amounts + "$", firstRow(AppCurrency.DOLLAR))
+        assertEquals(amounts + "€", firstRow(AppCurrency.EURO))
+        assertEquals(amounts + "R$", firstRow(AppCurrency.REAL))
         // The yen keeps the exact amounts too: the CSV is data, not what the screen rounds
-        assertEquals("2026-10-05,,100.00,2,1,Dana,2,50.00,0,0.00,0,0.00,50.00,70.00,0,0.00,70.00,20.00,¥", firstRow(AppCurrency.YEN))
-        assertEquals("2026-10-05,,100.00,2,1,Dana,2,50.00,0,0.00,0,0.00,50.00,70.00,0,0.00,70.00,20.00,", firstRow(AppCurrency.NONE))
+        assertEquals(amounts + "¥", firstRow(AppCurrency.YEN))
+        assertEquals(amounts, firstRow(AppCurrency.NONE))
         assertEquals("currency", NightCsv.HEADER.last())
         withCurrency(AppCurrency.KRONA) { assertTrue(NightCsv.of(listOf(night)).split("\r\n")[1].endsWith(",kr")) }
     }

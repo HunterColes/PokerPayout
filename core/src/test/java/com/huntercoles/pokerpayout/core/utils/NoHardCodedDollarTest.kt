@@ -20,25 +20,28 @@ class NoHardCodedDollarTest {
 
     private fun File.relative(): String = relativeTo(root).path
 
+    /** Every file with [extension] under [folder] of every module. */
+    private fun filesIn(folder: String, extension: String): List<File> = modules.flatMap { module ->
+        File(module, folder).walkTopDown().filter { it.isFile && it.extension == extension }.toList()
+    }
+
     @Test
     fun `no Kotlin string in the app writes a dollar sign by hand`() {
-        val found = modules
-            .flatMap { module -> File(module, "src/main").walkTopDown().filter { it.isFile && it.extension == "kt" }.toList() }
+        val found = filesIn("src/main", "kt")
             .filter { it.relative() !in ALLOWED }
             .flatMap { file -> dollarLiterals(file.readText()).map { "${file.relative()}: $it" } }
-        assertTrue(found.isEmpty(), "Hard-coded \"$\" (use FormatUtils.formatMoney or the currency's symbol):\n" + found.joinToString("\n"))
+        assertTrue(found.isEmpty(), "Hard-coded \"$\" (use FormatUtils.formatMoney):\n" + found.joinToString("\n"))
     }
 
     @Test
     fun `no string resource writes a dollar sign by hand`() {
-        val found = modules
-            .flatMap { module -> File(module, "src/main/res").walkTopDown().filter { it.isFile && it.extension == "xml" }.toList() }
+        val found = filesIn("src/main/res", "xml")
             .flatMap { file ->
                 file.readText().replace(XML_COMMENT, "").lines().filter { line ->
                     FORMAT_ARGUMENT.replace(line, "").contains('$')
                 }.map { "${file.relative()}: ${it.trim()}" }
             }
-        assertTrue(found.isEmpty(), "Hard-coded \"$\" in resources (pass the amount from FormatUtils.formatMoney):\n" + found.joinToString("\n"))
+        assertTrue(found.isEmpty(), "Hard-coded \"$\" in resources (pass an amount instead):\n" + found.joinToString("\n"))
     }
 
     @Test

@@ -48,6 +48,8 @@ class CurrencyViewModelTest {
         MoneyFormat.current = AppCurrency.DEFAULT
     }
 
+    private fun prefs() = context.getSharedPreferences(CurrencyPreferences.FILE, Context.MODE_PRIVATE)
+
     private fun newViewModel(preferences: CurrencyPreferences = CurrencyPreferences(context)): CurrencyViewModel {
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
@@ -65,7 +67,7 @@ class CurrencyViewModelTest {
 
     @Test
     fun showsThePickSavedBefore() {
-        context.getSharedPreferences(CurrencyPreferences.FILE, Context.MODE_PRIVATE).edit().putString("currency", "rupee").commit()
+        prefs().edit().putString("currency", "rupee").commit()
         assertEquals(AppCurrency.RUPEE, newViewModel().uiState.value.picked)
     }
 
@@ -75,7 +77,7 @@ class CurrencyViewModelTest {
         viewModel.acceptIntent(CurrencyIntent.Pick(AppCurrency.EURO))
         dispatcher.scheduler.advanceUntilIdle()
         assertEquals(AppCurrency.EURO, viewModel.uiState.value.picked)
-        assertEquals("euro", context.getSharedPreferences(CurrencyPreferences.FILE, Context.MODE_PRIVATE).getString("currency", null))
+        assertEquals("euro", prefs().getString("currency", null))
         assertEquals("12,50 €", FormatUtils.formatMoney(1_250))
         // The next start
         MoneyFormat.current = AppCurrency.DEFAULT

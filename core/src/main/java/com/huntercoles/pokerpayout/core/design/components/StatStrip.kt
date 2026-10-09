@@ -133,6 +133,9 @@ private val RuleWidth = 1.dp
 private val ColumnPadding = 6.dp
 private val ValueFloor = 18.dp
 
+/** The previews' prize pool: 450. */
+private const val PREVIEW_POOL_CENTS = 45_000L
+
 @Preview(name = "StatStrip", widthDp = 360, showBackground = true, backgroundColor = 0xFF0B0B0B)
 @Composable
 internal fun StatStripPreview() {
@@ -142,14 +145,14 @@ internal fun StatStripPreview() {
                 stats = listOf(
                     Stat("Players", "7", "of 9"),
                     Stat("Avg stack", "10,714", "18 BB"),
-                    Stat("Prize pool", FormatUtils.formatMoney(45_000L), "3 paid", valueColor = PokerColors.PokerGold),
+                    Stat("Prize pool", FormatUtils.formatMoney(PREVIEW_POOL_CENTS), "3 paid", valueColor = PokerColors.PokerGold),
                 ),
             )
             StatStrip(
                 stats = listOf(
                     Stat("Players", "7", "of 9"),
                     Stat("Avg", "10,714", "18 BB"),
-                    Stat("Pool", FormatUtils.formatMoney(45_000L), "3 paid", valueColor = PokerColors.PokerGold),
+                    Stat("Pool", FormatUtils.formatMoney(PREVIEW_POOL_CENTS), "3 paid", valueColor = PokerColors.PokerGold),
                 ),
                 showSubs = false,
             )

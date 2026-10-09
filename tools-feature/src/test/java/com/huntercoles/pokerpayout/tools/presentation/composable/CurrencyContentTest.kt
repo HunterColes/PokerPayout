@@ -42,7 +42,9 @@ class CurrencyContentTest {
         }
     }
 
-    private fun row(name: String) = compose.onNode(hasText(name) and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+    private val isRadio = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton)
+
+    private fun row(name: String) = compose.onNode(hasText(name) and isRadio)
 
     @Test
     fun everyCurrencyShowsWithASampleWrittenItsWay() {

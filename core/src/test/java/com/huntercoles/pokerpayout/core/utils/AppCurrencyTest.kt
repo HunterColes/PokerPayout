@@ -162,7 +162,10 @@ class AppCurrencyTest {
     fun `saved keys never change`() {
         // Saved data (currency_prefs): renaming one would lose a host's pick on the next update
         assertEquals(
-            listOf("dollar", "euro", "euro_first", "pound", "rupee", "real", "krona", "yen", "yuan", "franc", "zloty", "ruble", "none"),
+            listOf(
+                "dollar", "euro", "euro_first", "pound", "rupee", "real", "krona",
+                "yen", "yuan", "franc", "zloty", "ruble", "none",
+            ),
             AppCurrency.entries.map { it.key },
         )
     }

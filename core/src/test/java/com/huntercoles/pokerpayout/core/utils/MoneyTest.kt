@@ -162,7 +162,8 @@ class MoneyTest {
         assertEquals("12", MoneyInput.format(1_249, Locale.JAPAN, decimals = 0))
         assertEquals("0", MoneyInput.format(0, Locale.JAPAN, decimals = 0))
         listOf(0L, 100L, 300_000L, 99_999_999_900L).forEach { cents ->
-            assertEquals(cents, MoneyInput.parseCents(MoneyInput.format(cents, Locale.JAPAN, decimals = 0), decimals = 0), "$cents")
+            val shown = MoneyInput.format(cents, Locale.JAPAN, decimals = 0)
+            assertEquals(cents, MoneyInput.parseCents(shown, decimals = 0), "$cents")
         }
     }
 

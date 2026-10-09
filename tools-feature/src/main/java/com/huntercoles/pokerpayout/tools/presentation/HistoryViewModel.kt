@@ -103,7 +103,6 @@ class HistoryViewModel @Inject constructor(
         _uiState.update { it.copy(openNight = null) }
         store.delete(id)
         // The newest action gets the snackbar at once: one still up from before goes, its Undo with it
-        snackbars.hostState.currentSnackbarData?.dismiss()
         viewModelScope.launch {
             if (snackbars.showUndo(messages.deleted, messages.undo)) store.put(night)
         }

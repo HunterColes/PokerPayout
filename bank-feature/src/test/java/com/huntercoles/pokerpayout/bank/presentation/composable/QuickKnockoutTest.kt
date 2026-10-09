@@ -287,6 +287,25 @@ class QuickKnockoutTest {
         assertNull("nothing else to undo from the snackbar", kit.snackbars.hostState.currentSnackbarData)
     }
 
+    /**
+     * The clock and the Bank tab share the Bank's one ViewModel (bankViewModel): a knockout from the
+     * clock is the newest action in the Bank's history, and the top bar's Undo takes it back.
+     */
+    @Test
+    fun theBanksUndoTakesBackAKnockoutFromTheClock() {
+        val viewModel = BankScenes.midGame(kit)
+        val before = kit.recorded(viewModel, null)
+        showPanel(viewModel)
+        tap("Theo")
+        tap("Dana")
+        kit.settle() // the snackbar's 8 s are over
+        assertEquals("Theo is out in 7th · bounty to Dana", viewModel.uiState.value.undoLabel)
+
+        viewModel.acceptIntent(BankIntent.Undo)
+        kit.settle()
+        assertEquals(before.copy(prefs = emptyMap()), kit.recorded(viewModel, null).copy(prefs = emptyMap()))
+    }
+
     @Test
     fun backAndCloseRecordNothing() {
         val viewModel = BankScenes.midGame(kit)

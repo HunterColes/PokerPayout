@@ -8,12 +8,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.bank.presentation.BankIntent
 import com.huntercoles.pokerpayout.bank.presentation.BankSheet
 import com.huntercoles.pokerpayout.bank.presentation.BankViewModel
 import com.huntercoles.pokerpayout.core.presentation.TableKnockouts
+import com.huntercoles.pokerpayout.core.presentation.findActivity
 import javax.inject.Inject
 
 /** PP-135: the Bank's knockout, offered to the full-screen clock. */
@@ -33,15 +34,19 @@ class BankTableKnockouts @Inject constructor() : TableKnockouts {
  * before the clock comes back; once it is recorded (and any envelope seen, or put back by Undo),
  * [onClose].
  *
- * [viewModel] is the Tournament tab's own; the Bank tab has another. Both read and write the Bank's
- * records, and each reloads what the other records (forgetting its own Undo history, as for any
- * change made outside it).
+ * [viewModel] is the Bank tab's own ([bankViewModel]): a knockout from the clock is in the Bank's
+ * Undo history, and its top bar's Undo can take it back too.
  */
 @Composable
-fun QuickKnockoutRoute(onClose: () -> Unit, viewModel: BankViewModel = hiltViewModel()) {
+fun QuickKnockoutRoute(onClose: () -> Unit, viewModel: BankViewModel = bankViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    // Put away, the Bank's sheet goes too, so the next knockout starts at "Who's out?"
-    DisposableEffect(viewModel) { onDispose { viewModel.acceptIntent(BankIntent.DismissSheet) } }
+    // Put away, the Bank's sheet goes too, so the next knockout starts at "Who's out?" (a rotation keeps it)
+    val context = LocalContext.current
+    DisposableEffect(viewModel) {
+        onDispose {
+            if (context.findActivity()?.isChangingConfigurations != true) viewModel.acceptIntent(BankIntent.DismissSheet)
+        }
+    }
     var revealing by rememberSaveable { mutableStateOf(false) }
     val close by rememberUpdatedState(onClose)
     LaunchedEffect(viewModel) {

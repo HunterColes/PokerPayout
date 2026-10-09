@@ -5,6 +5,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -42,10 +43,10 @@ fun QuickKnockoutRoute(onClose: () -> Unit, viewModel: BankViewModel = hiltViewM
     // Put away, the Bank's sheet goes too, so the next knockout starts at "Who's out?"
     DisposableEffect(viewModel) { onDispose { viewModel.acceptIntent(BankIntent.DismissSheet) } }
     var revealing by rememberSaveable { mutableStateOf(false) }
-    if (revealing && viewModel.uiState.value.sheet !is BankSheet.Envelope) {
-        // The envelope seen, or put back in the pool by Undo
-        LaunchedEffect(Unit) { onClose() }
-        return
+    val close by rememberUpdatedState(onClose)
+    LaunchedEffect(viewModel) {
+        // The envelope seen (Close), or put back in the pool by Undo: the clock again
+        viewModel.uiState.collect { if (revealing && it.sheet !is BankSheet.Envelope) close() }
     }
     QuickKnockoutOverlay(
         state = state,

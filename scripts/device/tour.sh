@@ -775,6 +775,8 @@ s_table_view_knockout() {
   ui wait "text=Who knocked Player 10 out?"
   ui assert-text "text=10TH PLACE" "re=^Nobody" "desc=Back to who's out" "desc=Close knockout" || return 1
   ui tap "text=Player 1" --scroll-in scrollable
+  adb_ exec-out screencap -p > "$OUT/table-view-knockout-recorded.png" || true   # PP-135 diagnosis
+  ui texts | head -30
   ui wait-gone "text=Who knocked Player 10 out?"
   ui assert-text "text~=Player 10 is out in 10th" text=UNDO "text~=9 of 10 left" "desc=Exit table view" || return 1
   require_landscape

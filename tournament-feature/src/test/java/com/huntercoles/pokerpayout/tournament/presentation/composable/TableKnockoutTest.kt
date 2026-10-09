@@ -122,7 +122,10 @@ class TableKnockoutTest {
         val snackbars = SnackbarHostState()
         compose.setContent {
             PokerTheme(reducedMotion = true) {
-                CompositionLocalProvider(LocalTableKnockouts provides FakeTableKnockouts, LocalShellSnackbars provides snackbars) {
+                CompositionLocalProvider(
+                    LocalTableKnockouts provides FakeTableKnockouts,
+                    LocalShellSnackbars provides snackbars,
+                ) {
                     TableViewContent(fixture.running.copy(isTableView = true), onIntent = {}, onExit = {})
                 }
                 LaunchedEffect(snackbars) {

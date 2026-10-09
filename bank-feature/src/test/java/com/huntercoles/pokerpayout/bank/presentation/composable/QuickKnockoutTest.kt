@@ -2,9 +2,13 @@ package com.huntercoles.pokerpayout.bank.presentation.composable
 
 import android.content.Context
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -25,6 +29,11 @@ import com.huntercoles.pokerpayout.bank.presentation.BankTestKit
 import com.huntercoles.pokerpayout.bank.presentation.BankViewModel
 import com.huntercoles.pokerpayout.bank.presentation.PlayerData
 import com.huntercoles.pokerpayout.core.design.PokerTheme
+import com.huntercoles.pokerpayout.core.design.components.LocalShellSnackbars
+import com.huntercoles.pokerpayout.core.design.components.PokerAppShell
+import com.huntercoles.pokerpayout.core.design.components.PokerSnackbarHost
+import com.huntercoles.pokerpayout.core.design.components.RequestShellChrome
+import com.huntercoles.pokerpayout.core.design.components.pokerNavItems
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.PayoutTable
 import kotlinx.coroutines.Dispatchers
@@ -310,6 +319,42 @@ class QuickKnockoutTest {
             SemanticsMatcher("knocks Theo out") { it.config[SemanticsActions.OnClick].label == "Knock out Theo" },
         )
         assertTrue(viewModel.uiState.value.sheet !is BankSheet.Knockout)
+    }
+
+    /**
+     * As on the full-screen clock: the app's shell asked for the whole window, which hosts the
+     * app's snackbars itself (the table view's TableSnackbars, here a plain host). The Undo after a
+     * knockout from the panel shows there.
+     */
+    @Test
+    fun theUndoShowsOnAScreenThatHasTheWholeWindow() {
+        val viewModel = BankScenes.midGame(kit)
+        open = true
+        compose.setContent {
+            PokerTheme(reducedMotion = true) {
+                PokerAppShell(
+                    items = pokerNavItems(),
+                    selectedIndex = 0,
+                    onSelect = {},
+                    snackbarHostState = kit.snackbars.hostState,
+                ) {
+                    RequestShellChrome(immersive = true)
+                    Box(Modifier.fillMaxSize()) {
+                        if (open) QuickKnockoutRoute(onClose = { open = false }, viewModel = viewModel)
+                        LocalShellSnackbars.current?.let { PokerSnackbarHost(it, Modifier.align(Alignment.BottomStart)) }
+                    }
+                }
+            }
+        }
+        sync()
+        tap("Theo")
+        tap("Dana")
+        assertTrue("closed", !open)
+        compose.onNodeWithText("Theo is out in 7th · bounty to Dana").assertIsDisplayed()
+        compose.onNodeWithText("UNDO").performClick()
+        sync()
+        kit.settle()
+        assertTrue("Theo is back in", !viewModel.uiState.value.players.first { it.id == THEO }.out)
     }
 
     private companion object {

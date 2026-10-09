@@ -180,7 +180,7 @@ private fun ColumnScope.WhoKnockedOut(sheet: BankSheet.Knockout, onIntent: (Bank
         }
     }
     ChoiceTile(
-        choice = PanelChoice(playerId = null, label = nobodyLabel(sheet), muted = true, icon = PokerIcons.Person),
+        choice = PanelChoice(playerId = null, label = nobodyLabel(sheet), muted = true),
         onClick = { credit(null) },
         modifier = Modifier.fillMaxWidth(),
     )
@@ -215,16 +215,18 @@ private fun PanelHeader(title: String, onClose: () -> Unit, onBack: (() -> Unit)
     }
 }
 
-/** One choice: a player (or Nobody), their knockouts so far and an optional second line. */
+/** One choice: a player (or Nobody, with no id), their knockouts so far and an optional second line. */
 private class PanelChoice(
     val playerId: Int?,
     val label: String,
     val knockouts: Int = 0,
     val detail: String? = null,
     val muted: Boolean = false,
-    val icon: ImageVector? = null,
     val clickLabel: String? = null,
-)
+) {
+    /** Nobody shows a person; a player's name stands alone. */
+    val icon: ImageVector? get() = if (playerId == null) PokerIcons.Person else null
+}
 
 /**
  * The choices, scrolling when they don't fit: two to a row where the panel is wide enough at the

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12 and up: the system splash screen shows the app icon on the felt green too. -->
+    <style name="Theme.PokerPayout" parent="Base.Theme.PokerPayout">
+        <item name="android:windowSplashScreenBackground">@color/poker_felt_green</item>
+    </style>
+</resources>

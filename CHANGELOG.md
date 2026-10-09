@@ -3,6 +3,21 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.4 (on master, not published)
+
+House cleaning:
+
+- **Mystery bounties:** once an envelope is drawn, the player count can't go lower (fewer players
+  would deal fewer envelopes and could leave the champion's pool at $0); the Players hint says so.
+  A late entry still comes in, and Undo or a new tournament lifts it. Loading a preset keeps the
+  bounty that dealt the envelopes.
+- **No white flash at launch:** the launch screen, and Android 12's splash, are the felt green.
+- **Snackbars:** a new one replaces the one showing at once, on every screen, instead of waiting
+  behind it; the one replaced takes its Undo with it.
+- Under the hood: release.sh finds the last release by the highest version tag, the device tour's
+  break check allows any time up to 10:00, unused and duplicate launcher drawables are gone, and
+  the changelog marks 1.3.14 as published.
+
 ## 1.4.3 (on master, not published)
 
 - **Shot clock** (Tools): a countdown for each decision, 30, 45 or 60 seconds. The whole face is one
@@ -68,6 +83,11 @@ F-Droid) only when it has a tag. Published versions link to their release notes.
 - Gone with the cash page: free-amount buy-ins and top-ups, the chip count check and splitting a
   difference. A cash game saved by 1.3.14 is left untouched on the phone and no longer shown.
 - The store listing's fifth picture is now the settle-up.
+
+## [1.3.14](https://github.com/HunterColes/PokerPayout/releases/tag/v1.3.14) (2026-10-07)
+
+A new look, cash games and a clock on your lock screen: everything in 1.3.1 to 1.3.13 below,
+published as one release.
 
 ## 1.3.13 (on master, not published)
 

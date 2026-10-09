@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tournament.presentation.composable
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -82,7 +83,7 @@ internal fun SetupContent(
         ) {
             ReadyTicket(timer)
             PresetsRow(midGame = false, onOpen = { actions.onPresetIntent(PresetsIntent.Open) })
-            PlayersCard(setup.playerCount, hint = stringResource(R.string.setup_players_hint)) {
+            PlayersCard(setup, hint = R.string.setup_players_hint) {
                 actions.onSetupIntent(TournamentConfigIntent.UpdatePlayerCount(it))
             }
             var moneyOpen by rememberSaveable { mutableStateOf(true) }
@@ -170,16 +171,21 @@ internal fun SetupSection(
     }
 }
 
-/** "Players · Bank gets one row per player" with a stepper. Mid-game: "A late entry adds a Bank row". */
+/**
+ * "Players · Bank gets one row per player" with a stepper. Mid-game: "A late entry adds a Bank row".
+ * Once a mystery envelope is drawn the count can't go lower (PP-035): minus is off and the hint says why.
+ */
 @Composable
 internal fun PlayersCard(
-    count: Int,
-    hint: String,
+    setup: TournamentConfigUiState,
+    @StringRes hint: Int,
     modifier: Modifier = Modifier,
     framed: Boolean = true,
     onChange: (Int) -> Unit,
 ) {
     val label = stringResource(R.string.setup_players)
+    val count = setup.playerCount
+    val cantGoLower = setup.playerCountCantGoLower
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -198,9 +204,14 @@ internal fun PlayersCard(
     ) {
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite)
-            Text(hint, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
+            Text(
+                text = stringResource(if (cantGoLower) R.string.setup_players_envelopes_drawn else hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = PokerColors.Chalk,
+            )
         }
-        PokerStepper(value = count, onValueChange = onChange, range = PlayerRange, label = label)
+        val lowest = if (cantGoLower) count else PlayerRange.first
+        PokerStepper(value = count, onValueChange = onChange, range = lowest..PlayerRange.last, label = label)
     }
 }
 

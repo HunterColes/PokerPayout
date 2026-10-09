@@ -3,6 +3,21 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.9 (on master, not published)
+
+A restored phone asks for notifications again:
+
+- **The live clock on a new phone:** a phone restored from Google's backup, or moved by cable or
+  Wi-Fi, came back sure it had already asked for notifications, so it never asked and the live clock
+  stayed out of the shade and the lock screen. The app now asks Android each time instead of
+  remembering, so the first Start on a new or restored phone asks. A phone that already said no isn't
+  asked again; if the question was closed without an answer, it comes back at the next game's first
+  Start.
+- **The music stays on its phone:** the playlist and where a song was paused are no longer copied
+  by Android's backup or a move to a new phone, since the songs picked are that phone's own files
+  and can't play on another. They move once into a file of their own, keeping everything as it was
+  on this phone. Your settings, presets, History and tonight's game still travel.
+
 ## 1.4.8 (on master, not published)
 
 Three new tools for the table, in Tools:

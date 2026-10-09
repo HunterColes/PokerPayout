@@ -15,6 +15,16 @@ class PurchaseWindowTest {
     fun `no cutoff is open all night, started or not`() {
         assertEquals(PurchaseWindow.NoCutoff, PurchaseWindow.rebuys(0, at(20)))
         assertEquals(PurchaseWindow.NoCutoff, PurchaseWindow.addOns(0, at(20, finished = true)))
+        assertEquals(PurchaseWindow.NoCutoff, PurchaseWindow.lateEntries(0, at(20)))
+    }
+
+    /** PP-116: late entry until level 3 is open through level 3 and closes when it ends, as rebuys do. */
+    @Test
+    fun `late entry is open through the cutoff level and closes when it ends`() {
+        assertEquals(listOf(true, true, true, false, false), (1..5).map { PurchaseWindow.lateEntries(3, at(it)).isOpen })
+        assertEquals(PurchaseWindow.OpenUntilLevel(3), PurchaseWindow.lateEntries(3, ClockStatus.NOT_STARTED))
+        assertEquals(PurchaseWindow.ClosedAfterLevel(4), PurchaseWindow.lateEntries(4, at(4, onBreak = true)))
+        assertEquals(PurchaseWindow.ClosedAfterLevel(4), PurchaseWindow.lateEntries(4, at(2, finished = true)))
     }
 
     @Test

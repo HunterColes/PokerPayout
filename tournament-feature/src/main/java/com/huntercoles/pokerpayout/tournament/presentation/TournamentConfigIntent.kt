@@ -40,6 +40,9 @@ sealed class TournamentConfigIntent {
     data class UpdateSmallestChip(val chip: Int) : TournamentConfigIntent()
     data class UpdateStartingChips(val chips: Int) : TournamentConfigIntent()
     data class UpdateSelectedPanel(val panel: String) : TournamentConfigIntent()
+
+    /** The last level at which a player can join late or re-enter (PP-116); 0 = no cutoff. */
+    data class UpdateLateEntryUntil(val level: Int) : TournamentConfigIntent()
     object ShowResetDialog : TournamentConfigIntent()
     object HideResetDialog : TournamentConfigIntent()
     object ConfirmReset : TournamentConfigIntent()

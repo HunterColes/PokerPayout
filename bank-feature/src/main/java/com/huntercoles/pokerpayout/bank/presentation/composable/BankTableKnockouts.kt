@@ -36,6 +36,9 @@ class BankTableKnockouts @Inject constructor() : TableKnockouts {
  *
  * [viewModel] is the Bank tab's own ([bankViewModel]): a knockout from the clock is in the Bank's
  * Undo history, and its top bar's Undo can take it back too.
+ *
+ * While late entry is open and someone is out, "Who's out?" also offers Re-entry (PP-116): who is
+ * back in, then the clock again, the Bank's own re-entry with Undo on the snackbar.
  */
 @Composable
 fun QuickKnockoutRoute(onClose: () -> Unit, viewModel: BankViewModel = bankViewModel()) {
@@ -57,9 +60,13 @@ fun QuickKnockoutRoute(onClose: () -> Unit, viewModel: BankViewModel = bankViewM
         state = state,
         onIntent = { intent ->
             viewModel.acceptIntent(intent)
-            if (intent is BankIntent.KnockOut) {
+            when (intent) {
                 // Recorded: the clock again, unless a mystery envelope was drawn to show first
-                if (viewModel.uiState.value.sheet is BankSheet.Envelope) revealing = true else onClose()
+                is BankIntent.KnockOut ->
+                    if (viewModel.uiState.value.sheet is BankSheet.Envelope) revealing = true else onClose()
+                // A re-entry (PP-116), recorded: the clock again
+                is BankIntent.ReEnter -> onClose()
+                else -> Unit
             }
         },
         onClose = onClose,

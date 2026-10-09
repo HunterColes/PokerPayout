@@ -36,8 +36,8 @@ android {
         applicationId = "com.huntercoles.pokerpayout"
         minSdk = 26
         targetSdk = 34
-        versionCode = 53
-        versionName = "1.4.12"
+        versionCode = 55
+        versionName = "1.4.14"
 
         // The app is in English only, so the libraries' own strings (Compose and Material's
         // accessibility words, in about 80 languages) stay out of the APK: resources.arsc went

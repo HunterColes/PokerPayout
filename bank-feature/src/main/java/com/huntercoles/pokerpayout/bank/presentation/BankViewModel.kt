@@ -7,7 +7,7 @@ import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatusProvider
-import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
+import com.huntercoles.pokerpayout.core.domain.model.EntryPrice
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import com.huntercoles.pokerpayout.core.domain.model.ProgressiveBounty
 import com.huntercoles.pokerpayout.core.domain.model.PurchaseWindow
@@ -48,6 +48,12 @@ import javax.inject.Inject
  *   Undo and a restart give them back exactly. A mystery knockout draws its envelope when it is
  *   recorded, keeps it with the knocked-out player, and shows it ([BankSheet.Envelope]); Undo or
  *   Bring back puts the envelope back in the pool.
+ * - **Late entries and re-entries** (PP-116). Once the clock is running and until "late entry until"
+ *   closes ([PurchaseWindow.lateEntries]), a player who arrives late joins as one more entry, and a
+ *   player who is out can buy back in as a new entry. Either pays today's entry (recorded at that
+ *   price) and starts with a stack; the row count, and with it the Tournament's player count, goes
+ *   up by one, so places, payouts, bounties and the players left all count entries. A re-entry's
+ *   earlier entry keeps its knockout and place. Undo takes either back, row and all.
  * - **Settle up.** Once the night is over, who pays whom so that everyone is square
  *   ([SettleUpUseCase]; the Bank is a party), with a tick per payment. Ticks are part of what Undo
  *   restores; a tick goes when its payment drops out of the settle-up (something else changed), and
@@ -113,10 +119,14 @@ class BankViewModel @Inject constructor(
             }
         }
 
-        // The rebuy and add-on cutoffs follow the clock and the "rebuys until" setting.
+        // The rebuy, add-on and late entry cutoffs follow the clock and the "until" settings.
         viewModelScope.launch {
-            clockStatus.status.combine(tournamentPreferences.rebuyUntilLevel) { clock, cutoff -> clock to cutoff }
-                .collect { (clock, cutoff) -> updateWindows(clock, cutoff) }
+            combine(
+                clockStatus.status,
+                tournamentPreferences.rebuyUntilLevel,
+                tournamentPreferences.lateEntryUntilLevel,
+            ) { clock, rebuyCutoff, lateCutoff -> Triple(clock, rebuyCutoff, lateCutoff) }
+                .collect { (clock, rebuyCutoff, lateCutoff) -> updateWindows(clock, rebuyCutoff, lateCutoff) }
         }
 
         viewModelScope.launch {
@@ -154,6 +164,9 @@ class BankViewModel @Inject constructor(
             is BankIntent.BringBack -> bringBack(intent.playerId)
             is BankIntent.OpenPayOut -> openPayOut(intent.playerId)
             is BankIntent.SetPaid -> setPaid(intent.playerId, intent.paid)
+            BankIntent.OpenLateEntry -> openLateEntry()
+            is BankIntent.AddLateEntry -> addLateEntry(intent.name)
+            is BankIntent.ReEnter -> reEnter(intent.playerId)
             BankIntent.ShowPoolBreakdown -> showSheet(BankSheet.PoolBreakdown)
             BankIntent.ShowPayoutStructure -> showSheet(BankSheet.PayoutStructure)
             BankIntent.ShowSettleUp -> if (_uiState.value.settleUp != null) showSheet(BankSheet.SettleUp)
@@ -184,7 +197,9 @@ class BankViewModel @Inject constructor(
         addOnPrices = bankPreferences.getPlayerAddonPrices(playerId),
         eliminatedBy = bankPreferences.getPlayerEliminatedBy(playerId),
         outLevel = bankPreferences.getPlayerOutLevel(playerId),
-        bountyDrawCents = bankPreferences.getPlayerBountyDraw(playerId)
+        bountyDrawCents = bankPreferences.getPlayerBountyDraw(playerId),
+        entryPrice = bankPreferences.getPlayerEntryPrice(playerId),
+        reEntryOf = bankPreferences.getPlayerReEntryOf(playerId)
     )
 
     /** The stored elimination order, limited to [players] and including every player marked out. */
@@ -292,7 +307,7 @@ class BankViewModel @Inject constructor(
         val message = if (player.buyIn) {
             feedback.buyInCleared(player.name)
         } else {
-            feedback.buyIn(player.name, _uiState.value.money.entryCents)
+            feedback.buyIn(player.name, player.entryCents(_uiState.value.money))
         }
         record(message) { players, order -> players.replace(player.copy(buyIn = !player.buyIn)) to order }
     }
@@ -355,8 +370,9 @@ class BankViewModel @Inject constructor(
                 playerId = playerId,
                 name = player.name,
                 place = state.activePlayers,
-                // Progressive: the bounty on this player's head now, grown by their own knockouts
-                bountyCents = if (state.bountyMode == BountyMode.PROGRESSIVE) headBounty(playerId) else state.money.bountyCents,
+                // The bounty on this player's head now: progressive, grown by their own knockouts; a
+                // late entry's, what it paid (PP-116). Mystery: a knockout draws an envelope instead.
+                bountyCents = if (state.bountyMode == BountyMode.MYSTERY) state.money.bountyCents else headBounty(playerId),
                 candidates = candidates,
                 preselectedId = player.eliminatedBy?.takeIf { previous -> candidates.any { it.playerId == previous } },
                 mode = state.bountyMode,
@@ -438,9 +454,63 @@ class BankViewModel @Inject constructor(
 
     private fun bringBack(playerId: Int) {
         val player = player(playerId)?.takeIf { it.out } ?: return
+        // A player who re-entered since is in on their new entry; this one stays out (PP-116)
+        if (playerId in BankEntries.replaced(_uiState.value.players)) return
         // Back in: the knockout, its credit and any envelope drawn for it are taken back
         val backIn = player.copy(out = false, eliminatedBy = null, outLevel = null, bountyDrawCents = null)
         record(feedback.backIn(player.name)) { players, order -> players.replace(backIn) to (order - playerId) }
+    }
+
+    // Late entries and re-entries (PP-116) -------------------------------------------------------
+
+    private fun openLateEntry() {
+        val state = _uiState.value
+        if (!state.canTakeLateEntry) return
+        showSheet(BankSheet.LateEntry(EntryPrice.of(state.money), startingStack(), state.lateEntryWindow))
+    }
+
+    /** The stack a new entry starts with: the clock's, as it was set when it started. */
+    private fun startingStack(): Int = if (timerPreferences.getHasTimerStarted()) {
+        timerPreferences.getStartingChipsAtStart()
+    } else {
+        tournamentPreferences.getStartingChips()
+    }
+
+    /**
+     * A player who arrived late: one more entry, with [name], the buy-in paid at today's price and a
+     * starting stack. The player count goes up with it, so the places, the payouts, the players left
+     * and the average stack all count the new entry.
+     */
+    private fun addLateEntry(name: String) {
+        val state = _uiState.value
+        showSheet(null)
+        if (!state.canTakeLateEntry) return
+        val entry = BankEntries.lateArrival(state.players, name, state.money)
+        addEntry(entry, feedback.lateEntry(entry.name, entry.entryCents(state.money)))
+    }
+
+    /**
+     * [playerId]'s player, who is out, buys back in: a new entry under the same name, with a new
+     * stack and the buy-in paid at today's price. The entry that went out keeps its knockout, its
+     * bounty's winner and its place.
+     */
+    private fun reEnter(playerId: Int) {
+        val state = _uiState.value
+        showSheet(null)
+        if (!state.canTakeLateEntry) return
+        val latest = state.reEntries.firstOrNull { it.playerId == playerId } ?: return
+        val entry = BankEntries.reEntry(state.players, latest, state.money)
+        addEntry(entry, feedback.reEntry(entry.name, entry.entryCents(state.money)))
+    }
+
+    /**
+     * Records [entry] as the newest row; its name is saved at once, as a rename is (not part of Undo),
+     * and joins the regulars (PP-110) like any name the Bank uses.
+     */
+    private fun addEntry(entry: PlayerData, message: String) {
+        bankPreferences.savePlayerName(entry.id, entry.name)
+        if (!PlayerNames.isPlaceholder(entry.name)) regulars.remember(entry.name)
+        record(message) { players, order -> (players + entry) to order }
     }
 
     private fun openPayOut(playerId: Int) {
@@ -459,7 +529,9 @@ class BankViewModel @Inject constructor(
                 rebuys = player.rebuys,
                 addOns = player.addons,
                 unclaimedKnockouts = if (playerId == state.championId) unclaimed else 0,
-                envelopesLeft = state.envelopesLeft.size
+                envelopesLeft = state.envelopesLeft.size,
+                entry = player.entryPrice ?: EntryPrice.of(state.money),
+                knockoutEachCents = BankEntries.knockoutEach(state, playerId, ::headBounty)
             )
         )
     }
@@ -553,18 +625,26 @@ class BankViewModel @Inject constructor(
         offerUndo(entry)
     }
 
-    /** State first, then preferences: a write bumps the Bank revision, and its reload must find nothing new. */
+    /**
+     * State first, then preferences: a write bumps the Bank revision, and its reload must find nothing
+     * new. A late entry or re-entry (or Undo taking one back) changes the number of rows, and with it
+     * the Tournament's player count, last, so the count's change finds the rows already there.
+     */
     private fun save(after: BankSnapshot) {
         val before = _uiState.value.players.associateBy { it.id }
+        val count = after.players.size
         ownWrites++
         try {
             _uiState.update {
                 it.copy(players = after.players, eliminationOrder = after.eliminationOrder, settlePaid = after.settlePaid)
             }
+            // Rows taken back by Undo go for good, names included
+            if (count < before.size) bankPreferences.removePlayersAbove(count)
             after.players.forEach { player -> persist(before[player.id], player) }
             val order = after.eliminationOrder
             if (order != bankPreferences.getEliminationOrder()) bankPreferences.saveEliminationOrder(order)
             if (after.settlePaid != bankPreferences.getSettlePaid()) bankPreferences.saveSettlePaid(after.settlePaid)
+            if (count != tournamentPreferences.getPlayerCount()) tournamentPreferences.setPlayerCount(count)
         } finally {
             ownWrites--
         }
@@ -581,6 +661,8 @@ class BankViewModel @Inject constructor(
         if (before?.rebuyPrices != after.rebuyPrices) bankPreferences.savePlayerRebuyPrices(id, after.rebuyPrices)
         if (before?.addOnPrices != after.addOnPrices) bankPreferences.savePlayerAddonPrices(id, after.addOnPrices)
         if (before?.bountyDrawCents != after.bountyDrawCents) bankPreferences.savePlayerBountyDraw(id, after.bountyDrawCents)
+        if (before?.entryPrice != after.entryPrice) bankPreferences.savePlayerEntryPrice(id, after.entryPrice)
+        if (before?.reEntryOf != after.reEntryOf) bankPreferences.savePlayerReEntryOf(id, after.reEntryOf)
     }
 
     /** One snackbar at a time: a new action replaces the last one's snackbar (it stays in the history). */
@@ -619,12 +701,13 @@ class BankViewModel @Inject constructor(
 
     // Calculations --------------------------------------------------------------------------------
 
-    private fun updateWindows(clock: ClockStatus, cutoffLevel: Int) {
+    private fun updateWindows(clock: ClockStatus, cutoffLevel: Int, lateEntryCutoff: Int) {
         _uiState.update {
             it.copy(
                 clock = clock,
                 rebuyWindow = PurchaseWindow.rebuys(cutoffLevel, clock),
-                addOnWindow = PurchaseWindow.addOns(cutoffLevel, clock)
+                addOnWindow = PurchaseWindow.addOns(cutoffLevel, clock),
+                lateEntryWindow = PurchaseWindow.lateEntries(lateEntryCutoff, clock)
             )
         }
         updateCalculations()
@@ -637,7 +720,9 @@ class BankViewModel @Inject constructor(
         eliminatedBy = eliminatedBy,
         rebuyPricesCents = rebuyPrices,
         addOnPricesCents = addOnPrices,
-        bountyDrawCents = bountyDrawCents
+        bountyDrawCents = bountyDrawCents,
+        entryPrice = entryPrice,
+        reEntryOf = reEntryOf
     )
 
     /** Recomputes every amount and every row from one settlement of the current state. */
@@ -660,6 +745,8 @@ class BankViewModel @Inject constructor(
         val plan = settleUp(result, bankPlayers, config.money)
         val ticks = keptTicks(state.settlePaid, plan)
         _uiState.update {
+            // Late entry (PP-116) closes at the cutoff, and while someone has won (as this settlement has it)
+            val lateEntryOpen = it.copy(championId = result.championId).canTakeLateEntry
             it.copy(
                 pool = result.pool,
                 totalPaidInCents = result.paidInCents,
@@ -678,9 +765,16 @@ class BankViewModel @Inject constructor(
                 canReset = canReset,
                 undoLabel = undoStack.lastOrNull()?.message,
                 envelopesLeft = result.envelopesLeft,
-                settleUp = plan?.let { settleUpModel(it, result, state.players, config.money) },
+                reEntries = if (lateEntryOpen) {
+                    BankEntries.reEntries(state.players, state.eliminationOrder, result.standings.placeByPlayer)
+                } else {
+                    emptyList()
+                },
+                settleUp = plan?.let { BankEntries.settleUpModel(it, result, state.players, config.money) },
                 settlePaid = ticks,
-                sheet = it.sheet.takeUnless { sheet -> sheet == BankSheet.SettleUp && plan == null }
+                sheet = it.sheet.takeUnless { sheet ->
+                    (sheet == BankSheet.SettleUp && plan == null) || (sheet is BankSheet.LateEntry && !lateEntryOpen)
+                }
             )
         }
     }
@@ -694,16 +788,6 @@ class BankViewModel @Inject constructor(
         if (kept != ticks) bankPreferences.saveSettlePaid(kept)
         return kept
     }
-
-    private fun settleUpModel(plan: SettleUp, result: Settlement, players: List<PlayerData>, money: MoneySettings) =
-        SettleUpModel(
-            transfers = plan.transfers,
-            nights = players.map { player ->
-                val owed = result.forPlayer(player.id)
-                PlayerNight(player.id, player.name, owed?.costCents ?: money.entryCents, owed?.winningsCents ?: 0L)
-            },
-            foodCents = result.pool.foodCents
-        )
 
     private companion object {
         /** How many actions Undo can take back. */

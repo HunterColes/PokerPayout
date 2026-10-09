@@ -3,6 +3,43 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.14 (on master, not published)
+
+Tip the dealer, a friendly way to support the app:
+
+- **Tip the dealer in Tools:** a quiet row at the foot of the list, next to the app's promise. Its
+  page has the donation page (it opens in your browser; the app still has no internet permission)
+  and the Ethereum and Monero addresses with their QR codes, which work offline. Copy puts an
+  address on the clipboard and says "Copied". Telling a friend, a star and an idea are there too.
+- **One gentle card, at most twice:** after the third night saved to History, "Tip the dealer?"
+  sits under "Saved to History" on the Payouts tab, with Leave a tip, Not now and Don't ask again,
+  each one tap. It never shows on the app's first run or while the clock runs, comes at most twice
+  (three nights apart), and Don't ask again ends it for good. The answer stays on this phone: a
+  backup file never brings the card back, and Android's own backup keeps it on a new phone.
+
+## 1.4.13 (on master, not published)
+
+Late arrivals and re-entries:
+
+- **Late entry in the Bank:** once the clock runs, Late entry under the list takes a player who
+  arrives late: their name, the buy-in paid at today's price ("Add · $50 paid") and a starting
+  stack. One tap re-enters a player who is out as a new entry, with a new stack and a new buy-in;
+  the entry that went out keeps its place and who knocked it out, and the new one says "Entry 2".
+  Undo takes either back.
+- **Late entry until:** a cutoff beside "Rebuys until" in setup (and in the panel over a running
+  clock): no cutoff, or the end of a level. Re-entries follow it too. Presets save it; older
+  presets load with no cutoff.
+- **Re-entry on the clock:** the full-screen clock's Knock out offers Re-entry while anyone is out:
+  who's back in, one tap, and the clock again.
+- **Every amount counts entries:** the prize pool, the places paid, the payouts, the players left
+  and the average stack all count each entry; each entry keeps the price it paid, as rebuys do. A
+  knockout pays the bounty of the entry knocked out; a progressive re-entry starts with a fresh
+  bounty; in a mystery game a late entry or re-entry adds one envelope with its bounty and never
+  deals the others again.
+- **One player, one line:** a player who re-entered settles up once for both entries, History lists
+  them once at their best place (season points once), and the seat draw, the time bank and the
+  deal maker name them once.
+
 ## 1.4.12 (on master, not published)
 
 Regulars: tonight's players in a few taps:

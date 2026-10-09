@@ -269,6 +269,30 @@ class BankScreensTest(private val config: ScreenConfig) {
         check("Settle-up sheet, square")
     }
 
+    // Late entries and re-entries (PP-116, S27) -------------------------------------------------------
+
+    /** Kai joined late and Rita re-entered: her second entry plays on ("Entry 2"), her first is out. */
+    @Test
+    fun lateEntries() {
+        show(BankScenes.lateEntries(kit).state())
+        screen.compose.onNode(hasScrollToIndexAction()).performScrollToIndex(LAST_ROWS)
+        screen.compose.waitForIdle()
+        golden("S27_bank_late_entries")
+        check("Bank with a late entry and a re-entry")
+    }
+
+    /** S27: Kai's name typed; Rita and Ben, who are out, can re-enter. */
+    @Test
+    fun lateEntrySheet() {
+        val state = BankScenes.lateEntrySheet(kit).state()
+        val sheet = state.sheet as BankSheet.LateEntry
+        show(state) {
+            LateEntrySheetContent(sheet, state.reEntries, onAdd = {}, onReEnter = {}, onDismiss = {}, initialName = "Kai")
+        }
+        golden("S27_late_entry_sheet")
+        check("Late entry sheet")
+    }
+
     // Progressive and mystery bounties (PP-035) ------------------------------------------------------
 
     /** Progressive bounties: every player still in shows the bounty on their head under their name. */
@@ -329,6 +353,9 @@ class BankScreensTest(private val config: ScreenConfig) {
 
     companion object {
         private const val SCRIM = 0.62f
+
+        /** Far enough down the list to show the last rows, Late entry and its cutoff. */
+        private const val LAST_ROWS = 14
 
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")

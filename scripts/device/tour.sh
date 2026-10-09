@@ -1268,7 +1268,9 @@ s_sound_on() {
 s_hand_ranks() {
   # S12: a tool's screen keeps Tools selected (B16) and has a back arrow. Each hand shows how often
   # it comes up by the river: the royal flush is 1 in 30,940 of the 133,784,560 seven-card hands.
-  ui scroll-to "text=Hand ranks" --dir up --max 6     # back up from the Sound section
+  # Back to the top of the list from the Sound section, as the steps after expect (Odds in view)
+  ui scroll up --times 4
+  ui scroll-to text=Odds --dir up --max 4
   ui tap "text=Hand ranks"
   ui assert-text "Best to worst" desc=Back "re=Royal flush" "re=1 in 30,940" || return 1
   require_tab_selected Tools || return 1

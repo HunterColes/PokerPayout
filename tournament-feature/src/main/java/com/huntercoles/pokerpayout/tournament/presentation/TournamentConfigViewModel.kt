@@ -50,7 +50,9 @@ class TournamentConfigViewModel @Inject constructor(
 
         // The late entry cutoff (PP-116), as set here and as a new tournament clears it
         viewModelScope.launch {
-            tournamentPreferences.lateEntryUntilLevel.collect { level -> _uiState.update { it.copy(lateEntryUntilLevel = level) } }
+            tournamentPreferences.lateEntryUntilLevel.collect { level ->
+                _uiState.update { it.copy(lateEntryUntilLevel = level) }
+            }
         }
 
         // The pool and the payout table follow every settings change (including the Bank's

@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout.core.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
 import com.huntercoles.pokerpayout.core.domain.model.EntryPrice
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
@@ -157,6 +158,25 @@ class BankPreferences @Inject constructor(
 
     /** The recorded prices of the late entries and re-entries among players 1 to [playerCount] (PP-116). */
     fun getRecordedEntryPrices(playerCount: Int): List<EntryPrice> = (1..playerCount).mapNotNull(::getPlayerEntryPrice)
+
+    /**
+     * Entries 1 to [playerCount] as the settlement reads them, for screens that settle the Bank
+     * without it (the Payouts tab, the deal maker): with each late entry's price and who each
+     * re-entry belongs to (PP-116), so they settle exactly as the Bank does.
+     */
+    fun recordedPlayers(playerCount: Int): List<BankPlayer> = (1..playerCount).map { id ->
+        BankPlayer(
+            id = id,
+            boughtIn = getPlayerBuyInStatus(id),
+            paidOut = getPlayerPayedOutStatus(id),
+            eliminatedBy = getPlayerEliminatedBy(id),
+            rebuyPricesCents = getPlayerRebuyPrices(id),
+            addOnPricesCents = getPlayerAddonPrices(id),
+            bountyDrawCents = getPlayerBountyDraw(id),
+            entryPrice = getPlayerEntryPrice(id),
+            reEntryOf = getPlayerReEntryOf(id),
+        )
+    }
 
     /**
      * The pool for [playerCount] entries at [money]'s amounts, as the Bank recorded it: rebuys and

@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.huntercoles.pokerpayout.core.domain.history.NightPlayer
 import com.huntercoles.pokerpayout.core.domain.history.NightResults
-import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
@@ -116,19 +115,8 @@ class PayoutsViewModel @Inject constructor(
     private fun refresh() {
         val config = tournamentPreferences.getCurrentTournamentConfig()
         val ids = (1..config.numPlayers).toList()
-        val players = ids.map { id ->
-            BankPlayer(
-                id = id,
-                boughtIn = bankPreferences.getPlayerBuyInStatus(id),
-                paidOut = bankPreferences.getPlayerPayedOutStatus(id),
-                eliminatedBy = bankPreferences.getPlayerEliminatedBy(id),
-                rebuyPricesCents = bankPreferences.getPlayerRebuyPrices(id),
-                addOnPricesCents = bankPreferences.getPlayerAddonPrices(id),
-                bountyDrawCents = bankPreferences.getPlayerBountyDraw(id),
-                entryPrice = bankPreferences.getPlayerEntryPrice(id),
-                reEntryOf = bankPreferences.getPlayerReEntryOf(id)
-            )
-        }
+        // Late entries and re-entries included (PP-116), exactly as the Bank settles them
+        val players = bankPreferences.recordedPlayers(config.numPlayers)
         val names = ids.associateWith { bankPreferences.getPlayerName(it) }
         val settlement = settleTournament(
             players = players,

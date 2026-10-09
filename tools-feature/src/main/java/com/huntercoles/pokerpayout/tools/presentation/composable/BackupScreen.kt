@@ -210,7 +210,7 @@ fun BackupPreviewBody(preview: BackupPreview, busy: Boolean, onIntent: (BackupIn
         verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            preview.fileName?.let { Text(it, style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite) }
+            preview.fileName?.let { Text(wrappable(it), style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite) }
             savedLine(preview)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk) }
         }
         PokerEyebrow(stringResource(R.string.backup_preview_holds), modifier = Modifier.semantics { heading() })
@@ -273,6 +273,21 @@ private fun savedLine(preview: BackupPreview): String? {
     return preview.appVersion?.let { stringResource(R.string.backup_preview_saved_by, day, it) }
         ?: stringResource(R.string.backup_preview_saved, day)
 }
+
+/**
+ * [name] with a place to wrap after each '-', '_' and '.', so at large text a long file name
+ * ("poker-payout-2026-10-08.json") wraps between its parts, never inside one: on its own, a line
+ * may not break before a digit after a hyphen (it reads as a minus sign).
+ */
+internal fun wrappable(name: String): String = buildString {
+    name.forEach { char ->
+        append(char)
+        if (char in WRAP_AFTER) append(ZERO_WIDTH_SPACE)
+    }
+}
+
+private val WRAP_AFTER = setOf('-', '_', '.')
+private val ZERO_WIDTH_SPACE = Char(0x200B)
 
 @Composable
 private fun lineText(line: BackupLine): String = when (line) {

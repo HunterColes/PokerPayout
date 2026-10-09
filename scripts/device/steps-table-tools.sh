@@ -72,7 +72,8 @@ s_side_pots_fold() {
   ui assert-text "text=New hand: chips cleared" text=UNDO || return 1
   ui tap text=UNDO
   ui wait-gone text=UNDO --timeout 15 || return 1
-  ui scroll-to "text=Only Player 2 can win it" --max 6
+  ui scroll up --times 6                       # from the top, wherever the clear left the page
+  ui scroll-to "text=Only Player 2 can win it" --max 8
   ui assert-text "text=Only Player 2 can win it"
 }
 
@@ -88,16 +89,18 @@ s_deal() {
 }
 s_deal_icm() {
   # 5,000 / 3,000 / 2,000 chips for $50 / $30 / $20: by ICM $38.39, $32.75 and $28.86 (the example
-  # worked by hand in DealMathTest), by chip chop $40, $32 and $28. Each way adds up to $100.
+  # worked by hand in DealMathTest), by chip chop $40, $32 and $28. Each way adds up to $100. On a
+  # phone the deal comes right after the players, and the prizes after the deal.
   ui set-text "desc=Chips Player 1 has" --value 5000
   ui set-text "desc=Chips Player 2 has" --value 3000
   ui set-text "desc=Chips Player 3 has" --value 2000
-  ui scroll-to "text=Type them" --max 4
+  ui scroll-to "text=Type them" --max 8
   ui tap "text=Type them"
+  ui scroll-to "desc=3rd prize" --max 4
   ui set-text "desc=1st prize" --value 50
   ui set-text "desc=2nd prize" --value 30
   ui set-text "desc=3rd prize" --value 20
-  ui scroll-to "text=\$38.39" --max 8
+  ui scroll-to "text=\$38.39" --dir up --max 8
   ui assert-text "text=\$38.39" "text=\$40.00" || return 1
   ui scroll-to "text=\$28.86" --max 4
   ui assert-text "text=\$32.75" "text=\$28.86" "text=\$28.00" || return 1
@@ -106,9 +109,9 @@ s_deal_icm() {
 }
 s_deal_winner() {
   # $10 saved for the winner: $90 is shared now, and the winner takes the $10 on top.
-  ui scroll-to "desc=Save for the winner" --dir up --max 8
+  ui scroll-to "desc=Save for the winner" --max 8
   ui set-text "desc=Save for the winner" --value 10
-  ui scroll-to "text=Each way adds up to \$90." --max 8
+  ui scroll-to "text=Each way adds up to \$90." --dir up --max 8
   ui assert-text "text=Plus \$10 to whoever wins." "text=Each way adds up to \$90."
 }
 s_deal_start_over() {
@@ -117,6 +120,7 @@ s_deal_start_over() {
   ui assert-text "text=Deal started over from tonight" text=UNDO || return 1
   ui tap text=UNDO
   ui wait-gone text=UNDO --timeout 15 || return 1
+  ui scroll up --times 6                       # from the top, wherever Start over left the page
   ui scroll-to "text=Each way adds up to \$90." --max 8
   ui assert-text "text=Each way adds up to \$90."
 }

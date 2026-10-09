@@ -33,9 +33,11 @@ fun DealRoute(onBack: () -> Unit, viewModel: DealViewModel = hiltViewModel()) {
 }
 
 /**
- * Deal maker (S22): the players left and their chips, the prizes left (tonight's payouts, or typed),
- * an optional amount saved for the winner, then the deal by ICM and by chips side by side, each
- * adding up to the money shared to the cent. Start over (↺) reads tonight again, with Undo.
+ * Deal maker (S22): the players left and their chips, then the deal by ICM and by chips side by
+ * side, each adding up to the money shared to the cent, then the prizes left (tonight's payouts, or
+ * typed) and an optional amount saved for the winner. On a phone the deal comes before the prizes,
+ * which are usually tonight's as they are; from 600 dp the prizes sit under the players. Start over
+ * (↺) reads tonight again, with Undo.
  */
 @Composable
 fun DealContent(
@@ -62,10 +64,8 @@ fun DealContent(
                 tint = PokerColors.PokerGold,
             )
         },
-        inputs = {
-            DealPlayersCard(state, onIntent)
-            PrizesCard(state, onIntent)
-        },
+        settings = { PrizesCard(state, onIntent) },
+        inputs = { DealPlayersCard(state, onIntent) },
         results = { DealCard(state) },
     )
 }

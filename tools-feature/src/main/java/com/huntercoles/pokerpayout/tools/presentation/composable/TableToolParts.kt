@@ -39,9 +39,11 @@ private val TwoPaneWidth = 600.dp
 /**
  * A table tool's page (Side pots, Deal maker, Outs & pot odds): the top bar, then [inputs] and
  * [results] in one scrolling column, or side by side from 600 dp wide (tablets, phones on their
- * side) so the answer stays in view while you type.
+ * side) so the answer stays in view while you type. [settings] are inputs that are usually left as
+ * they are (the deal's prizes): under the results in one column, so the answer comes first, and
+ * under the inputs in two panes.
  */
-@Suppress("LongParameterList") // a page: its bar's three parts, its two panes and a modifier
+@Suppress("LongParameterList") // a page: its bar's three parts, its three parts and a modifier
 @Composable
 internal fun TableToolPage(
     title: String,
@@ -49,6 +51,7 @@ internal fun TableToolPage(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
+    settings: @Composable ColumnScope.() -> Unit = {},
     inputs: @Composable ColumnScope.() -> Unit,
     results: @Composable ColumnScope.() -> Unit,
 ) {
@@ -58,13 +61,17 @@ internal fun TableToolPage(
             val gutter = if (maxWidth < SmallWidth) SmallGutter else PokerDimens.Gutter
             if (maxWidth >= TwoPaneWidth) {
                 Row(Modifier.fillMaxSize().padding(horizontal = gutter), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ToolPane(0.dp, Modifier.weight(1f), inputs)
+                    ToolPane(0.dp, Modifier.weight(1f)) {
+                        inputs()
+                        settings()
+                    }
                     ToolPane(0.dp, Modifier.weight(1f), results)
                 }
             } else {
                 ToolPane(gutter, Modifier.fillMaxSize()) {
                     inputs()
                     results()
+                    settings()
                 }
             }
         }

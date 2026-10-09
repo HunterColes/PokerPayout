@@ -170,7 +170,7 @@ private fun SlotRow(event: CueEvent, hasSound: Boolean, packName: String, onPrev
             Text(
                 text = stringResource(R.string.cue_sounds_empty_slot),
                 style = MaterialTheme.typography.bodySmall,
-                color = PokerColors.ChalkDim,
+                color = PokerColors.Chalk,
                 modifier = Modifier.padding(end = PokerDimens.SpacingMedium),
             )
         }

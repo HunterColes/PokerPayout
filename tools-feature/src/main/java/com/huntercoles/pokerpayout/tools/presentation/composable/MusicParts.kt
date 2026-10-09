@@ -7,12 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,13 +26,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.huntercoles.pokerpayout.core.audio.music.MusicTrack
 import com.huntercoles.pokerpayout.core.audio.music.RepeatMode
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
-import com.huntercoles.pokerpayout.core.design.components.PokerButton
-import com.huntercoles.pokerpayout.core.design.components.PokerButtonSize
-import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerIconButton
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
@@ -45,10 +40,12 @@ import com.huntercoles.pokerpayout.tools.presentation.MusicUiState
 @Composable
 internal fun NowPlaying(state: MusicUiState, onIntent: (MusicIntent) -> Unit) {
     val current = state.current
-    PokerEyebrow(
-        text = stringResource(if (state.playing) R.string.music_now_playing else R.string.music_up_next),
-        color = if (state.playing) PokerColors.PokerGold else PokerColors.Chalk,
-    )
+    if (current != null) {
+        PokerEyebrow(
+            text = stringResource(if (state.playing) R.string.music_now_playing else R.string.music_up_next),
+            color = if (state.playing) PokerColors.PokerGold else PokerColors.Chalk,
+        )
+    }
     if (current == null) {
         Text(
             text = stringResource(R.string.music_no_song),
@@ -79,8 +76,13 @@ internal fun NowPlaying(state: MusicUiState, onIntent: (MusicIntent) -> Unit) {
 @Composable
 private fun Transport(state: MusicUiState, onIntent: (MusicIntent) -> Unit) {
     val hasSongs = state.tracks.isNotEmpty()
+    // Across the card on a phone; on a tablet together in the middle, not spread wide
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentWidth()
+            .widthIn(max = TransportMaxWidth)
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -195,120 +197,7 @@ private fun StateIcon(icon: ImageVector, lit: Boolean, enabled: Boolean) {
     }
 }
 
-/** The songs: tap one to play it, or Edit to move and remove them; then Add songs. */
-@Composable
-internal fun SongList(state: MusicUiState, onIntent: (MusicIntent) -> Unit, onAddSongs: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        PokerEyebrow(stringResource(R.string.music_songs), modifier = Modifier.weight(1f))
-        if (state.tracks.isNotEmpty()) {
-            PokerButton(
-                text = stringResource(if (state.editing) R.string.music_done else R.string.music_edit),
-                onClick = { onIntent(MusicIntent.SetEditing(!state.editing)) },
-                variant = PokerButtonVariant.Text,
-                size = PokerButtonSize.Small,
-                icon = if (state.editing) PokerIcons.Check else PokerIcons.Edit,
-            )
-        }
-    }
-    if (state.tracks.isEmpty()) {
-        Text(
-            text = stringResource(R.string.music_songs_empty),
-            style = MaterialTheme.typography.bodyMedium,
-            color = PokerColors.Chalk,
-        )
-    }
-    if (state.nothingPlayable) {
-        Text(
-            text = stringResource(R.string.music_none_playable),
-            style = MaterialTheme.typography.bodySmall,
-            color = PokerColors.Danger,
-        )
-    }
-    state.tracks.forEachIndexed { index, track ->
-        val missing = track.ref in state.missing
-        if (state.editing) {
-            EditableSong(track, index, state.tracks.lastIndex, missing, onIntent)
-        } else {
-            SongRow(
-                track,
-                current = track.ref == state.currentRef,
-                playing = state.playing,
-                missing = missing,
-                onIntent = onIntent,
-            )
-        }
-    }
-    PokerButton(
-        text = stringResource(R.string.music_add_songs),
-        onClick = onAddSongs,
-        variant = PokerButtonVariant.Secondary,
-        size = PokerButtonSize.Small,
-        icon = PokerIcons.Plus,
-    )
-}
-
-/** A song: one tap plays it. The current one is lit, with a speaker while it plays. */
-@Composable
-private fun SongRow(track: MusicTrack, current: Boolean, playing: Boolean, missing: Boolean, onIntent: (MusicIntent) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = PokerDimens.MinTouch)
-            .clip(RoundedCornerShape(PokerDimens.CornerControl))
-            .background(if (current) PokerColors.FeltHigh else Color.Transparent)
-            .clickable(
-                role = Role.Button,
-                onClickLabel = stringResource(R.string.music_play_song, track.title),
-                onClick = { onIntent(MusicIntent.PlayTrack(track.ref)) },
-            )
-            .padding(horizontal = PokerDimens.SpacingSmall, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
-    ) {
-        Icon(
-            imageVector = if (current && playing) PokerIcons.Volume else PokerIcons.MusicNote,
-            contentDescription = null,
-            tint = if (current) PokerColors.PokerGold else PokerColors.Chalk,
-        )
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = track.title, style = MaterialTheme.typography.bodyLarge, color = PokerColors.CardWhite)
-            if (missing) MissingLabel()
-        }
-    }
-}
-
-/** A song while editing: its title, then up, down and remove. */
-@Composable
-private fun EditableSong(track: MusicTrack, index: Int, lastIndex: Int, missing: Boolean, onIntent: (MusicIntent) -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().padding(start = PokerDimens.SpacingSmall)) {
-        Text(text = track.title, style = MaterialTheme.typography.bodyLarge, color = PokerColors.CardWhite)
-        if (missing) MissingLabel()
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            PokerIconButton(
-                icon = PokerIcons.ArrowUp,
-                contentDescription = stringResource(R.string.music_move_up, track.title),
-                onClick = { onIntent(MusicIntent.Move(index, index - 1)) },
-                enabled = index > 0,
-            )
-            PokerIconButton(
-                icon = PokerIcons.ArrowDown,
-                contentDescription = stringResource(R.string.music_move_down, track.title),
-                onClick = { onIntent(MusicIntent.Move(index, index + 1)) },
-                enabled = index < lastIndex,
-            )
-            PokerIconButton(
-                icon = PokerIcons.Close,
-                contentDescription = stringResource(R.string.music_remove, track.title),
-                onClick = { onIntent(MusicIntent.Remove(track.ref)) },
-                tint = PokerColors.Danger,
-            )
-        }
-    }
-}
-
-@Composable
-internal fun MissingLabel() {
-    Text(text = stringResource(R.string.music_missing), style = MaterialTheme.typography.bodySmall, color = PokerColors.Danger)
-}
-
 private val PlayButtonSize = 56.dp
+
+/** The player's five buttons sit within this on a wide card. */
+private val TransportMaxWidth = 400.dp

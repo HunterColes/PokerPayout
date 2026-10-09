@@ -1598,14 +1598,16 @@ s_backup_replace() {
 # the donation page goes to the browser as a VIEW intent (the app has no internet permission), and the
 # launcher brings the app back where it was. Ends on the Tools list, at its top, for the Odds steps.
 s_tip() {
+  tab Tools || return 1                        # (on the Tools list already in the full tour)
   ui scroll-to "text=Tip the dealer" --max 6
   ui tap "text=Tip the dealer"
   ui assert-text "text=No ads, no tracking" "text=Open the donation page" desc=Back || return 1
   require_tab_selected Tools || return 1
-  ui scroll-to "desc=QR code for the Ethereum address" --max 4
-  ui assert-text "text=Ethereum (ETH)" "desc=Copy the Ethereum address" || return 1
-  ui scroll-to "desc=QR code for the Monero address" --max 4
-  ui assert-text "text=Monero (XMR)" "desc=Copy the Monero address"
+  # Each card's last control scrolled into view, so the code above it is on screen too
+  ui scroll-to "desc=Copy the Ethereum address" --max 4
+  ui assert-text "text=Ethereum (ETH)" "desc=QR code for the Ethereum address" || return 1
+  ui scroll-to "desc=Copy the Monero address" --max 4
+  ui assert-text "text=Monero (XMR)" "desc=QR code for the Monero address"
 }
 s_tip_copy() {
   ui tap "desc=Copy the Monero address"

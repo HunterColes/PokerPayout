@@ -215,7 +215,9 @@ fun TournamentContent(
     val clockExists = timer.hasTimerStarted
     RequestOrientation(TournamentOrientation.requested(smallestWidth, clockExists, timer.isTableView, settled.rotationPaused))
     OnPhoneUpright(enabled = settled.rotationPaused) { actions.updateUi { it.pauseRotation(false) } }
-    val champion = winner?.takeIf { timer.winnerOpen && clockExists }?.let { WinnerPane(it, actions::onWinner) }
+    // Kept across the clock's ticks, so the champion's screen doesn't redraw every second
+    val shownWinner = winner?.takeIf { timer.winnerOpen && clockExists }
+    val champion = remember(shownWinner, actions) { shownWinner?.let { WinnerPane(it, actions::onWinner) } }
     val tableView = TournamentOrientation.showsTableView(
         smallestScreenWidthDp = smallestWidth,
         landscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,

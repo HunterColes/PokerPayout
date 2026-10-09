@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.tournament.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
+import com.huntercoles.pokerpayout.core.domain.model.TableSeats
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
@@ -32,7 +33,6 @@ import com.huntercoles.pokerpayout.tournament.domain.moments.BigMoment
 import com.huntercoles.pokerpayout.tournament.domain.moments.Field
 import com.huntercoles.pokerpayout.tournament.domain.moments.MomentLook
 import com.huntercoles.pokerpayout.tournament.domain.moments.MomentTracker
-import com.huntercoles.pokerpayout.tournament.domain.moments.TableSeats
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

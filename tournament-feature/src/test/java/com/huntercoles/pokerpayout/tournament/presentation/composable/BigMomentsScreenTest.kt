@@ -70,7 +70,7 @@ class BigMomentsScreenTest {
     private fun showSlot(shown: TimerUiState, reducedMotion: Boolean = true) {
         state = shown
         compose.setContent {
-            PokerTheme(reducedMotion = reducedMotion) { MomentSlot(state, onIntent = { sent += it }) }
+            PokerTheme(reducedMotion = reducedMotion) { MomentSlot(state.momentSlot, onIntent = { sent += it }) }
         }
         compose.waitForIdle()
     }

@@ -157,7 +157,7 @@ private fun TableClock(
         // PP-111: a short window at large text keeps a moment to its title, so the digits keep room
         val brief = height < BRIEF_BELOW * LocalDensity.current.fontScale
         Column(Modifier.fillMaxSize()) {
-            MomentSlot(uiState, onIntent, style = if (brief) MomentStyle.Brief else MomentStyle.Strip)
+            MomentSlot(uiState.momentSlot, onIntent, style = if (brief) MomentStyle.Brief else MomentStyle.Strip)
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 if (width > height) {
                     LandscapeBody(uiState, heroCap = height * HERO_MAX_HEIGHT_LANDSCAPE, width = width)

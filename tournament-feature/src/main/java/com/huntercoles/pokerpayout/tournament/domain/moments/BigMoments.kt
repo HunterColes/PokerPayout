@@ -2,8 +2,6 @@ package com.huntercoles.pokerpayout.tournament.domain.moments
 
 import com.huntercoles.pokerpayout.core.audio.packs.CueEvent
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
-import com.huntercoles.pokerpayout.tools.seats.SeatDrawStore
-import javax.inject.Inject
 
 /**
  * PP-111: the night's milestones, which the clock marks as the knockouts bring them. Declared from
@@ -29,7 +27,7 @@ enum class BigMoment(val cue: CueEvent) {
 
 /**
  * Where the field stands: [players] in the night, [left] still in, [paid] places paid (from the one
- * payout calculation) and [seatsPerTable] (the seat draw's tables).
+ * payout calculation) and [seatsPerTable] (the seat draw's tables, core's `TableSeats`).
  */
 data class Field(val players: Int, val left: Int, val paid: Int, val seatsPerTable: Int)
 
@@ -90,14 +88,4 @@ class MomentTracker(private val preferences: TimerPreferences) {
 data class MomentLook(val fresh: Set<BigMoment>, val reached: Set<BigMoment>) {
     /** The moment to show for this look, if any. */
     val headline: BigMoment? get() = BigMoments.headline(fresh)
-}
-
-/** How many seats a table has, for the final table: the seat draw's setting (Tools > Seat draw). */
-fun interface TableSeats {
-    fun seatsPerTable(): Int
-}
-
-/** The seat draw's tables (9 seats until the host changes it there). */
-class SeatDrawTableSeats @Inject constructor(private val store: SeatDrawStore) : TableSeats {
-    override fun seatsPerTable(): Int = store.seatsPerTable()
 }

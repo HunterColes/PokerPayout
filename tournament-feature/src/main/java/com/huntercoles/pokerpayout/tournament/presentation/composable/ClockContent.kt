@@ -43,7 +43,7 @@ internal fun ClockContent(
     if (layout == ClockLayout.TwoPane) {
         Column(Modifier.fillMaxSize().padding(horizontal = gutter)) {
             SetupStrip(SetupSummary.stripParts(setup, timer, full = true), openPanel)
-            MomentSlot(timer, actions.onTimerIntent)
+            MomentSlot(timer.momentSlot, actions.onTimerIntent)
             Row(Modifier.weight(1f).padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 Column(
                     modifier = Modifier.weight(LEFT_PANE).verticalScroll(rememberScrollState()).padding(bottom = 16.dp),
@@ -70,7 +70,7 @@ internal fun ClockContent(
             // PP-111: a big moment shows under the strip; with none, the slot takes no room
             Column(Modifier.fillMaxWidth()) {
                 SetupStrip(SetupSummary.stripParts(setup, timer), openPanel)
-                MomentSlot(timer, actions.onTimerIntent)
+                MomentSlot(timer.momentSlot, actions.onTimerIntent)
             }
             ClockMain(timer, actions, layout)
             ClockSide(setup, timer, showSubs = layout != ClockLayout.Small)

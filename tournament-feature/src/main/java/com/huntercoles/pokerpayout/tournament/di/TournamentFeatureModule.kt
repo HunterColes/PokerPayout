@@ -4,8 +4,6 @@ import com.huntercoles.pokerpayout.core.backup.BackupSection
 import com.huntercoles.pokerpayout.core.navigation.NavigationFactory
 import com.huntercoles.pokerpayout.core.utils.BlindScheduleProvider
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockBlindScheduleProvider
-import com.huntercoles.pokerpayout.tournament.domain.moments.SeatDrawTableSeats
-import com.huntercoles.pokerpayout.tournament.domain.moments.TableSeats
 import com.huntercoles.pokerpayout.tournament.domain.presets.PresetsBackup
 import com.huntercoles.pokerpayout.tournament.presentation.PayoutsNavigationFactory
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentNavigationFactory
@@ -36,8 +34,4 @@ abstract class TournamentFeatureModule {
     @Binds
     @IntoSet
     abstract fun bindPresetsBackup(section: PresetsBackup): BackupSection
-
-    /** PP-111: the seat draw's tables, for the clock's final table. */
-    @Binds
-    abstract fun bindTableSeats(seats: SeatDrawTableSeats): TableSeats
 }

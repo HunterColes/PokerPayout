@@ -208,6 +208,10 @@ data class TimerUiState(
             canGoForward = canGoForward
         )
 
+    /** PP-111: the moment slot's input: see [MomentSlotState]. */
+    val momentSlot: MomentSlotState
+        get() = MomentSlotState(moment = moment, champion = table.championName.takeUnless { winnerOpen })
+
     /** The blinds card's input: see [BlindsUp]. */
     val blindsUp: BlindsUp
         get() = BlindsUp(
@@ -269,6 +273,13 @@ data class MomentBanner(
     /** In the money: the least anyone left wins, the last paid place's prize, in cents. */
     val lowestPrizeCents: Long = 0L,
 )
+
+/**
+ * PP-111: what the clock's moment slot shows: a [moment]'s banner, else, once there is a champion
+ * and their screen is closed, the [champion]'s card. It changes with a moment, not every second.
+ */
+@Immutable
+data class MomentSlotState(val moment: MomentBanner? = null, val champion: String? = null)
 
 /** Clock text: "12:34" under an hour, "1:02:03" from an hour. */
 object ClockFormat {

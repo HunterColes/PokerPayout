@@ -1,6 +1,8 @@
 package com.huntercoles.pokerpayout.tools.di
 
+import com.huntercoles.pokerpayout.core.domain.model.TableSeats
 import com.huntercoles.pokerpayout.tools.seats.SeatDrawSeeds
+import com.huntercoles.pokerpayout.tools.seats.SeatDrawStore
 import com.huntercoles.pokerpayout.tools.seats.SecureSeatDrawSeeds
 import dagger.Module
 import dagger.Provides
@@ -13,4 +15,8 @@ object SeatDrawModule {
     /** Seat draws seed from SecureRandom (PP-036). */
     @Provides
     fun provideSeatDrawSeeds(): SeatDrawSeeds = SecureSeatDrawSeeds()
+
+    /** PP-111: the seat draw's tables, for the clock's final table. */
+    @Provides
+    fun provideTableSeats(store: SeatDrawStore): TableSeats = store
 }

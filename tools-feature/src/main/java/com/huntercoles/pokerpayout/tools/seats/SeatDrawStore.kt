@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout.tools.seats
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.huntercoles.pokerpayout.core.domain.model.TableSeats
 import com.huntercoles.pokerpayout.tools.poker.Cards
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.net.URLDecoder
@@ -11,14 +12,15 @@ import javax.inject.Singleton
 
 /**
  * The seat draw's saved state (PP-036): the last draw, the seats-a-table setting and, once changed
- * for the draw, the players. It survives process death and restarts. Nothing else reads it, and a
- * Tournament or Bank reset leaves it alone.
+ * for the draw, the players. It survives process death and restarts. The clock reads the seats a
+ * table for its final table (PP-111, as core's [TableSeats]); a Tournament or Bank reset leaves it
+ * alone.
  */
 @Singleton
-class SeatDrawStore @Inject constructor(@ApplicationContext context: Context) {
+class SeatDrawStore @Inject constructor(@ApplicationContext context: Context) : TableSeats {
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun seatsPerTable(): Int = prefs.getInt(KEY_SEATS_PER_TABLE, SeatDrawer.DEFAULT_SEATS_PER_TABLE)
+    override fun seatsPerTable(): Int = prefs.getInt(KEY_SEATS_PER_TABLE, SeatDrawer.DEFAULT_SEATS_PER_TABLE)
         .coerceIn(SeatDrawer.MIN_SEATS_PER_TABLE, SeatDrawer.MAX_SEATS_PER_TABLE)
 
     fun setSeatsPerTable(seats: Int) {

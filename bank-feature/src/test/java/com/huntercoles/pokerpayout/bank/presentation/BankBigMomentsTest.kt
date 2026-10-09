@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelStore
 import com.huntercoles.pokerpayout.core.R
 import com.huntercoles.pokerpayout.core.audio.SoundManager
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
+import com.huntercoles.pokerpayout.core.domain.model.TableSeats
 import com.huntercoles.pokerpayout.core.testing.expect
 import com.huntercoles.pokerpayout.core.testing.forAll
 import com.huntercoles.pokerpayout.core.time.TimeSource
@@ -16,7 +17,6 @@ import com.huntercoles.pokerpayout.tournament.domain.clock.CueVibrator
 import com.huntercoles.pokerpayout.tournament.domain.moments.BigMoment
 import com.huntercoles.pokerpayout.tournament.domain.moments.BigMoments
 import com.huntercoles.pokerpayout.tournament.domain.moments.Field
-import com.huntercoles.pokerpayout.tournament.domain.moments.TableSeats
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
 import io.kotest.property.Arb

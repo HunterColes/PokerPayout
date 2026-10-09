@@ -62,8 +62,8 @@ import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.domain.moments.BigMoment
 import com.huntercoles.pokerpayout.tournament.presentation.MomentBanner
+import com.huntercoles.pokerpayout.tournament.presentation.MomentSlotState
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
-import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import kotlinx.coroutines.delay
 
 /**
@@ -76,17 +76,18 @@ import kotlinx.coroutines.delay
  * Once there is a champion and their screen is closed, a card here leads back to it.
  *
  * Builds on the players-left pills (PP-135): the pill says where the field stands all along; the
- * banner marks the moment it gets there. [style] is how much room it has ([MomentStyle]).
+ * banner marks the moment it gets there. [style] is how much room it has ([MomentStyle]). Its
+ * input is [MomentSlotState] alone, so it skips the clock's every-second tick.
  */
 @Composable
 internal fun MomentSlot(
-    uiState: TimerUiState,
+    slot: MomentSlotState,
     onIntent: (TimerIntent) -> Unit,
     modifier: Modifier = Modifier,
     style: MomentStyle = MomentStyle.Card,
 ) {
     val reduced = LocalReducedMotion.current
-    val moment = uiState.moment
+    val moment = slot.moment
     val send by rememberUpdatedState(onIntent)
     LaunchedEffect(moment?.id) {
         val id = moment?.id ?: return@LaunchedEffect
@@ -102,10 +103,8 @@ internal fun MomentSlot(
         ) { shown ->
             if (shown != null) MomentCard(shown, glint = !reduced, style = style)
         }
-        val champion = uiState.table.championName
-        if (moment == null && champion != null && !uiState.winnerOpen) {
-            ChampionCard(champion, style) { onIntent(TimerIntent.OpenWinner) }
-        }
+        val champion = slot.champion
+        if (moment == null && champion != null) ChampionCard(champion, style) { onIntent(TimerIntent.OpenWinner) }
     }
 }
 

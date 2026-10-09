@@ -119,6 +119,11 @@ APK Signing Block. What that takes, with evidence from this repo:
   `signingConfig = if (…) {…} else {…}` are kept, and the latter falls back to the debug
   config. The script stays valid Kotlin: `--repro-check` builds exactly that stripped file.
   The signature is ignored by the comparison.
+* **Check a build change on GitHub first.** `gh workflow run device.yml --ref <branch> -f
+  job=measure` builds the release APK, rebuilds it F-Droid style in a fresh clone (signing
+  stripped, from `app/`) and compares the two with `apkdiff.py`, then measures the APK and its
+  cold start. Use it for anything that touches the build (toolchain, R8, resources) before
+  `release.sh` meets it.
 * No container is needed: no build step depends on the OS, and the path doesn't leak. The
   old `Dockerfile` (Ubuntu 22.04 + OpenJDK 17) and its Windows helper `docker-shell.bat` are
   how 1.1.0–1.1.12 were built on Windows. They were removed in 1.3.x, since they couldn't build

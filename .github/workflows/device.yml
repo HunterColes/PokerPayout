@@ -15,10 +15,11 @@
 #
 # Measure (by hand only): what the release build weighs and how fast it starts, for the code grade.
 #   gh workflow run device.yml --ref <branch> -f job=measure
-# It builds the release APK with the Compose compiler reports on (-PcomposeReports, never on in a
-# real release), runs scripts/dev/measure.sh (the APK by kind, method references, dex bytes by
-# library, the runtime dependency tree, Compose stability), then times cold starts on the tour's
-# emulator (scripts/device/startup.sh). The run's summary page shows the results.
+# It builds the release APK, rebuilds it F-Droid style in a fresh clone and compares the two
+# (reproducible?), compiles again with the Compose compiler reports on (-PcomposeReports, never on
+# in a real release), runs scripts/dev/measure.sh (the APK by kind, method references, dex bytes
+# by library, the runtime dependency tree, Compose stability), then times cold starts on the
+# tour's emulator (scripts/device/startup.sh). The run's summary page shows the results.
 #
 # Not a required check yet. The report (screenshots, ui dumps, logcat, tour.log) is uploaded as an
 # artifact either way. The release build is debug-signed here, since CI has no keystore.
@@ -242,7 +243,7 @@ jobs:
           retention-days: 14
 
   measure:
-    # By hand only (-f job=measure). About 25 minutes: the release build, then 16 cold starts.
+    # By hand only (-f job=measure). About 35 minutes: two release builds, then 16 cold starts.
     name: Measure
     if: github.event_name == 'workflow_dispatch' && inputs.job == 'measure'
     runs-on: ubuntu-latest
@@ -257,8 +258,35 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Release APK, with the Compose compiler reports
-        run: ./gradlew :app:assembleRelease -PcomposeReports --console=plain
+      - name: Release APK
+        run: ./gradlew :app:assembleRelease --console=plain
+
+      # What F-Droid does with the release tag (release.sh --repro-check does the same before a
+      # release): a fresh clone, signing configs stripped, `gradle clean assembleRelease` from app/.
+      # Every byte outside the signing block must match, or F-Droid rejects the release.
+      - name: F-Droid-style rebuild, compared
+        run: |
+          repro="$RUNNER_TEMP/repro"
+          git clone --quiet --no-hardlinks . "$repro"
+          git -C "$repro" checkout --quiet --detach "$GITHUB_SHA"
+          python3 scripts/release/lib/fdroid_strip_signing.py "$repro"
+          (cd "$repro/app" && ../gradlew clean --console=plain -q && ../gradlew assembleRelease --no-build-cache --console=plain -q)
+          mkdir -p build/measure
+          ours="$(ls app/build/outputs/apk/release/*.apk | head -1)"
+          theirs="$(ls "$repro"/app/build/outputs/apk/release/*.apk | head -1)"
+          if python3 scripts/release/lib/apkdiff.py "$ours" "$theirs" > build/measure/repro.txt 2>&1; then
+            verdict="identical outside the signing block"
+          else
+            verdict="DIFFERENT: F-Droid would reject this build"
+          fi
+          { echo "## Reproducible build"; echo; echo "F-Droid-style rebuild: **$verdict**"; echo;
+            echo '```'; tail -5 build/measure/repro.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          cat build/measure/repro.txt
+          [[ "$verdict" == identical* ]]
+
+      - name: Compose compiler reports
+        if: success() || failure()
+        run: ./gradlew compileReleaseKotlin -PcomposeReports --console=plain
 
       - name: Runtime dependency tree
         run: |

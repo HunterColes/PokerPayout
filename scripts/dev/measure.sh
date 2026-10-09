@@ -3,7 +3,8 @@
 # Reads a build that already ran; it builds nothing. The Measure workflow
 # (.github/workflows/device.yml, -f job=measure) runs it on GitHub after:
 #
-#   ./gradlew :app:assembleRelease -PcomposeReports
+#   ./gradlew :app:assembleRelease
+#   ./gradlew compileReleaseKotlin -PcomposeReports
 #   ./gradlew :app:dependencies --configuration releaseRuntimeClasspath > build/measure/deps-release.txt
 #
 # and writes build/measure/summary.md:

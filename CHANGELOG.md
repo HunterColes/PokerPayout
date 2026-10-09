@@ -3,6 +3,23 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.1 (on master, not published)
+
+- **Backup** (Tools): one file with everything the app saves (presets, History and the season's
+  points, the chip set, settings, sound and tonight's game), saved and opened through the phone's
+  file picker, so it can live in Drive, Downloads or on a computer. No permission and still no
+  internet. Opening one shows what it holds before anything changes, then *Add to this phone*
+  (the presets and nights the phone doesn't have, with Undo) or *Replace this phone's data* (the
+  app starts again on the backup's game; a running clock comes back paused). A file that isn't a
+  backup, is damaged or comes from a newer version is turned away with a plain reason.
+- **History's CSV as a file:** *Save as CSV file…* writes every night as a spreadsheet file (UTF-8,
+  a header row); *Share as CSV* (formerly *Export as CSV*) still sends it as text.
+- **Presets as files:** a preset's menu has *Share as file* ("Friday.json" for a friend), and the
+  presets list has *Open preset file…*, which adds its presets with Undo ("Friday 2" when the name
+  is taken by another setup). The Backup screen opens preset files too.
+- Android's own backup now takes the same data as the backup file, and on Android 12 and up copies
+  it to Google's cloud only when the copy is end-to-end encrypted, since it holds players' names.
+
 ## 1.4.0 (on master, not published)
 
 - **The cash game folds into the Bank.** The Bank's Tournament / Cash game switch and the separate

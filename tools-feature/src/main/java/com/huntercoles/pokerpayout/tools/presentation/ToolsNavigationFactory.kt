@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import com.huntercoles.pokerpayout.core.navigation.NavigationDestination
 import com.huntercoles.pokerpayout.core.navigation.NavigationFactory
 import com.huntercoles.pokerpayout.core.navigation.NavigationManager
+import com.huntercoles.pokerpayout.tools.presentation.composable.BackupRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ChipSetRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.CueSoundsRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.HandRanksScreen
@@ -63,6 +64,11 @@ class ToolsNavigationFactory @Inject constructor(
 
         builder.composable<NavigationDestination.CueSounds> {
             CueSoundsRoute(onBack = navigationManager::navigateBack)
+        }
+
+        // Everything the app saves, in one file: save it, open it and restore it
+        builder.composable<NavigationDestination.Backup> {
+            BackupRoute(onBack = navigationManager::navigateBack)
         }
     }
 }

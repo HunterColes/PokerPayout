@@ -59,16 +59,22 @@ class SnackbarController @Inject constructor() {
     val hostState = SnackbarHostState()
 
     suspend fun showUndo(message: String, actionLabel: String): Boolean = hostState.showUndo(message, actionLabel)
+
+    /** Shows [message] alone, with nothing to undo ("Backup saved"), for a few seconds. */
+    suspend fun showMessage(message: String) {
+        hostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
+    }
 }
 
 /** Hosts the app's snackbars, each drawn as an [UndoSnackbar]. */
 @Composable
 fun PokerSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifier) {
     SnackbarHost(hostState = hostState, modifier = modifier) { data ->
+        // A message shown with SnackbarController.showMessage has no action: no UNDO button
         UndoSnackbar(
             message = data.visuals.message,
             onUndo = data::performAction,
-            actionLabel = data.visuals.actionLabel ?: stringResource(R.string.design_undo),
+            actionLabel = data.visuals.actionLabel,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
         )
     }
@@ -77,14 +83,14 @@ fun PokerSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifie
 /**
  * The snackbar itself: white text on FeltHigh, a gold "UNDO" (48 dp touch target), and the only
  * shadow in the app apart from sheets. The message wraps rather than truncates. TalkBack announces
- * it politely when it appears.
+ * it politely when it appears. A null [actionLabel] shows the message alone.
  */
 @Composable
 fun UndoSnackbar(
     message: String,
     onUndo: () -> Unit,
     modifier: Modifier = Modifier,
-    actionLabel: String = stringResource(R.string.design_undo),
+    actionLabel: String? = stringResource(R.string.design_undo),
 ) {
     Surface(
         modifier = modifier
@@ -105,12 +111,14 @@ fun UndoSnackbar(
             Box(Modifier.weight(1f).padding(vertical = 6.dp)) {
                 Text(text = message, style = MaterialTheme.typography.bodyMedium, color = PokerColors.CardWhite)
             }
-            PokerButton(
-                text = actionLabel.uppercase(Locale.ROOT),
-                onClick = onUndo,
-                variant = PokerButtonVariant.Text,
-                size = PokerButtonSize.Small,
-            )
+            if (actionLabel != null) {
+                PokerButton(
+                    text = actionLabel.uppercase(Locale.ROOT),
+                    onClick = onUndo,
+                    variant = PokerButtonVariant.Text,
+                    size = PokerButtonSize.Small,
+                )
+            }
         }
     }
 }

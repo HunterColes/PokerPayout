@@ -33,6 +33,7 @@ val NavigationDestination.tab: NavTab?
         NavigationDestination.History,
         NavigationDestination.Music,
         NavigationDestination.CueSounds,
+        NavigationDestination.Backup,
         -> NavTab.Tools
         NavigationDestination.Back -> null
     }
@@ -50,6 +51,7 @@ val ScreenDestinations: List<NavigationDestination> = listOf(
     NavigationDestination.History,
     NavigationDestination.Music,
     NavigationDestination.CueSounds,
+    NavigationDestination.Backup,
 )
 
 /** The tab to show as selected while this destination is on top, or null when it isn't a screen. */

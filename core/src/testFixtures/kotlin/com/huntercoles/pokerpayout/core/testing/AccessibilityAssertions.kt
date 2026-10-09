@@ -56,15 +56,13 @@ object AccessibilityAssertions {
     private const val SAME_COLOUR_DISTANCE = 48
 
     /**
-     * Text and background colours below AA that were on screen when this check came in (wave 9),
-     * each an open question for the owner. They pass, so the check can guard everything else: any
-     * other pair below AA fails. Take a pair out when its screen is fixed, or say here why it stays.
+     * Text and background colours below AA kept on purpose (the owner's call, 1.4.5): a chip's
+     * value on its own physical colour (TalkBack reads the value), and Hand ranks' fade of the cards
+     * that don't play, which is decoration. Any other pair below AA fails.
      */
     private val KNOWN_BELOW_AA: Map<Pair<Int, Int>, String> = mapOf(
         (0xFFFFFF to 0x228B22) to "a chip's value on the green 25 chip, its physical colour: 4.39:1",
         (0xFFFFFF to 0x808080) to "a chip's value on the grey 20 chip, its physical colour: 3.95:1",
-        (0xE8CC07 to 0x146349) to "the selected segment's second line, PokerGold at 90% on FeltHigh: 4.49:1",
-        (0x6F8B82 to 0x072A20) to "ChalkDim ranks of cards on the table in the odds insight grid: 4.18:1",
         (0x0A7A3D to 0x6D8A81) to "a faded club in Hand ranks with the four-colour deck: 1.45:1",
     )
 

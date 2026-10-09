@@ -11,6 +11,7 @@ import com.huntercoles.pokerpayout.core.domain.model.PlayerSettlement
 import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.domain.model.PurchaseWindow
 import com.huntercoles.pokerpayout.core.domain.players.PlayerMerges
+import com.huntercoles.pokerpayout.core.domain.players.PlayerNames
 import com.huntercoles.pokerpayout.core.domain.players.Regular
 import com.huntercoles.pokerpayout.core.domain.settle.Transfer
 
@@ -106,6 +107,9 @@ data class BankUiState(
     val totalRebuyCount: Int get() = players.sumOf { it.rebuys }
     val totalAddonCount: Int get() = players.sumOf { it.addons }
     val canUndo: Boolean get() = undoLabel != null
+
+    /** A seat nobody named yet ("Player 3"): the Bank offers tonight's players from the regulars (PP-110). */
+    val hasUnnamedSeat: Boolean get() = players.any { PlayerNames.isPlaceholder(it.name) }
 
     /**
      * The money summary offers Settle up once the night is over and someone's buy-in is still open:

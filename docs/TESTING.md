@@ -214,10 +214,11 @@ are:
      50 / 100.
 2. **Bank** (28 steps). Set the rebuy amount to $10. The labelled header (Player, Buy-in,
    Rebuy, Out, Paid) and the top bar. Rename Player 1 to Alice with no Enter, switch tabs and
-   come back: the name must survive. **Tonight's players** (S25, PP-110, 3 steps): the top bar's
-   sheet must show Alice ticked (a regular already, "1 of N seats named"); Bea added in the sheet
-   takes Player 2's seat ("2 of N"), and a tap on her frees it again, so Player 2 is back for the
-   steps after. A buy-in in one tap, with "Alice paid the buy-in" and UNDO
+   come back: the name must survive. **Tonight's players** (S25, PP-110, 3 steps): "Pick tonight's
+   players" above the list (seats are still unnamed) opens a sheet that must show Alice ticked (a
+   regular already, "1 of N seats named"); Bea added in the sheet takes Player 2's seat ("2 of N"),
+   and a tap on her frees it again, so Player 2 is back for the steps after. A buy-in in one tap,
+   with "Alice paid the buy-in" and UNDO
    on the snackbar; UNDO must take it back. A rebuy in one tap. Knock out Player 2 from the
    knockout sheet ("5TH PLACE"; Alice picked, applied with no second dialog): the 5th badge must
    sit in the Out column, clear of the name. Three more out with nobody credited: Alice is the
@@ -797,7 +798,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tournament-feature` | `PresetsInteractionTest` | none | What the presets' controls send: the row on the setup page and in the panel, load (off mid-game), save (the name, the chip set switch, a name in use replaces it, a blank one can't be saved), share, rename (a name in use is refused), delete, and the load question |
 | `tournament-feature` | `TournamentInteractionTest`, `TournamentRotationTest`, `SetupFoldTest` | none | What each control sends; rotation per device class (Robolectric `+land` shows the table view, `+port` the clock, other tabs portrait on phones, tablets free, state kept through recreation; ✕ in a turned table view holds for that turn only, with the phone's hold faked through `LocalPhoneHold`); the fold plays once and is cut under Reduce motion |
 | `tournament-feature` | `PayoutsTabScreenTest` | `S6_payouts_{standard,topheavy,custom,finished}`, `S6_payouts_font2x`, `S6_payouts_save` (PP-037: over and everyone paid, "Save this night" heads the tab) | All three, at every scroll position, and locked while the clock runs; also the saved night's line |
-| `bank-feature` | `BankScreensTest` | `S5_bank_{before_buyins,midgame,rebuys_open,no_rebuys,champion,30players}`, `S5_bank_font2x`, `S5b_knockout_sheet`, `S5b_count_sheet`, `S5c_payout_{champion,second}`, `S5c_pool_breakdown`, `Z2_bank_small`, `Z5_bank_tablet`; PP-035: `S5_bank_pko` (each player's bounty under the name), `S5b_knockout_sheet_pko`, `S5c_payout_champion_pko`, `S5d_envelope_reveal`; 1.4: `S5_bank_settle_up` (Settle up under the meters), `S5e_settle_up` (who pays whom, two ticked) | All three, at every scroll position (also the mystery pool breakdown and the settle-up once everyone is square). A sheet is rendered as its content over the screen behind, since a modal window doesn't capture under Robolectric |
+| `bank-feature` | `BankScreensTest` | `S5_bank_{before_buyins,midgame,rebuys_open,no_rebuys,champion,30players}`, `S5_bank_font2x`, `S5b_knockout_sheet`, `S5b_count_sheet`, `S5c_payout_{champion,second}`, `S5c_pool_breakdown`, `Z2_bank_small`, `Z5_bank_tablet`; PP-035: `S5_bank_pko` (each player's bounty under the name), `S5b_knockout_sheet_pko`, `S5c_payout_champion_pko`, `S5d_envelope_reveal`; 1.4: `S5_bank_settle_up` (Settle up under the meters), `S5e_settle_up` (who pays whom, two ticked); PP-110: `S5_bank_naming` (seats nobody named yet: Pick tonight's players above the list) | All three, at every scroll position (also the mystery pool breakdown and the settle-up once everyone is square). A sheet is rendered as its content over the screen behind, since a modal window doesn't capture under Robolectric |
 | `bank-feature` | `RegularsSheetTest` | PP-110: `S25_regulars` (tonight's players: six of nine seats named, twelve regulars, most nights lately first), `S25_regulars_empty` (the first time) | All three, at every scroll position, on all 24 cells; also a name being typed, a new name, and every seat named. The sheet is drawn as its content over the Bank and its scrim; the checks run on the sheet alone |
 
 The screens' ViewModels are the real ones over Robolectric's in-memory preferences, set up as the

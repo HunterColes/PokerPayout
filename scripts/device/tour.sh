@@ -952,7 +952,7 @@ s_bank_rename() {
 # ago, is a regular already and ticked; a name added in the sheet takes the first seat nobody named
 # (Player 2), and a tap frees that seat again, so the steps after still find Player 2.
 s_bank_regulars() {
-  ui tap "desc=Tonight's players"
+  ui tap "text=Pick tonight's players"
   ui assert-text "text=Tonight's players" "re=^1 of [0-9]+ seats named" "text=REGULARS" "desc=Add a name" || return 1
   ui assert "has=Alice|No saved night yet" checked
 }

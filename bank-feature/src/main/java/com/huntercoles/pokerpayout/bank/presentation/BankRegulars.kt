@@ -61,14 +61,16 @@ data class RegularsModel(
             val tonightOnly = named
                 .distinctBy { merges.key(it.name) }
                 .filter { merges.key(it.name) !in known }
-                .map { player ->
-                    Regular(player.name.trim(), merges.key(player.name), nights = 0, recentNights = 0, lastPlayed = null, lastSeen = null)
-                }
+                .map { player -> newcomer(player.name.trim(), merges.key(player.name)) }
             val position = order.withIndex().associate { (index, key) -> key to index }
             val rows = (tonightOnly + state.roster)
                 .sortedBy { position[it.key] ?: -1 }
                 .map { RegularRow(it, seats[it.key]) }
             return RegularsModel(rows, seats = state.players.size, named = named.size, merges = merges)
         }
+
+        /** Someone at the table the regulars don't know yet: no saved night, never seen before tonight. */
+        private fun newcomer(name: String, key: String) =
+            Regular(name, key, nights = 0, recentNights = 0, lastPlayed = null, lastSeen = null)
     }
 }

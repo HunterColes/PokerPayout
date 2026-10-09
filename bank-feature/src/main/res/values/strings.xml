@@ -301,6 +301,7 @@
 
     <!-- Tonight's players, picked from the regulars (S25, PP-110) -->
     <string name="bank_regulars">Tonight\'s players</string>
+    <string name="bank_regulars_pick">Pick tonight\'s players</string>
     <plurals name="bank_regulars_seats">
         <item quantity="one">%1$d of %2$d seat named. Tap a name to seat them, or again to free the seat.</item>
         <item quantity="other">%1$d of %2$d seats named. Tap a name to seat them, or again to free the seat.</item>

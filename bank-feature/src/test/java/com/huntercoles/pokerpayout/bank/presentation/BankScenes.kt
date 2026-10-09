@@ -192,6 +192,9 @@ object BankScenes {
         viewModel
     }
 
+    /** Names going in: Dana, Marcus and Priya typed, six seats nobody named yet, so the Bank offers the regulars. */
+    fun naming(kit: BankTestKit): BankViewModel = kit.game(players = NAMES.take(PRIYA) + List(NAMES.size - PRIYA) { "" })
+
     /** The first time: nobody saved or typed yet, nine seats nobody named, the sheet open. */
     fun noRegulars(kit: BankTestKit): BankViewModel = with(kit) {
         val viewModel = game(players = List(NAMES.size) { "" })

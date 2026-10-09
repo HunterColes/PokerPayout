@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dealer's choice: a wheel that picks the next game, and each game's rules -->
+    <string name="dealers_title">Dealer\'s choice</string>
+    <plurals name="dealers_subtitle">
+        <item quantity="one">%1$d game on the wheel</item>
+        <item quantity="other">%1$d games on the wheel</item>
+    </plurals>
+
+    <!-- The wheel -->
+    <string name="dealers_spin">Spin the wheel</string>
+    <!-- TalkBack: "Game wheel, 9 games" -->
+    <plurals name="dealers_wheel_description">
+        <item quantity="one">Game wheel, %1$d game</item>
+        <item quantity="other">Game wheel, %1$d games</item>
+    </plurals>
+    <string name="dealers_too_few">Put at least two games on the wheel to spin it.</string>
+
+    <!-- The result -->
+    <string name="dealers_next_game">Next game</string>
+    <string name="dealers_spinning">Spinning…</string>
+    <string name="dealers_first_spin">Spin the wheel to pick the next game.</string>
+    <!-- TalkBack, when the wheel stops: "Next game: Badugi" -->
+    <string name="dealers_result_spoken">Next game: %1$s</string>
+    <string name="dealers_house_game">House game</string>
+    <string name="dealers_house_rules">Play it the way your table does.</string>
+    <string name="dealers_off_wheel">Not on the wheel now.</string>
+
+    <!-- What kind of game, as pills on the rules card -->
+    <string name="dealers_family_flop">Board game</string>
+    <string name="dealers_family_stud">Stud</string>
+    <string name="dealers_family_draw">Draw</string>
+    <string name="dealers_split_high">High</string>
+    <string name="dealers_split_low">Low</string>
+    <string name="dealers_split_hilo">Hi-lo</string>
+    <string name="dealers_split_split">Split pot</string>
+
+    <!-- The games on the wheel -->
+    <string name="dealers_games">Games on the wheel</string>
+    <!-- "9 of 17" -->
+    <string name="dealers_games_count">%1$d of %2$d</string>
+    <string name="dealers_house_games">House games</string>
+    <string name="dealers_add_label">Add a house game</string>
+    <string name="dealers_add">Add</string>
+    <!-- TalkBack for the button beside a house game: "Remove Kings and Little Ones" -->
+    <string name="dealers_remove">Remove %1$s</string>
+    <string name="dealers_house_full">That\'s the most house games a wheel holds. Remove one to add another.</string>
+    <string name="dealers_all_rules">Rules for every game</string>
+
+    <!-- Each game: its name, its label on the wheel, and its rules in a few lines -->
+    <string name="dealers_game_holdem">Texas Hold\'em</string>
+    <string name="dealers_wheel_holdem">Hold\'em</string>
+    <string-array name="dealers_rules_holdem">
+        <item>Two cards each, face down, then five shared cards: three on the flop, then the turn, then the river.</item>
+        <item>Your best five cards from your two and the five on the board win.</item>
+        <item>A round of betting before the flop and after each new card.</item>
+    </string-array>
+
+    <string name="dealers_game_omaha">Omaha</string>
+    <string name="dealers_wheel_omaha">Omaha</string>
+    <string-array name="dealers_rules_omaha">
+        <item>Four cards each, then five shared cards, dealt as in Hold\'em.</item>
+        <item>You must use exactly two of your cards and exactly three from the board.</item>
+        <item>Usually played pot-limit.</item>
+    </string-array>
+
+    <string name="dealers_game_omaha_hilo">Omaha Hi-Lo</string>
+    <string name="dealers_wheel_omaha_hilo">Omaha 8</string>
+    <string-array name="dealers_rules_omaha_hilo">
+        <item>Omaha, with the pot split between the best high hand and the best low hand.</item>
+        <item>A low is five different ranks, 8 or under, aces low. Straights and flushes don\'t spoil it.</item>
+        <item>Two cards from your hand and three from the board for each half. No low: high takes it all.</item>
+    </string-array>
+
+    <string name="dealers_game_big_o">Big O</string>
+    <string name="dealers_wheel_big_o">Big O</string>
+    <string-array name="dealers_rules_big_o">
+        <item>Omaha Hi-Lo with five cards each instead of four.</item>
+        <item>Still exactly two of your cards and three from the board, for the high and for the low.</item>
+        <item>The low needs five different ranks, 8 or under. No low: high takes it all.</item>
+    </string-array>
+
+    <string name="dealers_game_stud">Seven-card stud</string>
+    <string name="dealers_wheel_stud">Stud</string>
+    <string-array name="dealers_rules_stud">
+        <item>No shared cards. Two down and one up each; the lowest card showing opens the betting.</item>
+        <item>Three more cards face up, one at a time, then the last one face down.</item>
+        <item>Your best five of your seven win.</item>
+    </string-array>
+
+    <string name="dealers_game_stud_hilo">Stud Hi-Lo</string>
+    <string name="dealers_wheel_stud_hilo">Stud 8</string>
+    <string-array name="dealers_rules_stud_hilo">
+        <item>Seven-card stud, with the pot split between the best high hand and the best low hand.</item>
+        <item>A low is five different ranks, 8 or under, aces low.</item>
+        <item>Any five of your seven for the high, any five for the low. No low: high takes it all.</item>
+    </string-array>
+
+    <string name="dealers_game_razz">Razz</string>
+    <string name="dealers_wheel_razz">Razz</string>
+    <string-array name="dealers_rules_razz">
+        <item>Seven-card stud played for the lowest hand, which takes the whole pot.</item>
+        <item>Aces are low. Straights and flushes don\'t count, but pairs hurt.</item>
+        <item>The best hand is 5-4-3-2-A. The highest card showing opens the betting.</item>
+    </string-array>
+
+    <string name="dealers_game_triple_draw">2-7 Triple Draw</string>
+    <string name="dealers_wheel_triple_draw">2-7 Triple</string>
+    <string-array name="dealers_rules_triple_draw">
+        <item>Five cards each, face down, and three chances to swap some for new ones, with betting each time.</item>
+        <item>The lowest hand wins. Aces are high, and straights and flushes count against you.</item>
+        <item>The best hand is 7-5-4-3-2 in mixed suits.</item>
+    </string-array>
+
+    <string name="dealers_game_badugi">Badugi</string>
+    <string name="dealers_wheel_badugi">Badugi</string>
+    <string-array name="dealers_rules_badugi">
+        <item>Four cards each, face down, and three draws, with betting each time.</item>
+        <item>Aim for four cards of four different suits and ranks, as low as you can: a badugi. Aces are low.</item>
+        <item>Any badugi beats any three-card hand. The best is A-2-3-4 in four suits.</item>
+    </string-array>
+
+    <string name="dealers_game_pineapple">Pineapple</string>
+    <string name="dealers_wheel_pineapple">Pineapple</string>
+    <string-array name="dealers_rules_pineapple">
+        <item>Hold\'em, but with three cards each.</item>
+        <item>Throw one away before the flop comes.</item>
+        <item>Then it\'s Hold\'em with the two you kept.</item>
+    </string-array>
+
+    <string name="dealers_game_crazy_pineapple">Crazy Pineapple</string>
+    <string name="dealers_wheel_crazy_pineapple">Crazy Pine</string>
+    <string-array name="dealers_rules_crazy_pineapple">
+        <item>Hold\'em, with three cards each.</item>
+        <item>Keep all three through the flop, and throw one away when the betting on the flop is done.</item>
+        <item>Then play the turn and the river with two, as in Hold\'em.</item>
+    </string-array>
+
+    <string name="dealers_game_five_card_draw">Five-card draw</string>
+    <string name="dealers_wheel_five_card_draw">5-Card Draw</string>
+    <string-array name="dealers_rules_five_card_draw">
+        <item>Five cards each, face down, and a round of betting.</item>
+        <item>Swap some for new ones, usually up to three, then bet again.</item>
+        <item>The best high hand wins.</item>
+    </string-array>
+
+    <string name="dealers_game_short_deck">Short deck</string>
+    <string name="dealers_wheel_short_deck">Short Deck</string>
+    <string-array name="dealers_rules_short_deck">
+        <item>Hold\'em with the 2s to 5s taken out: 36 cards.</item>
+        <item>A flush beats a full house. An ace can play low in A-6-7-8-9.</item>
+        <item>Some tables also put three of a kind above a straight: agree before you deal.</item>
+    </string-array>
+
+    <string name="dealers_game_irish">Irish</string>
+    <string name="dealers_wheel_irish">Irish</string>
+    <string-array name="dealers_rules_irish">
+        <item>Four cards each, as in Omaha, and betting before and after the flop.</item>
+        <item>When the betting on the flop is done, throw two away.</item>
+        <item>Play the turn and the river as Hold\'em, with the two you kept.</item>
+    </string-array>
+
+    <string name="dealers_game_courchevel">Courchevel</string>
+    <string name="dealers_wheel_courchevel">Courchevel</string>
+    <string-array name="dealers_rules_courchevel">
+        <item>Omaha with five cards each, and the first card of the flop turned up before the first bet.</item>
+        <item>Two more cards finish the flop, then come the turn and the river.</item>
+        <item>Exactly two of your cards and three from the board. Often played hi-lo.</item>
+    </string-array>
+
+    <string name="dealers_game_follow_the_queen">Follow the Queen</string>
+    <string name="dealers_wheel_follow_the_queen">Follow Queen</string>
+    <string-array name="dealers_rules_follow_the_queen">
+        <item>Seven-card stud with wild cards. Queens are always wild.</item>
+        <item>The card dealt face up right after a face-up queen makes its whole rank wild too.</item>
+        <item>Another face-up queen moves that to the next card. If the last card up is a queen, only queens stay wild.</item>
+    </string-array>
+
+    <string name="dealers_game_high_chicago">High Chicago</string>
+    <string name="dealers_wheel_high_chicago">Chicago</string>
+    <string-array name="dealers_rules_high_chicago">
+        <item>Seven-card stud with a split pot.</item>
+        <item>Half goes to the best hand.</item>
+        <item>The other half goes to whoever holds the highest spade face down.</item>
+    </string-array>
+</resources>

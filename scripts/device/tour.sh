@@ -1243,7 +1243,7 @@ s_history_save() {
   ui back                                      # the night -> History
   ui assert-text "text=1 night saved" || return 1
   ui back                                      # History -> the Tools list
-  ui assert-text "text=Seat draw" text=History
+  ui assert-text "text=Saved nights and the season's points" text=History   # the History row: more tools since 1.4.8 can push Seat draw out of view
 }
 
 # One person under two names (S26b, PP-110): Alice opened from the standings; Bea (added in the Bank's

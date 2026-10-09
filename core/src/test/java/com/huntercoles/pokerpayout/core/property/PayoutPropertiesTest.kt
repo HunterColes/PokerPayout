@@ -38,24 +38,32 @@ class PayoutPropertiesTest {
 
     private fun Case.table(): PayoutTable = calculate(poolCents, weights, players, rounding)
 
+    /**
+     * The table pays the top of the structure (places that would round to $0 are left off the bottom,
+     * and only those), adds up to the pool, and while there is money pays every place something.
+     */
     @Test
-    fun `the table adds up to the pool to the cent and pays nobody less than nothing`() =
+    fun `the table adds up to the pool to the cent and pays every place something`() =
         forAll(seed = 2026_1008_01L, iterations = 4_000, gen = cases) { case ->
             val table = case.table()
             val amounts = table.places.map { it.amountCents }
-            expect(table.places.map { it.place } == (1..case.paid.size).toList()) {
-                "places ${table.places.map { it.place }}, expected 1..${case.paid.size}"
-            }
+            val count = table.places.size
+            expect(count in 1..case.paid.size) { "$count places for ${case.paid.size} asked" }
+            expect(table.places.map { it.place } == (1..count).toList()) { "places ${table.places.map { it.place }}" }
+            expect(table.places.map { it.weight } == case.paid.take(count)) { "weights ${table.places.map { it.weight }}" }
             expect(table.totalCents == case.poolCents) { "pays ${table.totalCents} of a ${case.poolCents} pool: $amounts" }
             expect(amounts.all { it >= 0L }) { "a negative place: $amounts" }
-            expect(table.places.map { it.weight } == case.paid) { "weights ${table.places.map { it.weight }}" }
+            // With falling weights the places that would get nothing are the last ones, and they go
+            val falling = case.weights.zipWithNext().none { (above, below) -> below > above }
+            if (case.poolCents > 0L && falling) expect(amounts.all { it > 0L }) { "a paid place gets nothing: $amounts" }
+            if (case.poolCents == 0L) expect(count == case.paid.size) { "no money, yet $count of ${case.paid.size} places" }
         }
 
     @Test
     fun `every place below 1st is whole units and within one unit of its exact share`() =
         forAll(seed = 2026_1008_02L, iterations = 4_000, gen = cases) { case ->
             val table = case.table()
-            val total = case.paid.sumOf { it.toLong() }
+            val total = table.places.sumOf { it.weight.toLong() }
             table.places.drop(1).forEach { place ->
                 expect(place.amountCents % case.unit == 0L) { "${place.ordinal} pays ${place.amountCents}: not whole units" }
                 // |amount - pool * weight / total| < unit, in exact integers

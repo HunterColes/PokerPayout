@@ -137,6 +137,16 @@ class PayoutsViewModel @Inject constructor(
         )
         val settings = tournamentPreferences.getPayoutSettings()
         val places = settlement.payoutTable.places.size.coerceAtLeast(1)
+        // A place that would get $0 isn't paid (CalculatePayoutsUseCase), so the stepper stops at the
+        // most places that each pay something with this structure and pool
+        val payable = (PayoutPlaces.maxFor(config.numPlayers) downTo 1).first { count ->
+            calculatePayouts(
+                prizePoolCents = settlement.pool.prizePoolCents,
+                weights = settings.withPlaces(count).weights,
+                playerCount = config.numPlayers,
+                rounding = config.payoutRounding
+            ).places.size == count
+        }
         val tonight = NightResults.of(settlement, players, names)
         finished = tonight
         _uiState.update {
@@ -156,8 +166,8 @@ class PayoutsViewModel @Inject constructor(
                         rounding = config.payoutRounding
                     ).amountFor(1)
                 },
-                recommendedPlaces = PayoutPlaces.recommended(config.numPlayers),
-                maxPlaces = PayoutPlaces.maxFor(config.numPlayers),
+                recommendedPlaces = PayoutPlaces.recommended(config.numPlayers).coerceAtMost(payable),
+                maxPlaces = payable,
                 rows = rows(settlement, names),
                 bubble = bubble(settlement, config.numPlayers),
                 bounties = bounties(settlement, names, config.money.bountyCents, config.money.foodCents * config.numPlayers),

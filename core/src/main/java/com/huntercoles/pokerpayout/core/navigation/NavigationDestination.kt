@@ -49,6 +49,10 @@ sealed class NavigationDestination {
     @Serializable
     data object Backup : NavigationDestination()
 
+    /** The money symbol amounts show with: $, €, £, kr, ₹, ¥ or none (PP-114). */
+    @Serializable
+    data object Currency : NavigationDestination()
+
     /** A countdown for each decision, with time-bank cards for slow players. */
     @Serializable
     data object ShotClock : NavigationDestination()

@@ -56,6 +56,7 @@ class NavBarTest {
             NavigationDestination.Music,
             NavigationDestination.CueSounds,
             NavigationDestination.Backup,
+            NavigationDestination.Currency,
             NavigationDestination.ShotClock,
             NavigationDestination.DealersChoice,
             NavigationDestination.EquityQuiz,
@@ -110,6 +111,7 @@ class NavBarTest {
             NavigationDestination.SeatDraw,
             NavigationDestination.History,
             NavigationDestination.Backup,
+            NavigationDestination.Currency,
             NavigationDestination.ShotClock,
             NavigationDestination.DealersChoice,
             NavigationDestination.EquityQuiz,
@@ -206,6 +208,7 @@ class NavBarTest {
                 builder.composable<NavigationDestination.SeatDraw> { Text(SCREEN + NavigationDestination.SeatDraw) }
                 builder.composable<NavigationDestination.History> { Text(SCREEN + NavigationDestination.History) }
                 builder.composable<NavigationDestination.Backup> { Text(SCREEN + NavigationDestination.Backup) }
+                builder.composable<NavigationDestination.Currency> { Text(SCREEN + NavigationDestination.Currency) }
                 builder.composable<NavigationDestination.ShotClock> { Text(SCREEN + NavigationDestination.ShotClock) }
                 builder.composable<NavigationDestination.DealersChoice> { Text(SCREEN + NavigationDestination.DealersChoice) }
                 builder.composable<NavigationDestination.EquityQuiz> { Text(SCREEN + NavigationDestination.EquityQuiz) }

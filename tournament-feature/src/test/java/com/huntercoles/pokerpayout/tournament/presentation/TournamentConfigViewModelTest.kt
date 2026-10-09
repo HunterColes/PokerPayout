@@ -36,7 +36,7 @@ class TournamentConfigViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         val context: Context = ApplicationProvider.getApplicationContext()
-        listOf("tournament_prefs", "timer_prefs", "bank_prefs").forEach {
+        listOf("tournament_prefs", "timer_prefs", "bank_prefs", "phone_prefs").forEach {
             context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
         }
         tournamentPreferences = TournamentPreferences(context)

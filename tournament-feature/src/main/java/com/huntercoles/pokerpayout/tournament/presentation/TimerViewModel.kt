@@ -104,9 +104,6 @@ class TimerViewModel @Inject constructor(
         observeSavedClock()
     }
 
-    /** PP-081: true at most once ever, the first Start asking for the live clock's notification. */
-    fun takeNotificationsAsk(): Boolean = timerPreferences.takeNotificationsAsk()
-
     fun acceptIntent(intent: TimerIntent) {
         when (intent) {
             TimerIntent.ToggleTimer -> toggleTimer()

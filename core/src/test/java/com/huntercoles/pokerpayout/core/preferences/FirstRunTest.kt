@@ -29,9 +29,12 @@ class FirstRunTest {
 
     private fun prefs(name: String) = context.getSharedPreferences(name, Context.MODE_PRIVATE)
 
+    /** Every file the app keeps: the backed-up ones, and the one about this phone alone (where the welcome is). */
+    private val allFiles = BackupCatalog.FILES + BackupCatalog.PHONE_FILES
+
     @Before
     fun wipe() {
-        BackupCatalog.FILES.forEach { prefs(it).edit().clear().commit() }
+        allFiles.forEach { prefs(it).edit().clear().commit() }
     }
 
     /** The app starting, as MainApplication does it: settled before anything else runs. */
@@ -51,7 +54,7 @@ class FirstRunTest {
 
     @Test
     fun `anything in any of the app's files is an update`() {
-        val showed = BackupCatalog.FILES.filter { file ->
+        val showed = allFiles.filter { file ->
             wipe()
             prefs(file).edit().putString("from_before", "x").commit()
             start().getShowWelcome()
@@ -71,7 +74,7 @@ class FirstRunTest {
     fun `an update stays an update, even after its data is cleared`() {
         prefs("bank_prefs").edit().putString("player_name_1", "Dana").commit()
         assertFalse(start().getShowWelcome())
-        BackupCatalog.FILES.filter { it != TIMER_PREFS }.forEach { prefs(it).edit().clear().commit() }
+        BackupCatalog.FILES.forEach { prefs(it).edit().clear().commit() }
         TimerPreferences(context).resetAllTimerData()
         assertFalse(start().getShowWelcome())
     }
@@ -106,6 +109,7 @@ class FirstRunTest {
 
         // Another phone, new to the app, restoring this one's backup: its welcome is its own
         wipe()
+        assertTrue("about this phone alone", BackupCatalog.PHONE_FILES.contains(PhonePrefs.FILE))
         assertTrue(start().getShowWelcome())
         backups().replace(backups().open(text))
         assertTrue("a restore leaves the phone's own welcome as it was", TimerPreferences(context).getShowWelcome())
@@ -120,9 +124,5 @@ class FirstRunTest {
         override fun wallClockMillis(): Long = 1_791_460_800_000L
 
         override fun bootCount(): Int = 7
-    }
-
-    private companion object {
-        const val TIMER_PREFS = "timer_prefs"
     }
 }

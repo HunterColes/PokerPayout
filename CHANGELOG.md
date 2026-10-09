@@ -3,6 +3,37 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.9 (on master, not published)
+
+A restored phone asks for notifications again:
+
+- **The live clock on a new phone:** a phone restored from Google's backup, or moved by cable or
+  Wi-Fi, came back sure it had already asked for notifications, so it never asked and the live clock
+  stayed out of the shade and the lock screen. The app now asks Android each time instead of
+  remembering, so the first Start on a new or restored phone asks. A phone that already said no isn't
+  asked again; if the question was closed without an answer, it comes back at the next game's first
+  Start.
+- **The music stays on its phone:** the playlist and where a song was paused are no longer copied
+  by Android's backup or a move to a new phone, since the songs picked are that phone's own files
+  and can't play on another. They move once into a file of their own, keeping everything as it was
+  on this phone. Your settings, presets, History and tonight's game still travel.
+
+## 1.4.8 (on master, not published)
+
+Three new tools for the table, in Tools:
+
+- **Outs & pot odds:** pick the flop or the turn and your outs (or tap a common draw: flush draw,
+  open-ended, gutshot and more) for the exact chance to hit, by the river and on the next card,
+  with the rule of 4 and 2 beside it ("35.0%" and "Rule of 4: 36%" for a flush draw). Type the pot
+  and the call for the share of the pot you need to win, and whether your outs cover it.
+- **Side pots:** type what each player put in and tick who folded. The main pot and each side pot
+  show how much is in it and who can win it, in whole chips; folded chips stay in, and a bet nobody
+  matched goes back. New hand clears the chips, with Undo.
+- **Deal maker:** the chop. The players still in come from the Bank and the prizes left from the
+  Payouts tab (or type them), then each player's share by ICM and by chip chop, side by side, to
+  the cent and adding up to the prizes exactly. You can save some for the winner and play for it.
+- What you type in these tools stays while the app is open, so a trip to the Bank loses nothing.
+
 ## 1.4.7 (on master, not published)
 
 Lighter and faster:

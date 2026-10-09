@@ -1251,7 +1251,7 @@ s_tools() {
   ui assert-text "Everything works offline" text=Odds "text=Chip set" "text=Hand ranks" || return 1
   require_tab_selected Tools || return 1
   # The Sound section comes after the tools: on a phone it is below the fold
-  ui scroll-to "Test chime" --max 4
+  ui scroll-to "Test chime" --max 6
   ui assert-text text=Sound "desc=Chime volume" "Test chime"
 }
 # The Sound row is one switch; the uiautomator node that holds "Sound" and is checkable.
@@ -1376,7 +1376,9 @@ PY
 s_hand_ranks() {
   # S12: a tool's screen keeps Tools selected (B16) and has a back arrow. Each hand shows how often
   # it comes up by the river: the royal flush is 1 in 30,940 of the 133,784,560 seven-card hands.
-  ui scroll-to "text=Hand ranks" --dir up --max 4   # the Sound steps left the list scrolled down
+  # Back to the top of the list from the Sound section, as the steps after expect (Odds in view)
+  ui scroll up --times 4
+  ui scroll-to text=Odds --dir up --max 4
   ui tap "text=Hand ranks"
   ui assert-text "Best to worst" desc=Back "re=Royal flush" "re=1 in 30,940" || return 1
   require_tab_selected Tools || return 1
@@ -2140,6 +2142,7 @@ step seat-draw-button     "Deal for the button: high card, blinds by seat"      
 step seat-draw-undo       "Redraw seats, then Undo brings the draw back"        s_seat_draw_undo
 step seat-draw-share      "Share as text: the share sheet opens and closes"     s_seat_draw_share
 step seat-draw-back       "Back to the Tools list"                              s_seat_draw_back
+source "$DEVICE_SCRIPTS/steps-table-tools.sh"   # Outs & pot odds, Side pots, Deal maker (S20 to S22)
 step backup               "Tools > Backup: save and restore, Tools selected"    s_backup
 step backup-save          "Save backup…: the file picker saves the file"        s_backup_save
 step backup-open          "Open it again: the preview names what it holds"      s_backup_open

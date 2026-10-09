@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Outs & pot odds (S20): exact chances to hit, and the price of a call -->
+    <string name="outs_title">Outs &amp; pot odds</string>
+    <!-- "9 outs on the flop" -->
+    <string name="outs_subtitle">%1$s %2$s</string>
+    <plurals name="outs_count">
+        <item quantity="one">%1$d out</item>
+        <item quantity="other">%1$d outs</item>
+    </plurals>
+    <string name="outs_on_flop">on the flop</string>
+    <string name="outs_on_turn">on the turn</string>
+
+    <!-- Your outs -->
+    <string name="outs_your_outs">Your outs</string>
+    <string name="outs_street_flop">On the flop</string>
+    <string name="outs_street_turn">On the turn</string>
+    <string name="outs_outs">Outs</string>
+    <string name="outs_common">Common draws</string>
+    <!-- A draw and its outs on a button: "Flush draw · 9" -->
+    <string name="outs_draw_button">%1$s · %2$d</string>
+    <!-- TalkBack: "Flush draw, 9 outs" -->
+    <string name="outs_draw_spoken">%1$s, %2$s</string>
+    <string name="outs_draw_flush">Flush draw</string>
+    <string name="outs_draw_open_ended">Open-ended</string>
+    <string name="outs_draw_gutshot">Gutshot</string>
+    <string name="outs_draw_overcards">Two overcards</string>
+    <string name="outs_draw_flush_open_ended">Flush + open-ended</string>
+    <string name="outs_draw_set">Pair to a set</string>
+
+    <!-- Chance to hit -->
+    <string name="outs_chance_title">Chance to hit</string>
+    <string name="outs_by_river">By the river</string>
+    <string name="outs_next_card">Next card</string>
+    <string name="outs_on_river">On the river</string>
+    <!-- "35.0%" -->
+    <string name="outs_percent">%1$s%%</string>
+    <!-- "Rule of 4: 36%" -->
+    <string name="outs_rule_of_four">Rule of 4: %1$d%%</string>
+    <string name="outs_rule_of_two">Rule of 2: %1$d%%</string>
+    <!-- "1.9 to 1 against" -->
+    <string name="outs_against">%1$s to 1 against</string>
+    <string name="outs_exact_flop">Exact, from the 47 cards you can\'t see: 52 less your 2 and the 3 on the board.</string>
+    <string name="outs_exact_turn">Exact, from the 46 cards you can\'t see: 52 less your 2 and the 4 on the board.</string>
+    <string name="outs_rule_runs_high">Past 8 outs the rule of 4 runs high.</string>
+
+    <!-- Pot odds -->
+    <string name="outs_pot_title">Pot odds</string>
+    <string name="outs_pot">Pot, with the bet</string>
+    <string name="outs_call">To call</string>
+    <string name="outs_amount_hint">0</string>
+    <!-- "You need 25.0% to call" -->
+    <string name="outs_need">You need %1$s%% to call</string>
+    <!-- "Pot odds 3 to 1" -->
+    <string name="outs_pot_odds">Pot odds %1$s to 1</string>
+    <string name="outs_type_pot">Type the pot and the call to see the share you need to win.</string>
+    <!-- "Next card 19.1% against 25.0% needed: too short for one card." -->
+    <string name="outs_next_enough">Next card %1$s%% against %2$s%% needed: worth a call.</string>
+    <string name="outs_next_short">Next card %1$s%% against %2$s%% needed: too short for one card.</string>
+    <string name="outs_river_enough">By the river %1$s%%: enough if you\'re all in.</string>
+    <string name="outs_river_short">By the river %1$s%%: short even if you\'re all in.</string>
+    <string name="outs_turn_enough">River %1$s%% against %2$s%% needed: worth a call.</string>
+    <string name="outs_turn_short">River %1$s%% against %2$s%% needed: too short to call.</string>
+    <string name="outs_later">Not counting what you could win later.</string>
+</resources>

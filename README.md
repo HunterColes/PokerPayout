@@ -69,14 +69,15 @@
 - Who has paid the buy-in, rebuys and add-ons, and who has been paid out, with Undo.
 - Knockouts and bounties three ways: standard, progressive (half now, half onto the winner's own
   bounty) or mystery envelopes.
-- Cash games: buy-ins and top-ups, a chip count check, and who pays whom at the end.
+- Settle up at the end of the night: the fewest payments that square everyone, with a tick for
+  each, when not everyone paid in at the start.
 - Share the settle-up as text.
 
 <p align="center">
   <img src="bank-feature/src/test/screenshots/screens/S5_bank_midgame/S5_bank_midgame_phone-360x780_font1.0.png" alt="The bank during a game" width="23%"/>
   <img src="bank-feature/src/test/screenshots/screens/S5b_knockout_sheet_pko/S5b_knockout_sheet_pko_phone-360x780_font1.0.png" alt="A knockout with a progressive bounty" width="23%"/>
   <img src="bank-feature/src/test/screenshots/screens/S5d_envelope_reveal/S5d_envelope_reveal_phone-360x780_font1.0.png" alt="A mystery bounty envelope" width="23%"/>
-  <img src="bank-feature/src/test/screenshots/screens/S13_cash_settle/S13_cash_settle_phone-360x780_font1.0.png" alt="Settling up a cash game" width="23%"/>
+  <img src="bank-feature/src/test/screenshots/screens/S5e_settle_up/S5e_settle_up_phone-360x780_font1.0.png" alt="Settling up at the end of the night" width="23%"/>
 </p>
 
 ### Payouts

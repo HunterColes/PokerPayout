@@ -10,6 +10,7 @@ import com.huntercoles.pokerpayout.core.domain.model.PayoutTable
 import com.huntercoles.pokerpayout.core.domain.model.PlayerSettlement
 import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.domain.model.PurchaseWindow
+import com.huntercoles.pokerpayout.core.domain.settle.Transfer
 
 const val MAX_PURCHASE_COUNT = 20
 
@@ -79,7 +80,11 @@ data class BankUiState(
     /** False while the Bank is as it starts (default names, nothing recorded): Reset has nothing to do. */
     val canReset: Boolean = false,
     /** Mystery bounties (PP-035): the envelopes not drawn yet, biggest first. */
-    val envelopesLeft: List<Long> = emptyList()
+    val envelopesLeft: List<Long> = emptyList(),
+    /** Once the night is over: who pays whom so that everyone is square; null before. */
+    val settleUp: SettleUpModel? = null,
+    /** The settle-up payments ticked as paid (only ones [settleUp] lists). */
+    val settlePaid: Set<Transfer> = emptySet()
 ) {
     /** How knockouts pay (PP-035), from the Tournament settings. */
     val bountyMode: BountyMode get() = money.bountyMode
@@ -96,6 +101,14 @@ data class BankUiState(
     val totalAddonCount: Int get() = players.sumOf { it.addons }
     val canUndo: Boolean get() = undoLabel != null
 
+    /**
+     * The money summary offers Settle up once the night is over and someone's buy-in is still open:
+     * then money moves between players, not only from the Bank to the winners (the Paid column).
+     */
+    val offersSettleUp: Boolean get() = settleUp?.transfers?.isNotEmpty() == true && players.any { !it.buyIn }
+
+    fun isPaid(transfer: Transfer): Boolean = transfer in settlePaid
+
     /** What the top bar says about the night so far. */
     val summary: BankSummary
         get() = BankSummary(
@@ -106,6 +119,23 @@ data class BankUiState(
             championName = players.firstOrNull { it.id == championId }?.name,
             stillToPayCents = (payableCents - totalPaidOutCents).coerceAtLeast(0L)
         )
+}
+
+/**
+ * The settle-up as the Bank shows it, once the night is over: the fewest [transfers] that square
+ * everyone (the Bank itself is `SettleUp.BANK_ID`), and each player's night, for Share.
+ */
+data class SettleUpModel(
+    val transfers: List<Transfer>,
+    /** In seat order. */
+    val nights: List<PlayerNight>,
+    /** The food money, which the Bank keeps. */
+    val foodCents: Long = 0L
+)
+
+/** What [name] put in tonight (entry, rebuys and add-ons) and won (prizes and bounties). */
+data class PlayerNight(val playerId: Int, val name: String, val inCents: Long, val wonCents: Long) {
+    val netCents: Long get() = wonCents - inCents
 }
 
 /** The Bank's top-bar subtitle, as numbers: "7 of 9 left · $540 collected". */
@@ -287,4 +317,7 @@ sealed interface BankSheet {
 
     /** "Reset the bank?" for [playerCount] players. */
     data class ResetConfirm(val playerCount: Int) : BankSheet
+
+    /** Who pays whom, with a tick per payment ([BankUiState.settleUp]). */
+    data object SettleUp : BankSheet
 }

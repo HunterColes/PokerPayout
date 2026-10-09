@@ -66,16 +66,16 @@ import com.huntercoles.pokerpayout.core.R as CoreR
  * The Bank (S5 v2), stateless: the top bar (live subtitle, Undo, the chime bell and ⋮), the money
  * summary, the labelled sticky header and one line per player, in sections. Below 360 dp closed
  * columns fold into the line under each name (Z2); from 840 dp the list gets wider columns with In
- * and Owed, and the meters, pool breakdown and payout table sit open in a side pane (Z5).
- *
- * [modeSwitch] is where the Tournament / Cash game switch goes (M7); the tournament Bank is this.
+ * and Owed, and the meters, pool breakdown and payout table sit open in a side pane (Z5). Once the
+ * night is over with a buy-in still open, the summary offers Settle up: who pays whom, with
+ * [onShareSettleUp] for Share as text.
  */
 @Composable
 fun BankContent(
     state: BankUiState,
     onIntent: (BankIntent) -> Unit,
     modifier: Modifier = Modifier,
-    modeSwitch: (@Composable () -> Unit)? = null,
+    onShareSettleUp: () -> Unit = {},
 ) {
     val widthClass = LocalWidthClass.current
     val layout = BankLayout.of(state, widthClass)
@@ -87,12 +87,12 @@ fun BankContent(
     ) {
         BankTopBar(state, onIntent)
         if (expanded) {
-            TabletBody(state, layout, onIntent, modeSwitch)
+            TabletBody(state, layout, onIntent)
         } else {
-            PhoneBody(state, layout, onIntent, modeSwitch)
+            PhoneBody(state, layout, onIntent)
         }
     }
-    BankSheets(state, onIntent)
+    BankSheets(state, onIntent, onShareSettleUp)
 }
 
 @Composable
@@ -175,18 +175,12 @@ private fun subtitle(summary: BankSummary): String = when {
 // Phone ---------------------------------------------------------------------------------------------
 
 @Composable
-private fun PhoneBody(
-    state: BankUiState,
-    layout: BankLayout,
-    onIntent: (BankIntent) -> Unit,
-    modeSwitch: (@Composable () -> Unit)?
-) {
+private fun PhoneBody(state: BankUiState, layout: BankLayout, onIntent: (BankIntent) -> Unit) {
     val hint = stringResource(R.string.bank_hint_rename)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = layout.gutter, end = layout.gutter, bottom = 24.dp),
     ) {
-        if (modeSwitch != null) item(key = "mode") { Box(Modifier.padding(bottom = 12.dp)) { modeSwitch() } }
         item(key = "summary") {
             MoneySummary(
                 state = state,
@@ -194,6 +188,7 @@ private fun PhoneBody(
                     onBreakdown = { onIntent(BankIntent.ShowPoolBreakdown) },
                     onPayoutStructure = { onIntent(BankIntent.ShowPayoutStructure) },
                 ),
+                onSettleUp = { onIntent(BankIntent.ShowSettleUp) },
                 modifier = Modifier.padding(bottom = 12.dp),
             )
         }
@@ -204,12 +199,7 @@ private fun PhoneBody(
 // Tablet --------------------------------------------------------------------------------------------
 
 @Composable
-private fun TabletBody(
-    state: BankUiState,
-    layout: BankLayout,
-    onIntent: (BankIntent) -> Unit,
-    modeSwitch: (@Composable () -> Unit)?
-) {
+private fun TabletBody(state: BankUiState, layout: BankLayout, onIntent: (BankIntent) -> Unit) {
     val hint = stringResource(R.string.bank_hint_rename_hold)
     Row(
         modifier = Modifier
@@ -223,7 +213,6 @@ private fun TabletBody(
                 .fillMaxHeight(),
             contentPadding = PaddingValues(bottom = 24.dp),
         ) {
-            if (modeSwitch != null) item(key = "mode") { Box(Modifier.padding(bottom = 12.dp)) { modeSwitch() } }
             playerList(state, layout, onIntent, hint = hint)
         }
         Column(
@@ -234,7 +223,7 @@ private fun TabletBody(
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            MoneySummary(state = state, buttons = null)
+            MoneySummary(state = state, buttons = null, onSettleUp = { onIntent(BankIntent.ShowSettleUp) })
             PaneCard {
                 PokerEyebrow(stringResource(R.string.bank_pool_title), color = PokerColors.PokerGold)
                 PoolBreakdownContent(state)
@@ -310,7 +299,7 @@ private val LastRowShape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 1
 
 /** The open sheet, if any. Each is a modal bottom sheet; its content composable is screenshot-tested. */
 @Composable
-private fun BankSheets(state: BankUiState, onIntent: (BankIntent) -> Unit) {
+private fun BankSheets(state: BankUiState, onIntent: (BankIntent) -> Unit, onShareSettleUp: () -> Unit) {
     val dismiss = { onIntent(BankIntent.DismissSheet) }
     when (val sheet = state.sheet) {
         is BankSheet.Knockout -> KnockoutSheet(
@@ -340,6 +329,12 @@ private fun BankSheets(state: BankUiState, onIntent: (BankIntent) -> Unit) {
             onSave = { onIntent(BankIntent.UpdatePayoutSettings(it)) },
             onDismiss = dismiss,
             isLocked = state.isTimerRunning,
+        )
+        BankSheet.SettleUp -> SettleUpSheet(
+            state = state,
+            onSetPaid = { transfer, paid -> onIntent(BankIntent.SetSettlePaid(transfer, paid)) },
+            onShare = onShareSettleUp,
+            onDismiss = dismiss,
         )
         is BankSheet.ResetConfirm -> ConfirmSheet(
             title = stringResource(R.string.bank_reset_title),

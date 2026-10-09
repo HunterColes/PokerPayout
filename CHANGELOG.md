@@ -3,6 +3,20 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.0 (on master, not published)
+
+- **The cash game folds into the Bank.** The Bank's Tournament / Cash game switch and the separate
+  cash page are gone: a home night runs one way, through the Tournament, Bank and Payouts tabs.
+- **Settle up:** once the night is over and someone's buy-in is still open, the Bank offers
+  "Settle up": who pays whom so that everyone is square, counting what the Bank took in and paid
+  out (it keeps the food money). It finds the true fewest payments (exactly, for nights of up to 10
+  players), with a tick for each payment and Share as text for the group chat. Ticking the last one
+  marks every buy-in and payout paid, so the night can go into History; Undo takes it back. When
+  everyone paid in at the start, the Paid column does the job as before.
+- Gone with the cash page: free-amount buy-ins and top-ups, the chip count check and splitting a
+  difference. A cash game saved by 1.3.14 is left untouched on the phone and no longer shown.
+- The store listing's fifth picture is now the settle-up.
+
 ## 1.3.13 (on master, not published)
 
 - **Odds on small phones:** on the smallest phones at large text, the card keypad takes a row less

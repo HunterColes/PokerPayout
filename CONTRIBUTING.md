@@ -24,7 +24,7 @@ JDK 21 toolchain, which is also what F-Droid's build server has.
 | `app` | The app's entry point and the release build setup |
 | `core` | The design system (`core/design`), navigation, saved settings, money and blind maths, and the test kit for screen sizes |
 | `tournament-feature` | The Tournament tab (setup, presets, clock, blinds, table view), the live clock notification, and the Payouts tab |
-| `bank-feature` | The Bank tab: buy-ins, rebuys, add-ons, knockouts and bounties, settling up, and cash games |
+| `bank-feature` | The Bank tab: buy-ins, rebuys, add-ons, knockouts and bounties, payouts, and Settle up |
 | `tools-feature` | The Tools tab: Odds and Run it out, Chip set, Hand ranks, Seat draw, History, Sound |
 
 ## The check every change must pass

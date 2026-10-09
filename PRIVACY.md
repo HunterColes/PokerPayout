@@ -11,7 +11,7 @@ Only what you enter or choose, in the app's own private storage on your phone:
 - **The tournament:** players, buy-in, bounty, rebuys, add-ons and food; the blind settings; where
   the clock is.
 - **The bank:** player names you type, who has paid what, knockouts and bounties, payouts, and
-  cash game buy-ins and chip counts.
+  which settle-up payments you ticked. (A cash game saved by version 1.3.14 stays where it was.)
 - **Presets** you save, and your **chip set**.
 - **History:** the nights you choose to save, with names, places, amounts and season points.
 - **Settings:** sound, vibration and flash, payout choices, the four-colour deck, and similar.

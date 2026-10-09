@@ -4,7 +4,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -14,8 +18,10 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
+import com.huntercoles.pokerpayout.core.design.components.LocalShellSnackbars
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.navigation.NavTab
+import com.huntercoles.pokerpayout.core.presentation.LocalTableKnockouts
 import com.huntercoles.pokerpayout.core.testing.DeviceMatrix
 import com.huntercoles.pokerpayout.core.testing.InAppShell
 import com.huntercoles.pokerpayout.core.testing.LayoutAssertions
@@ -48,6 +54,8 @@ import java.util.TimeZone
  *
  * A phone held sideways shows the table view once a clock exists, as the app does, so the S1 and S2
  * goldens on the landscape phone cells are table views; the tablet-land cell is the two-pane Z4.
+ * The table view has its Knock out button (PP-135); the Bank's panel behind it is a stand-in here
+ * ([FakeTableKnockouts]) and bank-feature's QuickKnockoutScreensTest checks the real one.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -172,6 +180,32 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
     }
 
     /**
+     * PP-135: knockouts on the table view. On the bubble (4 left, 3 paid) the players left say so;
+     * after a knockout the snackbar's Undo sits bottom left, clear of Knock out, pause and exit.
+     */
+    @Test
+    fun tableViewKnockouts() {
+        if (!config.device.isLandscape) return
+        val running = TournamentUi(mode = TournamentMode.Running)
+        check("S3_table_bubble", fixture.running.withPlayersLeft(BUBBLE_LEFT).copy(isTableView = true), running)
+
+        val snackbars = SnackbarHostState()
+        val afterKnockout = fixture.running.withPlayersLeft(AFTER_KNOCKOUT_LEFT).copy(isTableView = true)
+        showAndCheck("S3_table_undo", scroll = false) {
+            CompositionLocalProvider(LocalShellSnackbars provides snackbars) {
+                TournamentContent(setup, afterKnockout, running, TournamentActions())
+            }
+            LaunchedEffect(snackbars) {
+                snackbars.showSnackbar(KNOCKOUT_DONE, actionLabel = "Undo", duration = SnackbarDuration.Indefinite)
+            }
+        }
+    }
+
+    /** The same moment with [left] players still in (each one's stack grows as the field shrinks). */
+    private fun TimerUiState.withPlayersLeft(left: Int): TimerUiState =
+        copy(table = table.copy(playersLeft = left, averageStack = table.averageStack * table.playersLeft / left))
+
+    /**
      * The fold (S1 v2) 300 ms in: the sections folded to their lines, stacking into the strip. The frame
      * is [FoldScene] at 300 of its 800 ms, the same scene [SetupFold] animates ([SetupFoldTest] runs
      * the animation itself on a paused clock).
@@ -242,14 +276,22 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
 
     private fun show(name: String, timer: TimerUiState, ui: TournamentUi) {
         shownKey = name
-        shown = { InAppShell(NavTab.Tournament) { TournamentContent(setup, timer, ui, TournamentActions()) } }
+        shown = { InTournamentTab { TournamentContent(setup, timer, ui, TournamentActions()) } }
         screen.compose.waitForIdle()
+    }
+
+    /** The tab as the app shows it: in the shell, with the Bank's knockout for the table view (PP-135). */
+    @Composable
+    private fun InTournamentTab(content: @Composable () -> Unit) {
+        InAppShell(NavTab.Tournament) {
+            CompositionLocalProvider(LocalTableKnockouts provides FakeTableKnockouts) { content() }
+        }
     }
 
     /** Shows [content] in the shell, checks the layout (at every scroll position if [scroll]), records the golden. */
     private fun showAndCheck(name: String, scroll: Boolean, checkLayout: Boolean = true, content: @Composable () -> Unit) {
         shownKey = name
-        shown = { InAppShell(NavTab.Tournament) { content() } }
+        shown = { InTournamentTab { content() } }
         screen.compose.waitForIdle()
         val where = "$name on ${config.id}"
         if (checkLayout) {
@@ -271,6 +313,9 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         private const val SMALL_BELOW_DP = 360
         private const val LEVEL_ONE_LEFT = 20 * 60
         private const val FOLD_FRAME_MILLIS = 300f
+        private const val BUBBLE_LEFT = 4
+        private const val AFTER_KNOCKOUT_LEFT = 6
+        private const val KNOCKOUT_DONE = "Theo is out in 7th · bounty to Dana"
         private val MIN_TOUCH = 48.dp
         private val TOP_BAR_BUTTONS = listOf("Reset tournament", "Mute chimes", "Unmute chimes", "Table view", "More options")
         private val ADAPTIVE_GOLDENS =

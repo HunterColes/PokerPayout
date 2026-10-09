@@ -124,7 +124,9 @@ class PayoutsViewModel @Inject constructor(
                 eliminatedBy = bankPreferences.getPlayerEliminatedBy(id),
                 rebuyPricesCents = bankPreferences.getPlayerRebuyPrices(id),
                 addOnPricesCents = bankPreferences.getPlayerAddonPrices(id),
-                bountyDrawCents = bankPreferences.getPlayerBountyDraw(id)
+                bountyDrawCents = bankPreferences.getPlayerBountyDraw(id),
+                entryPrice = bankPreferences.getPlayerEntryPrice(id),
+                reEntryOf = bankPreferences.getPlayerReEntryOf(id)
             )
         }
         val names = ids.associateWith { bankPreferences.getPlayerName(it) }
@@ -162,7 +164,7 @@ class PayoutsViewModel @Inject constructor(
                 maxPlaces = payable,
                 rows = rows(settlement, names),
                 bubble = bubble(settlement, config.numPlayers),
-                bounties = bounties(settlement, names, config.money.bountyCents, config.money.foodCents * config.numPlayers),
+                bounties = bounties(settlement, names, config.money.bountyCents, settlement.pool.foodCents),
                 night = nightSave(tonight, settlement.pool.prizePoolCents)
             )
         }

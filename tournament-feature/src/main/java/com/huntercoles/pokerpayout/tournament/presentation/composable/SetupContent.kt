@@ -172,7 +172,8 @@ internal fun SetupSection(
 }
 
 /**
- * "Players · Bank gets one row per player" with a stepper. Mid-game: "A late entry adds a Bank row".
+ * "Players · Bank gets one row per player" with a stepper. Mid-game: "Late arrival? Add them in the
+ * Bank" (its Late entry takes their buy-in at today's price, PP-116; the stepper still adds a row).
  * Once a mystery envelope is drawn the count can't go lower (PP-035): minus is off and the hint says why.
  */
 @Composable
@@ -232,6 +233,30 @@ internal fun RebuysUntilSelect(timer: TimerUiState, onTimerIntent: (TimerIntent)
             }
         },
         onPick = { onTimerIntent(TimerIntent.UpdateRebuyUntil(it)) },
+        modifier = modifier,
+    )
+}
+
+/**
+ * The late entry cutoff (PP-116): no cutoff, or the end of a level. Until then the Bank's Late entry
+ * adds a player who arrives late, or a re-entry for one who is out.
+ */
+@Composable
+internal fun LateEntryUntilSelect(timer: TimerUiState, onTimerIntent: (TimerIntent) -> Unit, modifier: Modifier = Modifier) {
+    val resources = LocalContext.current.resources
+    val last = maxOf(timer.regularLevelCount, timer.lateEntryUntilLevel, 1)
+    SetupSelectField(
+        label = stringResource(R.string.setup_late_entry_until),
+        options = listOf(0) + (1..last),
+        selected = timer.lateEntryUntilLevel,
+        optionText = { level ->
+            if (level == 0) {
+                resources.getString(R.string.setup_rebuys_until_none)
+            } else {
+                resources.getString(R.string.setup_rebuys_until_level, level)
+            }
+        },
+        onPick = { onTimerIntent(TimerIntent.UpdateLateEntryUntil(it)) },
         modifier = modifier,
     )
 }

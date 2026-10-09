@@ -45,6 +45,9 @@ sealed class TimerIntent {
     /** The last level at which rebuys are allowed; 0 = no cutoff. */
     data class UpdateRebuyUntil(val level: Int) : TimerIntent()
 
+    /** The last level at which a player can join late or re-enter (PP-116); 0 = no cutoff. */
+    data class UpdateLateEntryUntil(val level: Int) : TimerIntent()
+
     // Breaks and antes
     /** 0 turns breaks off. */
     data class UpdateBreakEvery(val levels: Int) : TimerIntent()

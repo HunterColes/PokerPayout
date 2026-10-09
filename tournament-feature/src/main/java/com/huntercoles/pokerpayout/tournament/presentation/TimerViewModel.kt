@@ -127,6 +127,7 @@ class TimerViewModel @Inject constructor(
             is TimerIntent.SetTableView -> _uiState.update { it.copy(isTableView = intent.enabled) }
             TimerIntent.ToggleMute -> audioPreferences.toggleMute()
             is TimerIntent.UpdateRebuyUntil -> tournamentPreferences.setRebuyUntilLevel(intent.level)
+            is TimerIntent.UpdateLateEntryUntil -> tournamentPreferences.setLateEntryUntilLevel(intent.level)
             is TimerIntent.ApplyFix -> applyFix(intent.fix)
             is TimerIntent.KeepingLevel -> changeKeepingLevel(intent.edit)
             else -> acceptSetupIntent(intent)
@@ -461,6 +462,7 @@ class TimerViewModel @Inject constructor(
                 config = loadConfig(frozen = false),
                 table = it.table,
                 rebuyUntilLevel = it.rebuyUntilLevel,
+                lateEntryUntilLevel = it.lateEntryUntilLevel,
                 purchases = it.purchases,
                 isMuted = it.isMuted
             )
@@ -731,10 +733,17 @@ class TimerViewModel @Inject constructor(
      */
     private fun observeSettings() {
         _uiState.update {
-            it.copy(rebuyUntilLevel = tournamentPreferences.getRebuyUntilLevel(), isMuted = audioPreferences.getIsMuted())
+            it.copy(
+                rebuyUntilLevel = tournamentPreferences.getRebuyUntilLevel(),
+                lateEntryUntilLevel = tournamentPreferences.getLateEntryUntilLevel(),
+                isMuted = audioPreferences.getIsMuted(),
+            )
         }
         viewModelScope.launch {
             tournamentPreferences.rebuyUntilLevel.collect { level -> _uiState.update { it.copy(rebuyUntilLevel = level) } }
+        }
+        viewModelScope.launch {
+            tournamentPreferences.lateEntryUntilLevel.collect { level -> _uiState.update { it.copy(lateEntryUntilLevel = level) } }
         }
         viewModelScope.launch {
             audioPreferences.isMuted.collect { muted -> _uiState.update { it.copy(isMuted = muted) } }
@@ -757,6 +766,8 @@ class TimerViewModel @Inject constructor(
             players,
             bankPreferences.getRecordedRebuyCents(),
             bankPreferences.getRecordedAddOnCents(),
+            // Late entries and re-entries at what they paid (PP-116)
+            bankPreferences.getRecordedEntryPrices(players),
         ).prizePoolCents
         val table = TableStats(
             playerCount = players,

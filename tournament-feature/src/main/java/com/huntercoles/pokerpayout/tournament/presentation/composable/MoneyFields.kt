@@ -37,8 +37,8 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiSta
 
 /**
  * The money per player: buy-in, bounty and how bounties pay (PP-035), rebuy (and its cutoff, before
- * the start), add-on, food. Only a committed $0 rebuy or add-on can clear recorded purchases, and only
- * after asking (PP-014).
+ * the start), add-on, food, and until when a player can join late or re-enter (PP-116). Only a
+ * committed $0 rebuy or add-on can clear recorded purchases, and only after asking (PP-014).
  */
 @Composable
 internal fun MoneyGrid(setup: TournamentConfigUiState, timer: TimerUiState, actions: TournamentActions) {
@@ -57,6 +57,11 @@ internal fun MoneyGrid(setup: TournamentConfigUiState, timer: TimerUiState, acti
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             AddOnField(amounts, onSetup, Modifier.weight(1f))
             FoodField(amounts, onSetup, Modifier.weight(1f))
+        }
+        // Late arrivals and re-entries pay the entry above (PP-116)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+            LateEntryUntilSelect(timer, actions.onTimerIntent, Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
         }
     }
 }

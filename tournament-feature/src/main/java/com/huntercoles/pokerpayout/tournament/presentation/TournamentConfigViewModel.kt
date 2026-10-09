@@ -128,6 +128,8 @@ class TournamentConfigViewModel @Inject constructor(
             config.numPlayers,
             bankPreferences.getRecordedRebuyCents(),
             bankPreferences.getRecordedAddOnCents(),
+            // Late entries and re-entries at what they paid (PP-116)
+            bankPreferences.getRecordedEntryPrices(config.numPlayers),
         )
         val table = calculatePayoutsUseCase(
             prizePoolCents = pool.prizePoolCents,

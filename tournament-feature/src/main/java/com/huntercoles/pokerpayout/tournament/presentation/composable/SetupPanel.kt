@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -50,8 +51,9 @@ private val PanelShape = RoundedCornerShape(bottomStart = PokerDimens.CornerShee
 /**
  * S1 v2, mid-game: setup unfolded down from the strip, over the clock, which keeps running.
  *
- * - **Change any time:** players (a late entry adds a Bank row), rebuys-until, the BB ante, break
- *   length and note. The clock keeps its place when breaks or the ante change.
+ * - **Change any time:** players (a late arrival is best added in the Bank, PP-116), rebuys-until,
+ *   late-entry-until, the BB ante, break length and note. The clock keeps its place when breaks or
+ *   the ante change.
  * - **Locked while the clock runs:** money and blinds, shown read-only behind "Unlock to edit…", which
  *   says what happens first (a [ConfirmSheet]). Unlocked, blind changes rebuild the schedule from the
  *   current level and keep its time left; one that can't be played is refused with the fixes.
@@ -142,7 +144,10 @@ private fun PanelHeader(timer: TimerUiState, gutter: Dp, onClose: () -> Unit) {
     }
 }
 
-/** Players, rebuys-until, the BB ante, break length and note: safe to change with the clock running. */
+/**
+ * Players, rebuys-until, the BB ante, late-entry-until (PP-116), break length and note: safe to
+ * change with the clock running.
+ */
 @Composable
 private fun AnyTimeFields(setup: TournamentConfigUiState, timer: TimerUiState, actions: TournamentActions) {
     PokerEyebrow(stringResource(R.string.panel_any_time))
@@ -157,6 +162,10 @@ private fun AnyTimeFields(setup: TournamentConfigUiState, timer: TimerUiState, a
             onChange = { actions.onTimerIntent(TimerIntent.UpdateBigBlindAnte(it)) },
             modifier = Modifier.weight(1f),
         )
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+        LateEntryUntilSelect(timer, actions.onTimerIntent, Modifier.weight(1f))
+        Spacer(Modifier.weight(1f))
     }
     if (timer.config.breaks.enabled) BreakRow(timer.config.breaks, actions.onTimerIntent)
 }

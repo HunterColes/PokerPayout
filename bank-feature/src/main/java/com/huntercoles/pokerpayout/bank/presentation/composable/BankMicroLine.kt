@@ -80,6 +80,10 @@ internal fun MicroLine(row: BankRowModel, layout: BankLayout) {
 
 private const val MICRO_WRAPS_ABOVE = 1.3f
 
+/** Whether [row] has a line under its name; [BankRow] leaves room above the name for one. */
+@Composable
+internal fun hasMicroLine(row: BankRowModel, layout: BankLayout): Boolean = microParts(row, layout).isNotEmpty()
+
 /** One piece of the micro line: words, an optional icon before them, and what TalkBack says instead. */
 private class MicroPart(val text: String, val icon: MicroIcon? = null, val spoken: String? = null)
 

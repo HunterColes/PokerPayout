@@ -7,8 +7,6 @@ import com.huntercoles.pokerpayout.core.domain.model.EntryPrice
 import com.huntercoles.pokerpayout.core.domain.model.Settlement
 import com.huntercoles.pokerpayout.core.domain.settle.SettleUp
 import com.huntercoles.pokerpayout.core.domain.settle.SettleUpUseCase
-import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
-import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
 import com.huntercoles.pokerpayout.core.testing.expect
 import com.huntercoles.pokerpayout.core.testing.forAll
 import org.junit.jupiter.api.Test
@@ -31,7 +29,6 @@ import org.junit.jupiter.api.Test
  */
 class EntriesPropertiesTest {
 
-    private val settle = SettleTournamentUseCase(CalculatePayoutsUseCase())
     private val settleUp = SettleUpUseCase()
 
     @Test

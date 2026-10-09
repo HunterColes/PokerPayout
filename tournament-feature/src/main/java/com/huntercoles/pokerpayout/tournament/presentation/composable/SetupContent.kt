@@ -242,13 +242,18 @@ internal fun RebuysUntilSelect(timer: TimerUiState, onTimerIntent: (TimerIntent)
  * adds a player who arrives late, or a re-entry for one who is out.
  */
 @Composable
-internal fun LateEntryUntilSelect(timer: TimerUiState, onTimerIntent: (TimerIntent) -> Unit, modifier: Modifier = Modifier) {
+internal fun LateEntryUntilSelect(
+    setup: TournamentConfigUiState,
+    timer: TimerUiState,
+    onSetupIntent: (TournamentConfigIntent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val resources = LocalContext.current.resources
-    val last = maxOf(timer.regularLevelCount, timer.lateEntryUntilLevel, 1)
+    val last = maxOf(timer.regularLevelCount, setup.lateEntryUntilLevel, 1)
     SetupSelectField(
         label = stringResource(R.string.setup_late_entry_until),
         options = listOf(0) + (1..last),
-        selected = timer.lateEntryUntilLevel,
+        selected = setup.lateEntryUntilLevel,
         optionText = { level ->
             if (level == 0) {
                 resources.getString(R.string.setup_rebuys_until_none)
@@ -256,7 +261,7 @@ internal fun LateEntryUntilSelect(timer: TimerUiState, onTimerIntent: (TimerInte
                 resources.getString(R.string.setup_rebuys_until_level, level)
             }
         },
-        onPick = { onTimerIntent(TimerIntent.UpdateLateEntryUntil(it)) },
+        onPick = { onSetupIntent(TournamentConfigIntent.UpdateLateEntryUntil(it)) },
         modifier = modifier,
     )
 }

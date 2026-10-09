@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
-import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.domain.model.Standings
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
@@ -47,6 +46,11 @@ class TournamentConfigViewModel @Inject constructor(
             tournamentPreferences.isConfigExpanded.collect { isExpanded ->
                 _uiState.update { it.copy(isConfigExpanded = isExpanded) }
             }
+        }
+
+        // The late entry cutoff (PP-116), as set here and as a new tournament clears it
+        viewModelScope.launch {
+            tournamentPreferences.lateEntryUntilLevel.collect { level -> _uiState.update { it.copy(lateEntryUntilLevel = level) } }
         }
 
         // The pool and the payout table follow every settings change (including the Bank's
@@ -97,6 +101,7 @@ class TournamentConfigViewModel @Inject constructor(
             is TournamentConfigIntent.UpdateSmallestChip -> updateSmallestChip(intent.chip)
             is TournamentConfigIntent.UpdateStartingChips -> updateStartingChips(intent.chips)
             is TournamentConfigIntent.UpdateSelectedPanel -> updateSelectedPanel(intent.panel)
+            is TournamentConfigIntent.UpdateLateEntryUntil -> tournamentPreferences.setLateEntryUntilLevel(intent.level)
             TournamentConfigIntent.ShowResetDialog -> showResetDialog()
             TournamentConfigIntent.HideResetDialog -> hideResetDialog()
             TournamentConfigIntent.ConfirmReset -> confirmReset()
@@ -123,14 +128,8 @@ class TournamentConfigViewModel @Inject constructor(
         val config = tournamentPreferences.getCurrentTournamentConfig()
         val rebuys = bankPreferences.getTotalRebuyCount()
         val addOns = bankPreferences.getTotalAddonCount()
-        val pool = PoolBreakdown.withRecordedPurchases(
-            config.money,
-            config.numPlayers,
-            bankPreferences.getRecordedRebuyCents(),
-            bankPreferences.getRecordedAddOnCents(),
-            // Late entries and re-entries at what they paid (PP-116)
-            bankPreferences.getRecordedEntryPrices(config.numPlayers),
-        )
+        // Purchases, late entries and re-entries at the prices paid (PP-085, PP-116)
+        val pool = bankPreferences.recordedPool(config.money, config.numPlayers)
         val table = calculatePayoutsUseCase(
             prizePoolCents = pool.prizePoolCents,
             weights = config.payoutWeights,

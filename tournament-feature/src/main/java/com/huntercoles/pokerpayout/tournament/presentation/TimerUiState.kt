@@ -88,8 +88,6 @@ data class TimerUiState(
     val isTableView: Boolean = false,
     /** The last level rebuys are allowed at; 0 = no cutoff (TournamentPreferences). */
     val rebuyUntilLevel: Int = 0,
-    /** The last level a player can join late or re-enter at (PP-116); 0 = no cutoff (TournamentPreferences). */
-    val lateEntryUntilLevel: Int = 0,
     val purchases: Purchases = Purchases(),
     /** Breaks whose color-up is ticked off, by the level each follows. */
     val colorUpDoneAfterLevels: Set<Int> = emptySet(),

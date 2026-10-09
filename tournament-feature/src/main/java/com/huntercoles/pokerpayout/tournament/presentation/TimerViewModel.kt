@@ -2,7 +2,6 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
@@ -127,7 +126,6 @@ class TimerViewModel @Inject constructor(
             is TimerIntent.SetTableView -> _uiState.update { it.copy(isTableView = intent.enabled) }
             TimerIntent.ToggleMute -> audioPreferences.toggleMute()
             is TimerIntent.UpdateRebuyUntil -> tournamentPreferences.setRebuyUntilLevel(intent.level)
-            is TimerIntent.UpdateLateEntryUntil -> tournamentPreferences.setLateEntryUntilLevel(intent.level)
             is TimerIntent.ApplyFix -> applyFix(intent.fix)
             is TimerIntent.KeepingLevel -> changeKeepingLevel(intent.edit)
             else -> acceptSetupIntent(intent)
@@ -462,7 +460,6 @@ class TimerViewModel @Inject constructor(
                 config = loadConfig(frozen = false),
                 table = it.table,
                 rebuyUntilLevel = it.rebuyUntilLevel,
-                lateEntryUntilLevel = it.lateEntryUntilLevel,
                 purchases = it.purchases,
                 isMuted = it.isMuted
             )
@@ -733,19 +730,10 @@ class TimerViewModel @Inject constructor(
      */
     private fun observeSettings() {
         _uiState.update {
-            it.copy(
-                rebuyUntilLevel = tournamentPreferences.getRebuyUntilLevel(),
-                lateEntryUntilLevel = tournamentPreferences.getLateEntryUntilLevel(),
-                isMuted = audioPreferences.getIsMuted(),
-            )
+            it.copy(rebuyUntilLevel = tournamentPreferences.getRebuyUntilLevel(), isMuted = audioPreferences.getIsMuted())
         }
         viewModelScope.launch {
             tournamentPreferences.rebuyUntilLevel.collect { level -> _uiState.update { it.copy(rebuyUntilLevel = level) } }
-        }
-        viewModelScope.launch {
-            tournamentPreferences.lateEntryUntilLevel.collect { level ->
-                _uiState.update { it.copy(lateEntryUntilLevel = level) }
-            }
         }
         viewModelScope.launch {
             audioPreferences.isMuted.collect { muted -> _uiState.update { it.copy(isMuted = muted) } }
@@ -763,14 +751,8 @@ class TimerViewModel @Inject constructor(
         val left = (players - out).coerceAtLeast(0)
         val stacks = players.toLong() + bank.rebuys + bank.addOns
         val chips = stacks * _uiState.value.config.startingChips
-        val prizePool = PoolBreakdown.withRecordedPurchases(
-            tableConfig.money,
-            players,
-            bankPreferences.getRecordedRebuyCents(),
-            bankPreferences.getRecordedAddOnCents(),
-            // Late entries and re-entries at what they paid (PP-116)
-            bankPreferences.getRecordedEntryPrices(players),
-        ).prizePoolCents
+        // Purchases, late entries and re-entries at the prices paid (PP-085, PP-116)
+        val prizePool = bankPreferences.recordedPool(tableConfig.money, players).prizePoolCents
         val table = TableStats(
             playerCount = players,
             playersLeft = left,

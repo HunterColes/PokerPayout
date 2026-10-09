@@ -8,6 +8,9 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -87,9 +90,9 @@ class BankContentTest {
             compose.onNodeWithContentDescription(it).assertExists()
         }
         val note = "Rebuys closed after level 4 · add-ons closed after break 1. Taken ones stay filled; hold one to correct it."
-        compose.onNodeWithText(note)
-            .performScrollTo()
-            .assertExists()
+        // The last item of the list, under Late entry (PP-116): scrolled to before it is composed
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(note))
+        compose.onNodeWithText(note).assertExists()
     }
 
     @Test
@@ -116,7 +119,8 @@ class BankContentTest {
     @Test
     fun lateEntryUnderTheListOpensItsSheet() {
         show(BankScenes.midGame(kit).uiState.value)
-        compose.onNodeWithText("Late entry").performScrollTo().performClick()
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Late entry"))
+        compose.onNodeWithText("Late entry").performClick()
         assertEquals(listOf(BankIntent.OpenLateEntry), sent)
     }
 

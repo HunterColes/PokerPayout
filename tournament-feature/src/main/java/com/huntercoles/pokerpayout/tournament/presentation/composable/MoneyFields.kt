@@ -60,7 +60,7 @@ internal fun MoneyGrid(setup: TournamentConfigUiState, timer: TimerUiState, acti
         }
         // Late arrivals and re-entries pay the entry above (PP-116)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
-            LateEntryUntilSelect(timer, actions.onTimerIntent, Modifier.weight(1f))
+            LateEntryUntilSelect(setup, timer, onSetup, Modifier.weight(1f))
             Spacer(Modifier.weight(1f))
         }
     }

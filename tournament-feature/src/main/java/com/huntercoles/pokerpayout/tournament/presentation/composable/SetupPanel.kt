@@ -164,7 +164,7 @@ private fun AnyTimeFields(setup: TournamentConfigUiState, timer: TimerUiState, a
         )
     }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
-        LateEntryUntilSelect(timer, actions.onTimerIntent, Modifier.weight(1f))
+        LateEntryUntilSelect(setup, timer, actions.onSetupIntent, Modifier.weight(1f))
         Spacer(Modifier.weight(1f))
     }
     if (timer.config.breaks.enabled) BreakRow(timer.config.breaks, actions.onTimerIntent)

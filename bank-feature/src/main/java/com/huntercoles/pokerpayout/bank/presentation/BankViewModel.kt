@@ -698,8 +698,8 @@ class BankViewModel @Inject constructor(
         val plan = settleUp(result, bankPlayers, config.money)
         val ticks = keptTicks(state.settlePaid, plan)
         _uiState.update {
-            // Late entry (PP-116) closes at the cutoff, and once someone has won
-            val lateEntryOpen = it.canTakeLateEntry && result.championId == null
+            // Late entry (PP-116) closes at the cutoff, and while someone has won (as this settlement has it)
+            val lateEntryOpen = it.copy(championId = result.championId).canTakeLateEntry
             it.copy(
                 pool = result.pool,
                 totalPaidInCents = result.paidInCents,

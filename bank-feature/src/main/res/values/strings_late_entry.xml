@@ -42,4 +42,7 @@
     <!-- The full-screen clock's knockout panel -->
     <string name="quick_ko_re_entry">Re-entry</string>
     <string name="quick_ko_back_in">Who\'s back in?</string>
+    <!-- Pills: what a re-entry costs, "$50 to sit down", and the stack it gets, "5,000 chips" -->
+    <string name="quick_ko_back_in_price">%1$s to sit down</string>
+    <string name="quick_ko_back_in_chips">%1$s chips</string>
 </resources>

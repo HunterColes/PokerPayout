@@ -177,9 +177,11 @@ private fun ColumnScope.WhoIsBackIn(
         onBack = { onIntent(BankIntent.DismissSheet) },
     )
     val chips = remember { NumberFormat.getIntegerInstance(Locale.getDefault()) }.format(sheet.startingChips)
+    // Two pills, so they wrap at large text rather than cut off
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         val price = FormatUtils.formatMoney(sheet.price.totalCents)
-        PokerPill(stringResource(R.string.bank_late_price, price, chips), tone = PokerPillTone.Gold)
+        PokerPill(stringResource(R.string.quick_ko_back_in_price, price), tone = PokerPillTone.Gold)
+        PokerPill(stringResource(R.string.quick_ko_back_in_chips, chips), tone = PokerPillTone.Outline)
     }
     val choices = state.reEntries.map { candidate ->
         PanelChoice(

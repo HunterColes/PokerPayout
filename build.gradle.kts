@@ -42,10 +42,10 @@ allprojects {
         }
     }
     
-    // Ensure all projects use the same JVM toolchain
+    // Kotlin bytecode targets 17 in every module (the toolchain is JDK 21; see CLAUDE.md).
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        kotlinOptions {
-            jvmTarget = "17"
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
         }
     }
 }

@@ -357,13 +357,7 @@ private fun BankSheets(state: BankUiState, onIntent: (BankIntent) -> Unit, onSha
             onDismiss = dismiss,
         )
         is BankSheet.Envelope -> EnvelopeSheet(sheet = sheet, onDismiss = dismiss)
-        is BankSheet.LateEntry -> LateEntrySheet(
-            sheet = sheet,
-            reEntries = state.reEntries,
-            onAdd = { onIntent(BankIntent.AddLateEntry(it)) },
-            onReEnter = { onIntent(BankIntent.ReEnter(it)) },
-            onDismiss = dismiss,
-        )
+        is BankSheet.LateEntry -> LateEntrySheet(sheet, state.reEntries, onIntent, onDismiss = dismiss)
         BankSheet.PoolBreakdown -> PoolBreakdownSheet(
             state = state,
             onPayoutStructure = { onIntent(BankIntent.ShowPayoutStructure) },

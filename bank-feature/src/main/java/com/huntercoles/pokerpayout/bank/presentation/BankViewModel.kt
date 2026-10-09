@@ -8,7 +8,6 @@ import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatusProvider
 import com.huntercoles.pokerpayout.core.domain.model.EntryPrice
-import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import com.huntercoles.pokerpayout.core.domain.model.ProgressiveBounty
 import com.huntercoles.pokerpayout.core.domain.model.PurchaseWindow
@@ -486,13 +485,7 @@ class BankViewModel @Inject constructor(
         val state = _uiState.value
         showSheet(null)
         if (!state.canTakeLateEntry) return
-        val id = state.players.size + 1
-        val entry = PlayerData(
-            id = id,
-            name = name.trim().take(MAX_ENTRY_NAME_LENGTH).ifBlank { "Player $id" },
-            buyIn = true,
-            entryPrice = EntryPrice.of(state.money),
-        )
+        val entry = BankEntries.lateArrival(state.players, name, state.money)
         addEntry(entry, feedback.lateEntry(entry.name, entry.entryCents(state.money)))
     }
 
@@ -506,14 +499,7 @@ class BankViewModel @Inject constructor(
         showSheet(null)
         if (!state.canTakeLateEntry) return
         val latest = state.reEntries.firstOrNull { it.playerId == playerId } ?: return
-        val id = state.players.size + 1
-        val entry = PlayerData(
-            id = id,
-            name = latest.name,
-            buyIn = true,
-            entryPrice = EntryPrice.of(state.money),
-            reEntryOf = BankEntries.people(state.players).getValue(latest.playerId),
-        )
+        val entry = BankEntries.reEntry(state.players, latest, state.money)
         addEntry(entry, feedback.reEntry(entry.name, entry.entryCents(state.money)))
     }
 
@@ -545,11 +531,7 @@ class BankViewModel @Inject constructor(
                 unclaimedKnockouts = if (playerId == state.championId) unclaimed else 0,
                 envelopesLeft = state.envelopesLeft.size,
                 entry = player.entryPrice ?: EntryPrice.of(state.money),
-                knockoutEachCents = state.players
-                    .filter { it.out && it.id != playerId && it.eliminatedBy == playerId && it.id != state.championId }
-                    .map { headBounty(it.id) }
-                    .distinct()
-                    .singleOrNull()
+                knockoutEachCents = BankEntries.knockoutEach(state, playerId, ::headBounty)
             )
         )
     }
@@ -788,7 +770,7 @@ class BankViewModel @Inject constructor(
                 } else {
                     emptyList()
                 },
-                settleUp = plan?.let { settleUpModel(it, result, state.players, config.money) },
+                settleUp = plan?.let { BankEntries.settleUpModel(it, result, state.players, config.money) },
                 settlePaid = ticks,
                 sheet = it.sheet.takeUnless { sheet ->
                     (sheet == BankSheet.SettleUp && plan == null) || (sheet is BankSheet.LateEntry && !lateEntryOpen)
@@ -805,29 +787,6 @@ class BankViewModel @Inject constructor(
         val kept = plan?.transfers?.let { transfers -> ticks.filterTo(mutableSetOf()) { it in transfers } }.orEmpty()
         if (kept != ticks) bankPreferences.saveSettlePaid(kept)
         return kept
-    }
-
-    /** Each player's night: one line per player, a re-entry's entries together under their first entry (PP-116). */
-    private fun settleUpModel(
-        plan: SettleUp,
-        result: Settlement,
-        players: List<PlayerData>,
-        money: MoneySettings,
-    ): SettleUpModel {
-        val person = BankEntries.people(players)
-        val names = players.associate { it.id to it.name }
-        return SettleUpModel(
-            transfers = plan.transfers,
-            nights = players.groupBy { person.getValue(it.id) }.map { (personId, entries) ->
-                PlayerNight(
-                    playerId = personId,
-                    name = names[personId].orEmpty(),
-                    inCents = entries.sumOf { entry -> result.forPlayer(entry.id)?.costCents ?: entry.entryCents(money) },
-                    wonCents = entries.sumOf { entry -> result.forPlayer(entry.id)?.winningsCents ?: 0L },
-                )
-            },
-            foodCents = result.pool.foodCents
-        )
     }
 
     private companion object {

@@ -1,6 +1,10 @@
 package com.huntercoles.pokerpayout.bank.presentation
 
 import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
+import com.huntercoles.pokerpayout.core.domain.model.EntryPrice
+import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
+import com.huntercoles.pokerpayout.core.domain.model.Settlement
+import com.huntercoles.pokerpayout.core.domain.settle.SettleUp
 
 /**
  * Late entries and re-entries (PP-116), as the Bank's rows see them. Every row is one entry; a
@@ -49,5 +53,53 @@ internal object BankEntries {
                 ReEntryCandidate(latest.id, latest.name, places[latest.id], entries.size)
             }
             .sortedByDescending { outAt[it.playerId] ?: -1 }
+    }
+
+    /** A player who arrived late, as the newest row: [name] (blank: "Player N"), paid at [money]'s entry now. */
+    fun lateArrival(players: List<PlayerData>, name: String, money: MoneySettings): PlayerData {
+        val id = players.size + 1
+        return PlayerData(
+            id = id,
+            name = name.trim().take(MAX_ENTRY_NAME_LENGTH).ifBlank { "Player $id" },
+            buyIn = true,
+            entryPrice = EntryPrice.of(money),
+        )
+    }
+
+    /** [out]'s player buying back in, as the newest row: their name, paid at [money]'s entry now, theirs. */
+    fun reEntry(players: List<PlayerData>, out: ReEntryCandidate, money: MoneySettings): PlayerData = PlayerData(
+        id = players.size + 1,
+        name = out.name,
+        buyIn = true,
+        entryPrice = EntryPrice.of(money),
+        reEntryOf = people(players).getValue(out.playerId),
+    )
+
+    /**
+     * Standard bounties: what each of [playerId]'s knockouts paid ([headBounty] of each player they
+     * knocked out), when they all paid the same; null when they differ (a late entry's at its price).
+     */
+    fun knockoutEach(state: BankUiState, playerId: Int, headBounty: (Int) -> Long): Long? = state.players
+        .filter { it.out && it.id != playerId && it.eliminatedBy == playerId && it.id != state.championId }
+        .map { headBounty(it.id) }
+        .distinct()
+        .singleOrNull()
+
+    /** The settle-up as the Bank shows it: one line per player, a re-entry's entries together under the first. */
+    fun settleUpModel(plan: SettleUp, result: Settlement, players: List<PlayerData>, money: MoneySettings): SettleUpModel {
+        val person = people(players)
+        val names = players.associate { it.id to it.name }
+        return SettleUpModel(
+            transfers = plan.transfers,
+            nights = players.groupBy { person.getValue(it.id) }.map { (personId, entries) ->
+                PlayerNight(
+                    playerId = personId,
+                    name = names[personId].orEmpty(),
+                    inCents = entries.sumOf { entry -> result.forPlayer(entry.id)?.costCents ?: entry.entryCents(money) },
+                    wonCents = entries.sumOf { entry -> result.forPlayer(entry.id)?.winningsCents ?: 0L },
+                )
+            },
+            foodCents = result.pool.foodCents,
+        )
     }
 }

@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.bank.R
+import com.huntercoles.pokerpayout.bank.presentation.BankIntent
 import com.huntercoles.pokerpayout.bank.presentation.BankSheet
 import com.huntercoles.pokerpayout.bank.presentation.MAX_ENTRY_NAME_LENGTH
 import com.huntercoles.pokerpayout.bank.presentation.ReEntryCandidate
@@ -58,12 +59,17 @@ import java.util.Locale
 internal fun LateEntrySheet(
     sheet: BankSheet.LateEntry,
     reEntries: List<ReEntryCandidate>,
-    onAdd: (String) -> Unit,
-    onReEnter: (Int) -> Unit,
+    onIntent: (BankIntent) -> Unit,
     onDismiss: () -> Unit,
 ) {
     PokerSheet(onDismissRequest = onDismiss) {
-        LateEntrySheetContent(sheet, reEntries, onAdd, onReEnter, onDismiss)
+        LateEntrySheetContent(
+            sheet = sheet,
+            reEntries = reEntries,
+            onAdd = { onIntent(BankIntent.AddLateEntry(it)) },
+            onReEnter = { onIntent(BankIntent.ReEnter(it)) },
+            onDismiss = onDismiss,
+        )
     }
 }
 

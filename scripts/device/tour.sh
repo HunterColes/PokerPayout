@@ -1263,7 +1263,7 @@ s_history_merge_undo() {
   ui tap text=UNDO
   ui wait-gone "text=Bea now counts as Alice"
   ui back                                      # History -> the Tools list
-  ui assert-text "text=Seat draw" text=History
+  ui assert-text "text=Saved nights and the season's points" text=History   # the History row: the list stays scrolled to it
 }
 
 # Currency (PP-114) ---------------------------------------------------------------------------------

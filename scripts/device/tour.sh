@@ -2033,9 +2033,11 @@ s_bank_pko() {
   ui assert-text "text~=Player 1 takes \$2.50, bounty now \$7.50" "has=Player 1|bounty \$7.50, 1 knockout"
 }
 # Big moments (PP-111) -----------------------------------------------------------------------------
-# The PKO night above, on the clock: five players, Player 2 out, two places paid. The Bank's
-# knockouts bring the bubble (three left) and heads-up (two) to the clock; the table view's Knock
-# out makes the champion, whose screen (S25) takes the clock's place. UNDO takes it back, the
+# The PKO night above, on the clock: five players, Player 2 out, two places paid, and the seat
+# draw's tables of three (from its steps). The Bank's knockouts bring the bubble and the final table
+# at once (three left: the bigger, the final table, shows; the pill says the bubble) and heads-up
+# (two) to the clock; the table view's Knock out makes the champion, whose screen (S25) takes the
+# clock's place. UNDO takes it back, the
 # knockout again brings it again, and then its way to History: pay out in the Bank, then "Save
 # this night" on it. A banner's title starts its text ("re=^"), the pill beside the players left
 # is in capitals, so the two can't be mistaken.
@@ -2052,11 +2054,12 @@ bank_knockout() {
   ui tap "text=Knock out Player $1"
   ui wait-gone "text=Player $1 is out"
 }
-s_moment_bubble() {
-  # Player 3 out at the Bank: three left, two paid. Back on the clock the banner says so.
+s_moment_final_table() {
+  # Player 3 out at the Bank: three left, two paid, at the seat draw's table of three. Back on the
+  # clock the banner says "Final table" and the pill beside the level says the bubble.
   bank_knockout 3
   tab Tournament
-  ui assert-text "re=^On the bubble" "desc=Table view"
+  ui assert-text "re=^Final table" "text=ON THE BUBBLE" "desc=Table view"
 }
 s_moment_heads_up() {
   # Player 4 out, by Player 1: two left, both paid. Heads-up is the bigger moment, so it shows.
@@ -2256,7 +2259,7 @@ step rail-payouts         "Rail: Payouts tab, table adds up"                    
 step rail-restored        "Phone width again: bottom bar back, tab kept"        s_rail_restored
 step bank-pko             "PKO: Player 1 takes \$2.50, bounty up to \$7.50"     s_bank_pko
 step moments-start        "Big moments: start the clock on the PKO night"       s_moments_start
-step moment-bubble        "A Bank knockout: \"On the bubble\" on the clock"     s_moment_bubble
+step moment-final-table   "A Bank knockout: \"Final table\", on the bubble"     s_moment_final_table
 step moment-heads-up      "Another: \"Heads-up\" on the clock"                  s_moment_heads_up
 step moment-champion      "Table view knockout: the champion's screen (S25)"    s_moment_champion
 step moment-undo          "UNDO closes it; the knockout again opens it again"   s_moment_undo

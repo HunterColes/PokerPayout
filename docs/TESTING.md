@@ -316,16 +316,17 @@ are:
    knockout" to TalkBack). Each part scrolls to what it checks last, since a swipe flings less on
    GitHub's emulator.
 10. **Big moments** (PP-111, 8 steps). The PKO night above (five players, Player 2 out, two
-   places paid) on a started clock: Player 3 out at the Bank brings "On the bubble" to the clock,
-   Player 4 (by Player 1) "Heads-up"; the table view's Knock out (Player 5, by Player 1) opens the
+   places paid, the seat draw's tables of three) on a started clock: Player 3 out at the Bank
+   brings the bubble and the final table at once, so "Final table" shows (the bigger one) with the
+   "ON THE BUBBLE" pill beside the level; Player 4 (by Player 1) brings "Heads-up"; the table view's Knock out (Player 5, by Player 1) opens the
    champion's screen (S25) in the clock's place, with "Pay out in the Bank". UNDO closes it (the
    Bank's top-bar Undo if the snackbar has gone), and the knockout again opens it again. "Pay out
    in the Bank" leads to the Bank, where the champion and the runner-up are paid; back on the
    clock, the screen offers "Save this night", says "Saved to History, in the Tools tab.", and
    "Open History" shows the night ("Player 1 won"); ✕ leaves the champion's card on the clock
    ("Player 1 is the champion"), whose "See the results" opens the screen again. A banner is
-   matched by its title at the start of its text (`re=^On the bubble`), never the pill beside the
-   players left, which is in capitals.
+   matched by its title at the start of its text (`re=^Final table`), never a pill, which is in
+   capitals.
 11. Check that the app process is still alive.
 
 Phones stay portrait (`AppOrientation` in `core`) except on the Tournament tab while a clock

@@ -20,6 +20,8 @@ F-Droid) only when it has a tag. Published versions link to their release notes.
 - **Equity quiz** (Tools): two or three hands face up, before the flop, on the flop or on the turn.
   Guess who's ahead, or how often the first hand wins; then see every hand's real odds, worked out
   exactly by the Odds screen's engine. Your streak, best streak and score stay on the phone.
+- Backups take all three: the shot clock's settings and cards played, the wheel and its house
+  games, and the quiz's settings and score.
 
 ## 1.4.2 (on master, not published)
 

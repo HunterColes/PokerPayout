@@ -171,6 +171,25 @@ class BackupsTest {
             .putString("players", "Dana,Zo%C3%AB")
             .putString("draw", "seats:1\nDana,Zo%C3%AB|As,Kd")
             .commit()
+        // The shot clock's, dealer's choice's and the equity quiz's files (tools-feature), as they save them
+        prefs("shot_clock_prefs").edit()
+            .putInt("seconds", 45)
+            .putInt("cards_each", 3)
+            .putString("used_cards", "Dana=1,Zo%C3%AB=2")
+            .commit()
+        prefs("dealers_choice_prefs").edit()
+            .putString("on_wheel", "holdem,badugi,house%3Aguts")
+            .putString("house_games", "Guts")
+            .putString("last_pick", "badugi")
+            .commit()
+        prefs("equity_quiz_prefs").edit()
+            .putInt("hands", 3)
+            .putString("question", "range")
+            .putInt("streak", 2)
+            .putInt("best_streak", 7)
+            .putInt("right", 13)
+            .putInt("answered", 17)
+            .commit()
     }
 
     /** Every settings file as it stands, without the keys about this phone. */

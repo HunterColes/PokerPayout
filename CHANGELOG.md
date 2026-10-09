@@ -3,6 +3,11 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## [1.3.14](https://github.com/HunterColes/PokerPayout/releases/tag/v1.3.14) (2026-10-07)
+
+A new look, cash games and a clock on your lock screen: everything in 1.3.1 to 1.3.13 below,
+published as one release.
+
 ## 1.3.13 (on master, not published)
 
 - **Odds on small phones:** on the smallest phones at large text, the card keypad takes a row less

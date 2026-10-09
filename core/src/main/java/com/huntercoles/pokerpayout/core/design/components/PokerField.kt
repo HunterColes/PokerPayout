@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -83,7 +84,11 @@ fun PokerField(
             onValueChange = onValueChange,
             modifier = fieldModifier
                 .fillMaxWidth()
-                .semantics { if (isError && supportingText != null) error(supportingText) },
+                .semantics {
+                    // TalkBack's name for the field, unless the caller's fieldModifier gives one
+                    contentDescription = label
+                    if (isError && supportingText != null) error(supportingText)
+                },
             textStyle = textStyle?.copy(color = PokerColors.CardWhite) ?: FieldValue,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),

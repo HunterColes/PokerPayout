@@ -200,6 +200,8 @@ class ClockCuesTest {
             CueEvent.BREAK_START to BREAK_START_SOUND,
             CueEvent.BREAK_END to BREAK_END_SOUND,
             CueEvent.GAME_OVER to GAME_OVER_SOUND,
+            CueEvent.BIG_MOMENT to MOMENT_SOUND,
+            CueEvent.CHAMPION to CHAMPION_SOUND,
         ),
     )
 
@@ -254,6 +256,34 @@ class ClockCuesTest {
         collecting.cancel()
     }
 
+    /** PP-111: a big moment plays its slot of the picked pack, once per call, and never buzzes or flashes. */
+    @Test
+    fun aBigMomentPlaysItsSlotOfThePickedPack() = runTest {
+        audio.setSoundPack("bells")
+        val cues = cuesWithBells()
+        val flashes = mutableListOf<SilentCue>()
+        val collecting = launch(UnconfinedTestDispatcher(testScheduler)) { cues.flashes.toList(flashes) }
+
+        cues.playMoment(CueEvent.BIG_MOMENT)
+        cues.playMoment(CueEvent.CHAMPION)
+        runCurrent()
+
+        verify(exactly = 1) { sound.playSound(MOMENT_SOUND) }
+        verify(exactly = 1) { sound.playSound(CHAMPION_SOUND) }
+        assertTrue(buzzes.isEmpty())
+        assertTrue(flashes.isEmpty())
+        collecting.cancel()
+    }
+
+    @Test
+    fun theClassicPackPlaysTheChimeForTheChampionAndNothingForTheOtherMoments() {
+        val cues = cues()
+        cues.playMoment(CueEvent.BIG_MOMENT)
+        verify(exactly = 0) { sound.playSound(any()) }
+        cues.playMoment(CueEvent.CHAMPION)
+        verify(exactly = 1) { sound.playSound(R.raw.blind_level_up) }
+    }
+
     @Test
     fun aPackThatIsGoneFallsBackToTheClassic() {
         audio.setSoundPack("a pack from a later version")
@@ -284,5 +314,7 @@ class ClockCuesTest {
         const val BREAK_START_SOUND = 102
         const val BREAK_END_SOUND = 103
         const val GAME_OVER_SOUND = 104
+        const val MOMENT_SOUND = 105
+        const val CHAMPION_SOUND = 106
     }
 }

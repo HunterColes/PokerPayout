@@ -20,6 +20,7 @@ import com.huntercoles.pokerpayout.core.utils.InventoryChip
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCues
 import com.huntercoles.pokerpayout.tournament.domain.clock.CueVibrator
+import com.huntercoles.pokerpayout.tournament.presentation.NineSeats
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
@@ -89,6 +90,7 @@ internal class TournamentFixture(private val store: ViewModelStore) {
             StillClock,
             audioPreferences,
             SavedChipSetProvider(chipPreferences),
+            NineSeats,
         )
     }
 

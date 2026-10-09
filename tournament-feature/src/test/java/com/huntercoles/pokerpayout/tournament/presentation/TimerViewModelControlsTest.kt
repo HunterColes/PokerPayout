@@ -97,7 +97,8 @@ class TimerViewModelControlsTest {
                 ClockCues(soundManager, audioPreferences, CueVibrator { }, clock),
                 clock,
                 audioPreferences,
-                chipSets
+                chipSets,
+                NineSeats,
             ) as T
         }
         return ViewModelProvider(store, factory)[TimerViewModel::class.java]

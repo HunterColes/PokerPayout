@@ -193,6 +193,28 @@ class TimerPreferences @Inject constructor(
         prefs.edit().putString(COLOR_UP_DONE_KEY, updated.sorted().joinToString(",")).apply()
     }
 
+    // ------------------------------------------------------------------ big moments (PP-111)
+
+    /**
+     * The night's big moments (the bubble, the final table, heads-up, the champion; by name) the
+     * field had reached when the clock last looked, and how many players were out then, so a moment
+     * is marked once: never again after a restart, and again only if an Undo took it back first.
+     * Null until the clock first looks. Saved with the game; the Bank's knockouts decide it, so a
+     * clock reset leaves it alone.
+     */
+    fun getBigMomentsReached(): Set<String>? =
+        prefs.getString(BIG_MOMENTS_KEY, null)?.split(",")?.filter { it.isNotBlank() }?.toSet()
+
+    /** How many players were out at the clock's last look at the big moments; 0 before the first. */
+    fun getBigMomentsOut(): Int = prefs.getInt(BIG_MOMENTS_OUT_KEY, 0)
+
+    fun setBigMoments(reached: Set<String>, out: Int) {
+        prefs.edit()
+            .putString(BIG_MOMENTS_KEY, reached.sorted().joinToString(","))
+            .putInt(BIG_MOMENTS_OUT_KEY, out)
+            .apply()
+    }
+
     // ------------------------------------------------------------------ reset
 
     /** Back to a fresh clock; keeps the duration, breaks and ante settings. */
@@ -294,6 +316,8 @@ class TimerPreferences @Inject constructor(
         private const val BREAK_MESSAGE_KEY = "break_message"
         private const val BIG_BLIND_ANTE_FROM_LEVEL_KEY = "big_blind_ante_from_level"
         private const val COLOR_UP_DONE_KEY = "color_up_done_after_levels"
+        private const val BIG_MOMENTS_KEY = "big_moments_reached"
+        private const val BIG_MOMENTS_OUT_KEY = "big_moments_out"
 
         // PP-081: not part of the clock, so no reset clears it
         private const val NOTIFICATIONS_ASKED_KEY = "notifications_permission_asked"

@@ -129,7 +129,8 @@ class TimerViewModelTest {
                     ClockCues(soundManager, audioPreferences, CueVibrator { }, clock),
                     clock,
                     audioPreferences,
-                    FakeChipSets()
+                    FakeChipSets(),
+                    NineSeats,
                 ) as T
         }
         // runCurrent, not advanceUntilIdle: a restored running clock ticks forever

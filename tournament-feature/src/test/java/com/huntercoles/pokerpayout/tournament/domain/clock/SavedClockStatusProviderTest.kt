@@ -13,6 +13,7 @@ import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.time.TimeSource
 import com.huntercoles.pokerpayout.tournament.presentation.FakeChipSets
+import com.huntercoles.pokerpayout.tournament.presentation.NineSeats
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
@@ -82,7 +83,7 @@ class SavedClockStatusProviderTest {
                 val audio = AudioPreferences(ApplicationProvider.getApplicationContext())
                 val cues = ClockCues(mockk<SoundManager>(relaxed = true), audio, CueVibrator { }, time)
                 return TimerViewModel(
-                    timerPreferences, tournamentPreferences, bankPreferences, cues, time, audio, FakeChipSets(),
+                    timerPreferences, tournamentPreferences, bankPreferences, cues, time, audio, FakeChipSets(), NineSeats,
                 ) as T
             }
         }

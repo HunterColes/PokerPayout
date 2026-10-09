@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- PokerColors.FeltGreen, for the window and the launch screen (themes.xml), which start before
+         Compose draws. LaunchThemeTest (core) checks the two stay the same colour. -->
+    <color name="poker_felt_green">#FF0A3D2E</color>
+</resources>

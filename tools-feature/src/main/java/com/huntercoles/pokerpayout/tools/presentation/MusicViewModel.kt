@@ -128,6 +128,13 @@ class MusicViewModel @Inject constructor(
             MusicIntent.CycleRepeat -> player.setRepeat(player.state.value.playlist.repeat.next())
             is MusicIntent.SetVolume -> player.setVolume(intent.volume)
             is MusicIntent.PlayTrack -> player.playTrack(intent.ref)
+            else -> acceptListIntent(intent)
+        }
+    }
+
+    /** The list's and the settings' intents. */
+    private fun acceptListIntent(intent: MusicIntent) {
+        when (intent) {
             is MusicIntent.Remove -> player.remove(intent.ref)
             is MusicIntent.Move -> player.move(intent.from, intent.to)
             is MusicIntent.AddPicked -> addPicked(intent.uris)
@@ -135,6 +142,7 @@ class MusicViewModel @Inject constructor(
             is MusicIntent.SetAutoPlay -> preferences.setAutoPlay(intent.on)
             is MusicIntent.SetBreakMusic -> preferences.setBreakMusic(intent.mode)
             is MusicIntent.SetEditing -> editing.value = intent.on
+            else -> Unit // the player's buttons: acceptIntent
         }
     }
 

@@ -16,6 +16,7 @@ import javax.inject.Singleton
  * cue sound pack the clock plays.
  */
 @Singleton
+@Suppress("TooManyFunctions") // a getter and a setter per saved setting
 class AudioPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {

@@ -743,7 +743,9 @@ class TimerViewModel @Inject constructor(
             tournamentPreferences.rebuyUntilLevel.collect { level -> _uiState.update { it.copy(rebuyUntilLevel = level) } }
         }
         viewModelScope.launch {
-            tournamentPreferences.lateEntryUntilLevel.collect { level -> _uiState.update { it.copy(lateEntryUntilLevel = level) } }
+            tournamentPreferences.lateEntryUntilLevel.collect { level ->
+                _uiState.update { it.copy(lateEntryUntilLevel = level) }
+            }
         }
         viewModelScope.launch {
             audioPreferences.isMuted.collect { muted -> _uiState.update { it.copy(isMuted = muted) } }

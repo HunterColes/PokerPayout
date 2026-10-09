@@ -410,8 +410,11 @@ class BankViewModel @Inject constructor(
     }
 
     /** The stack a new entry starts with: the clock's, as it was set when it started. */
-    private fun startingStack(): Int =
-        if (timerPreferences.getHasTimerStarted()) timerPreferences.getStartingChipsAtStart() else tournamentPreferences.getStartingChips()
+    private fun startingStack(): Int = if (timerPreferences.getHasTimerStarted()) {
+        timerPreferences.getStartingChipsAtStart()
+    } else {
+        tournamentPreferences.getStartingChips()
+    }
 
     /**
      * A player who arrived late: one more entry, with [name], the buy-in paid at today's price and a
@@ -740,7 +743,12 @@ class BankViewModel @Inject constructor(
     }
 
     /** Each player's night: one line per player, a re-entry's entries together under their first entry (PP-116). */
-    private fun settleUpModel(plan: SettleUp, result: Settlement, players: List<PlayerData>, money: MoneySettings): SettleUpModel {
+    private fun settleUpModel(
+        plan: SettleUp,
+        result: Settlement,
+        players: List<PlayerData>,
+        money: MoneySettings,
+    ): SettleUpModel {
         val person = BankEntries.people(players)
         val names = players.associate { it.id to it.name }
         return SettleUpModel(

@@ -138,7 +138,8 @@ class BankPreferences @Inject constructor(
         val parts = prefs.getString("$PLAYER_ENTRY_PRICE_PREFIX$playerId", null)?.split(",").orEmpty()
         val cents = parts.mapNotNull { it.trim().toLongOrNull()?.coerceAtLeast(0L) }
         // Unreadable: an entry at today's amounts, as before PP-116
-        return if (parts.size == ENTRY_PRICE_PARTS && cents.size == ENTRY_PRICE_PARTS) EntryPrice(cents[0], cents[1], cents[2]) else null
+        val readable = parts.size == ENTRY_PRICE_PARTS && cents.size == ENTRY_PRICE_PARTS
+        return if (readable) EntryPrice(cents[0], cents[1], cents[2]) else null
     }
 
     fun savePlayerEntryPrice(playerId: Int, price: EntryPrice?) {

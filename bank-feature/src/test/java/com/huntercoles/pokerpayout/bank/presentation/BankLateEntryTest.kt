@@ -177,7 +177,8 @@ class BankLateEntryTest {
         val state = viewModel.state()
         assertEquals(1, state.championId)
         assertEquals((1..7).toList(), state.placeByPlayer.values.sorted())
-        assertEquals(state.payableCents, state.payoutEligiblePlayerIds.sumOf { id -> viewModel.payOutSheet(id).owed.winningsCents })
+        val owed = state.payoutEligiblePlayerIds.sumOf { id -> viewModel.payOutSheet(id).owed.winningsCents }
+        assertEquals(state.payableCents, owed)
     }
 
     // Re-entries ------------------------------------------------------------------------------------

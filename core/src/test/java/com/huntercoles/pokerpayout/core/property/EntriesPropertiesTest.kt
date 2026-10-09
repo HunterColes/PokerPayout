@@ -111,16 +111,17 @@ class EntriesPropertiesTest {
         val money = night.script.money
         val entries = night.players.values.map { it.entry(money) }
         val pool = settlement.pool
-        expect(pool.buyInCents == entries.sumOf { it.buyInCents }) { "${where()}: buy-ins ${pool.buyInCents}, entries $entries" }
-        expect(pool.foodCents == entries.sumOf { it.foodCents }) { "${where()}: food ${pool.foodCents}, entries $entries" }
-        expect(pool.bountyCents == entries.sumOf { it.bountyCents }) { "${where()}: bounties ${pool.bountyCents}, entries $entries" }
+        val paid = EntryPrice(entries.sumOf { it.buyInCents }, entries.sumOf { it.foodCents }, entries.sumOf { it.bountyCents })
+        val pooled = EntryPrice(pool.buyInCents, pool.foodCents, pool.bountyCents)
+        expect(pooled == paid) { "${where()}: pool $pool, entries $entries" }
         val costs = settlement.players.sumOf { it.costCents }
         expect(costs == pool.totalCents) { "${where()}: entries cost $costs, pool ${pool.totalCents}" }
         if (settlement.payoutTable.places.isNotEmpty()) {
             expect(settlement.payoutTable.totalCents == pool.prizePoolCents) { "${where()}: the table doesn't add up" }
         }
         val boughtIn = night.players.values.filter { it.boughtIn }.sumOf { it.entry(money).totalCents }
-        expect(settlement.paidInCents == boughtIn + pool.rebuyCents + pool.addOnCents) { "${where()}: paid in ${settlement.paidInCents}" }
+        val paidIn = boughtIn + pool.rebuyCents + pool.addOnCents
+        expect(settlement.paidInCents == paidIn) { "${where()}: paid in ${settlement.paidInCents}, expected $paidIn" }
     }
 
     /** Nothing owed beyond the bounty pool; mystery: drawn and left are the pool exactly. */

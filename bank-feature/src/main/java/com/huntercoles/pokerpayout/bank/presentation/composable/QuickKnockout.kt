@@ -271,6 +271,7 @@ private fun PanelHeader(title: String, onClose: () -> Unit, onBack: (() -> Unit)
 }
 
 /** One choice: a player (or Nobody, with no id), their knockouts so far and an optional second line. */
+@Suppress("LongParameterList") // one choice: who, its words, knockouts, a second line, tone, TalkBack's action, icon
 private class PanelChoice(
     val playerId: Int?,
     val label: String,

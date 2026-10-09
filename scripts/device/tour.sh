@@ -1171,6 +1171,8 @@ s_history_save() {
   ui tap "text=Save this night"
   ui assert-text "text=Saved to History, in the Tools tab." || return 1
   if ui find "text=Save this night" --timeout 1 >/dev/null 2>&1; then echo "[ui] FAIL still offered after saving"; return 1; fi
+  # PP-112: the "Tip the dealer?" card waits for the third night saved (and never on the first run)
+  if ui find "text=Tip the dealer?" --timeout 1 >/dev/null 2>&1; then echo "[ui] FAIL the tip card on the first night"; return 1; fi
   tab Tools
   ui scroll-to text=History --max 4
   ui tap text=History
@@ -1578,6 +1580,51 @@ s_backup_replace() {
   ui assert-text "text=1 night saved" || return 1
   ui back
   ui scroll-to text=Odds --dir up --max 4      # the list is long: back at its top for the Odds steps
+  ui assert-text text=Odds "text=Seat draw" || return 1
+  require_tab_selected Tools
+}
+# Tip the dealer (S25, PP-112) ---------------------------------------------------------------------------
+# A quiet row at the foot of the Tools list opens the page: the donation page, both addresses with the
+# repository's own QR codes, the free ways to help. Copy puts an address on the clipboard and says so;
+# the donation page goes to the browser as a VIEW intent (the app has no internet permission), and the
+# launcher brings the app back where it was. Ends on the Tools list, at its top, for the Odds steps.
+s_tip() {
+  ui scroll-to "text=Tip the dealer" --max 6
+  ui tap "text=Tip the dealer"
+  ui assert-text "text=Free, with no ads or tracking" "text=Open the donation page" desc=Back || return 1
+  require_tab_selected Tools || return 1
+  ui scroll-to "desc=QR code for the Ethereum address" --max 4
+  ui assert-text "text=Ethereum (ETH)" "desc=Copy the Ethereum address" || return 1
+  ui scroll-to "desc=QR code for the Monero address" --max 4
+  ui assert-text "text=Monero (XMR)" "desc=Copy the Monero address"
+}
+s_tip_copy() {
+  ui tap "desc=Copy the Monero address"
+  ui assert-text "desc=Monero address copied" text=Copied || return 1
+  # Only the one just copied says so
+  ui scroll-to "desc=Copy the Ethereum address" --dir up --max 4
+}
+s_tip_page() {
+  ui scroll-to "text=Open the donation page" --dir up --max 6
+  ui tap "text=Open the donation page"
+  local focus="" try started=""
+  for try in $(seq 20); do
+    focus="$(adb_ shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus || true)"
+    [[ -n "$focus" && ! "$focus" =~ $APP_ID ]] && break
+    sleep 0.5
+  done
+  echo "focus: $focus"
+  # The tour's only VIEW intent (setup cleared the log), as ActivityTaskManager logs it
+  started="$(adb_ logcat -d 2>/dev/null | grep -m1 -E 'START u0 .*act=android.intent.action.VIEW.*dat=https://github.com' || true)"
+  echo "started: $started"
+  [[ -n "$started" ]] || { echo "[ui] FAIL the donation page wasn't handed to the browser"; return 1; }
+  [[ ! "$focus" =~ $APP_ID ]] || { echo "[ui] FAIL the app is still in front"; return 1; }
+  # Back to the app from the launcher, as a user would; the browser is put away
+  adb_ shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || return 1
+  adb_ shell am force-stop com.android.chrome >/dev/null 2>&1 || true
+  PP_UI_SCROLL=0 ui wait "text=Open the donation page" --timeout 15 || return 1
+  ui back                                      # the page -> the Tools list
+  ui scroll-to text=Odds --dir up --max 6      # back at its top for the Odds steps
   ui assert-text text=Odds "text=Seat draw" || return 1
   require_tab_selected Tools
 }
@@ -2108,6 +2155,9 @@ step backup-save          "Save backup…: the file picker saves the file"      
 step backup-open          "Open it again: the preview names what it holds"      s_backup_open
 step backup-add           "Add to this phone: nothing new, nothing changed"     s_backup_add
 step backup-replace       "Replace: the app starts again on the same game"      s_backup_replace
+step tip                  "Tip the dealer (S25): page, addresses, QR codes"     s_tip
+step tip-copy             "Copy the Monero address: Copied, for that one only"  s_tip_copy
+step tip-page             "Donation page opens in the browser; the app returns" s_tip_page
 step odds-empty           "Odds: empty table, first slot waiting"              s_odds_empty
 step odds-card-picker     "Docked keypad: ranks, then suits that wait"          s_card_picker
 step odds-hole-cards      "Keypad: AsKs vs QhQd, auto-advance to the flop"      s_hole_cards

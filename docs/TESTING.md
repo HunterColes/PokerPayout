@@ -243,6 +243,7 @@ are:
    1 win": 5 players, 1st, so 5 points); the night's row ("5 players · Alice won") opens the night in
    full (Share, Alice and Player 5), Back closes it, and Back again returns to the Tools list. It
    scrolls to the night's row before tapping it, since a swipe flings less on GitHub's emulator.
+   The "Tip the dealer?" card (PP-112) must not show under this first night: it waits for the third.
 
 4. **Tools** (7 steps). The tool list and the Sound section (S7); turn the sound off (the
    volume and Test chime rest) and on again, and play the test chime; Cue sounds (S18): the
@@ -265,6 +266,12 @@ are:
    "Tournament setup and tonight's game"); Add to this phone must find nothing new; Replace this
    phone's data must start the app again on the first tab with the same game (Alice the Bank's
    champion, the night in History), ending on the Tools list.
+   Then **Tip the dealer** (S25, PP-112, 3 steps): the row at the foot of the Tools list opens the
+   page (Tools still selected) with "Open the donation page" and both addresses under their QR codes
+   ("QR code for the Ethereum address", "... Monero ..."); Copy the Monero address must say "Copied"
+   for that one only; Open the donation page must hand the page to the browser (a VIEW intent to
+   github.com in the log, another app in front), and the launcher brings the app back on the page;
+   Back to the Tools list, at its top.
 5. **Odds.** Empty state, with the slot being filled on screen above the keypad without
    scrolling; card picker; AsKs vs QhQd; a JsTs2c flop (the picker scrolls to find 2c); calculate
    and require the exact answer, **56.06%** under Player 1 and **43.94%** under Player 2 (555 and
@@ -778,6 +785,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | Module | Class | Goldens (`src/test/screenshots/screens/`) | Layout checks |
 |---|---|---|---|
 | `tools-feature` | `ToolsTabScreenTest` | `S7_tools_default`, `S7_tools_muted`, `S7_tools_cues_off`, `S7_tools_notifications_off` (PP-081/083: the Vibrate and Flash rows, and the way back to notifications; the History row, PP-037), `S7_tools_music` (the Cue sounds and Music rows, a song playing) | S7: all three, at every scroll position |
+| `tools-feature` | `TipScreenTest` (+ `TipContentTest`, what each control sends; `TipMethodsTest`) | `S25_tip` (why a tip helps, the donation page), `S25_tip_copied` (the Ethereum code, its address just copied) | Tip the dealer (PP-112): all three, at every scroll position, on all 24 cells; also no browser on the phone. `TipMethodsTest` checks every way to tip is the repository's (`crypto/DONATIONS.md`, `.github/FUNDING.yml`) and decodes each QR code the app shows back to its address |
 | `tools-feature` | `MusicScreenTest` | `S18_music_empty` (a fresh install: no songs, nothing built in), `S18_music_playing` (five songs, one playing, one whose file has gone, shuffle and repeat on, with the clock and quieter on breaks), `S18_music_editing` (move and remove), `S18_cue_sounds`, `S18_cue_sounds_off` (the sound switched off) | Music and Cue sounds: all three, at every scroll position, on all 24 cells; also every file gone and the built-in songs (none ship yet). Fixtures in `MusicFixtures` |
 | `tools-feature` | `HandRanksScreenTest` | `S12_ranks_default`, `S12_ranks_4colour` | All three, at every scroll position |
 | `tools-feature` | `ChipSetScreenTest` | `S11_chipset_ok`, `S11_chipset_short`, `S11_chipset_ok_end`, `S11_chipset_settings` (the stack settings unfolded, keeping back the Tournament's estimate) | All three, at every scroll position of each pane; also the unfolded stack settings and the colour sheet |
@@ -789,7 +797,7 @@ every scrolling container a page at a time, for `assertVisibleTextUnclipped`.
 | `tournament-feature` | `PresetsScreenTest` | `S15_presets_list`, `S15_presets_locked` (mid-game: loading off, and why), `S15_presets_save`, `S15_presets_load` (the question when loading would replace what the host set) | Saved setups (PP-032): all three, at every scroll position, on all 24 cells; also the empty list, the rename form and the save form before the chip set is set up. The sheet is drawn as its content over the tab and its scrim; the checks run on the sheet alone. The Presets row itself is in the S1 goldens (setup page and panel) |
 | `tournament-feature` | `PresetsInteractionTest` | none | What the presets' controls send: the row on the setup page and in the panel, load (off mid-game), save (the name, the chip set switch, a name in use replaces it, a blank one can't be saved), share, rename (a name in use is refused), delete, and the load question |
 | `tournament-feature` | `TournamentInteractionTest`, `TournamentRotationTest`, `SetupFoldTest` | none | What each control sends; rotation per device class (Robolectric `+land` shows the table view, `+port` the clock, other tabs portrait on phones, tablets free, state kept through recreation; ✕ in a turned table view holds for that turn only, with the phone's hold faked through `LocalPhoneHold`); the fold plays once and is cut under Reduce motion |
-| `tournament-feature` | `PayoutsTabScreenTest` | `S6_payouts_{standard,topheavy,custom,finished}`, `S6_payouts_font2x`, `S6_payouts_save` (PP-037: over and everyone paid, "Save this night" heads the tab) | All three, at every scroll position, and locked while the clock runs; also the saved night's line |
+| `tournament-feature` | `PayoutsTabScreenTest` | `S6_payouts_{standard,topheavy,custom,finished}`, `S6_payouts_font2x`, `S6_payouts_save` (PP-037: over and everyone paid, "Save this night" heads the tab), `S6_payouts_tip` (PP-112: the third night saved, "Tip the dealer?" under it) | All three, at every scroll position, and locked while the clock runs; also the saved night's line |
 | `bank-feature` | `BankScreensTest` | `S5_bank_{before_buyins,midgame,rebuys_open,no_rebuys,champion,30players}`, `S5_bank_font2x`, `S5b_knockout_sheet`, `S5b_count_sheet`, `S5c_payout_{champion,second}`, `S5c_pool_breakdown`, `Z2_bank_small`, `Z5_bank_tablet`; PP-035: `S5_bank_pko` (each player's bounty under the name), `S5b_knockout_sheet_pko`, `S5c_payout_champion_pko`, `S5d_envelope_reveal`; 1.4: `S5_bank_settle_up` (Settle up under the meters), `S5e_settle_up` (who pays whom, two ticked) | All three, at every scroll position (also the mystery pool breakdown and the settle-up once everyone is square). A sheet is rendered as its content over the screen behind, since a modal window doesn't capture under Robolectric |
 
 The screens' ViewModels are the real ones over Robolectric's in-memory preferences, set up as the

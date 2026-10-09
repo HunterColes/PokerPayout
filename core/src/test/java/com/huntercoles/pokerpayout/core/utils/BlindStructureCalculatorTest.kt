@@ -222,6 +222,19 @@ class BlindStructureCalculatorTest {
         assertNull(BlindStructureCalculator.generateNextOvertimeLevel(emptyList(), roundLengthMinutes = 20))
     }
 
+    /**
+     * Found by BlindPropertiesTest: the stack field takes up to 999,999,999, and doubling a 500,000,000
+     * stack twice made the big blind overflow to -294,967,296. Overtime now stops at the last level
+     * whose big blind fits.
+     */
+    @Test
+    fun `overtime stops before the big blind would overflow`() {
+        val schedule = BlindStructureCalculator.generateSchedule(BlindStructureInput(9, 120, 5_000, 500_000_000, 5))
+        val first = BlindStructureCalculator.generateNextOvertimeLevel(schedule, roundLengthMinutes = 5)!!
+        assertEquals(1_000_000_000 to 2_000_000_000, first.smallBlind to first.bigBlind)
+        assertNull(BlindStructureCalculator.generateNextOvertimeLevel(schedule + first, roundLengthMinutes = 5))
+    }
+
     @Test
     fun `non-positive inputs are rejected`() {
         val valid = BlindStructureInput(9, 180, 50, 5_000, 20)

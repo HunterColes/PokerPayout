@@ -60,11 +60,11 @@ fun OutsContent(
         subtitle = subtitle,
         onBack = onBack,
         modifier = modifier,
-        inputs = {
-            YourOutsCard(state, onIntent)
+        inputs = { YourOutsCard(state, onIntent) },
+        results = {
+            ChanceCard(state)
             PotOddsCard(state, onIntent)
         },
-        results = { ChanceCard(state) },
     )
 }
 

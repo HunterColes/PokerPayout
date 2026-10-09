@@ -47,8 +47,15 @@ object SidePots {
 
     fun split(contributions: List<Contribution>): PotSplit {
         val inHand = contributions.indices.filter { contributions[it].chips > 0 }
-        if (inHand.isEmpty()) return PotSplit.Empty
-        if (inHand.all { contributions[it].folded }) return PotSplit.AllFolded
+        return when {
+            inHand.isEmpty() -> PotSplit.Empty
+            inHand.all { contributions[it].folded } -> PotSplit.AllFolded
+            else -> pots(contributions, inHand)
+        }
+    }
+
+    /** The pots of a hand where someone with chips in is still in. */
+    private fun pots(contributions: List<Contribution>, inHand: List<Int>): PotSplit.Pots {
         val layers = layers(contributions, inHand)
         val top = layers.last()
         val uncalled = top.players.singleOrNull()?.let { Uncalled(it, top.chips) }

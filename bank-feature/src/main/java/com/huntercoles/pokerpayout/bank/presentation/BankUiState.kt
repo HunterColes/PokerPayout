@@ -351,7 +351,7 @@ sealed interface BankSheet {
     }
 
     /**
-     * S25, late entry (PP-116), once the clock is running and until [window] closes: a player who
+     * S27, late entry (PP-116), once the clock is running and until [window] closes: a player who
      * arrives late pays [price] (today's buy-in, food and bounty) and starts with [startingChips];
      * a player who is out ([BankUiState.reEntries]) can re-enter for the same.
      */

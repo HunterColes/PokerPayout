@@ -76,7 +76,7 @@ object BankScenes {
         viewModel
     }
 
-    /** [midGame] with late entry open until the end of level 6, and its sheet open (S25). */
+    /** [midGame] with late entry open until the end of level 6, and its sheet open (S27). */
     fun lateEntrySheet(kit: BankTestKit): BankViewModel = with(kit) {
         tournamentPreferences.setLateEntryUntilLevel(6)
         val viewModel = midGame(kit)

@@ -53,6 +53,7 @@ class CurrentSetup @Inject constructor(
             ),
             payouts = PresetPayouts.of(tournament.getPayoutSettings(), tournament.getPlayerCount()),
             chipSet = if (includeChipSet) chipPreferences.current() else null,
+            lateEntryUntilLevel = tournament.getLateEntryUntilLevel(),
         )
     }
 
@@ -90,6 +91,7 @@ class CurrentSetup @Inject constructor(
             setRebuyCents(money.rebuyCents)
             setAddOnCents(money.addOnCents)
             setRebuyUntilLevel(target.rebuyUntilLevel)
+            setLateEntryUntilLevel(target.lateEntryUntilLevel)
             setPayoutSettings(target.payouts.settingsFor(getPlayerCount()))
             setGameDurationHours(blinds.durationMinutes / MINUTES_PER_HOUR)
             setRoundLengthMinutes(blinds.roundLengthMinutes)

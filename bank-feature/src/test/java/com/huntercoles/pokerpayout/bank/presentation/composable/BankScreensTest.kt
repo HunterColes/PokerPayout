@@ -261,7 +261,7 @@ class BankScreensTest(private val config: ScreenConfig) {
         check("Settle-up sheet, square")
     }
 
-    // Late entries and re-entries (PP-116, S25) -------------------------------------------------------
+    // Late entries and re-entries (PP-116, S27) -------------------------------------------------------
 
     /** Kai joined late and Rita re-entered: her second entry plays on ("Entry 2"), her first is out. */
     @Test
@@ -269,11 +269,11 @@ class BankScreensTest(private val config: ScreenConfig) {
         show(BankScenes.lateEntries(kit).state())
         screen.compose.onNode(hasScrollToIndexAction()).performScrollToIndex(LAST_ROWS)
         screen.compose.waitForIdle()
-        golden("S25_bank_late_entries")
+        golden("S27_bank_late_entries")
         check("Bank with a late entry and a re-entry")
     }
 
-    /** S25: Kai's name typed; Rita and Ben, who are out, can re-enter. */
+    /** S27: Kai's name typed; Rita and Ben, who are out, can re-enter. */
     @Test
     fun lateEntrySheet() {
         val state = BankScenes.lateEntrySheet(kit).state()
@@ -281,7 +281,7 @@ class BankScreensTest(private val config: ScreenConfig) {
         show(state) {
             LateEntrySheetContent(sheet, state.reEntries, onAdd = {}, onReEnter = {}, onDismiss = {}, initialName = "Kai")
         }
-        golden("S25_late_entry_sheet")
+        golden("S27_late_entry_sheet")
         check("Late entry sheet")
     }
 

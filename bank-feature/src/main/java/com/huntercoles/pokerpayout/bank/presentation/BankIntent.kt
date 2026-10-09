@@ -42,7 +42,7 @@ sealed interface BankIntent {
 
     // Late entries and re-entries (PP-116) ---------------------------------------------------------
 
-    /** Late entry, under the list (or Re-entry on the clock's knockout panel): the late entry sheet (S25). */
+    /** Late entry, under the list (or Re-entry on the clock's knockout panel): the late entry sheet (S27). */
     data object OpenLateEntry : BankIntent
 
     /**

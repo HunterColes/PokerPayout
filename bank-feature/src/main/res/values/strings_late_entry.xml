@@ -8,7 +8,7 @@
     <string name="bank_note_late_open_level">Late entry until the end of level %1$d.</string>
     <string name="bank_note_late_closed">Late entry closed after level %1$d.</string>
 
-    <!-- S25: the late entry sheet -->
+    <!-- S27: the late entry sheet -->
     <string name="bank_late_title">Late entry</string>
     <!-- %1$s: the entry ($50), %2$s: the starting stack (10,000) -->
     <string name="bank_late_price">%1$s to sit down · %2$s chips</string>

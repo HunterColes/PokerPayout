@@ -110,7 +110,7 @@ class QuickKnockoutScreensTest(private val config: ScreenConfig) {
     fun whoIsBackIn() {
         val viewModel = BankScenes.lateEntrySheet(kit)
         show(viewModel.uiState.value)
-        golden("S25_clock_back_in")
+        golden("S27_clock_back_in")
         check("Who's back in?")
     }
 

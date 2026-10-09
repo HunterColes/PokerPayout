@@ -53,7 +53,7 @@ import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 import java.text.NumberFormat
 import java.util.Locale
 
-/** The late entry sheet (S25, PP-116) as a modal bottom sheet. */
+/** The late entry sheet (S27, PP-116) as a modal bottom sheet. */
 @Composable
 internal fun LateEntrySheet(
     sheet: BankSheet.LateEntry,
@@ -68,7 +68,7 @@ internal fun LateEntrySheet(
 }
 
 /**
- * S25, late entry (PP-116): what a new entry costs and the stack it starts with, until when entries
+ * S27, late entry (PP-116): what a new entry costs and the stack it starts with, until when entries
  * are open, then the late arrival's name and Add, named after what it takes ("Add · $50 paid"). Below,
  * when anyone is out, each of them as a 48 dp choice: one tap re-enters them as a new entry for the
  * same. Either applies at once; Undo follows on the snackbar.

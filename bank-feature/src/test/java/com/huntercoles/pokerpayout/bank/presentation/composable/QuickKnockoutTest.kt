@@ -19,7 +19,6 @@ import com.huntercoles.pokerpayout.bank.presentation.BankRowModel
 import com.huntercoles.pokerpayout.bank.presentation.BankScenes
 import com.huntercoles.pokerpayout.bank.presentation.BankScenes.DANA
 import com.huntercoles.pokerpayout.bank.presentation.BankScenes.JO
-import com.huntercoles.pokerpayout.bank.presentation.BankScenes.MARCUS
 import com.huntercoles.pokerpayout.bank.presentation.BankScenes.THEO
 import com.huntercoles.pokerpayout.bank.presentation.BankSheet
 import com.huntercoles.pokerpayout.bank.presentation.BankTestKit

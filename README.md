@@ -27,16 +27,16 @@
   <a href="https://github.com/HunterColes/PokerPayout/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/HunterColes/PokerPayout?label=release"/></a>
   <a href="https://github.com/HunterColes/PokerPayout/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/HunterColes/PokerPayout/actions/workflows/ci.yml/badge.svg?branch=master"/></a>
   <img alt="Android 8.0 and up" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84?logo=android&logoColor=white"/>
-  <img alt="No internet permission" src="https://img.shields.io/badge/internet%20permission-none-0b3d2e"/>
+  <img alt="No internet permission" src="https://img.shields.io/badge/internet%20permission-none-2ea44f"/>
   <a href="LICENSE.md"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-blue"/></a>
   <a href="#support-the-app"><img alt="Support the app" src="https://img.shields.io/badge/support-the%20app-ffd60a"/></a>
 </p>
 
 <p align="center">
-  <img src="metadata/en-US/images/phoneScreenshots/01_clock.png" alt="The tournament clock" width="190"/>
-  <img src="metadata/en-US/images/phoneScreenshots/03_bank.png" alt="The bank" width="190"/>
-  <img src="metadata/en-US/images/phoneScreenshots/04_payouts.png" alt="Payouts" width="190"/>
-  <img src="metadata/en-US/images/phoneScreenshots/06_odds.png" alt="Odds" width="190"/>
+  <img src="metadata/en-US/images/phoneScreenshots/01_clock.png" alt="The tournament clock" width="23%"/>
+  <img src="metadata/en-US/images/phoneScreenshots/03_bank.png" alt="The bank" width="23%"/>
+  <img src="metadata/en-US/images/phoneScreenshots/04_payouts.png" alt="Payouts" width="23%"/>
+  <img src="metadata/en-US/images/phoneScreenshots/06_odds.png" alt="Odds" width="23%"/>
 </p>
 
 ## What's inside
@@ -46,7 +46,7 @@ Four tabs: **Tournament**, **Bank**, **Payouts** and **Tools**.
 <table>
 <tr>
 <td width="220"><img src="tournament-feature/src/test/screenshots/screens/S2_clock_running/S2_clock_running_phone-360x780_font1.0.png" alt="The tournament clock" width="200"/></td>
-<td>
+<td valign="top">
 
 **Tournament**
 
@@ -67,7 +67,7 @@ Four tabs: **Tournament**, **Bank**, **Payouts** and **Tools**.
 </tr>
 <tr>
 <td width="220"><img src="bank-feature/src/test/screenshots/screens/S5_bank_midgame/S5_bank_midgame_phone-360x780_font1.0.png" alt="The bank" width="200"/></td>
-<td>
+<td valign="top">
 
 **Bank**
 
@@ -81,7 +81,7 @@ Four tabs: **Tournament**, **Bank**, **Payouts** and **Tools**.
 </tr>
 <tr>
 <td width="220"><img src="tournament-feature/src/test/screenshots/screens/S6_payouts_standard/S6_payouts_standard_phone-360x780_font1.0.png" alt="Payouts" width="200"/></td>
-<td>
+<td valign="top">
 
 **Payouts**
 
@@ -93,7 +93,7 @@ Four tabs: **Tournament**, **Bank**, **Payouts** and **Tools**.
 </tr>
 <tr>
 <td width="220"><img src="tools-feature/src/test/screenshots/screens/S7_tools_default/S7_tools_default_phone-360x780_font1.0.png" alt="The Tools tab" width="200"/></td>
-<td>
+<td valign="top">
 
 **Tools**
 

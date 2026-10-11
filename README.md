@@ -44,8 +44,9 @@
 
 ### Tournament
 
-- Set up the night once: players, buy-in, bounty, rebuys (with a cutoff level), add-ons and food.
-  Save it as a preset and load it next time.
+- Set up the night once: players, buy-in, bounty, rebuys and late entry (each with a cutoff
+  level), add-ons, food and a house rake if you take one. Save it as a preset and load it next
+  time, or start from a ready-made night: Turbo, Classic, Deep stack or Bounty night.
 - Blinds from four numbers: game length, level length, starting stack and smallest chip. Every
   level is a multiple of your smallest chip, and a setup that can't work says why and offers the
   nearest fix.
@@ -54,7 +55,9 @@
 - The running clock in the notifications and on the lock screen, with a chime, a vibration or a
   flash at each new level.
 - Color-ups on breaks, overtime levels if the game runs long, and a full-screen table view when
-  you turn the phone sideways.
+  you turn the phone sideways, with Knock out right on it.
+- The night's big moments on the clock: on the bubble, in the money, the final table and
+  heads-up, then the champion's screen with what each place won.
 - Share the setup as text for the group chat.
 
 <p align="center">
@@ -63,10 +66,17 @@
   <img src="tournament-feature/src/test/screenshots/screens/S4_break_colorup/S4_break_colorup_phone-360x780_font1.0.png" alt="A break with a color-up" width="23%"/>
   <img src="tournament-feature/src/test/screenshots/screens/S15_presets_list/S15_presets_list_phone-360x780_font1.0.png" alt="Saved presets" width="23%"/>
 </p>
+<p align="center">
+  <img src="tournament-feature/src/test/screenshots/screens/S2_clock_moment/S2_clock_moment_phone-360x780_font1.0.png" alt="Heads-up, on the clock" width="23%"/>
+  <img src="tournament-feature/src/test/screenshots/screens/S2_clock_champion/S2_clock_champion_phone-360x780_font1.0.png" alt="The champion, on the clock" width="23%"/>
+</p>
 
 ### Bank
 
 - Who has paid the buy-in, rebuys and add-ons, and who has been paid out, with Undo.
+- Pick tonight's players from everyone you've played with, the regulars first, or type a new
+  name.
+- Late arrivals and re-entries, each with its own buy-in and starting stack.
 - Knockouts and bounties three ways: standard, progressive (half now, half onto the winner's own
   bounty) or mystery envelopes.
 - Settle up at the end of the night: the fewest payments that square everyone, with a tick for
@@ -79,38 +89,61 @@
   <img src="bank-feature/src/test/screenshots/screens/S5d_envelope_reveal/S5d_envelope_reveal_phone-360x780_font1.0.png" alt="A mystery bounty envelope" width="23%"/>
   <img src="bank-feature/src/test/screenshots/screens/S5e_settle_up/S5e_settle_up_phone-360x780_font1.0.png" alt="Settling up at the end of the night" width="23%"/>
 </p>
+<p align="center">
+  <img src="bank-feature/src/test/screenshots/screens/S26_regulars/S26_regulars_phone-360x780_font1.0.png" alt="Picking tonight's players" width="23%"/>
+  <img src="bank-feature/src/test/screenshots/screens/S27_bank_late_entries/S27_bank_late_entries_phone-360x780_font1.0.png" alt="A late entry and a re-entry in the bank" width="23%"/>
+</p>
 
 ### Payouts
 
-- Top-heavy, standard or flat, or your own weights, rounded to $1, $5 or $10.
+- Top-heavy, standard or flat, or your own weights, rounded to 1, 5 or 10 of your currency (100,
+  500 or 1,000 yen).
 - The places always add up to the prize pool, to the cent.
+- A house rake, if you take one: a share of the prize pool for the host, shown wherever the pool
+  is. Bounties and food are never raked.
 - Share the payouts as text, and save the night to History once everyone is paid.
 
 <p align="center">
   <img src="tournament-feature/src/test/screenshots/screens/S6_payouts_standard/S6_payouts_standard_phone-360x780_font1.0.png" alt="Payouts for three places" width="23%"/>
+  <img src="tournament-feature/src/test/screenshots/screens/S6_payouts_rake/S6_payouts_rake_phone-360x780_font1.0.png" alt="Payouts after a house rake" width="23%"/>
   <img src="tournament-feature/src/test/screenshots/screens/S6_payouts_save/S6_payouts_save_phone-360x780_font1.0.png" alt="Saving the night when everyone is paid" width="23%"/>
 </p>
 
 ### Tools
 
-- **Odds** for two to ten hands (exact, or a close estimate when there are too many runouts),
-  and run it out card by card.
-- **Hand ranks:** what beats what, with how often each hand comes up.
+In the order of a night:
+
 - **Chip set:** stacks from the chips you own, and a color-up plan.
 - **Seat draw:** random, balanced seats across your tables, and the high card for the button.
+- **Odds** for two to ten hands (exact, or a close estimate when there are too many runouts),
+  and run it out card by card.
+- **Side pots:** when someone is all in, what each pot holds and who can win it.
+- **Hand ranks:** what beats what, with how often each hand comes up.
+- **Split the prizes:** a deal for the players left, by ICM or by chip chop, adding up to the
+  prizes to the cent.
 - **History:** saved nights, season points and the player of the year, and a CSV export for a
   spreadsheet.
-- **Sound:** a chime before each level, break and the end; vibrate and flash for quiet rooms.
+- **Sound and music:** a chime before each level, break and the end; vibrate and flash for quiet
+  rooms; and a playlist of songs from your phone that plays with the clock.
+- **Currency:** $, €, £, ₹, ¥, kr and more, each written its own way, or no symbol at all.
+- **Backup:** everything the app saves in one file, kept where you choose, and restored from it.
 
-<p align="center">
-  <img src="tools-feature/src/test/screenshots/screens/S9_odds_flop_exact/S9_odds_flop_exact_phone-360x780_font1.0.png" alt="Odds on the flop" width="23%"/>
-  <img src="tools-feature/src/test/screenshots/screens/S10_runout_river_p1/S10_runout_river_p1_phone-360x780_font1.0.png" alt="Running it out to the river" width="23%"/>
-  <img src="tools-feature/src/test/screenshots/screens/S12_ranks_default/S12_ranks_default_phone-360x780_font1.0.png" alt="Hand ranks" width="23%"/>
-</p>
 <p align="center">
   <img src="tools-feature/src/test/screenshots/screens/S11_chipset_ok/S11_chipset_ok_phone-360x780_font1.0.png" alt="Chip set" width="23%"/>
   <img src="tools-feature/src/test/screenshots/screens/S14_seats_two_tables/S14_seats_two_tables_phone-360x780_font1.0.png" alt="Seats across two tables" width="23%"/>
+  <img src="tools-feature/src/test/screenshots/screens/S9_odds_flop_exact/S9_odds_flop_exact_phone-360x780_font1.0.png" alt="Odds on the flop" width="23%"/>
+  <img src="tools-feature/src/test/screenshots/screens/S10_runout_river_p1/S10_runout_river_p1_phone-360x780_font1.0.png" alt="Running it out to the river" width="23%"/>
+</p>
+<p align="center">
+  <img src="tools-feature/src/test/screenshots/screens/S21_side_pots/S21_side_pots_phone-360x780_font1.0.png" alt="Side pots" width="23%"/>
+  <img src="tools-feature/src/test/screenshots/screens/S12_ranks_default/S12_ranks_default_phone-360x780_font1.0.png" alt="Hand ranks" width="23%"/>
+  <img src="tools-feature/src/test/screenshots/screens/S22_deal/S22_deal_phone-360x780_font1.0.png" alt="Splitting the prizes" width="23%"/>
   <img src="tools-feature/src/test/screenshots/screens/S16_history_list/S16_history_list_phone-360x780_font1.0.png" alt="History and season points" width="23%"/>
+</p>
+<p align="center">
+  <img src="tools-feature/src/test/screenshots/screens/S18_music_playing/S18_music_playing_phone-360x780_font1.0.png" alt="Music that plays with the clock" width="23%"/>
+  <img src="tools-feature/src/test/screenshots/screens/S25_currency/S25_currency_phone-360x780_font1.0.png" alt="Picking a currency" width="23%"/>
+  <img src="tools-feature/src/test/screenshots/screens/S17_backup/S17_backup_phone-360x780_font1.0.png" alt="Backup" width="23%"/>
 </p>
 
 <sub>The pictures in this section come from the app's screenshot tests. A change to a screen can't
@@ -122,7 +155,7 @@ merge until they're updated, so they always show the app as it is today.</sub>
   through it.
 - **No ads, no accounts, no analytics, no tracking.**
 - **Your data stays on your phone,** in the app's own storage. Something leaves only when you tap
-  Share or Export and pick where it goes.
+  Share, or save a file (a backup, a CSV, a preset) where you choose.
 
 The details are in [PRIVACY.md](PRIVACY.md).
 

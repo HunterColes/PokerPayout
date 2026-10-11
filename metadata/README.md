@@ -1,89 +1,32 @@
-# F-Droid Metadata
+# F-Droid metadata
 
-This directory contains all metadata files required for F-Droid submission.
-
-## Directory Structure
+What F-Droid shows for Poker Payout, read from the release tag, and a mirror of its build recipe.
 
 ```
 metadata/
-├── com.huntercoles.pokerpayout.yml       # Main metadata file for F-Droid
-└── en-US/                                # Localized content (English-US)
-    ├── README.md                         # Instructions for adding images
-    ├── title.txt                         # App title
-    ├── short_description.txt             # Short description (max 80 chars)
-    ├── full_description.txt              # Full app description
+├── com.huntercoles.pokerpayout.yml       # mirror of fdroiddata's recipe, rebuilt by release.sh
+└── en-US/
+    ├── title.txt                         # the app's name
+    ├── short_description.txt             # the summary: 80 characters at most, no full stop
+    ├── full_description.txt              # the feature list
     ├── images/
-    │   ├── icon.png                      # 512x512 app icon
-    │   ├── featureGraphic.png            # 1024x500 banner: scripts/listing/feature_graphic.py
-    │   └── phoneScreenshots/             # 8 pictures: scripts/device/listing.sh
-    └── changelogs/                       # What's New per version, written by release.sh
-        └── {versionCode}.txt
+    │   ├── icon.png                      # 512 x 512
+    │   ├── featureGraphic.png            # 1024 x 500: scripts/listing/feature_graphic.py
+    │   └── phoneScreenshots/             # 8 pictures: scripts/device/listing.sh (listing.yml)
+    └── changelogs/<versionCode>.txt      # What's New, written by release.sh
 ```
 
-## Quick Start
+- **Pictures** are made by scripts, never by hand, and carry no metadata (no EXIF, no text
+  chunks): see "Refreshing the store listing" in [docs/RELEASING.md](../docs/RELEASING.md#refreshing-the-store-listing).
+- **Words:** plain and short, leading with free, no ads, offline and no internet permission. When a
+  feature lands or goes, `full_description.txt` changes with it.
+- **The recipe** (`com.huntercoles.pokerpayout.yml`) is fdroiddata's file as of the last release,
+  plus that release's build entry. `AllowedAPKSigningKeys` pins the release key's certificate (the
+  2026 key, since 1.2.0). `Binaries:` points at the GitHub release's APK, which F-Droid compares
+  with its own build byte for byte. Tags are `v<versionName>`; the APK is
+  `PokerPayout-v<versionName>-release.apk`.
+- **Changes to the recipe** go to fdroiddata as a merge request (`scripts/release/fdroid-mr.sh`);
+  a new version needs none. See [docs/RELEASING.md](../docs/RELEASING.md).
 
-### 1. Images
-
-The screenshots and the feature graphic are made by scripts, never by hand: see "Refreshing the
-store listing" in [docs/RELEASING.md](../docs/RELEASING.md#refreshing-the-store-listing).
-
-### 2. Review Metadata YAML
-
-Edit `com.huntercoles.pokerpayout.yml` and verify:
-- Author information
-- Repository URLs
-- Binary download URL pattern
-- Build configuration
-- Signing key fingerprint (`AllowedAPKSigningKeys`: the release key's certificate)
-
-### 3. Follow Submission Guide
-
-See `../docs/FDROID_SUBMISSION.md` for complete step-by-step instructions.
-
-### 4. Screenshot metadata
-
-`listing.sh` saves the emulator's screenshots with no metadata (no EXIF, no text chunks), so there
-is nothing to strip.
-
-## Files Explained
-
-### `com.huntercoles.pokerpayout.yml`
-The main metadata file that F-Droid uses to:
-- Build your app from source
-- Verify reproducible builds
-- Display app information in the F-Droid catalog
-- Auto-update when new versions are released
-
-### `en-US/` Directory
-Contains all user-facing content that appears in the F-Droid app listing:
-- **title.txt**: App name displayed in F-Droid
-- **short_description.txt**: Tagline (max 80 characters)
-- **full_description.txt**: Detailed description with features
-- **icon.png**: App icon shown in store
-- **featureGraphic.png**: Banner image at top of listing
-- **phoneScreenshots/**: Screenshots displayed in listing
-
-## Important Notes
-
-🔑 **Signing**
-- `AllowedAPKSigningKeys` pins the release key's certificate (the 2026 key, since 1.2.0)
-- Key changes: "The 2026 signing key change" in [docs/RELEASING.md](../docs/RELEASING.md)
-
-📦 **GitHub Release Required**
-- F-Droid downloads your signed APK from GitHub releases
-- The `Binaries` field in the YAML points to your release URL
-- Tag format: `v{versionName}` (e.g., `v1.1.0`)
-- APK filename: `PokerPayout-v{versionName}-release.apk`
-
-🔄 **Future Updates**
-- `scripts/release/release.sh` writes `en-US/changelogs/{versionCode}.txt` and rebuilds the
-  yml mirror from fdroiddata; see [docs/RELEASING.md](../docs/RELEASING.md)
-- F-Droid auto-detects new tags if `AutoUpdateMode: Version` is set
-- Updates typically appear in F-Droid within a few days
-
-## Resources
-
-- [F-Droid Submission Guide](../docs/FDROID_SUBMISSION.md)
-- [F-Droid Official Docs](https://f-droid.org/en/docs/)
-- [Build Metadata Reference](https://f-droid.org/en/docs/Build_Metadata_Reference/)
-- [Reproducible Builds](https://f-droid.org/docs/Reproducible_Builds/)
+[docs/FDROID_SUBMISSION.md](../docs/FDROID_SUBMISSION.md) is the guide from the first submission
+(2025), kept for history.

@@ -22,10 +22,10 @@ JDK 21 toolchain, which is also what F-Droid's build server has.
 | Module | What lives there |
 |---|---|
 | `app` | The app's entry point and the release build setup |
-| `core` | The design system (`core/design`), navigation, saved settings, money and blind maths, and the test kit for screen sizes |
+| `core` | The design system (`core/design`), navigation, saved settings and backups, money and blind maths, the cue sounds and the music player (`core/audio`), and the test kit for screen sizes |
 | `tournament-feature` | The Tournament tab (setup, presets, clock, blinds, table view), the live clock notification, and the Payouts tab |
-| `bank-feature` | The Bank tab: buy-ins, rebuys, add-ons, knockouts and bounties, payouts, and Settle up |
-| `tools-feature` | The Tools tab: Odds and Run it out, Chip set, Hand ranks, Seat draw, History, Sound |
+| `bank-feature` | The Bank tab: tonight's players, buy-ins, rebuys, add-ons, late entries, knockouts and bounties, payouts, and Settle up |
+| `tools-feature` | The Tools tab: Chip set, Seat draw, Odds and Run it out, Side pots, Hand ranks, Split the prizes, History, Sound and Music, Currency, Backup |
 
 ## The check every change must pass
 
@@ -73,8 +73,10 @@ A few rules keep the app correct and consistent. In plain terms:
 
 Each screen is drawn on the JVM (Roborazzi on Robolectric) and compared with a checked-in picture,
 a *golden*, in `*/src/test/screenshots/`. Every screen has a phone golden, and the main ones also
-have small-phone, large-font, tablet and landscape goldens. On top of that, layout checks run every screen at 8 sizes and 3 font scales and fail on clipped or cut-off
-text, text off the screen, targets under 48 dp and overlapping targets.
+have small-phone, large-font, tablet and landscape goldens. On top of that, layout checks run
+every screen at 8 sizes and 3 font scales and fail on clipped or cut-off text, text off the screen,
+targets under 48 dp, overlapping targets, anything tappable that TalkBack can't name, and text
+under WCAG AA contrast.
 
 When you change how a screen looks, record its goldens again on purpose:
 

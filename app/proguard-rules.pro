@@ -16,7 +16,10 @@
 #                   values()/valueOf() (TournamentUi, saved with the Tournament tab,
 #                   holds TournamentMode, an enum).
 #   Preferences     SharedPreferences hold plain strings and numbers ("COUNTDOWN",
-#                   "player", ...). No enum or class is looked up by its name.
+#                   "player", ...). An enum saved by its name (PayoutPreset, BreakMusic) is
+#                   found again by comparing Enum.name, which R8 never changes (it renames
+#                   the fields, not the names the constants report). No class is looked up
+#                   by its name.
 #
 # Add a rule here only with a reproducer: a crash in the minified build (run
 # `scripts/device/tour.sh --release`) or a documented library requirement.

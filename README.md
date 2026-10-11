@@ -111,7 +111,7 @@
 
 ### Tools
 
-In the order of a night:
+In the order of the Tools tab, which follows a night:
 
 - **Chip set:** stacks from the chips you own, and a color-up plan.
 - **Seat draw:** random, balanced seats across your tables, and the high card for the button.

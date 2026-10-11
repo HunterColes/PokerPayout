@@ -103,6 +103,15 @@ class ClockCues @Inject constructor(
         actions.flash?.let { flashEvents.tryEmit(it) }
     }
 
+    /**
+     * PP-111: a big moment's sound ([CueEvent.BIG_MOMENT], [CueEvent.CHAMPION]) from the picked pack,
+     * muted or not as the Sound section says; an empty slot is silent. The moment itself shows on
+     * the clock, so it neither vibrates nor flashes.
+     */
+    fun playMoment(event: CueEvent) {
+        pack().soundFor(event)?.let(soundManager::playSound)
+    }
+
     private companion object {
         /**
          * The same cue reported again within this long is the one already played. A real second pass

@@ -161,6 +161,7 @@ class ClockRestoreTest {
                     clock,
                     audio,
                     FakeChipSets(),
+                    NineSeats,
                 ) as T
         }
         // runCurrent, not advanceUntilIdle: a restored running clock ticks forever

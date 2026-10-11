@@ -62,4 +62,6 @@
     <string name="cue_event_break_start">Break starts</string>
     <string name="cue_event_break_end">Break ends</string>
     <string name="cue_event_game_over">Game over</string>
+    <string name="cue_event_big_moment">Bubble, final table, heads-up</string>
+    <string name="cue_event_champion">Champion</string>
 </resources>

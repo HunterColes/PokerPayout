@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.tournament.presentation.payouts
 import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
+import com.huntercoles.pokerpayout.tournament.presentation.composable.WinnerModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -91,6 +92,17 @@ class PayoutsRakeTest {
         val raked = game.viewModel().state()
         assertEquals(plain, raked.bounties)
         assertEquals(4_500L, raked.pool.bountyPoolCents)
+    }
+
+    /** The champion's screen (PP-111) is the tab's own picture of the night: the rake comes with it. */
+    @Test
+    fun `the champion's screen carries the rake and what came in`() {
+        game.tournament.setRake(HouseRake.of(500))
+        val winner = requireNotNull(WinnerModel.from(game.finished().viewModel().state()))
+        assertEquals(21_750L, winner.prizeCents)
+        assertEquals(2_250L, winner.rakeCents)
+        assertEquals(45_000L, winner.takenInCents)
+        assertEquals(winner.takenInCents, winner.rows.sumOf { it.amountCents } + winner.rakeCents)
     }
 
     @Test

@@ -28,6 +28,7 @@ import com.huntercoles.pokerpayout.tournament.domain.presets.PresetStore
 import com.huntercoles.pokerpayout.tournament.domain.presets.PresetsBackup
 import com.huntercoles.pokerpayout.tournament.domain.presets.Starter
 import com.huntercoles.pokerpayout.tournament.presentation.FakeChipSets
+import com.huntercoles.pokerpayout.tournament.presentation.NineSeats
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerViewModel
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigViewModel
@@ -113,6 +114,7 @@ class PresetsViewModelTest {
             clock,
             audio,
             FakeChipSets(),
+            NineSeats,
         )
     }
 

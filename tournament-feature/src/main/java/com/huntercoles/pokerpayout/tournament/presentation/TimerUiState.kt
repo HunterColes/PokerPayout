@@ -8,6 +8,7 @@ import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockTimeline
 import com.huntercoles.pokerpayout.tournament.domain.clock.LevelSegment
+import com.huntercoles.pokerpayout.tournament.domain.moments.BigMoment
 
 /** How urgent the time left in the current level is. Checked most urgent first (B14). */
 enum class TimeTone { NORMAL, LOW, CRITICAL }
@@ -107,7 +108,15 @@ data class TimerUiState(
      * A mid-game blind change ([TimerIntent.KeepingLevel]) that can't be played, so it wasn't applied:
      * the clock runs on the setup it had. Cleared by the next change that works.
      */
-    val midGameProblem: BlindSetupProblem? = null
+    val midGameProblem: BlindSetupProblem? = null,
+    /**
+     * PP-111: the big moment the clock shows (the bubble, in the money, the final table, heads-up),
+     * from the knockout that brought it until it has been on screen for a while; null between them.
+     * Only while a clock exists. An Undo that takes the knockout back takes it away.
+     */
+    val moment: MomentBanner? = null,
+    /** PP-111: the champion's screen is open; it opens with the last knockout, and closes with ✕ or an Undo. */
+    val winnerOpen: Boolean = false
 ) {
     val gameDurationMinutes: Int get() = config.gameDurationMinutes
 
@@ -199,6 +208,10 @@ data class TimerUiState(
             canGoForward = canGoForward
         )
 
+    /** PP-111: the moment slot's input: see [MomentSlotState]. */
+    val momentSlot: MomentSlotState
+        get() = MomentSlotState(moment = moment, champion = table.championName.takeUnless { winnerOpen })
+
     /** The blinds card's input: see [BlindsUp]. */
     val blindsUp: BlindsUp
         get() = BlindsUp(
@@ -245,6 +258,28 @@ data class TimerUiState(
         const val CRITICAL_FRACTION = 0.10
     }
 }
+
+/**
+ * PP-111: a big moment on the clock. [id] grows with every moment shown, so the same moment again
+ * (after an Undo) shows again.
+ */
+@Immutable
+data class MomentBanner(
+    val moment: BigMoment,
+    val id: Int,
+    val playersLeft: Int,
+    /** Heads-up: the two still in. */
+    val names: List<String> = emptyList(),
+    /** In the money: the least anyone left wins, the last paid place's prize, in cents. */
+    val lowestPrizeCents: Long = 0L,
+)
+
+/**
+ * PP-111: what the clock's moment slot shows: a [moment]'s banner, else, once there is a champion
+ * and their screen is closed, the [champion]'s card. It changes with a moment, not every second.
+ */
+@Immutable
+data class MomentSlotState(val moment: MomentBanner? = null, val champion: String? = null)
 
 /** Clock text: "12:34" under an hour, "1:02:03" from an hour. */
 object ClockFormat {

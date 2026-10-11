@@ -60,4 +60,14 @@ sealed class TimerIntent {
 
     /** S3 forced on with ⤢ (or off with ✕); rotating a phone shows it too, without this flag. */
     data class SetTableView(val enabled: Boolean) : TimerIntent()
+
+    // Big moments (PP-111)
+    /** The moment [id] has been on the clock long enough: it goes. */
+    data class MomentSeen(val id: Int) : TimerIntent()
+
+    /** The champion's screen, from the clock's champion card. */
+    data object OpenWinner : TimerIntent()
+
+    /** ✕ or Back on the champion's screen: the clock again. */
+    data object CloseWinner : TimerIntent()
 }

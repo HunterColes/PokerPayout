@@ -92,6 +92,7 @@ class TournamentTabsScreenTest(private val config: ScreenConfig) {
                 StillClock,
                 audio,
                 FakeChipSets(),
+                NineSeats,
             )
         }
         screen.compose.setContent {

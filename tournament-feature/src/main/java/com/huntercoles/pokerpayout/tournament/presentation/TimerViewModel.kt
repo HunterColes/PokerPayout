@@ -2,7 +2,7 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
+import com.huntercoles.pokerpayout.core.domain.model.TableSeats
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
@@ -55,6 +55,10 @@ import javax.inject.Inject
  * re-plans them and leaves the clock where it is.
  * The saved anchor is the one clock (PP-081): the live clock notification's Pause and Resume change
  * it too, and this follows ([followSavedClock]) through the same steps as its own button.
+ *
+ * Big moments (PP-111): the knockouts the Bank records (from its tab or the table view's Knock out)
+ * bring the bubble, in the money, the final table, heads-up and the champion; each shows on the
+ * clock once ([ClockMoments]), and an Undo takes it back.
  */
 @HiltViewModel
 @Suppress("LongParameterList") // one injected source per thing the clock reads
@@ -65,7 +69,8 @@ class TimerViewModel @Inject constructor(
     private val cues: ClockCues,
     private val timeSource: TimeSource,
     private val audioPreferences: AudioPreferences,
-    private val chipSets: ChipSetProvider
+    private val chipSets: ChipSetProvider,
+    private val tableSeats: TableSeats
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TimerUiState())
@@ -88,11 +93,12 @@ class TimerViewModel @Inject constructor(
     private var tableConfig = tournamentPreferences.getCurrentTournamentConfig()
     private var bank = BankCounts()
 
-    /** The one payout calculation (stateless), for how many places are paid. */
-    private val payouts = CalculatePayoutsUseCase()
+    /** The table's numbers and the night's big moments (PP-111) they bring. */
+    private val clockTable = ClockTable(bankPreferences, tableSeats, timerPreferences, cues)
 
     /** The chip set the color-ups follow; null for a common home set's chips. */
     private var chipSet: ChipSetChips? = chipSets.current()
+
 
     init {
         cues.preload()
@@ -126,6 +132,9 @@ class TimerViewModel @Inject constructor(
             is TimerIntent.UpdateRebuyUntil -> tournamentPreferences.setRebuyUntilLevel(intent.level)
             is TimerIntent.ApplyFix -> applyFix(intent.fix)
             is TimerIntent.KeepingLevel -> changeKeepingLevel(intent.edit)
+            is TimerIntent.MomentSeen -> _uiState.update { it.copy(moment = it.moment?.takeUnless { m -> m.id == intent.id }) }
+            TimerIntent.OpenWinner -> _uiState.update { it.copy(winnerOpen = it.table.championName != null) }
+            TimerIntent.CloseWinner -> _uiState.update { it.copy(winnerOpen = false) }
             else -> acceptSetupIntent(intent)
         }
     }
@@ -694,8 +703,6 @@ class TimerViewModel @Inject constructor(
 
     // ------------------------------------------------------------------ table numbers and settings
 
-    private data class BankCounts(val eliminated: List<Int> = emptyList(), val rebuys: Int = 0, val addOns: Int = 0)
-
     private fun observeTable() {
         tableConfig = tournamentPreferences.getCurrentTournamentConfig()
         bank = BankCounts(
@@ -746,30 +753,7 @@ class TimerViewModel @Inject constructor(
     }
 
     private fun refreshTable() {
-        val players = tableConfig.numPlayers
-        val out = bank.eliminated.filter { it in 1..players }.distinct().size
-        val left = (players - out).coerceAtLeast(0)
-        val stacks = players.toLong() + bank.rebuys + bank.addOns
-        val chips = stacks * _uiState.value.config.startingChips
-        // Purchases, late entries and re-entries at the prices paid (PP-085, PP-116)
-        val prizePool = bankPreferences.recordedPool(tableConfig.money, players).prizePoolCents
-        val table = TableStats(
-            playerCount = players,
-            playersLeft = left,
-            averageStack = if (left > 0) (chips / left).toInt() else 0,
-            // The same prize pool the Payouts table splits (buy-ins, rebuys and add-ons at the prices
-            // they were bought at; no food or bounty)
-            prizePoolCents = prizePool,
-            // The places that table pays, from the one payout calculation (PP-135: the bubble)
-            paidPlaces = payouts(prizePool, tableConfig.payoutWeights, players, tableConfig.payoutRounding).places.size
-        )
-        val purchases = Purchases(
-            rebuyCents = tableConfig.money.rebuyCents,
-            addOnCents = tableConfig.money.addOnCents,
-            rebuysTaken = bank.rebuys,
-            addOnsTaken = bank.addOns
-        )
-        _uiState.update { it.copy(table = table, purchases = purchases) }
+        _uiState.value = clockTable.refreshed(_uiState.value, tableConfig, bank)
     }
 
     private companion object {

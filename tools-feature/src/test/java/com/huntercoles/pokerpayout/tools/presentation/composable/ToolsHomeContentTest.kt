@@ -20,6 +20,7 @@ import com.huntercoles.pokerpayout.tools.presentation.MusicSummary
 import com.huntercoles.pokerpayout.tools.presentation.ToolsHomeIntent
 import com.huntercoles.pokerpayout.tools.presentation.ToolsHomeUiState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,37 +53,60 @@ class ToolsHomeContentTest {
     @Test
     fun eachRowOpensItsTool() {
         show(ToolsHomeUiState())
-        compose.onNodeWithText("Odds").performClick()
         compose.onNodeWithText("Chip set").performClick()
-        compose.onNodeWithText("Hand ranks").performClick()
         compose.onNodeWithText("Seat draw").performClick()
-        compose.onNodeWithText("Outs & pot odds").performScrollTo().performClick()
+        compose.onNodeWithText("Odds").performScrollTo().performClick()
         compose.onNodeWithText("Side pots").performScrollTo().performClick()
-        compose.onNodeWithText("Deal maker").performScrollTo().performClick()
-        compose.onNodeWithText("Shot clock").performScrollTo().performClick()
-        compose.onNodeWithText("Dealer's choice").performScrollTo().performClick()
-        compose.onNodeWithText("Equity quiz").performScrollTo().performClick()
+        compose.onNodeWithText("Hand ranks").performScrollTo().performClick()
+        compose.onNodeWithText("Split the prizes").performScrollTo().performClick()
         compose.onNodeWithText("History").performScrollTo().performClick()
-        compose.onNodeWithText("Backup").performScrollTo().performClick()
         compose.onNodeWithText("Currency").performScrollTo().performClick()
+        compose.onNodeWithText("Backup").performScrollTo().performClick()
         assertEquals(
             listOf(
-                NavigationDestination.OddsCalculator,
                 NavigationDestination.ChipCalculator,
-                NavigationDestination.HandRanks,
                 NavigationDestination.SeatDraw,
-                NavigationDestination.Outs,
+                NavigationDestination.OddsCalculator,
                 NavigationDestination.SidePots,
+                NavigationDestination.HandRanks,
                 NavigationDestination.DealMaker,
-                NavigationDestination.ShotClock,
-                NavigationDestination.DealersChoice,
-                NavigationDestination.EquityQuiz,
                 NavigationDestination.History,
-                NavigationDestination.Backup,
                 NavigationDestination.Currency,
+                NavigationDestination.Backup,
             ),
             opened,
         )
+    }
+
+    @Test
+    fun theToolsComeInGroupsInTheOrderOfANightAndEachGroupIsAHeading() {
+        show(ToolsHomeUiState())
+        listOf("Before the game", "During play", "End of the night", "Sound and music", "Settings").forEach { heading ->
+            compose.onNode(hasText(heading, ignoreCase = true) and isHeading).performScrollTo().assertExists()
+        }
+        // Everything on the page, top to bottom (one entry per row: a row reads as one button)
+        val page = compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)).fetchSemanticsNodes().map { node ->
+            node.config[SemanticsProperties.Text].joinToString(" ") { it.text }
+        }
+        val expected = listOf(
+            "BEFORE THE GAME", "Chip set", "Seat draw",
+            "DURING PLAY", "Odds", "Side pots", "Hand ranks",
+            "END OF THE NIGHT", "Split the prizes", "History",
+            "SOUND AND MUSIC", "Sound",
+            "SETTINGS", "Currency", "Backup",
+        )
+        val at = expected.map { label -> page.indexOfFirst { it == label || it.startsWith("$label ") } }
+        assertTrue("each is on the page: ${expected.zip(at)}", at.none { it < 0 })
+        assertEquals("in this order: $page", at.sorted(), at)
+        compose.onNodeWithText("A deal: stop early and share what's left by chips").performScrollTo().assertExists()
+    }
+
+    @Test
+    fun theRemovedToolsAreGone() {
+        show(ToolsHomeUiState())
+        listOf("Outs & pot odds", "Shot clock", "Dealer's choice", "Equity quiz", "Deal maker").forEach {
+            compose.onNodeWithText(it).assertDoesNotExist()
+        }
     }
 
     @Test
@@ -203,4 +227,5 @@ class ToolsHomeContentTest {
     }
 
     private val isSwitch = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)
+    private val isHeading = SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading)
 }

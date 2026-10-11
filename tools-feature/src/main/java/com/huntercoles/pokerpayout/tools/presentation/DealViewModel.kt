@@ -58,6 +58,17 @@ data class DealUiState(
     /** The most that can be kept back for the winner: what 1st pays over 2nd. */
     val maxForWinnerCents: Long get() = DealMath.maxForWinner(prizes)
 
+    /**
+     * Nothing typed yet: no chips, no prizes, nothing saved for the winner, and the players as
+     * tonight gave them (the Bank's still in, or three to name).
+     */
+    val nothingTyped: Boolean
+        get() {
+            val noAmounts = players.all { it.chips == null } && typed.all { it == null } && forWinnerCents == null
+            val playersAsGiven = fromBank || players == List(DEFAULT_PLAYERS) { DealPlayer() }
+            return noAmounts && playersAsGiven
+        }
+
     companion object {
         /** Three left: where most home games talk about a deal. */
         const val DEFAULT_PLAYERS = 3
@@ -90,7 +101,7 @@ sealed interface DealIntent {
  * The deal maker: the players still in and the prizes left start from tonight's Bank and Payouts
  * ([TonightSource]), and can be typed instead. Every change works out ICM and the chip chop again
  * ([DealMath]). What was typed stays in [TableToolsMemory] while the app runs; tonight's payout
- * table is read again each time the screen opens.
+ * table is read again each time the screen opens, and so are the players while nothing is typed.
  */
 @HiltViewModel
 class DealViewModel @Inject constructor(
@@ -106,8 +117,11 @@ class DealViewModel @Inject constructor(
     private var undo: Job? = null
 
     init {
+        // A deal with something typed comes back as it was; one with nothing typed yet starts from
+        // tonight again, so players knocked out since it was opened are gone from it.
         val now = tonight.tonight()
-        _uiState = MutableStateFlow(memory.deal?.copy(payouts = now.prizes) ?: fresh(now))
+        val kept = memory.deal?.takeUnless { it.nothingTyped }
+        _uiState = MutableStateFlow(kept?.copy(payouts = now.prizes) ?: fresh(now))
         uiState = _uiState.asStateFlow()
     }
 

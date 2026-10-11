@@ -57,10 +57,6 @@ class NavBarTest {
             NavigationDestination.CueSounds,
             NavigationDestination.Backup,
             NavigationDestination.Currency,
-            NavigationDestination.ShotClock,
-            NavigationDestination.DealersChoice,
-            NavigationDestination.EquityQuiz,
-            NavigationDestination.Outs,
             NavigationDestination.SidePots,
             NavigationDestination.DealMaker,
         ).forEach { assertEquals("$it", NavTab.Tools, it.tab) }
@@ -115,10 +111,6 @@ class NavBarTest {
             NavigationDestination.History,
             NavigationDestination.Backup,
             NavigationDestination.Currency,
-            NavigationDestination.ShotClock,
-            NavigationDestination.DealersChoice,
-            NavigationDestination.EquityQuiz,
-            NavigationDestination.Outs,
             NavigationDestination.SidePots,
             NavigationDestination.DealMaker,
         ).forEach { destination ->
@@ -215,10 +207,6 @@ class NavBarTest {
                 builder.composable<NavigationDestination.History> { Text(SCREEN + NavigationDestination.History) }
                 builder.composable<NavigationDestination.Backup> { Text(SCREEN + NavigationDestination.Backup) }
                 builder.composable<NavigationDestination.Currency> { Text(SCREEN + NavigationDestination.Currency) }
-                builder.composable<NavigationDestination.ShotClock> { Text(SCREEN + NavigationDestination.ShotClock) }
-                builder.composable<NavigationDestination.DealersChoice> { Text(SCREEN + NavigationDestination.DealersChoice) }
-                builder.composable<NavigationDestination.EquityQuiz> { Text(SCREEN + NavigationDestination.EquityQuiz) }
-                builder.composable<NavigationDestination.Outs> { Text(SCREEN + NavigationDestination.Outs) }
                 builder.composable<NavigationDestination.SidePots> { Text(SCREEN + NavigationDestination.SidePots) }
                 builder.composable<NavigationDestination.DealMaker> { Text(SCREEN + NavigationDestination.DealMaker) }
             }

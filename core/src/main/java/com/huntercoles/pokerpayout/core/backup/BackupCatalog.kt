@@ -30,11 +30,9 @@ object BackupCatalog {
         SettingsFile(MusicPreferences.FILE, SettingsGroup.SOUND, phoneOnly = MusicPreferences.PHONE_ONLY_KEYS),
         SettingsFile("odds_calculator_prefs", SettingsGroup.TOOLS),
         SettingsFile("seat_draw_prefs", SettingsGroup.TOOLS),
-        // The shot clock (its times and the time-bank cards played), dealer's choice (the wheel,
-        // house games, the last pick) and the equity quiz (its settings and the score)
-        SettingsFile("shot_clock_prefs", SettingsGroup.TOOLS),
-        SettingsFile("dealers_choice_prefs", SettingsGroup.TOOLS),
-        SettingsFile("equity_quiz_prefs", SettingsGroup.TOOLS),
+        // 1.4.3 to 1.4.13 also saved shot_clock_prefs, dealers_choice_prefs and equity_quiz_prefs
+        // here. Those tools are gone: nothing reads the files, and a backup that holds them restores
+        // everything else and skips them, as it skips any file this version doesn't know.
     )
 
     /** Files saved item by item by a section of their own, so a backup can merge them: file to section key. */

@@ -18,12 +18,12 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The table tools inside the app's shell on every cell of the device matrix: text fits and is
- * never clipped at any scroll position of either pane, 48 dp targets that don't overlap. Goldens on
- * [DeviceMatrix.goldens]: `S20_outs_flop` (a flush draw facing a bet: both chances, the rules of
- * thumb and the verdict), `S21_side_pots` (an all-in, a bigger all-in, a fold and a bet nobody
- * matched: a main pot, a side pot and chips back) and `S22_deal` (three left from the Bank, ICM and
- * chip chop side by side, $50 saved for the winner). The other states get the layout checks only.
+ * The table tools (Side pots, Split the prizes) inside the app's shell on every cell of the device
+ * matrix: text fits and is never clipped at any scroll position of either pane, 48 dp targets that
+ * don't overlap. Goldens on [DeviceMatrix.goldens]: `S21_side_pots` (an all-in, a bigger all-in, a
+ * fold and a bet nobody matched: a main pot, a side pot and chips back) and `S22_deal` (three left
+ * from the Bank, ICM and chip chop side by side, $50 saved for the winner). The other states get
+ * the layout checks only.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -31,15 +31,6 @@ import org.robolectric.annotation.GraphicsMode
 class TableToolsScreenTest(private val config: ScreenConfig) {
     @get:Rule
     val screen = ScreenTestRule(config)
-
-    @Test
-    fun outsFlop() = check("S20_outs_flop") { OutsContent(TableToolFixtures.outsFlop, onIntent = {}, onBack = {}) }
-
-    @Test
-    fun outsTurn() = check(name = null) { OutsContent(TableToolFixtures.outsTurn, onIntent = {}, onBack = {}) }
-
-    @Test
-    fun outsCombo() = check(name = null) { OutsContent(TableToolFixtures.outsCombo, onIntent = {}, onBack = {}) }
 
     @Test
     fun sidePots() = check("S21_side_pots") { SidePotsContent(TableToolFixtures.sidePots, onIntent = {}, onBack = {}) }

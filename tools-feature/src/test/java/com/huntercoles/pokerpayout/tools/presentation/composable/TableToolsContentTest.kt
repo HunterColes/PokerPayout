@@ -15,12 +15,9 @@ import com.huntercoles.pokerpayout.core.design.PokerTheme
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.tools.presentation.DealIntent
 import com.huntercoles.pokerpayout.tools.presentation.DealUiState
-import com.huntercoles.pokerpayout.tools.presentation.OutsIntent
-import com.huntercoles.pokerpayout.tools.presentation.OutsUiState
 import com.huntercoles.pokerpayout.tools.presentation.PrizeSource
 import com.huntercoles.pokerpayout.tools.presentation.SidePotsIntent
 import com.huntercoles.pokerpayout.tools.presentation.SidePotsUiState
-import com.huntercoles.pokerpayout.tools.table.Street
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -41,7 +38,6 @@ class TableToolsContentTest {
 
     private val sidePots = mutableListOf<SidePotsIntent>()
     private val deal = mutableListOf<DealIntent>()
-    private val outs = mutableListOf<OutsIntent>()
 
     private fun show(state: SidePotsUiState) = compose.setContent {
         PokerTheme(reducedMotion = true) { SidePotsContent(state, onIntent = { sidePots += it }, onBack = {}) }
@@ -49,10 +45,6 @@ class TableToolsContentTest {
 
     private fun show(state: DealUiState) = compose.setContent {
         PokerTheme(reducedMotion = true) { DealContent(state, onIntent = { deal += it }, onBack = {}) }
-    }
-
-    private fun show(state: OutsUiState) = compose.setContent {
-        PokerTheme(reducedMotion = true) { OutsContent(state, onIntent = { outs += it }, onBack = {}) }
     }
 
     @Test
@@ -146,45 +138,27 @@ class TableToolsContentTest {
     }
 
     @Test
+    fun `the deal says what it is for, and each way in a few words before any amount`() {
+        show(TableToolFixtures.dealNoChips)
+        compose.onNodeWithText("Split the prizes").assertExists()
+        compose.onNodeWithText("A deal: when the players left agree to stop, share the prizes still to win by their chips.")
+            .assertExists()
+        compose.onNodeWithText("Who gets what", ignoreCase = true).performScrollTo()
+        compose.onNodeWithText("ICM: by each stack's chances of finishing in each place.").performScrollTo()
+        compose.onNodeWithText("Chip chop: everyone gets the smallest prize left, and the rest goes by chips.").performScrollTo()
+    }
+
+    @Test
+    fun `side pots say when they are for`() {
+        show(TableToolFixtures.sidePotsEmpty)
+        compose.onNodeWithText("When someone is all in", substring = true).assertExists()
+    }
+
+    @Test
     fun `typed prizes that go up are named`() {
         show(TableToolFixtures.dealTyped)
         compose.onNodeWithText("Typed for this deal").assertExists()
         compose.onNodeWithContentDescription("4th prize").performScrollTo()
         compose.onNodeWithText("4th pays more than 3rd. Each place pays no more than the one above.").performScrollTo()
-    }
-
-    @Test
-    fun `outs show the exact chances beside the rules of thumb, and the price of the call`() {
-        show(TableToolFixtures.outsFlop)
-        compose.onNodeWithText("9 outs on the flop").assertExists()
-        compose.onNode(hasText("By the river") and hasText("35.0%") and hasText("Rule of 4: 36%") and hasText("1.9 to 1 against"))
-            .performScrollTo()
-        compose.onNode(hasText("Next card") and hasText("19.1%") and hasText("Rule of 2: 18%") and hasText("4.2 to 1 against"))
-            .performScrollTo()
-        compose.onNodeWithText("You need 25.0% to call").performScrollTo()
-        compose.onNodeWithText("Pot odds 3 to 1").performScrollTo()
-        compose.onNodeWithText("Next card 19.1% against 25.0% needed: too short for one card.").performScrollTo()
-        compose.onNodeWithText("By the river 35.0%: enough if you're all in.").performScrollTo()
-    }
-
-    @Test
-    fun `outs controls send the street, the count, a common draw and the pot`() {
-        show(OutsUiState(street = Street.Turn, outs = 4))
-        compose.onNode(hasText("On the river") and hasText("8.7%")).performScrollTo()
-        compose.onNodeWithText("On the flop").performClick()
-        compose.onNodeWithContentDescription("Increase Outs").performClick()
-        compose.onNodeWithContentDescription("Flush + open-ended, 15 outs").performScrollTo().performClick()
-        compose.onNodeWithContentDescription("Pot, with the bet").performScrollTo().performTextInput("250")
-        compose.onNodeWithContentDescription("To call").performScrollTo().performTextInput("50")
-        assertEquals(
-            listOf(
-                OutsIntent.SetStreet(Street.Flop),
-                OutsIntent.SetOuts(5),
-                OutsIntent.SetOuts(15),
-                OutsIntent.SetPot(250),
-                OutsIntent.SetCall(50),
-            ),
-            outs,
-        )
     }
 }

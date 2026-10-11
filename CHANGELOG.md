@@ -3,6 +3,23 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.15 (on master, not published)
+
+A tidier Tools page:
+
+- **Four tools are gone:** Outs & pot odds, Shot clock, Dealer's choice and Equity quiz. Their
+  saved settings are left alone and no longer read, and a backup that holds them still restores
+  everything else. Odds, Run it out and the clock's sounds and vibration are unchanged.
+- **Split the prizes** (it was Deal maker): one line says what a deal is (the players left agree
+  to stop and share the prizes still to win by their chips), and ICM and the chip chop are each
+  explained in a few words above the amounts. With nothing typed yet it starts from tonight's
+  players and payouts every time it opens, so a player knocked out since is gone from it. The
+  maths is the same.
+- **Side pots** says when it's for: when someone is all in.
+- **The Tools tab in the order of a night:** Before the game (Chip set, Seat draw), During play
+  (Odds, Side pots, Hand ranks), End of the night (Split the prizes, History), then Sound and
+  music, then Settings (Currency, Backup). TalkBack reads each group's name as a heading.
+
 ## 1.4.14 (on master, not published)
 
 Big moments: bubble, final table, champion:

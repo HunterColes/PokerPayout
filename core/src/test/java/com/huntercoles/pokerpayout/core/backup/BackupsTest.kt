@@ -30,6 +30,8 @@ import com.huntercoles.pokerpayout.core.utils.ChipDistributionCurve
 import com.huntercoles.pokerpayout.core.utils.ChipInventory
 import com.huntercoles.pokerpayout.core.utils.InventoryChip
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -187,7 +189,13 @@ class BackupsTest {
             .putString("players", "Dana,Zo%C3%AB")
             .putString("draw", "seats:1\nDana,Zo%C3%AB|As,Kd")
             .commit()
-        // The shot clock's, dealer's choice's and the equity quiz's files (tools-feature), as they save them
+    }
+
+    /**
+     * The files of the tools taken out after 1.4.13 (the shot clock, dealer's choice and the equity
+     * quiz), as those versions saved them: still on a phone that had them, and in its backups.
+     */
+    private fun fillRemovedTools() {
         prefs("shot_clock_prefs").edit()
             .putInt("seconds", 45)
             .putInt("cards_each", 3)
@@ -206,6 +214,19 @@ class BackupsTest {
             .putInt("right", 13)
             .putInt("answered", 17)
             .commit()
+    }
+
+    /** [text] as 1.4.3 to 1.4.13 wrote it: the removed tools' files in the Tools section beside the rest. */
+    private fun withRemovedTools(text: String): String {
+        val root = Json.parseToJsonElement(text).jsonObject
+        val sections = root.getValue("sections").jsonObject
+        val tools = sections.getValue("tools").jsonObject
+        val files = tools.getValue("files").jsonObject
+        val removed = REMOVED_TOOLS.associateWith { name -> PrefsJson.encode(prefs(name).all) }
+        assertTrue("the old files are filled", removed.values.all { it.isNotEmpty() })
+        val oldTools = JsonObject(tools + ("files" to JsonObject(files + removed)))
+        val old = JsonObject(root + ("sections" to JsonObject(sections + ("tools" to oldTools))))
+        return Json.encodeToString(JsonElement.serializer(), old)
     }
 
     /** Every settings file as it stands, without the keys about this phone. */
@@ -413,6 +434,42 @@ class BackupsTest {
     }
 
     @Test
+    fun `a backup holding the removed tools' files restores everything else and leaves them out`() {
+        fillEverything()
+        fillRemovedTools()
+        val before = settings()
+        val savedNights = nights.nights.value
+        val text = withRemovedTools(backups().export())
+        REMOVED_TOOLS.forEach { assertTrue("$it is in the old backup", "\"$it\"" in text) }
+
+        wipe()
+        REMOVED_TOOLS.forEach { prefs(it).edit().clear().commit() }
+        val opened = backups().open(text)
+        assertFalse(opened.partial)
+        assertTrue(BackupLine.Named(R.string.backup_line_tools) in opened.lines)
+        assertTrue(backups().replace(opened))
+
+        assertEquals(before, settings())
+        assertEquals(savedNights, NightStore(context).nights.value)
+        assertEquals(6, prefs("seat_draw_prefs").getInt("seats_per_table", 0))
+        assertEquals(4, prefs("odds_calculator_prefs").getInt("player_count", 0))
+        REMOVED_TOOLS.forEach { assertTrue("$it is not written back", prefs(it).all.isEmpty()) }
+    }
+
+    @Test
+    fun `a phone that still has the removed tools' files backs up without them`() {
+        fillEverything()
+        fillRemovedTools()
+        val before = settings()
+        val text = backups().export()
+        REMOVED_TOOLS.forEach { assertFalse("$it is not in a new backup", it in text) }
+
+        wipe()
+        assertTrue(backups().replace(backups().open(text)))
+        assertEquals(before, settings())
+    }
+
+    @Test
     fun `a section from a later version is left out and the rest restores`() {
         fillEverything()
         val text = backups().export().replace("\"history\": {\n      \"version\": 1", "\"history\": {\n      \"version\": 2")
@@ -459,6 +516,9 @@ class BackupsTest {
     private companion object {
         /** A song the host picked: a loan from this phone's file picker. */
         const val PICKED_SONG = "content://com.android.providers.media.documents/document/audio%3A12"
+
+        /** The settings files of the tools taken out after 1.4.13; nothing reads them now. */
+        val REMOVED_TOOLS = listOf("shot_clock_prefs", "dealers_choice_prefs", "equity_quiz_prefs")
     }
 
     /** Stands still unless a test moves it: 12:00 UTC on 8 October 2026, one boot. */

@@ -161,6 +161,33 @@ class DealViewModelTest {
     }
 
     @Test
+    fun `opened with nothing typed and opened again later, it starts from tonight as it is then`() {
+        val early = viewModel()
+        early.acceptIntent(DealIntent.SetChips(0, 5_000))
+        early.acceptIntent(DealIntent.SetChips(0, null)) // typed, then cleared: nothing typed again
+        assertTrue(early.state.nothingTyped)
+        assertEquals(listOf("Dana", "Sam", "Theo"), checkNotNull(memory.deal).players.map { it.name })
+        // Theo goes out, and the payout table changes with a late entry
+        tonight = Tonight(playersLeft = listOf("Dana", "Sam"), prizes = listOf(7_000, 4_000, 0, 0, 0, 0, 0))
+        val later = viewModel().state
+        assertEquals(listOf("Dana", "Sam"), later.players.map { it.name })
+        assertTrue(later.fromBank)
+        assertEquals(listOf(7_000L, 4_000L), later.prizes)
+    }
+
+    @Test
+    fun `chips, prizes or a winner's sum typed count as typed, and so do players changed by hand`() {
+        val base = DealUiState(players = List(3) { DealPlayer("P$it") }, fromBank = true)
+        assertTrue(base.nothingTyped)
+        assertTrue(DealUiState().nothingTyped, "three to name, as with nobody in the Bank")
+        assertFalse(base.copy(players = base.players.updated(0) { it.copy(chips = 100) }).nothingTyped)
+        assertFalse(base.copy(typed = listOf(5_000L)).nothingTyped)
+        assertFalse(base.copy(forWinnerCents = 500).nothingTyped)
+        assertFalse(base.copy(fromBank = false).nothingTyped, "renamed, added or removed")
+        assertFalse(DealUiState(players = List(3) { DealPlayer() } + DealPlayer()).nothingTyped)
+    }
+
+    @Test
     fun `Start over reads tonight again, and Undo brings the deal back`() = runVmTest {
         val vm = viewModel()
         vm.stacks(5_000, 3_000, 2_000)

@@ -22,9 +22,10 @@ import com.huntercoles.pokerpayout.tools.table.Deal
 import com.huntercoles.pokerpayout.tools.table.DealProblem
 
 /**
- * The deal: per player, their chips and share, then what they take by ICM and by chip chop, side by
- * side (one under the other when they don't fit). Then what is saved for the winner, the check that
- * each way adds up, and a line on how each is worked out. Until there is a deal, what's missing.
+ * Who gets what: first the two ways in a few words each, then per player their chips and share and
+ * what they take by ICM and by chip chop, side by side (one under the other when they don't fit).
+ * Then what is saved for the winner and the check that each way adds up. Until there is a deal,
+ * what's missing.
  */
 @Composable
 internal fun DealCard(state: DealUiState) {
@@ -33,6 +34,14 @@ internal fun DealCard(state: DealUiState) {
         SectionHeader(
             title = stringResource(R.string.deal_result_title),
             note = deal?.let { stringResource(R.string.deal_result_note, FormatUtils.formatMoney(it.splitCents)) },
+        )
+        ToolNote(stringResource(R.string.deal_icm_how))
+        ToolNote(
+            if (deal != null) {
+                stringResource(R.string.deal_chop_how, FormatUtils.formatMoney(deal.floorCents))
+            } else {
+                stringResource(R.string.deal_chop_how_plain)
+            },
         )
         if (deal != null) DealRows(state, deal) else DealProblemNote(state.problem)
     }
@@ -75,8 +84,6 @@ private fun DealRows(state: DealUiState, deal: Deal) {
     if (overFirst >= 0) {
         ToolNote(stringResource(R.string.deal_chop_over_first, playerName(overFirst, state.players[overFirst].name)))
     }
-    ToolNote(stringResource(R.string.deal_icm_how))
-    ToolNote(stringResource(R.string.deal_chop_how, FormatUtils.formatMoney(deal.floorCents)))
 }
 
 /** ICM and chip chop for one player, side by side, or one under the other when they don't fit. */

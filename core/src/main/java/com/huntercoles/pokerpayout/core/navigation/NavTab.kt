@@ -35,10 +35,6 @@ val NavigationDestination.tab: NavTab?
         NavigationDestination.CueSounds,
         NavigationDestination.Backup,
         NavigationDestination.Currency,
-        NavigationDestination.ShotClock,
-        NavigationDestination.DealersChoice,
-        NavigationDestination.EquityQuiz,
-        NavigationDestination.Outs,
         NavigationDestination.SidePots,
         NavigationDestination.DealMaker,
         -> NavTab.Tools
@@ -60,10 +56,6 @@ val ScreenDestinations: List<NavigationDestination> = listOf(
     NavigationDestination.CueSounds,
     NavigationDestination.Backup,
     NavigationDestination.Currency,
-    NavigationDestination.ShotClock,
-    NavigationDestination.DealersChoice,
-    NavigationDestination.EquityQuiz,
-    NavigationDestination.Outs,
     NavigationDestination.SidePots,
     NavigationDestination.DealMaker,
 )

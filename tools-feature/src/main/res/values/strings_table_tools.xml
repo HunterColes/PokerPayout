@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Shared by the table tools: Side pots (S21), Deal maker (S22), Outs & pot odds (S20) -->
+    <!-- Shared by the table tools: Side pots (S21) and Split the prizes (S22) -->
     <string name="table_tools_undo">Undo</string>
     <!-- A player nobody named, and the TalkBack name of each name field -->
     <string name="table_tools_default_player">Player %1$d</string>

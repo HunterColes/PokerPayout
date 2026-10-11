@@ -37,17 +37,18 @@ private val SmallGutter = 12.dp
 private val TwoPaneWidth = 600.dp
 
 /**
- * A table tool's page (Side pots, Deal maker, Outs & pot odds): the top bar, then [inputs] and
- * [results] in one scrolling column, or side by side from 600 dp wide (tablets, phones on their
- * side) so the answer stays in view while you type. [settings] are inputs that are usually left as
- * they are (the deal's prizes): under the results in one column, so the answer comes first, and
- * under the inputs in two panes.
+ * A table tool's page (Side pots, Split the prizes): the top bar, a line on what the tool is for
+ * ([intro]), then [inputs] and [results] in one scrolling column, or side by side from 600 dp wide
+ * (tablets, phones on their side) so the answer stays in view while you type. [settings] are inputs
+ * that are usually left as they are (the deal's prizes): under the results in one column, so the
+ * answer comes first, and under the inputs in two panes.
  */
-@Suppress("LongParameterList") // a page: its bar's three parts, its three parts and a modifier
+@Suppress("LongParameterList") // a page: its bar's three parts, its intro, its three parts and a modifier
 @Composable
 internal fun TableToolPage(
     title: String,
     subtitle: String,
+    intro: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
@@ -62,6 +63,7 @@ internal fun TableToolPage(
             if (maxWidth >= TwoPaneWidth) {
                 Row(Modifier.fillMaxSize().padding(horizontal = gutter), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     ToolPane(0.dp, Modifier.weight(1f)) {
+                        ToolIntro(intro)
                         inputs()
                         settings()
                     }
@@ -69,6 +71,7 @@ internal fun TableToolPage(
                 }
             } else {
                 ToolPane(gutter, Modifier.fillMaxSize()) {
+                    ToolIntro(intro)
                     inputs()
                     results()
                     settings()
@@ -76,6 +79,17 @@ internal fun TableToolPage(
             }
         }
     }
+}
+
+/** What the tool is for, in a plain line above everything to type. */
+@Composable
+private fun ToolIntro(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = PokerColors.CardWhite,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+    )
 }
 
 /** One scrolling column of cards. */

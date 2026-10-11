@@ -2,11 +2,9 @@ package com.huntercoles.pokerpayout.tools.presentation.composable
 
 import com.huntercoles.pokerpayout.tools.presentation.DealPlayer
 import com.huntercoles.pokerpayout.tools.presentation.DealUiState
-import com.huntercoles.pokerpayout.tools.presentation.OutsUiState
 import com.huntercoles.pokerpayout.tools.presentation.PotPlayer
 import com.huntercoles.pokerpayout.tools.presentation.PrizeSource
 import com.huntercoles.pokerpayout.tools.presentation.SidePotsUiState
-import com.huntercoles.pokerpayout.tools.table.Street
 
 /** The table tools' states for the screen tests, with the mockups' players. */
 internal object TableToolFixtures {
@@ -64,13 +62,4 @@ internal object TableToolFixtures {
         payouts = tonight,
         typed = listOf(40_000L, 25_000L, 15_000L, 20_000L),
     )
-
-    /** A flush draw on the flop facing 100 into 200: 25% needed, 19.1% next card, 35.0% by the river. */
-    val outsFlop = OutsUiState(street = Street.Flop, outs = 9, pot = 300, call = 100)
-
-    /** A gutshot on the turn, nothing typed for the pot. */
-    val outsTurn = OutsUiState(street = Street.Turn, outs = 4)
-
-    /** Fifteen outs on the flop: the rule of 4 runs high. */
-    val outsCombo = OutsUiState(street = Street.Flop, outs = 15, pot = 1_000, call = 500)
 }

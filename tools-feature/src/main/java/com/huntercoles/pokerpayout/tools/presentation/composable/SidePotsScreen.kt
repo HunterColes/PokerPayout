@@ -35,8 +35,8 @@ fun SidePotsRoute(onBack: () -> Unit, viewModel: SidePotsViewModel = hiltViewMod
 }
 
 /**
- * Side pots (S21): what each player put in (and who folded), then the main pot and each side pot
- * with who can win it, worked out as you type. New hand (the top bar's ↺) clears the chips and
+ * Side pots (S21): a line on when it's for, what each player put in (and who folded), then the
+ * main pot and each side pot with who can win it, worked out as you type. New hand (the top bar's ↺) clears the chips and
  * keeps the players, with Undo.
  */
 @Composable
@@ -54,6 +54,7 @@ fun SidePotsContent(
     TableToolPage(
         title = stringResource(R.string.side_pots_title),
         subtitle = subtitle,
+        intro = stringResource(R.string.side_pots_intro),
         onBack = onBack,
         modifier = modifier,
         actions = {

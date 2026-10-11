@@ -53,27 +53,11 @@ sealed class NavigationDestination {
     @Serializable
     data object Currency : NavigationDestination()
 
-    /** A countdown for each decision, with time-bank cards for slow players. */
-    @Serializable
-    data object ShotClock : NavigationDestination()
-
-    /** A wheel that picks the next game, with each game's rules. */
-    @Serializable
-    data object DealersChoice : NavigationDestination()
-
-    /** A guessing game on the odds engine: who's ahead, and by how much. */
-    @Serializable
-    data object EquityQuiz : NavigationDestination()
-
-    /** Outs as exact chances, and pot odds (S20). */
-    @Serializable
-    data object Outs : NavigationDestination()
-
     /** Main and side pots from what each player put in (S21). */
     @Serializable
     data object SidePots : NavigationDestination()
 
-    /** The chop: ICM and chip chop for the players left (S22). */
+    /** Split the prizes: the deal the players left make, by ICM and by chip chop (S22). */
     @Serializable
     data object DealMaker : NavigationDestination()
 

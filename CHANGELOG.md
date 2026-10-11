@@ -3,6 +3,28 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.14 (on master, not published)
+
+Big moments: bubble, final table, champion:
+
+- **The clock marks the night's milestones:** as knockouts are recorded (in the Bank, or with the
+  full-screen clock's Knock out), a short banner on the clock says "On the bubble", "In the
+  money!" (with what everyone left wins at least), "Final table" (everyone left fits one table of
+  the seat draw's size, in a night that started on two or more) and "Heads-up" (by name). Upright
+  it sits under the setup strip; sideways, over the time's column. The clock makes room for it:
+  nothing covers the time or a control. It goes after 12 s; the "On the bubble / In the money"
+  pills carry on. When one knockout brings two moments, the bigger shows.
+- **The champion's screen:** the last knockout opens it in the clock's place: the name with a burst
+  of gold (a steady gold card under Reduce motion), what each paid place won, and the way to
+  History: "Pay out in the Bank" while anyone is owed, then "Save this night", then "Open History".
+  ✕ or Back returns to the clock, where "Dana is the champion · See the results" leads back.
+- **Undo and restarts:** an Undo of the knockout (or Bring back) takes its moment back, and
+  recording it again shows it again; a restart never shows a moment twice; a late arrival or a
+  re-entry neither takes a moment back nor shows it a second time.
+- **Cue sounds:** every sound pack has two new slots, "Bubble, final table, heads-up" and
+  "Champion". Classic plays its chime for the champion; the other moments show without a sound.
+  TalkBack reads each banner as it comes.
+
 ## 1.4.13 (on master, not published)
 
 Late arrivals and re-entries:

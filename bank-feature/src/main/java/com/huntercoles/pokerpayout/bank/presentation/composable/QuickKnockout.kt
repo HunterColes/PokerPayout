@@ -334,7 +334,7 @@ private fun ChoiceTile(choice: PanelChoice, onClick: () -> Unit, modifier: Modif
         val color = if (choice.muted) PokerColors.Chalk else PokerColors.CardWhite
         choice.icon?.let { Icon(it, contentDescription = null, tint = color, modifier = Modifier.size(20.dp)) }
         Column(Modifier.weight(1f)) {
-            Text(text = choice.label, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp), color = color)
+            Text(text = choice.label, style = MaterialTheme.typography.bodyLarge, color = color)
             choice.detail?.let { Text(text = it, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk) }
         }
         if (choice.knockouts > 0) KnockoutBadge(count = choice.knockouts)

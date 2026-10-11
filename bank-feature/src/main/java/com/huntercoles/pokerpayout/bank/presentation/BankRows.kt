@@ -25,7 +25,7 @@ internal class BankRowInput(
 internal fun buildBankRows(input: BankRowInput): List<BankRowModel> {
     val championId = input.settlement.championId
     val names = input.players.associate { it.id to it.name }
-    val ordered = buildPlayerDisplayModels(input.players, input.eliminationOrder).map { it.player }
+    val ordered = bankOrder(input.players, input.eliminationOrder)
     val champion = ordered.filter { it.id == championId }
     // Re-entries (PP-116): which entry each is, and the entries they replaced (out for good)
     val entryNumbers = BankEntries.numbers(input.players)

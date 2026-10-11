@@ -4,6 +4,7 @@ import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
 import com.huntercoles.pokerpayout.core.domain.model.EntryPrice
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.Settlement
+import com.huntercoles.pokerpayout.core.domain.players.PlayerNames
 import com.huntercoles.pokerpayout.core.domain.settle.SettleUp
 
 /**
@@ -55,12 +56,12 @@ internal object BankEntries {
             .sortedByDescending { outAt[it.playerId] ?: -1 }
     }
 
-    /** A player who arrived late, as the newest row: [name] (blank: "Player N"), paid at [money]'s entry now. */
+    /** A player who arrived late, as the newest row: [name], cleaned (blank: "Player N"), paid at [money]'s entry now. */
     fun lateArrival(players: List<PlayerData>, name: String, money: MoneySettings): PlayerData {
         val id = players.size + 1
         return PlayerData(
             id = id,
-            name = name.trim().take(MAX_ENTRY_NAME_LENGTH).ifBlank { "Player $id" },
+            name = PlayerNames.clean(name).ifBlank { "Player $id" },
             buyIn = true,
             entryPrice = EntryPrice.of(money),
         )

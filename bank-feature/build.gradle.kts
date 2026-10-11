@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.junit)
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.compose.compiler)
-    alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.ksp)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.roborazzi)
@@ -17,10 +16,6 @@ android {
     with (defaultConfig) {
         minSdk = 26
         targetSdk = 34
-    }
-
-    defaultConfig {
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -59,7 +54,6 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.navigation)
     implementation(libs.navigation.hilt)
-    implementation(libs.timber)
     testImplementation(libs.bundles.common.test)
     testImplementation(libs.bundles.screenshot.test)
     testImplementation(testFixtures(project(":core"))) // device matrix, layout checks, goldens
@@ -67,11 +61,9 @@ dependencies {
     testImplementation(project(":tournament-feature"))
     testImplementation(libs.test.robolectric)
     testImplementation(libs.test.androidx.core)
-    androidTestImplementation(libs.bundles.common.android.test)
     debugImplementation(libs.debug.compose.manifest)
 
     ksp(libs.hilt.compiler)
-    kspAndroidTest(libs.hilt.compiler)
 }
 
 // Screenshot goldens under src/test/screenshots, verified by testDebugUnitTest and re-recorded with

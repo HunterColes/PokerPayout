@@ -6,8 +6,7 @@ import com.huntercoles.pokerpayout.core.domain.settle.SettleUp
 import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 
 /**
- * The settle-up as plain text, for the group chat (Share, `ACTION_SEND` text/plain; no permission),
- * as the cash game's was:
+ * The settle-up as plain text, for the group chat (Share, `ACTION_SEND` text/plain; no permission):
  * ```
  * Poker night: settle up
  * Dana: in $50, won $245, up $195

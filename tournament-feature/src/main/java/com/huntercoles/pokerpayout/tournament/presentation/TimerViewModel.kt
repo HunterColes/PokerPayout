@@ -752,16 +752,16 @@ class TimerViewModel @Inject constructor(
         val stacks = players.toLong() + bank.rebuys + bank.addOns
         val chips = stacks * _uiState.value.config.startingChips
         // Purchases, late entries and re-entries at the prices paid (PP-085, PP-116)
-        val prizePool = bankPreferences.recordedPool(tableConfig.money, players).prizePoolCents
+        val pool = bankPreferences.recordedPool(tableConfig.money, players)
         val table = TableStats(
             playerCount = players,
             playersLeft = left,
             averageStack = if (left > 0) (chips / left).toInt() else 0,
             // The same prize pool the Payouts table splits (buy-ins, rebuys and add-ons at the prices
-            // they were bought at; no food or bounty)
-            prizePoolCents = prizePool,
+            // they were bought at, less the house rake, PP-145; no food or bounty)
+            prizePoolCents = pool.prizePoolCents,
             // The places that table pays, from the one payout calculation (PP-135: the bubble)
-            paidPlaces = payouts(prizePool, tableConfig.payoutWeights, players, tableConfig.payoutRounding).places.size
+            paidPlaces = payouts(pool, tableConfig.payoutWeights, players, tableConfig.payoutRounding).places.size
         )
         val purchases = Purchases(
             rebuyCents = tableConfig.money.rebuyCents,

@@ -66,12 +66,16 @@ internal fun NightContent(
         }
         HistoryPane {
             StatStrip(
-                listOf(
+                listOfNotNull(
                     Stat(
                         label = stringResource(R.string.history_prize_pool),
                         value = formatMoney(night.prizePoolCents),
                         valueColor = PokerColors.PokerGold,
                     ),
+                    // PP-145: the house rake kept off the prize money, on a night that had one
+                    night.rakeCents.takeIf { it > 0L }?.let {
+                        Stat(label = stringResource(R.string.history_rake_stat), value = formatMoney(it))
+                    },
                     Stat(label = stringResource(R.string.history_players_stat), value = night.players.size.toString()),
                 ),
             )

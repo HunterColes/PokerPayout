@@ -70,6 +70,10 @@ internal class HistoryText(private val res: Resources) {
         )
         val pool = formatMoney(night.prizePoolCents)
         append('\n').append(res.getString(R.string.history_share_pool, pool, players(night.players.size)))
+        // PP-145: "Prize pool $380 · 10 players · House rake $20"
+        if (night.rakeCents > 0L) {
+            append(separator).append(res.getString(R.string.history_share_rake, formatMoney(night.rakeCents)))
+        }
         append('\n')
         night.players.forEach { player ->
             val line = if (player.wonCents > 0L) {

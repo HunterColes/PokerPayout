@@ -1,6 +1,7 @@
 package com.huntercoles.pokerpayout.tournament.presentation
 
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
@@ -24,6 +25,9 @@ sealed class TournamentConfigIntent {
     data class UpdateAddOnAmount(val cents: Long) : TournamentConfigIntent()
     data class CommitRebuyAmount(val cents: Long, val centsBeforeEdit: Long) : TournamentConfigIntent()
     data class CommitAddOnAmount(val cents: Long, val centsBeforeEdit: Long) : TournamentConfigIntent()
+
+    /** The house rake (PP-145): 0% to 25% of the prize pool, in 0.5% steps. */
+    data class UpdateRake(val rake: HouseRake) : TournamentConfigIntent()
     object ConfirmClearPurchases : TournamentConfigIntent()
     object DismissClearPurchases : TournamentConfigIntent()
     data class UpdateWeights(val weights: List<Int>) : TournamentConfigIntent()

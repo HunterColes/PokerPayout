@@ -46,6 +46,10 @@ class HistoryScreenTest(private val config: ScreenConfig) {
     @Test
     fun oneNight() = check("S16_history_night", HistoryFixtures.night)
 
+    /** PP-145: a night played with a house rake: a third stat, "House rake", between the pool and the players (layout only). */
+    @Test
+    fun aRakedNight() = check(name = null, HistoryFixtures.rakedNight)
+
     @Test
     fun nothingSaved() = check("S16_history_empty", HistoryFixtures.empty)
 

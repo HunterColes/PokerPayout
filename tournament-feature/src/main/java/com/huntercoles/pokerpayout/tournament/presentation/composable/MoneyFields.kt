@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,7 +36,8 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiSta
 
 /**
  * The money per player: buy-in, bounty and how bounties pay (PP-035), rebuy (and its cutoff, before
- * the start), add-on, food, and until when a player can join late or re-enter (PP-116). Only a
+ * the start), add-on, food, until when a player can join late or re-enter (PP-116), and the house
+ * rake on the prize pool (PP-145), always in view, right above the prize pool note it changes. Only a
  * committed $0 rebuy or add-on can clear recorded purchases, and only after asking (PP-014).
  */
 @Composable
@@ -58,15 +58,18 @@ internal fun MoneyGrid(setup: TournamentConfigUiState, timer: TimerUiState, acti
             AddOnField(amounts, onSetup, Modifier.weight(1f))
             FoodField(amounts, onSetup, Modifier.weight(1f))
         }
-        // Late arrivals and re-entries pay the entry above (PP-116)
+        // Late arrivals and re-entries pay the entry above (PP-116); the rake comes off the prize pool (PP-145)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
             LateEntryUntilSelect(setup, timer, onSetup, Modifier.weight(1f))
-            Spacer(Modifier.weight(1f))
+            RakeField(amounts, onSetup, Modifier.weight(1f))
         }
     }
 }
 
-/** The same amounts in the mid-game panel once unlocked; the rebuy cutoff is already open above them. */
+/**
+ * The same amounts in the mid-game panel once unlocked, the house rake (PP-145) beside the food; the
+ * rebuy cutoff is already open above them.
+ */
 @Composable
 internal fun PanelMoneyGrid(setup: TournamentConfigUiState, onSetup: (TournamentConfigIntent) -> Unit) {
     val amounts = setup.money
@@ -82,7 +85,7 @@ internal fun PanelMoneyGrid(setup: TournamentConfigUiState, onSetup: (Tournament
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             FoodField(amounts, onSetup, Modifier.weight(1f))
-            Spacer(Modifier.weight(1f))
+            RakeField(amounts, onSetup, Modifier.weight(1f))
         }
     }
 }

@@ -19,6 +19,7 @@ import com.huntercoles.pokerpayout.bank.presentation.BankUiState
 import com.huntercoles.pokerpayout.bank.presentation.BankViewModel
 import com.huntercoles.pokerpayout.bank.presentation.Purchase
 import com.huntercoles.pokerpayout.core.design.components.PokerSheetContent
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.navigation.NavTab
 import com.huntercoles.pokerpayout.core.testing.Device
 import com.huntercoles.pokerpayout.core.testing.DeviceMatrix
@@ -237,6 +238,20 @@ class BankScreensTest(private val config: ScreenConfig) {
         check("Pool breakdown sheet")
     }
 
+    /**
+     * PP-145: a 5% house rake. The prize pool is what the places share ($427.50 of the $450 in for
+     * prizes), the rake has its own line ("House rake · 5%", $22.50), and the lines still add up to
+     * the total.
+     */
+    @Test
+    fun poolBreakdownSheetRaked() {
+        kit.tournamentPreferences.setRake(HouseRake.of(500))
+        val state = BankScenes.midGame(kit).state()
+        show(state) { PoolBreakdownSheetContent(state, onPayoutStructure = {}, onDismiss = {}) }
+        golden("S5c_pool_breakdown_rake")
+        check("Pool breakdown sheet, raked")
+    }
+
     // Settle up (1.4, from the cash game) --------------------------------------------------------------
 
     /** The night over with four buy-ins still open: Settle up under the meters. */
@@ -257,6 +272,18 @@ class BankScreensTest(private val config: ScreenConfig) {
         show(state) { SettleUpSheetContent(state.settleUp!!, state, onSetPaid = { _, _ -> }, onShare = {}, onDismiss = {}) }
         golden("S5e_settle_up")
         check("Settle-up sheet")
+    }
+
+    /** PP-145: the settle-up with a 10% house rake: a line says the Bank keeps it for the host. */
+    @Test
+    fun settleUpSheetRaked() = with(kit) {
+        tournamentPreferences.setRake(HouseRake.of(1_000))
+        val viewModel = BankScenes.settleUp(kit)
+        viewModel.send(BankIntent.ShowSettleUp)
+        val state = viewModel.state()
+        show(state) { SettleUpSheetContent(state.settleUp!!, state, onSetPaid = { _, _ -> }, onShare = {}, onDismiss = {}) }
+        golden("S5e_settle_up_rake")
+        check("Settle-up sheet, raked")
     }
 
     /** Every payment ticked: the Bank records everyone square, and the sheet says so (layout only). */

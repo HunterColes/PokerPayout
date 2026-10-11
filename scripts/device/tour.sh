@@ -504,6 +504,42 @@ s_payouts_share() {
   tab Tournament
   ui wait "Start clock"
 }
+# The house rake (PP-145): a percentage beside the late entry cutoff, "0" until set. At 5% on the
+# ten $12.50 buy-ins ($125 in for prizes) the house keeps $6.25; the note under the money says the
+# prize pool starts at $118.75 after it.
+s_rake_set() {
+  ui scroll-to "has=House rake|0" --max 6
+  ui set-text "has=House rake" class=EditText --value 5
+  ui enter
+  ui scroll-to 'text~=after the 5% house rake' --max 3
+  ui assert-text "has=House rake|5" 'text~=Prize pool starts at $118.75 after the 5% house rake' || return 1
+}
+# The rake comes off before the places are paid: the Payouts tab's pool is what is left ($118.75),
+# the rake has its line under where the pool came from, the rows add up to the pool to the cent (in
+# $5s below 1st), and the line under them says the places and the rake make the $125 taken in.
+s_rake_payouts() {
+  tab Payouts
+  ui assert-text 'text~=$118.75 prize pool · 3 places paid' 'text=10 buy-ins $125' 'text=5% house rake −$6.25' || return 1
+  ui scroll-to 'text~=With the $6.25 house rake: $125 taken in.' --max 4
+  ui assert-text 'text~=With the $6.25 house rake: $125 taken in.' 'text~=Adds up to $118.75' || return 1
+  check_payout_table "$PP_UI_LAST_XML" 500
+}
+# Emptied, the field is 0% again: the pool is the whole $125 and the Payouts tab has no rake on it.
+s_rake_off() {
+  tab Tournament
+  ui scroll-to "has=House rake|5" --max 6
+  ui set-text "has=House rake" class=EditText --value ""
+  ui enter
+  ui scroll-to 'text~=Prize pool starts at' --max 3
+  ui assert-text "has=House rake|0" 'text~=Prize pool starts at $125 and grows' || return 1
+  tab Payouts
+  ui assert-text 'text~=$125 prize pool · 3 places paid' || return 1
+  if ui find "text~=house rake" --timeout 2 >/dev/null 2>&1; then echo "[ui] FAIL a house rake on the Payouts tab at 0%"; return 1; fi
+  check_payout_table "$PP_UI_LAST_XML" 500
+  tab Tournament
+  ui wait "Start clock"
+}
+
 # The blind setup and the clock (PP-015/020/025/026/051). Default setup: 3 h of 20-minute
 # rounds from a 50 chip to 5,000 = 9 levels, 50/100 to 5,000/10,000. The blinds are a section of
 # the setup page now (no folder tabs).
@@ -2252,6 +2288,9 @@ step payouts-preset       "Top-heavy: 1st gets what its preview said"           
 step payouts-rounded      "Round to \$5: lower places in \$5, adds up"           s_payouts_rounded
 step payouts-editor       "Payout structure sheet opens and closes"             s_payouts_editor
 step payouts-share        "Share as text: the share sheet has the payouts"      s_payouts_share
+step rake-set             "House rake 5% in setup: the pool starts after it"    s_rake_set
+step rake-payouts         "Payouts after a 5% rake: rows + rake = \$125 in"     s_rake_payouts
+step rake-off             "House rake back to 0%: no rake on the Payouts tab"   s_rake_off
 step blinds               "Blind setup on the setup page, with its verdict"     s_blinds_tab
 step smallest-chip        "Smallest chip from a row of chips: pick 25"          s_smallest_chip
 step invalid-setup        "25-minute rounds: reason and nearest fix shown"      s_invalid_setup

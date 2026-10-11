@@ -29,9 +29,10 @@ data class SettleUp(val balancesCents: Map<Int, Long>, val transfers: List<Trans
  *
  * Each player is owed their winnings until marked paid, and owes their entry (buy-in, food and
  * bounty) until it is marked paid; rebuys and add-ons are paid when they are recorded. The Bank is
- * the party in the middle: it holds what came in, pays what went out, and keeps the food money, so
- * its balance is whatever squares the rest. When everyone paid in and the Bank pays the winners, the
- * settle-up is just "the Bank pays each winner"; when nobody paid in, the players pay each other.
+ * the party in the middle: it holds what came in, pays what went out, and keeps the food money and
+ * the house rake (PP-145: the host's), so its balance is whatever squares the rest. When everyone
+ * paid in and the Bank pays the winners, the settle-up is just "the Bank pays each winner"; when
+ * nobody paid in, the players pay each other.
  *
  * A player who re-entered (PP-116) settles once, for all their entries together, under their first
  * entry's id ([BankPlayer.personId]); each entry owes what it cost to sit down then.

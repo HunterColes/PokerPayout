@@ -69,8 +69,12 @@
     <string name="setup_late_entry_until">Late entry until</string>
     <string name="setup_add_on">Add-on</string>
     <string name="setup_food">Food</string>
+    <!-- PP-145: the house rake, a percentage of the prize pool the host keeps (the field shows "%" after it) -->
+    <string name="setup_rake">House rake</string>
     <!-- %1$s is the amount, shown in gold -->
     <string name="setup_prize_pool_starts">Prize pool starts at %1$s and grows with rebuys and add-ons.</string>
+    <!-- PP-145: %1$s is the amount (shown in gold), %2$s the rake ("5%") -->
+    <string name="setup_prize_pool_starts_raked">Prize pool starts at %1$s after the %2$s house rake, and grows with rebuys and add-ons.</string>
     <string name="setup_game_length">Game length</string>
     <string name="setup_hours">hours</string>
     <!-- How long each level lasts, in minutes (the field's suffix is "min") -->
@@ -127,6 +131,8 @@
     <string name="strip_rebuy_to">rebuy to L%1$d</string>
     <string name="strip_rebuy">%1$s rebuy</string>
     <string name="strip_add_on">%1$s add-on</string>
+    <!-- PP-145: "5% house rake" -->
+    <string name="strip_rake">%1$s house rake</string>
     <string name="strip_level_length">%1$d-min levels</string>
     <string name="strip_hours">%1$d h</string>
     <string name="strip_chips">%1$s chips</string>

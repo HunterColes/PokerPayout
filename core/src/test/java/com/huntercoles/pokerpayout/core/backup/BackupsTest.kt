@@ -9,6 +9,7 @@ import com.huntercoles.pokerpayout.core.audio.music.Playlist
 import com.huntercoles.pokerpayout.core.domain.history.NightStore
 import com.huntercoles.pokerpayout.core.domain.history.Nights.night
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.players.PlayerMerges
@@ -104,6 +105,7 @@ class BackupsTest {
             setRebuyCents(2_000L)
             setAddOnCents(1_500L)
             setBountyMode(BountyMode.PROGRESSIVE)
+            setRake(HouseRake.of(250)) // PP-145
             setPayoutPreset(PayoutPreset.TOP_HEAVY, 2)
             setPayoutRounding(PayoutRounding.entries.last())
             setRebuyUntilLevel(4)
@@ -243,6 +245,7 @@ class BackupsTest {
         assertEquals(6, tournament.getPlayerCount())
         assertEquals(4_000L, tournament.getMoneySettings().buyInCents)
         assertEquals(BountyMode.PROGRESSIVE, tournament.getBountyMode())
+        assertEquals(HouseRake.of(250), tournament.getMoneySettings().rake) // PP-145: the house rake comes back
         assertEquals(PayoutPreset.TOP_HEAVY, tournament.getPayoutPreset())
         val timer = TimerPreferences(context)
         assertEquals(1_234_567L, timer.getClock()?.elapsedMillis)

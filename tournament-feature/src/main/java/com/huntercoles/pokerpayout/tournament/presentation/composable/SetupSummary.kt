@@ -50,7 +50,7 @@ internal object SetupSummary {
     @Composable
     fun stripSeparator(): String = stringResource(R.string.strip_separator)
 
-    /** "$40 buy-in · $5 bounty · rebuy to L4 · $10 add-on": the money section folded. */
+    /** "$40 buy-in · $5 bounty · rebuy to L4 · $10 add-on · 5% house rake": the money section folded. */
     @Composable
     fun moneyLine(setup: TournamentConfigUiState, timer: TimerUiState): String =
         moneyParts(setup, timer).joinToString(stringResource(R.string.strip_separator))
@@ -111,6 +111,8 @@ internal object SetupSummary {
                 }
             },
             amounts.addOnCents.takeIf { it > 0 }?.let { stringResource(R.string.strip_add_on, money(it)) },
+            // PP-145: the house rake, when there is one
+            amounts.rake.takeUnless { it.isNone }?.let { stringResource(R.string.strip_rake, it.label) },
         )
     }
 

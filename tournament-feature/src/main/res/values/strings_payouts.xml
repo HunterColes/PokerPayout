@@ -68,6 +68,10 @@
         <item quantity="one">%1$d add-on %2$s</item>
         <item quantity="other">%1$d add-ons %2$s</item>
     </plurals>
+    <!-- PP-145: what the house rake took off them: "5% house rake −$20" (a minus sign, not a hyphen) -->
+    <string name="payouts_rake_part">%1$s house rake −%2$s</string>
+    <!-- PP-145: under "Adds up to $380": the places plus the rake are what was taken in -->
+    <string name="payouts_rake_taken_in">With the %1$s house rake: %2$s taken in.</string>
 
     <!-- Saving the finished night to History (PP-037) -->
     <string name="payouts_night_over">The night is over and everyone is paid.</string>

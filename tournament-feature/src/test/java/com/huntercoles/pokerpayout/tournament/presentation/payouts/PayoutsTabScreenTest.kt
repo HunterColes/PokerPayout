@@ -1,6 +1,9 @@
 package com.huntercoles.pokerpayout.tournament.presentation.payouts
 
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performScrollTo
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
@@ -108,6 +111,22 @@ class PayoutsTabScreenTest(private val config: ScreenConfig) {
         )))
         golden("S6_payouts_custom")
         check("Payouts, custom weights")
+    }
+
+    /**
+     * PP-145: a 5% house rake. The pool is what the places share ($427.50), the rake has a line under
+     * where it came from ("5% house rake −$22.50"), and under the rows "With the $22.50 house rake:
+     * $450 taken in." The golden is scrolled to that line.
+     */
+    @Test
+    fun raked() {
+        game.tournament.setRake(HouseRake.of(500))
+        game.midGame()
+        show()
+        screen.compose.onNodeWithText("taken in", substring = true).performScrollTo()
+        screen.compose.waitForIdle()
+        golden("S6_payouts_rake")
+        check("Payouts, 5% house rake")
     }
 
     @Test

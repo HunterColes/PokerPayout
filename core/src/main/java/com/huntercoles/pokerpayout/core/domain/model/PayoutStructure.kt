@@ -165,13 +165,22 @@ data class PayoutPlace(
     val ordinal: String get() = ordinalOf(place)
 }
 
-/** The payout table for one prize pool. [places] always add up to [prizePoolCents] exactly. */
+/**
+ * The payout table for one prize pool. [places] always add up to [prizePoolCents] exactly: the pool
+ * after the house rake ([rakeCents], PP-145), so the places plus the rake add up to the money taken
+ * in for prizes ([takenInCents]), to the cent.
+ */
 data class PayoutTable(
     val prizePoolCents: Long,
     val places: List<PayoutPlace>,
-    val rounding: PayoutRounding
+    val rounding: PayoutRounding,
+    /** What the house kept off the money taken in before the places were paid; 0 without a rake. */
+    val rakeCents: Long = 0L
 ) {
     val totalCents: Long get() = places.sumOf { it.amountCents }
+
+    /** The buy-ins, rebuys and add-ons the table was paid from: the prize pool plus the rake. */
+    val takenInCents: Long get() = prizePoolCents + rakeCents
 
     /** What [place] pays; 0 for a place outside the table. */
     fun amountFor(place: Int): Long = places.getOrNull(place - 1)?.amountCents ?: 0L

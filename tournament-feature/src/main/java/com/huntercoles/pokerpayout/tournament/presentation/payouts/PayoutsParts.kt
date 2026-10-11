@@ -71,24 +71,16 @@ internal fun PayoutsCard(content: @Composable ColumnScope.() -> Unit) {
 
 /**
  * What each place pays, with the winner once decided ("Still playing" until then) and a bar for its
- * share of the pool, then "Adds up to $450" and the places stepper. The share is the rounded
- * amount's, so the percentages describe the money actually handed over, not the raw weights.
+ * share of the pool, then "Adds up to $450" (with a house rake, PP-145: "With the $20 house rake:
+ * $400 taken in.") and the places stepper. The share is the rounded amount's, so the percentages
+ * describe the money actually handed over, not the raw weights.
  */
 @Composable
 internal fun PlacesCard(state: PayoutsUiState, onIntent: (PayoutsIntent) -> Unit) {
     PayoutsCard {
         PayoutRows(state.rows)
         HorizontalDivider(color = PokerColors.FeltLine)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (state.addsUp) {
-                Icon(PokerIcons.Check, contentDescription = null, tint = PokerColors.Live, modifier = Modifier.size(16.dp))
-            }
-            Text(
-                text = stringResource(R.string.payouts_adds_up, formatMoney(state.pool.prizePoolCents)),
-                style = MaterialTheme.typography.bodyMedium,
-                color = PokerColors.CardWhite,
-            )
-        }
+        AddsUp(state)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val placesLabel = stringResource(R.string.payouts_places_stepper)
             Text(
@@ -125,6 +117,35 @@ internal fun PlacesCard(state: PayoutsUiState, onIntent: (PayoutsIntent) -> Unit
                 )
             }
         }
+    }
+}
+
+/**
+ * "✓ Adds up to $450" under the rows; with a house rake (PP-145) a line under it says the places and
+ * the rake make what was taken in, to the cent: "With the $22.50 house rake: $450 taken in."
+ */
+@Composable
+private fun AddsUp(state: PayoutsUiState) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (state.addsUp) {
+            Icon(PokerIcons.Check, contentDescription = null, tint = PokerColors.Live, modifier = Modifier.size(16.dp))
+        }
+        Text(
+            text = stringResource(R.string.payouts_adds_up, formatMoney(state.pool.prizePoolCents)),
+            style = MaterialTheme.typography.bodyMedium,
+            color = PokerColors.CardWhite,
+        )
+    }
+    if (state.table.rakeCents > 0L) {
+        Text(
+            text = stringResource(
+                R.string.payouts_rake_taken_in,
+                formatMoney(state.table.rakeCents),
+                formatMoney(state.table.takenInCents),
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = PokerColors.Chalk,
+        )
     }
 }
 

@@ -1,6 +1,7 @@
 package com.huntercoles.pokerpayout.tournament.domain.presets
 
 import androidx.annotation.StringRes
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
@@ -66,7 +67,7 @@ enum class Starter(@StringRes val title: Int, val night: StarterNight) {
      * This night for a table that plays [smallestChip] as its smallest chip, charges [foodCents] for
      * food (the house's call, which a starter leaves alone) and seats [players]: the stack is
      * [StarterNight.stackInChips] of those chips, and the payouts are the standard ones for that many
-     * players, following the player count as it changes.
+     * players, following the player count as it changes. No starter takes a house rake (PP-145).
      */
     fun setupFor(smallestChip: Int, foodCents: Long, players: Int): PresetSetup = PresetSetup(
         money = MoneySettings(
@@ -75,6 +76,7 @@ enum class Starter(@StringRes val title: Int, val night: StarterNight) {
             bountyCents = night.bountyCents,
             rebuyCents = 0L,
             addOnCents = 0L,
+            rake = HouseRake.NONE,
         ),
         rebuyUntilLevel = 0,
         blinds = PresetBlinds(

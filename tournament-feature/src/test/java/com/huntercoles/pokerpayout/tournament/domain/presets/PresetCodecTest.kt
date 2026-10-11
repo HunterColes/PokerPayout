@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tournament.domain.presets
 
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
@@ -38,6 +39,7 @@ class PresetCodecTest {
                 bountyCents = 500L,
                 rebuyCents = 3_500L,
                 addOnCents = 1_000L,
+                rake = HouseRake.of(250),
             ),
             rebuyUntilLevel = 4,
             blinds = PresetBlinds(
@@ -121,6 +123,29 @@ class PresetCodecTest {
         assertNull(PresetCodec.decode(mutated { getJSONObject("money").put("lateEntryUntil", -1) }))
     }
 
+    /**
+     * PP-145: a preset keeps its house rake. One saved before the rake loads at 0%, a preset at 0% is
+     * written as before (no rake key), a rate off the scale goes onto it, and a negative one is unreadable.
+     */
+    @Test
+    fun `a preset keeps its house rake, and one from before the rake loads at 0 percent`() {
+        assertEquals(HouseRake.of(250), roundTrip(everyField)?.setup?.money?.rake)
+        val older = mutated { getJSONObject("money").remove("rakeBasisPoints") }
+        val loaded = requireNotNull(PresetCodec.decode(older))
+        assertEquals(HouseRake.NONE, loaded.setup.money.rake)
+        assertEquals(everyField.setup.money.copy(rake = HouseRake.NONE), loaded.setup.money)
+
+        val none = everyField.copy(setup = everyField.setup.copy(money = everyField.setup.money.copy(rake = HouseRake.NONE)))
+        val written = JSONObject(PresetCodec.encode(none)).getJSONObject("money")
+        assertEquals(false, written.has("rakeBasisPoints"))
+        assertEquals(none, roundTrip(none))
+
+        fun savedAs(basisPoints: Int) = PresetCodec.decode(mutated { getJSONObject("money").put("rakeBasisPoints", basisPoints) })
+        assertEquals(HouseRake.of(350), savedAs(333)?.setup?.money?.rake)
+        assertEquals(HouseRake.of(2_500), savedAs(9_000)?.setup?.money?.rake)
+        assertNull(savedAs(-50))
+    }
+
     @Test
     fun `text that isn't a preset is skipped, not thrown`() {
         listOf(null, "", "   ", "not json", "[]", "42", "{}", "{\"format\":1}", "{\"format\":1,\"name\":\"x\"}").forEach {
@@ -178,6 +203,7 @@ class PresetCodecTest {
         val money = json.getJSONObject("money")
         val moneyKeys = listOf("buyIn", "food", "bounty", "rebuy", "addOn", "rebuyUntil")
         assertEquals(listOf(4_050L, 550L, 500L, 3_500L, 1_000L, 4L), moneyKeys.map { money.getLong(it) })
+        assertEquals(250, money.getInt("rakeBasisPoints")) // PP-145
         val blinds = json.getJSONObject("blinds")
         val blindKeys = listOf("minutes", "levelMinutes", "smallestChip", "stack", "breakEvery", "breakMinutes", "anteFrom")
         assertEquals(listOf(240, 15, 25, 10_000, 3, 12, 6), blindKeys.map { blinds.getInt(it) })

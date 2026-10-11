@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.core.property
 import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.EntryPrice
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
@@ -199,14 +200,39 @@ internal class BankNight(val script: NightScript) {
 
         val steps = Arb.bind(Arb.int(0..10), Arb.int(0..30), Arb.int(0..30), Arb.int(0..30), ::Step)
 
-        fun scripts(maxSteps: Int = 40, lateRegistration: Boolean = false, entries: Boolean = false) = Arb.bind(
-            Arb.int(2..14),
-            settings,
-            structures,
-            Arb.element(PayoutRounding.entries),
-            Arb.list(steps, 0..maxSteps),
-        ) { players, money, weights, rounding, steps ->
-            NightScript(players, money, weights, rounding, steps, lateRegistration, entries)
+        /**
+         * A house rake (PP-145): any step of the setup's scale (0% to 25%, none as often as any other),
+         * or any number of basis points at all, put on the scale as saved data is.
+         */
+        val rakes = Arb.bind(
+            Arb.int(0..HouseRake.MAX_BASIS_POINTS / HouseRake.STEP_BASIS_POINTS),
+            Arb.int(-500..5_000),
+            Arb.int(0..3),
+        ) { step, any, which ->
+            HouseRake.of(if (which == 0) any else step * HouseRake.STEP_BASIS_POINTS)
+        }
+
+        /**
+         * Nights to replay. [raked] gives each a house rake ([rakes], PP-145); without it every night is
+         * at 0%, drawn exactly as before the rake, so the older properties check the same nights.
+         */
+        fun scripts(
+            maxSteps: Int = 40,
+            lateRegistration: Boolean = false,
+            entries: Boolean = false,
+            raked: Boolean = false,
+        ): Arb<NightScript> {
+            val plain = Arb.bind(
+                Arb.int(2..14),
+                settings,
+                structures,
+                Arb.element(PayoutRounding.entries),
+                Arb.list(steps, 0..maxSteps),
+            ) { players, money, weights, rounding, steps ->
+                NightScript(players, money, weights, rounding, steps, lateRegistration, entries)
+            }
+            if (!raked) return plain
+            return Arb.bind(plain, rakes) { script, rake -> script.copy(money = script.money.copy(rake = rake)) }
         }
     }
 }

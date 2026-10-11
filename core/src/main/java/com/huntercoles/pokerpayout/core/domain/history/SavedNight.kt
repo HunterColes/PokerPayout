@@ -12,7 +12,10 @@ import java.time.LocalDate
  *
  * @property id stable while the night is kept; 0 until [NightStore] gives it one.
  * @property structureName the preset the setup came from, or null when it matched none.
+ * @property prizePoolCents what the places shared: after the house rake, if there was one.
  * @property players 1st first; never empty.
+ * @property rakeCents the house rake kept off the prize money (PP-145); 0 for a night without one,
+ *   and for every night saved before PP-145.
  */
 data class SavedNight(
     val id: Long,
@@ -20,6 +23,7 @@ data class SavedNight(
     val structureName: String?,
     val prizePoolCents: Long,
     val players: List<NightPlayer>,
+    val rakeCents: Long = 0L,
 ) {
     init {
         require(players.isNotEmpty()) { "A night has players" }

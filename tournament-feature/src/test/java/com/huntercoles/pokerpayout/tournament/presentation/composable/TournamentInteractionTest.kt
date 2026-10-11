@@ -21,6 +21,7 @@ import androidx.compose.ui.test.requestFocus
 import androidx.lifecycle.ViewModelStore
 import com.huntercoles.pokerpayout.core.design.PokerTheme
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.utils.ChipColour
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
@@ -121,6 +122,34 @@ class TournamentInteractionTest {
         tapText("Mystery")
         assertTrue(setupIntents.isEmpty())
         compose.onNodeWithText("Fixed now that someone is out.", substring = true).assertExists()
+    }
+
+    /**
+     * PP-145: the house rake sits with the money, at "0" until set. Focused at 0% it empties, so the
+     * first digit replaces the 0; a typed rate goes out on the scale (30 is 25%, 2.3 is 2.5%), and
+     * leaving the field sends what it holds once more. Text that isn't a rate sends nothing.
+     */
+    @Test
+    fun `the house rake field sends the rate typed, on the scale`() {
+        show(fixture.ready, TournamentUi())
+        val rake = compose.onNode(hasSetTextAction() and hasText("House rake", substring = true))
+        rake.performScrollTo().assertExists()
+        compose.onNode(hasSetTextAction() and hasText("House rake", substring = true) and hasText("0", substring = true))
+            .assertExists()
+        rake.requestFocus()
+        rake.performTextReplacement("5")
+        compose.waitForIdle()
+        assertEquals(TournamentConfigIntent.UpdateRake(HouseRake.of(500)), setupIntents.last())
+        rake.performTextReplacement("2.3")
+        rake.performTextReplacement("30")
+        compose.waitForIdle()
+        assertEquals(
+            listOf(500, 250, 2_500),
+            setupIntents.filterIsInstance<TournamentConfigIntent.UpdateRake>().map { it.rake.basisPoints },
+        )
+        rake.performImeAction()
+        compose.waitForIdle()
+        assertEquals(TournamentConfigIntent.UpdateRake(HouseRake.of(2_500)), setupIntents.last())
     }
 
     /** PP-035: once a mystery envelope is drawn, the players stepper only goes up, and says why. */

@@ -10,15 +10,18 @@ import kotlin.math.abs
  * per night, the oldest night first and its players in finishing order. Dates read 2026-10-05;
  * amounts are plain numbers with two decimals and a '.' ("12.50", "-0.50"), in every currency, so a
  * spreadsheet reads them as numbers whatever the phone's language; buy_in is what the player paid to
- * sit down (buy-in, food and bounty). The last column, currency, holds the money symbol the app shows
- * ("$", "€", "kr"; empty for plain numbers, PP-114). Text holding a comma, a quote or a line break is
- * quoted, its quotes doubled. Lines end in CRLF.
+ * sit down (buy-in, food and bounty). prize_pool is what the places shared, and rake the house rake
+ * kept off the prize money that night (PP-145; "0.00" without one), so prize_pool + rake is what was
+ * taken in for prizes; both are the night's, on each of its rows. The new columns go at the end, so
+ * the columns a spreadsheet already reads keep their places. The last column, currency, holds the
+ * money symbol the app shows ("$", "€", "kr"; empty for plain numbers, PP-114). Text holding a comma,
+ * a quote or a line break is quoted, its quotes doubled. Lines end in CRLF.
  */
 object NightCsv {
     val HEADER = listOf(
         "date", "structure", "prize_pool", "players", "place", "player", "points",
         "buy_in", "rebuys", "rebuy_total", "add_ons", "add_on_total", "paid_in",
-        "prize", "knockouts", "bounties", "won", "net", "currency",
+        "prize", "knockouts", "bounties", "won", "net", "rake", "currency",
     )
 
     private const val LINE_END = "\r\n"
@@ -49,6 +52,7 @@ object NightCsv {
         amount(player.bountyCents),
         amount(player.wonCents),
         amount(player.netCents),
+        amount(night.rakeCents),
         field(currency.symbol),
     )
 

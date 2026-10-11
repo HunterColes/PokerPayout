@@ -102,6 +102,7 @@ class CurrentSetup @Inject constructor(
             setBountyCents(money.bountyCents)
             setRebuyCents(money.rebuyCents)
             setAddOnCents(money.addOnCents)
+            setRake(money.rake)
             setRebuyUntilLevel(target.rebuyUntilLevel)
             setLateEntryUntilLevel(target.lateEntryUntilLevel)
             setPayoutSettings(target.payouts.settingsFor(getPlayerCount()))

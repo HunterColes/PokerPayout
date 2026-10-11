@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
@@ -113,8 +114,20 @@ class TournamentPreferences @Inject constructor(
             bountyCents = prefs.getLong(BOUNTY_CENTS_KEY, defaults.bountyCents),
             rebuyCents = prefs.getLong(REBUY_CENTS_KEY, defaults.rebuyCents),
             addOnCents = prefs.getLong(ADDON_CENTS_KEY, defaults.addOnCents),
-            bountyMode = getBountyMode()
+            bountyMode = getBountyMode(),
+            rake = getRake()
         )
+    }
+
+    /**
+     * The house rake (PP-145), under its own key in basis points. Games saved before PP-145 have none
+     * stored, so they load at 0% and pay out exactly as before; nothing to migrate.
+     */
+    fun getRake(): HouseRake = HouseRake.of(prefs.getInt(RAKE_BASIS_POINTS_KEY, 0))
+
+    fun setRake(rake: HouseRake) {
+        prefs.edit().putInt(RAKE_BASIS_POINTS_KEY, rake.basisPoints).apply()
+        publish()
     }
 
     /**
@@ -332,6 +345,7 @@ class TournamentPreferences @Inject constructor(
             .remove(REBUY_UNTIL_LEVEL_KEY)
             .remove(LATE_ENTRY_UNTIL_LEVEL_KEY)
             .remove(BOUNTY_MODE_KEY)
+            .remove(RAKE_BASIS_POINTS_KEY)
             .apply()
 
         // Reset all state flows to default values (keep current player count)
@@ -395,6 +409,9 @@ class TournamentPreferences @Inject constructor(
 
         /** PP-035: "standard", "progressive" or "mystery" ([BountyMode.key]); absent means standard. */
         private const val BOUNTY_MODE_KEY = "bounty_mode"
+
+        /** PP-145: the house rake in basis points (500 = 5%); absent means none. Never rename it. */
+        private const val RAKE_BASIS_POINTS_KEY = "rake_basis_points"
         private const val DEFAULT_PLAYER_COUNT = TournamentDefaults.PLAYER_COUNT
 
         /** v1.1.x Float keys and the cents keys that replace them. */

@@ -152,6 +152,10 @@ private fun PoolHero(state: PayoutsUiState) {
             style = MaterialTheme.typography.bodyMedium,
             color = PokerColors.Chalk,
         )
+        // PP-145: the house rake that came off it, on its own line
+        PayoutsShareText.rakeLine(context, state.pool)?.let { rake ->
+            Text(text = rake, style = MaterialTheme.typography.bodyMedium, color = PokerColors.Chalk)
+        }
     }
 }
 

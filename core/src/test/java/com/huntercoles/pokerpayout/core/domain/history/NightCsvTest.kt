@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
 class NightCsvTest {
 
     private val header = "date,structure,prize_pool,players,place,player,points,buy_in,rebuys,rebuy_total," +
-        "add_ons,add_on_total,paid_in,prize,knockouts,bounties,won,net,currency"
+        "add_ons,add_on_total,paid_in,prize,knockouts,bounties,won,net,rake,currency"
 
     @Test
     fun `one row per player per night, the oldest night first and its players in finishing order`() {
@@ -27,11 +27,11 @@ class NightCsvTest {
         assertEquals(
             listOf(
                 header,
-                "2026-09-12,,150.00,3,1,Priya,3,50.00,0,0.00,0,0.00,50.00,150.00,0,0.00,150.00,100.00,$",
-                "2026-09-12,,150.00,3,2,Theo,2,50.00,0,0.00,0,0.00,50.00,0.00,0,0.00,0.00,-50.00,$",
-                "2026-09-12,,150.00,3,3,Jo,1,50.00,0,0.00,0,0.00,50.00,0.00,0,0.00,0.00,-50.00,$",
-                "2026-10-05,Friday,100.00,2,1,Dana,2,50.00,0,0.00,0,0.00,50.00,70.00,0,0.00,70.00,20.00,$",
-                "2026-10-05,Friday,100.00,2,2,Marcus,1,50.00,0,0.00,0,0.00,50.00,30.00,0,0.00,30.00,-20.00,$",
+                "2026-09-12,,150.00,3,1,Priya,3,50.00,0,0.00,0,0.00,50.00,150.00,0,0.00,150.00,100.00,0.00,$",
+                "2026-09-12,,150.00,3,2,Theo,2,50.00,0,0.00,0,0.00,50.00,0.00,0,0.00,0.00,-50.00,0.00,$",
+                "2026-09-12,,150.00,3,3,Jo,1,50.00,0,0.00,0,0.00,50.00,0.00,0,0.00,0.00,-50.00,0.00,$",
+                "2026-10-05,Friday,100.00,2,1,Dana,2,50.00,0,0.00,0,0.00,50.00,70.00,0,0.00,70.00,20.00,0.00,$",
+                "2026-10-05,Friday,100.00,2,2,Marcus,1,50.00,0,0.00,0,0.00,50.00,30.00,0,0.00,30.00,-20.00,0.00,$",
                 "",
             ),
             lines,
@@ -46,7 +46,7 @@ class NightCsvTest {
         )
         val night = SavedNight(1L, LocalDate.of(2026, 1, 9), null, prizePoolCents = 22_500L, players = listOf(dana))
         assertEquals(
-            "2026-01-09,,225.00,1,1,Dana,1,50.00,2,80.50,1,10.00,140.50,225.00,3,15.00,240.00,99.50,$",
+            "2026-01-09,,225.00,1,1,Dana,1,50.00,2,80.50,1,10.00,140.50,225.00,3,15.00,240.00,99.50,0.00,$",
             NightCsv.of(listOf(night)).split("\r\n")[1],
         )
     }
@@ -94,7 +94,7 @@ class NightCsvTest {
     fun `the last column is the money symbol the app shows, the amounts plain numbers in every currency`() {
         val night = night("2026-10-05", listOf("Dana", "Marcus"), id = 1, prizes = listOf(7_000L, 3_000L))
         fun firstRow(currency: AppCurrency) = NightCsv.of(listOf(night), currency).split("\r\n")[1]
-        val amounts = "2026-10-05,,100.00,2,1,Dana,2,50.00,0,0.00,0,0.00,50.00,70.00,0,0.00,70.00,20.00,"
+        val amounts = "2026-10-05,,100.00,2,1,Dana,2,50.00,0,0.00,0,0.00,50.00,70.00,0,0.00,70.00,20.00,0.00,"
         assertEquals(amounts + "$", firstRow(AppCurrency.DOLLAR))
         assertEquals(amounts + "€", firstRow(AppCurrency.EURO))
         assertEquals(amounts + "R$", firstRow(AppCurrency.REAL))
@@ -103,6 +103,23 @@ class NightCsvTest {
         assertEquals(amounts, firstRow(AppCurrency.NONE))
         assertEquals("currency", NightCsv.HEADER.last())
         withCurrency(AppCurrency.KRONA) { assertTrue(NightCsv.of(listOf(night)).split("\r\n")[1].endsWith(",kr")) }
+    }
+
+    /**
+     * PP-145: the night's house rake on each of its rows, just before the currency (the columns from
+     * before keep their places); prize_pool is what the places shared, so the two add up to what came in.
+     */
+    @Test
+    fun `the house rake has its column, the night's on each of its rows`() {
+        val raked = night("2026-10-11", listOf("Dana", "Marcus"), id = 1, prizes = listOf(26_000L, 12_000L))
+            .copy(rakeCents = 2_000L)
+        val rows = NightCsv.of(listOf(raked)).split("\r\n").drop(1).filter { it.isNotEmpty() }.map { it.split(",") }
+        val rake = NightCsv.HEADER.indexOf("rake")
+        assertEquals(NightCsv.HEADER.indexOf("currency") - 1, rake)
+        assertEquals(NightCsv.HEADER.indexOf("net") + 1, rake)
+        assertEquals(listOf("20.00", "20.00"), rows.map { it[rake] })
+        assertEquals(listOf("380.00", "380.00"), rows.map { it[NightCsv.HEADER.indexOf("prize_pool")] })
+        assertEquals(listOf("260.00", "120.00"), rows.map { it[NightCsv.HEADER.indexOf("prize")] })
     }
 
     @Test

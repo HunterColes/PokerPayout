@@ -1,5 +1,6 @@
 package com.huntercoles.pokerpayout.tournament.domain.presets
 
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
@@ -68,6 +69,8 @@ private object PresetJsonWriter {
         .put(ADD_ON, setup.money.addOnCents)
         .put(REBUY_UNTIL, setup.rebuyUntilLevel)
         .put(LATE_ENTRY_UNTIL, setup.lateEntryUntilLevel)
+        // PP-145: only a preset with a house rake has one, so a preset without is written as before
+        .apply { if (!setup.money.rake.isNone) put(RAKE, setup.money.rake.basisPoints) }
 
     private fun blinds(blinds: PresetBlinds): JSONObject = JSONObject()
         .put(DURATION, blinds.durationMinutes)
@@ -132,6 +135,8 @@ private object PresetJsonReader {
         bountyCents = json.atLeast(BOUNTY, 0L),
         rebuyCents = json.atLeast(REBUY, 0L),
         addOnCents = json.atLeast(ADD_ON, 0L),
+        // PP-145: a preset saved before the house rake has none, so 0%; a rate off the scale goes onto it
+        rake = if (json.has(RAKE)) HouseRake.of(json.atLeast(RAKE, 0)) else HouseRake.NONE,
     )
 
     private fun blinds(json: JSONObject) = PresetBlinds(
@@ -209,6 +214,9 @@ private const val REBUY_UNTIL = "rebuyUntil"
 
 /** PP-116, added to format 1 (older readers ignore it; older presets lack it and load with no cutoff). */
 private const val LATE_ENTRY_UNTIL = "lateEntryUntil"
+
+/** PP-145, the house rake in basis points (500 = 5%), added to format 1 like [LATE_ENTRY_UNTIL]. */
+private const val RAKE = "rakeBasisPoints"
 private const val BLINDS = "blinds"
 private const val DURATION = "minutes"
 private const val LEVEL_LENGTH = "levelMinutes"

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Currency (S25, PP-114): the money symbol every amount shows with. The symbols and how each
+     currency writes its numbers are in core (AppCurrency), not here: they are the same in every
+     language. -->
+<resources>
+    <string name="tools_currency_title">Currency</string>
+    <!-- The Tools row under its title: "Euro · 1.234,50 €" -->
+    <string name="tools_currency_line">%1$s · %2$s</string>
+
+    <string name="currency_title">Currency</string>
+    <string name="currency_subtitle">How amounts show</string>
+    <string name="currency_note">Only the look changes. Amounts stay as they were saved, so you can switch back at any time. Payouts, share texts and the CSV export use the currency picked here.</string>
+    <!-- Under the yen's sample: it has no cents -->
+    <string name="currency_whole_only">Whole amounts, no cents</string>
+    <!-- Under "No symbol"'s sample -->
+    <string name="currency_plain">Plain numbers, for points or chips</string>
+
+    <string name="currency_dollar">Dollar</string>
+    <string name="currency_euro">Euro</string>
+    <string name="currency_euro_first">Euro, sign first</string>
+    <string name="currency_pound">Pound</string>
+    <string name="currency_rupee">Rupee</string>
+    <string name="currency_real">Real</string>
+    <string name="currency_krona">Krona or krone</string>
+    <string name="currency_yen">Yen</string>
+    <string name="currency_yuan">Yuan</string>
+    <string name="currency_franc">Swiss franc</string>
+    <string name="currency_zloty">Złoty</string>
+    <string name="currency_ruble">Ruble</string>
+    <string name="currency_none">No symbol</string>
+</resources>

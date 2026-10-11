@@ -13,13 +13,22 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * The music's settings and playlist (Tools > Sound > Music), in a file of their own (`music_prefs`),
- * so nothing here can touch a key the chime or the clock saved. The keys at the foot of this file
- * are saved data: never rename one.
+ * The music's settings and playlist (Tools > Sound > Music). The settings are in a file of their own
+ * (`music_prefs`), so nothing here can touch a key the chime or the clock saved. The playlist and
+ * where a song was paused are about this phone's files, so they live in [PhonePrefs.FILE], which no
+ * backup takes (PP-137); older versions kept them in `music_prefs`, and they move once. The keys
+ * at the foot of this file are saved data: never rename one.
  */
 @Singleton
 class MusicPreferences @Inject constructor(@ApplicationContext context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+
+    /** The playlist and the paused song's place: this phone's alone. */
+    private val phone: SharedPreferences = PhonePrefs.open(context)
+
+    init {
+        PhonePrefs.moveOnce(from = prefs, to = phone, keys = PHONE_ONLY_KEYS)
+    }
 
     private val _volume = MutableStateFlow(getVolume())
     val volume: StateFlow<Float> = _volume.asStateFlow()
@@ -32,11 +41,11 @@ class MusicPreferences @Inject constructor(@ApplicationContext context: Context)
     private val _breakMusic = MutableStateFlow(getBreakMusic())
     val breakMusic: StateFlow<BreakMusic> = _breakMusic.asStateFlow()
 
-    fun getPlaylist(): Playlist = PlaylistCodec.decode(prefs.getString(PLAYLIST_KEY, null))
+    fun getPlaylist(): Playlist = PlaylistCodec.decode(phone.getString(PLAYLIST_KEY, null))
 
     /** Saved when the playlist changes (songs, order, shuffle, repeat, the current song); never per tick. */
     fun setPlaylist(playlist: Playlist) {
-        prefs.edit().putString(PLAYLIST_KEY, PlaylistCodec.encode(playlist)).apply()
+        phone.edit().putString(PLAYLIST_KEY, PlaylistCodec.encode(playlist)).apply()
     }
 
     /** The music's own volume, 0 to 1, apart from the chime's. */
@@ -65,11 +74,11 @@ class MusicPreferences @Inject constructor(@ApplicationContext context: Context)
 
     /** Where song [ref] was paused, to carry on from there; 0 for any other song. */
     fun getPosition(ref: String?): Int =
-        if (ref != null && prefs.getString(POSITION_REF_KEY, null) == ref) prefs.getInt(POSITION_MS_KEY, 0) else 0
+        if (ref != null && phone.getString(POSITION_REF_KEY, null) == ref) phone.getInt(POSITION_MS_KEY, 0) else 0
 
     /** Saved on a pause, not while playing. */
     fun setPosition(ref: String?, millis: Int) {
-        prefs.edit().putString(POSITION_REF_KEY, ref).putInt(POSITION_MS_KEY, millis.coerceAtLeast(0)).apply()
+        phone.edit().putString(POSITION_REF_KEY, ref).putInt(POSITION_MS_KEY, millis.coerceAtLeast(0)).apply()
     }
 
     companion object {
@@ -77,8 +86,10 @@ class MusicPreferences @Inject constructor(@ApplicationContext context: Context)
 
         /**
          * About this phone's files, not the night: the playlist and where a song was paused. Picked
-         * songs are loans from this phone's file picker, which don't move to another phone, so a
-         * backup leaves them out and a restore keeps this phone's own (core/backup).
+         * songs are loans from this phone's file picker, which don't move to another phone, so they
+         * are kept in [PhonePrefs.FILE], which no backup takes. Still listed for `music_prefs`, where
+         * older versions saved them: the in-app backup never writes them from there, and a restore
+         * leaves them where they are until they move (core/backup).
          */
         val PHONE_ONLY_KEYS: Set<String> get() = setOf(PLAYLIST_KEY, POSITION_REF_KEY, POSITION_MS_KEY)
         const val DEFAULT_VOLUME = 0.8f

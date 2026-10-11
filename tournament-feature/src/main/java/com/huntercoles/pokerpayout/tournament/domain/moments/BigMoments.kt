@@ -58,34 +58,43 @@ object BigMoments {
 }
 
 /**
- * Marks each moment once (PP-111). The moments the field had reached at the clock's last look are
- * saved, with how many players were out then. A moment is new when it is reached now and wasn't
- * then, and a knockout brought it: more players are out than at the last look. So a restart
- * (process death included) marks nothing again; an Undo takes a moment back, and the knockout
- * recorded again marks it again; and a late arrival or a change of tables that moves the field past
- * a line without anyone going out marks nothing.
+ * Marks each moment once (PP-111). Each moment the clock marks is saved with how many entries were
+ * out then, and so is the count at the clock's last look. Only a knockout (more out than at the last
+ * look) brings a moment: the ones it newly reaches. Only someone coming back in (fewer out: an Undo
+ * of a knockout, Bring back) takes moments away: those marked with more out than now, so recorded
+ * again they show again. A late arrival or a re-entry (a new entry; nobody out comes back) moves the
+ * field but neither brings nor takes a moment, so the next knockouts don't show the bubble or the
+ * final table a second time. A restart, process death included, marks nothing again.
  */
 class MomentTracker(private val preferences: TimerPreferences) {
 
-    /** What [field] newly reaches since the last look, and everything it reaches; saves the latter. */
+    /** What [field] newly brings since the last look, everything it reaches, and what stays marked; saves the marks. */
     fun look(field: Field): MomentLook {
         val reached = BigMoments.reached(field)
         val out = field.players - field.left
-        val saved = preferences.getBigMomentsReached()?.let(::parse)
+        val saved = preferences.getBigMomentsMarked()?.let(::parse)
         val savedOut = preferences.getBigMomentsOut()
+        val fresh = if (saved != null && out > savedOut) reached - saved.keys else emptySet()
+        val marked = when {
+            // Before the first look (a fresh install, an update mid-game) whatever is reached is old news
+            saved == null -> reached.associateWith { out }
+            out < savedOut -> saved.filterValues { it <= out }
+            else -> saved + (reached - saved.keys).associateWith { out }
+        }
         // Written only when it changes, never per tick
-        if (saved != reached || savedOut != out) preferences.setBigMoments(reached.map { it.name }.toSet(), out)
-        // Before the first look (a fresh install, or an update mid-game) whatever is reached is old news
-        val fresh = if (saved != null && out > savedOut) reached - saved else emptySet()
-        return MomentLook(fresh = fresh, reached = reached)
+        if (marked != saved || out != savedOut) preferences.setBigMoments(marked.mapKeys { it.key.name }, out)
+        return MomentLook(fresh = fresh, reached = reached, marked = marked.keys)
     }
 
-    private fun parse(names: Set<String>): Set<BigMoment> =
-        names.mapNotNull { name -> BigMoment.entries.firstOrNull { it.name == name } }.toSet()
+    private fun parse(saved: Map<String, Int>): Map<BigMoment, Int> =
+        saved.mapNotNull { (name, at) -> BigMoment.entries.firstOrNull { it.name == name }?.let { it to at } }.toMap()
 }
 
-/** One look at the field: the moments [fresh] since the last look, and all those [reached]. */
-data class MomentLook(val fresh: Set<BigMoment>, val reached: Set<BigMoment>) {
+/**
+ * One look at the field: the moments [fresh] since the last look, all those it [reached], and all
+ * those [marked] (a re-entry can leave a moment marked that the field no longer reaches).
+ */
+data class MomentLook(val fresh: Set<BigMoment>, val reached: Set<BigMoment>, val marked: Set<BigMoment>) {
     /** The moment to show for this look, if any. */
     val headline: BigMoment? get() = BigMoments.headline(fresh)
 }

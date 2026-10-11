@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import com.huntercoles.pokerpayout.core.utils.FormatUtils
 
 /**
  * One choice out of a few, side by side (payout presets, rounding, the Bank mode). Replaces
@@ -159,11 +161,16 @@ private val ThumbPadding = 4.dp
 /** Each segment's padding plus its thumb's: the room a label loses inside its share of the track. */
 private val SegmentInset = TrackPadding + ThumbPadding
 
-private enum class PreviewPreset(val label: String, val firstPlace: String) {
-    TopHeavy("Top-heavy", "$270"),
-    Standard("Standard", "$225"),
-    Flat("Flat", "$200"),
+/** The previews' presets, each with what 1st gets from a 450 pool. */
+private enum class PreviewPreset(val label: String, val firstPlaceCents: Long) {
+    TopHeavy("Top-heavy", TOP_HEAVY_FIRST_CENTS),
+    Standard("Standard", STANDARD_FIRST_CENTS),
+    Flat("Flat", FLAT_FIRST_CENTS),
 }
+
+private const val TOP_HEAVY_FIRST_CENTS = 27_000L
+private const val STANDARD_FIRST_CENTS = 22_500L
+private const val FLAT_FIRST_CENTS = 20_000L
 
 @Preview(name = "PokerSegmentedControl", widthDp = 360, showBackground = true, backgroundColor = 0xFF0B0B0B)
 @Composable
@@ -175,11 +182,11 @@ internal fun PokerSegmentedControlPreview() {
                 selected = PreviewPreset.Standard,
                 onSelect = {},
                 label = { it.label },
-                secondary = { it.firstPlace },
+                secondary = { FormatUtils.formatMoney(it.firstPlaceCents) },
             )
             PokerSegmentedControl(
-                options = listOf("$1", "$5", "$10"),
-                selected = "$5",
+                options = PayoutRounding.entries.map { it.label },
+                selected = PayoutRounding.FIVE_DOLLARS.label,
                 onSelect = {},
                 label = { it },
             )

@@ -18,6 +18,7 @@ import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.testing.forEachScrollPosition
+import com.huntercoles.pokerpayout.tournament.domain.presets.Starter
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiState
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentMode
@@ -39,7 +40,8 @@ import java.util.TimeZone
  * any scroll position, and every target is 48 dp without overlapping. Goldens on
  * [DeviceMatrix.goldens]: the list before the start (`S15_presets_list`), the list mid-game with
  * loading off (`S15_presets_locked`), the save form (`S15_presets_save`) and the load question
- * (`S15_presets_load`). The sheet is drawn as it looks open, over the tab and its scrim (a modal
+ * (`S15_presets_load`), and a new install's list, nothing saved yet and the starter nights under it
+ * (`S15_presets_starters`, PP-113). The sheet is drawn as it looks open, over the tab and its scrim (a modal
  * window doesn't capture under Robolectric); the layout checks then run on the sheet alone.
  * The presets row on the setup page and in the panel is in the S1 goldens ([TournamentScreenGoldenTest]).
  */
@@ -124,6 +126,18 @@ class PresetsScreenTest(private val config: ScreenConfig) {
     fun loadQuestion() {
         show(PresetsFixture.list.copy(sheet = PresetSheet.ConfirmLoad(PresetsFixture.friday.id)))
         check("Load Friday?", "S15_presets_load")
+    }
+
+    @Test
+    fun startersOnANewInstall() {
+        show(PresetsFixture.firstNight)
+        check("Presets on a new install, with the starters", "S15_presets_starters")
+    }
+
+    @Test
+    fun starterLoadQuestion() {
+        show(PresetsFixture.list.copy(sheet = PresetSheet.ConfirmStarter(Starter.DEEP_STACK)))
+        check("Load Deep stack?")
     }
 
     @Test

@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.huntercoles.pokerpayout.core.domain.history.NightPlayer
 import com.huntercoles.pokerpayout.core.domain.history.NightResults
-import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
@@ -14,10 +13,12 @@ import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
+import com.huntercoles.pokerpayout.core.utils.MoneyFormat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -66,6 +67,8 @@ class PayoutsViewModel @Inject constructor(
         viewModelScope.launch { tournamentPreferences.config.collect { refresh() } }
         viewModelScope.launch { bankPreferences.revision.collect { refresh() } }
         viewModelScope.launch { nights.nights.collect { refresh() } }
+        // PP-114: a currency picked on another tab (the yen rounds to ¥100s)
+        viewModelScope.launch { MoneyFormat.changes.drop(1).collect { refresh() } }
         viewModelScope.launch {
             tournamentPreferences.tournamentLocked.collect { locked -> _uiState.update { it.copy(isLocked = locked) } }
         }
@@ -116,17 +119,8 @@ class PayoutsViewModel @Inject constructor(
     private fun refresh() {
         val config = tournamentPreferences.getCurrentTournamentConfig()
         val ids = (1..config.numPlayers).toList()
-        val players = ids.map { id ->
-            BankPlayer(
-                id = id,
-                boughtIn = bankPreferences.getPlayerBuyInStatus(id),
-                paidOut = bankPreferences.getPlayerPayedOutStatus(id),
-                eliminatedBy = bankPreferences.getPlayerEliminatedBy(id),
-                rebuyPricesCents = bankPreferences.getPlayerRebuyPrices(id),
-                addOnPricesCents = bankPreferences.getPlayerAddonPrices(id),
-                bountyDrawCents = bankPreferences.getPlayerBountyDraw(id)
-            )
-        }
+        // Late entries and re-entries included (PP-116), exactly as the Bank settles them
+        val players = bankPreferences.recordedPlayers(config.numPlayers)
         val names = ids.associateWith { bankPreferences.getPlayerName(it) }
         val settlement = settleTournament(
             players = players,
@@ -162,7 +156,7 @@ class PayoutsViewModel @Inject constructor(
                 maxPlaces = payable,
                 rows = rows(settlement, names),
                 bubble = bubble(settlement, config.numPlayers),
-                bounties = bounties(settlement, names, config.money.bountyCents, config.money.foodCents * config.numPlayers),
+                bounties = bounties(settlement, names, config.money.bountyCents, settlement.pool.foodCents),
                 night = nightSave(tonight, settlement.pool.prizePoolCents)
             )
         }

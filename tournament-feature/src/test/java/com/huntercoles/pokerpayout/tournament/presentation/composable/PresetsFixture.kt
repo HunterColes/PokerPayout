@@ -7,6 +7,8 @@ import com.huntercoles.pokerpayout.core.preferences.ChipSetSettings
 import com.huntercoles.pokerpayout.tournament.domain.presets.PresetBlinds
 import com.huntercoles.pokerpayout.tournament.domain.presets.PresetPayouts
 import com.huntercoles.pokerpayout.tournament.domain.presets.PresetSetup
+import com.huntercoles.pokerpayout.tournament.domain.presets.Starter
+import com.huntercoles.pokerpayout.tournament.domain.presets.StarterSetup
 import com.huntercoles.pokerpayout.tournament.domain.presets.TournamentPreset
 import com.huntercoles.pokerpayout.tournament.presentation.presets.ChipSetSummary
 import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetSheet
@@ -14,7 +16,8 @@ import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetsUiStat
 
 /**
  * Three saved nights for the presets sheet (PP-032), the last used first: the mockups' Friday game,
- * a deep stack with the chip set, and a turbo.
+ * a deep stack with the chip set, and a turbo. Under them the starter nights (PP-113), fitted to the
+ * mockups' table: 25s for the smallest chip, $5 food, nine players.
  */
 internal object PresetsFixture {
     val friday = TournamentPreset(
@@ -61,11 +64,16 @@ internal object PresetsFixture {
 
     val all = listOf(friday, deepStack, turbo)
 
+    val starters = Starter.entries.map { StarterSetup(it, it.setupFor(smallestChip = 25, foodCents = 500L, players = 9)) }
+
     /** The home set's 4 colours and 500 chips, checked in Tools. */
     val chipSet = ChipSetSummary(colours = 4, chips = 500, ready = true)
 
-    /** The list before the start, with [all] saved. */
-    val list = PresetsUiState(presets = all, sheet = PresetSheet.List, canLoad = true, chipSet = chipSet)
+    /** The list before the start, with [all] saved and the [starters] under them. */
+    val list = PresetsUiState(presets = all, sheet = PresetSheet.List, canLoad = true, chipSet = chipSet, starters = starters)
+
+    /** A new install's list: nothing saved yet, the [starters] ready. */
+    val firstNight = PresetsUiState(sheet = PresetSheet.List, starters = starters)
 
     /** The suggested name for the mockups' night ($40 buy-in, 20-minute levels). */
     const val SUGGESTED_NAME = "$40 · 20-min levels"

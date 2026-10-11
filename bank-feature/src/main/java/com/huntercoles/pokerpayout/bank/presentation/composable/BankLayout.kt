@@ -120,9 +120,21 @@ internal fun cellDescription(row: BankRowModel, column: BankColumn, state: BankU
 @Composable
 private fun outDescription(row: BankRowModel, cell: BankCell): String = when (cell.status) {
     CellStatus.Champion -> stringResource(R.string.bank_cell_champion, row.name)
+    // An entry the player re-entered after can't be brought back (PP-116): no "Bring back" then
     CellStatus.OutPlace -> row.knockedOutByName
-        ?.let { stringResource(R.string.bank_cell_out, row.name, ordinalOf(cell.place), it) }
-        ?: stringResource(R.string.bank_cell_out_unclaimed, row.name, ordinalOf(cell.place))
+        ?.let { by ->
+            stringResource(
+                if (cell.enabled) R.string.bank_cell_out else R.string.bank_cell_out_re_entered,
+                row.name,
+                ordinalOf(cell.place),
+                by,
+            )
+        }
+        ?: stringResource(
+            if (cell.enabled) R.string.bank_cell_out_unclaimed else R.string.bank_cell_out_unclaimed_re_entered,
+            row.name,
+            ordinalOf(cell.place),
+        )
     else -> stringResource(R.string.bank_cell_knock_out, row.name)
 }
 

@@ -40,6 +40,23 @@ sealed interface BankIntent {
     /** The pay-out sheet's answer. */
     data class SetPaid(val playerId: Int, val paid: Boolean) : BankIntent
 
+    // Late entries and re-entries (PP-116) ---------------------------------------------------------
+
+    /** Late entry, under the list (or Re-entry on the clock's knockout panel): the late entry sheet (S27). */
+    data object OpenLateEntry : BankIntent
+
+    /**
+     * A player who arrived late joins as a new entry: [name] (blank: "Player N"), buy-in paid at
+     * today's price, a starting stack. While late entry is open; Undo takes it back.
+     */
+    data class AddLateEntry(val name: String) : BankIntent
+
+    /**
+     * [playerId], who is out, buys back in as a new entry: a new stack and a new buy-in, paid at
+     * today's price. Their knockout stays where it was. While late entry is open; Undo takes it back.
+     */
+    data class ReEnter(val playerId: Int) : BankIntent
+
     // The rest of the screen ----------------------------------------------------------------------
 
     data object ShowPoolBreakdown : BankIntent
@@ -69,4 +86,18 @@ sealed interface BankIntent {
 
     /** The top bar's bell: the clock's chime on or off. */
     data object ToggleMute : BankIntent
+
+    // Tonight's players (S26, PP-110) ----------------------------------------------------------------
+
+    /** The top bar's regulars: tonight's players, picked from everyone the host has played with. */
+    data object ShowRegulars : BankIntent
+
+    /**
+     * A regular tapped in the sheet: not at the table, they take the first seat nobody named (a new
+     * seat when every seat has a name); at the table, their seat is nobody's again ("Player 3").
+     */
+    data class ToggleRegular(val name: String) : BankIntent
+
+    /** Quick add: [name] takes a seat as a regular tapped would, and joins the regulars if new. */
+    data class AddRegular(val name: String) : BankIntent
 }

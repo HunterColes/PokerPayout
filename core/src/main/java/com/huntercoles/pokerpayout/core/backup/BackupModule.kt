@@ -31,7 +31,7 @@ class ProcessRestarter @Inject constructor(@ApplicationContext private val conte
     }
 }
 
-/** The core's backup sections: the settings groups and History. Feature modules add their own (presets). */
+/** The core's backup sections: the settings groups, History and the regulars. Feature modules add their own (presets). */
 @Module
 @InstallIn(SingletonComponent::class)
 object BackupModule {
@@ -48,6 +48,10 @@ object BackupModule {
     @Provides
     @IntoSet
     fun historySection(section: HistoryBackup): BackupSection = section
+
+    @Provides
+    @IntoSet
+    fun regularsSection(section: RegularsBackup): BackupSection = section
 
     private const val TIMER_PREFS = "timer_prefs"
 }

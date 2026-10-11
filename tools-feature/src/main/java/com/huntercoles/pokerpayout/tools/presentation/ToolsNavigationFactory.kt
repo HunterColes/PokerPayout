@@ -13,6 +13,7 @@ import com.huntercoles.pokerpayout.core.navigation.NavigationManager
 import com.huntercoles.pokerpayout.tools.presentation.composable.BackupRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.ChipSetRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.CueSoundsRoute
+import com.huntercoles.pokerpayout.tools.presentation.composable.CurrencyRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.DealRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.DealersChoiceRoute
 import com.huntercoles.pokerpayout.tools.presentation.composable.EquityQuizRoute
@@ -100,6 +101,11 @@ class ToolsNavigationFactory @Inject constructor(
 
         builder.composable<NavigationDestination.DealMaker> {
             DealRoute(onBack = navigationManager::navigateBack)
+        }
+
+        // The money symbol every amount shows with (PP-114)
+        builder.composable<NavigationDestination.Currency> {
+            CurrencyRoute(onBack = navigationManager::navigateBack)
         }
     }
 }

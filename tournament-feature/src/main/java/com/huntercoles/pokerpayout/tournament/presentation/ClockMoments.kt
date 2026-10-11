@@ -9,8 +9,9 @@ import com.huntercoles.pokerpayout.tournament.domain.moments.MomentTracker
 /**
  * PP-111: the clock's side of the night's big moments ([MomentTracker] decides which are new). The
  * biggest new one shows on the clock with its cue: a banner, or for the champion their screen. Once
- * a clock exists, that is; before its first start a moment is only noted. A moment the field no
- * longer has (an Undo, a player brought back) goes.
+ * a clock exists, that is; before its first start a moment is only noted. A moment an Undo or a
+ * Bring back takes back goes; a re-entry or a late arrival leaves it. The champion's screen shows
+ * while there is a champion.
  */
 internal class ClockMoments(
     preferences: TimerPreferences,
@@ -40,9 +41,9 @@ internal class ClockMoments(
                 lowestPrizeCents = lowestPrizeCents,
             )
         }
-        val champion = BigMoment.CHAMPION in look.reached
+        val champion = BigMoment.CHAMPION in look.reached && BigMoment.CHAMPION in look.marked
         return state.copy(
-            moment = banner ?: state.moment?.takeIf { headline == null && it.moment in look.reached },
+            moment = banner ?: state.moment?.takeIf { headline == null && it.moment in look.marked },
             winnerOpen = champion && (state.winnerOpen || headline == BigMoment.CHAMPION),
         )
     }

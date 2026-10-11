@@ -41,6 +41,7 @@ import com.huntercoles.pokerpayout.bank.presentation.BankSection
 import com.huntercoles.pokerpayout.bank.presentation.BankSheet
 import com.huntercoles.pokerpayout.bank.presentation.BankSummary
 import com.huntercoles.pokerpayout.bank.presentation.BankUiState
+import com.huntercoles.pokerpayout.bank.presentation.RegularsModel
 import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
@@ -64,11 +65,12 @@ import com.huntercoles.pokerpayout.core.R as CoreR
 
 /**
  * The Bank (S5 v2), stateless: the top bar (live subtitle, Undo, the chime bell and ⋮), the money
- * summary, the labelled sticky header and one line per player, in sections. Below 360 dp closed
- * columns fold into the line under each name (Z2); from 840 dp the list gets wider columns with In
- * and Owed, and the meters, pool breakdown and payout table sit open in a side pane (Z5). Once the
- * night is over with a buy-in still open, the summary offers Settle up: who pays whom, with
- * [onShareSettleUp] for Share as text.
+ * summary, the labelled sticky header and one line per player, in sections. While a seat has no
+ * name, "Pick tonight's players" (from the regulars, PP-110) sits above the list; ⋮ has it always.
+ * Below 360 dp closed columns fold into the line under each name (Z2); from 840 dp the list gets
+ * wider columns with In and Owed, and the meters, pool breakdown and payout table sit open in a side
+ * pane (Z5). Once the night is over with a buy-in still open, the summary offers Settle up: who pays
+ * whom, with [onShareSettleUp] for Share as text.
  */
 @Composable
 fun BankContent(
@@ -111,12 +113,17 @@ private fun BankTopBar(state: BankUiState, onIntent: (BankIntent) -> Unit) {
             contentDescription = stringResource(if (state.isMuted) R.string.bank_unmute else R.string.bank_mute),
             onClick = { onIntent(BankIntent.ToggleMute) },
         )
-        MoreMenu(canReset = state.canReset, onReset = { onIntent(BankIntent.ShowResetConfirm) })
+        MoreMenu(
+            canReset = state.canReset,
+            onReset = { onIntent(BankIntent.ShowResetConfirm) },
+            onRegulars = { onIntent(BankIntent.ShowRegulars) },
+        )
     }
 }
 
+/** ⋮: tonight's players from the regulars (any time, a late arrival too), and Reset. */
 @Composable
-private fun MoreMenu(canReset: Boolean, onReset: () -> Unit) {
+private fun MoreMenu(canReset: Boolean, onReset: () -> Unit, onRegulars: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         PokerIconButton(
@@ -129,6 +136,14 @@ private fun MoreMenu(canReset: Boolean, onReset: () -> Unit) {
             onDismissRequest = { open = false },
             containerColor = PokerColors.FeltGreen,
         ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.bank_regulars), color = PokerColors.CardWhite) },
+                onClick = {
+                    open = false
+                    onRegulars()
+                },
+                leadingIcon = { Icon(PokerIcons.People, contentDescription = null, tint = PokerColors.PokerGold) },
+            )
             DropdownMenuItem(
                 text = { Text(
                     stringResource(R.string.bank_reset_menu),
@@ -192,8 +207,29 @@ private fun PhoneBody(state: BankUiState, layout: BankLayout, onIntent: (BankInt
                 modifier = Modifier.padding(bottom = 12.dp),
             )
         }
+        if (state.hasUnnamedSeat) {
+            item(key = "regulars") {
+                RegularsButton(onIntent, Modifier.padding(bottom = 12.dp))
+            }
+        }
         playerList(state, layout, onIntent, hint = hint)
     }
+}
+
+/**
+ * While a seat has no name ("Player 3"): tonight's players from the regulars, in reach above the
+ * list (PP-110). With every seat named it goes; ⋮ keeps it for a late arrival.
+ */
+@Composable
+private fun RegularsButton(onIntent: (BankIntent) -> Unit, modifier: Modifier = Modifier) {
+    PokerButton(
+        text = stringResource(R.string.bank_regulars_pick),
+        onClick = { onIntent(BankIntent.ShowRegulars) },
+        variant = PokerButtonVariant.Secondary,
+        size = PokerButtonSize.Small,
+        icon = PokerIcons.People,
+        modifier = modifier.fillMaxWidth(),
+    )
 }
 
 // Tablet --------------------------------------------------------------------------------------------
@@ -224,6 +260,7 @@ private fun TabletBody(state: BankUiState, layout: BankLayout, onIntent: (BankIn
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             MoneySummary(state = state, buttons = null, onSettleUp = { onIntent(BankIntent.ShowSettleUp) })
+            if (state.hasUnnamedSeat) RegularsButton(onIntent)
             PaneCard {
                 PokerEyebrow(stringResource(R.string.bank_pool_title), color = PokerColors.PokerGold)
                 PoolBreakdownContent(state)
@@ -260,7 +297,8 @@ private fun PaneCard(content: @Composable ColumnScope.() -> Unit) {
 // The list --------------------------------------------------------------------------------------------
 
 /**
- * The header (sticky), then each section with its label and rows, then the cutoff note. Rows keep
+ * The header (sticky), then each section with its label and rows, then Late entry (PP-116, under the
+ * players who are out, who can re-enter from it) and the cutoff note. Rows keep
  * their key, so a knocked-out player slides into the Out section (no red flash), or jumps there
  * under Reduce motion.
  */
@@ -290,6 +328,7 @@ private fun LazyListScope.playerList(state: BankUiState, layout: BankLayout, onI
             }
         }
     }
+    item(key = "late") { LateEntryFooter(state, onLateEntry = { onIntent(BankIntent.OpenLateEntry) }) }
     item(key = "note") { CutoffNote(state) }
 }
 
@@ -318,6 +357,7 @@ private fun BankSheets(state: BankUiState, onIntent: (BankIntent) -> Unit, onSha
             onDismiss = dismiss,
         )
         is BankSheet.Envelope -> EnvelopeSheet(sheet = sheet, onDismiss = dismiss)
+        is BankSheet.LateEntry -> LateEntrySheet(sheet, state.reEntries, onIntent, onDismiss = dismiss)
         BankSheet.PoolBreakdown -> PoolBreakdownSheet(
             state = state,
             onPayoutStructure = { onIntent(BankIntent.ShowPayoutStructure) },
@@ -344,6 +384,12 @@ private fun BankSheets(state: BankUiState, onIntent: (BankIntent) -> Unit, onSha
             onDismiss = dismiss,
             onConfirm = { onIntent(BankIntent.ConfirmReset) },
             destructive = true,
+        )
+        is BankSheet.Regulars -> RegularsSheet(
+            model = RegularsModel.of(state, sheet.order),
+            onToggle = { onIntent(BankIntent.ToggleRegular(it)) },
+            onAdd = { onIntent(BankIntent.AddRegular(it)) },
+            onDismiss = dismiss,
         )
         null -> Unit
     }

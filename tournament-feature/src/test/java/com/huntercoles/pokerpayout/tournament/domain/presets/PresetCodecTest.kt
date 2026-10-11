@@ -70,6 +70,7 @@ class PresetCodecTest {
                 maxColours = 4,
                 reserveOverride = 3,
             ),
+            lateEntryUntilLevel = 5,
         ),
     )
 
@@ -108,6 +109,16 @@ class PresetCodecTest {
                 assertEquals("$preset at $rounding", saved, roundTrip(saved))
             }
         }
+    }
+
+    /** PP-116: a preset saved before the late entry cutoff loads with none; a negative one is unreadable. */
+    @Test
+    fun `a preset from before the late entry cutoff loads with no cutoff`() {
+        val older = mutated { getJSONObject("money").remove("lateEntryUntil") }
+        val loaded = requireNotNull(PresetCodec.decode(older))
+        assertEquals(0, loaded.setup.lateEntryUntilLevel)
+        assertEquals(everyField.setup.copy(lateEntryUntilLevel = 0), loaded.setup)
+        assertNull(PresetCodec.decode(mutated { getJSONObject("money").put("lateEntryUntil", -1) }))
     }
 
     @Test

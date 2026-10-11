@@ -23,6 +23,7 @@ import com.huntercoles.pokerpayout.bank.presentation.BankRowModel
 import com.huntercoles.pokerpayout.bank.presentation.BankScenes
 import com.huntercoles.pokerpayout.bank.presentation.BankScenes.DANA
 import com.huntercoles.pokerpayout.bank.presentation.BankScenes.JO
+import com.huntercoles.pokerpayout.bank.presentation.BankScenes.RITA
 import com.huntercoles.pokerpayout.bank.presentation.BankScenes.THEO
 import com.huntercoles.pokerpayout.bank.presentation.BankSheet
 import com.huntercoles.pokerpayout.bank.presentation.BankTestKit
@@ -304,6 +305,40 @@ class QuickKnockoutTest {
         viewModel.acceptIntent(BankIntent.Undo)
         kit.settle()
         assertEquals(before.copy(prefs = emptyMap()), kit.recorded(viewModel, null).copy(prefs = emptyMap()))
+    }
+
+    /**
+     * PP-116: with late entry open, "Who's out?" offers Re-entry; "Who's back in?" lists Rita and
+     * Ben, who are out, and a pick records the Bank's own re-entry and brings the clock back.
+     */
+    @Test
+    fun aReEntryFromTheClockIsTheBanksReEntry() {
+        val fromBank = run {
+            val viewModel = BankScenes.midGame(kit)
+            viewModel.acceptIntent(BankIntent.ReEnter(RITA))
+            val message = kit.snackbarMessage()
+            kit.settle()
+            kit.recorded(viewModel, message)
+        }
+        kit.clear()
+        kit = BankTestKit(dispatcher)
+
+        val viewModel = BankScenes.midGame(kit)
+        showPanel(viewModel)
+        tap("Re-entry", scroll = false)
+        compose.onNodeWithText("Who's back in?").assertIsDisplayed()
+        compose.onNodeWithText("Ben").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Rita").assert(
+            SemanticsMatcher("re-enters Rita") { it.config[SemanticsActions.OnClick].label == "Re-enter Rita" },
+        )
+        tap("Rita")
+        val message = kit.snackbarMessage()
+        kit.settle()
+        sync()
+        assertTrue("the panel closes once the re-entry is recorded", !open && closings == 1)
+        assertEquals("Rita re-enters · \$50 paid", message)
+        assertEquals(fromBank, kit.recorded(viewModel, message))
+        assertEquals(RITA, viewModel.uiState.value.players.last().reEntryOf)
     }
 
     @Test

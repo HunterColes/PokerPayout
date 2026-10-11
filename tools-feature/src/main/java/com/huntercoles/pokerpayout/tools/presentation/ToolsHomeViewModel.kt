@@ -7,6 +7,7 @@ import com.huntercoles.pokerpayout.core.audio.music.MusicPlayer
 import com.huntercoles.pokerpayout.core.audio.packs.CueEvent
 import com.huntercoles.pokerpayout.core.audio.packs.SoundPacks
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
+import com.huntercoles.pokerpayout.core.utils.AppCurrency
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +36,8 @@ data class ToolsHomeUiState(
     /** The cue sound pack's id ([SoundPacks]). */
     val soundPack: String = SoundPacks.default.id,
     val music: MusicSummary = MusicSummary(),
+    /** The currency amounts show in (PP-114), for the Currency row; the route reads it from MoneyFormat. */
+    val currency: AppCurrency = AppCurrency.DEFAULT,
 )
 
 /** The music, in a line: how many songs, and the one playing. */

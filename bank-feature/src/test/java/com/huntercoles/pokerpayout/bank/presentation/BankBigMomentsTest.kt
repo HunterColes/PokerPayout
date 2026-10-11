@@ -75,10 +75,14 @@ class BankBigMomentsTest {
         Dispatchers.resetMain()
     }
 
-    /** Nine players ([BankScenes.NAMES]) at $40, a $5 bounty in [mode], three places paid. */
+    /**
+     * Nine players ([BankScenes.NAMES]) at $40, a $5 bounty in [mode], three places paid; the clock
+     * at level 1 as the Bank sees it, so late entries and re-entries are open.
+     */
     private fun night(mode: BountyMode = BountyMode.STANDARD, players: Int = 9): BankViewModel = with(kit) {
         configure(players = players, buyIn = 40.0, bounty = 5.0, rebuy = 40.0, weights = listOf(50, 30, 20))
         tournamentPreferences.setBountyMode(mode)
+        clock.at(level = 1)
         val bank = newViewModel()
         BankScenes.NAMES.take(players).forEachIndexed { index, name -> bank.send(BankIntent.PlayerNameChanged(index + 1, name)) }
         bank
@@ -207,6 +211,61 @@ class BankBigMomentsTest {
         verify(exactly = 1) { sound.playSound(R.raw.blind_level_up) }
     }
 
+    /**
+     * PP-116 meets PP-111: a re-entry is a new entry, and nobody who was out comes back, so it
+     * neither takes a moment back nor brings it again: after the bubble, Jo re-enters (five left),
+     * and the next knockout (four again) shows no second bubble; the knockout after that brings the
+     * money. Undo of the re-entry changes nothing; an Undo of a knockout still takes back what it
+     * brought, and only that.
+     */
+    @Test
+    fun aReEntryAfterTheBubbleNeitherTakesItBackNorBringsItAgain() = with(kit) {
+        val bank = night()
+        val clock = clock()
+        listOf(9, 8, 7, 6, 5).forEach { bank.out(it) }
+        val bubble = clock.state.moment!!
+        assertEquals(BigMoment.BUBBLE, bubble.moment)
+
+        bank.send(BankIntent.ReEnter(BankScenes.JO))
+        assertEquals("Jo's new entry plays on", 5, clock.state.table.playersLeft)
+        assertEquals("the bubble's banner stays", bubble, clock.state.moment)
+        // Ten entries now, five left: two tables' worth, so the final table is noted, not shown
+        assertEquals(setOf("BUBBLE", "FINAL_TABLE"), marked().keys)
+
+        bank.out(4) // four left again, of ten entries
+        assertEquals("no second bubble", bubble, clock.state.moment)
+        bank.out(3) // three left: the money
+        val money = clock.state.moment!!
+        assertEquals(BigMoment.IN_THE_MONEY, money.moment)
+
+        bank.send(BankIntent.Undo) // Priya back in: the money goes, the bubble stays
+        assertNull(clock.state.moment)
+        assertEquals(setOf("BUBBLE", "FINAL_TABLE"), marked().keys)
+        bank.send(BankIntent.Undo) // Theo back in: five left, but the bubble came before the re-entry
+        assertEquals(setOf("BUBBLE", "FINAL_TABLE"), marked().keys)
+        bank.send(BankIntent.Undo) // the re-entry taken back: four left of nine, still the bubble
+        assertEquals(4, clock.state.table.playersLeft)
+        assertTrue("BUBBLE" in marked().keys)
+        bank.send(BankIntent.Undo) // Jo's knockout taken back: now the bubble goes
+        assertEquals(emptySet<String>(), marked().keys)
+        verify(exactly = 0) { sound.playSound(R.raw.blind_level_up) }
+    }
+
+    /** The same for the final table, with a late arrival: twelve players at tables of nine. */
+    @Test
+    fun aLateArrivalAfterTheFinalTableNeitherTakesItBackNorBringsItAgain() = with(kit) {
+        val bank = night(players = 12)
+        val clock = clock()
+        listOf(12, 11, 10).forEach { bank.out(it) }
+        val finalTable = clock.state.moment!!
+        assertEquals(BigMoment.FINAL_TABLE, finalTable.moment)
+        bank.send(BankIntent.AddLateEntry("Kai"))
+        assertEquals(10, clock.state.table.playersLeft)
+        assertEquals(finalTable, clock.state.moment)
+        bank.out(9) // nine left again
+        assertEquals("no second final table", finalTable, clock.state.moment)
+    }
+
     /** One thing done at the Bank or the Tournament tab ([kind]), or the process dying. */
     private data class Step(val kind: Int, val who: Int, val by: Int)
 
@@ -214,9 +273,11 @@ class BankBigMomentsTest {
 
     /**
      * Random nights at the Bank in every bounty type, with knockouts (credited or not), Bring back,
-     * Undo, rebuys, a late arrival and process death at random points. After every step the clock
-     * shows a new moment only when a knockout brought one, and then the biggest it brought; what it
-     * shows the field still has; and after a restart it shows nothing until the next knockout.
+     * Undo, rebuys, late entries, re-entries and process death at random points. After every step the
+     * clock shows a new moment only when someone more is out, and then the biggest one that brought
+     * of those not marked yet; what it shows is marked; with nobody back in, nothing marked goes, and
+     * with someone back in, only what was marked with more out; after a restart nothing shows until
+     * the next knockout.
      */
     @Test
     fun aMomentComesOnlyWithTheKnockoutThatBringsIt() {
@@ -231,7 +292,7 @@ class BankBigMomentsTest {
             var clock = clock()
             night.steps.forEachIndexed { index, step ->
                 val before = clock.state
-                val reachedBefore = reached(before)
+                val markedBefore = marked()
                 val knockout = perform(bank, step)
                 if (step.kind == DIE) {
                     restart().let { (newBank, newClock) -> bank = newBank; clock = newClock }
@@ -239,7 +300,8 @@ class BankBigMomentsTest {
                     return@forEachIndexed
                 }
                 val after = clock.state
-                val brought = reached(after) - reachedBefore
+                val markedAfter = marked()
+                val brought = reached(after).filterTo(mutableSetOf()) { it.name !in markedBefore.keys }
                 val shown = after.moment?.takeIf { it.id != before.moment?.id }?.moment
                     ?: BigMoment.CHAMPION.takeIf { after.winnerOpen && !before.winnerOpen }
                 // A knockout, or an Undo that puts one back (of a Bring back): someone more is out
@@ -250,7 +312,12 @@ class BankBigMomentsTest {
                 }
                 expect(!knockout || wentOut || shown == null) { "step $index: a knockout that changed nothing showed $shown" }
                 val still = after.moment?.moment
-                expect(still == null || still in reached(after)) { "step $index: $still isn't reached" }
+                expect(still == null || still.name in markedAfter.keys) { "step $index: $still isn't marked" }
+                val keep = if (out(after) < out(before)) markedBefore.filterValues { it <= out(after) } else markedBefore
+                expect(markedAfter.entries.containsAll(keep.entries)) {
+                    "step $index ($step): $markedBefore became $markedAfter"
+                }
+                expect(out(after) >= out(before) || markedAfter == keep) { "step $index ($step): kept $markedAfter, not $keep" }
                 expect(!after.winnerOpen || after.table.championName != null) { "step $index: a champion's screen, no champion" }
                 if (shown != null) moments++
             }
@@ -260,6 +327,9 @@ class BankBigMomentsTest {
     }
 
     private fun out(state: TimerUiState): Int = state.table.playerCount - state.table.playersLeft
+
+    /** What the clock has marked, as it saved it. */
+    private fun marked(): Map<String, Int> = kit.timerPreferences.getBigMomentsMarked().orEmpty()
 
     private fun reached(state: TimerUiState): Set<BigMoment> = with(state.table) {
         BigMoments.reached(Field(playerCount, playersLeft, paidPlaces, NINE_SEATS))
@@ -275,10 +345,8 @@ class BankBigMomentsTest {
             KNOCKOUTS + 1 -> bank.send(BankIntent.BringBack(id))
             KNOCKOUTS + 2 -> bank.send(BankIntent.Undo)
             KNOCKOUTS + 3 -> bank.send(BankIntent.AddPurchase(id, Purchase.REBUY))
-            KNOCKOUTS + 4 -> {
-                tournamentPreferences.setPlayerCount(ids.size + 1) // a late arrival
-                settle()
-            }
+            KNOCKOUTS + 4 -> bank.send(BankIntent.AddLateEntry(""))
+            KNOCKOUTS + 5 -> bank.send(BankIntent.ReEnter(id))
             else -> Unit // DIE: the caller restarts
         }
         step.kind in 0..KNOCKOUTS
@@ -300,7 +368,7 @@ class BankBigMomentsTest {
     private companion object {
         const val NINE_SEATS = 9
         const val KNOCKOUTS = 5
-        const val DIE = KNOCKOUTS + 5
+        const val DIE = KNOCKOUTS + 6
         const val MOMENTS_AT_LEAST = 20
 
         val steps = Arb.bind(Arb.int(0..DIE), Arb.int(0..30), Arb.int(0..30), ::Step)

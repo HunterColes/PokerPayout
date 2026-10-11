@@ -8,7 +8,8 @@ import java.util.Locale
 /**
  * Money is a whole number of cents in a [Long]. That is exact for any amount a home game sees, and
  * sums can't drift the way `Double` and `Float` sums do. Dollars appear only at the edges: legacy
- * preferences, test fixtures and display.
+ * preferences, test fixtures and display. "Cents" are a hundredth of whatever currency the host shows
+ * ([AppCurrency], PP-114); the currency changes how amounts look, never what is saved.
  */
 object Money {
     const val CENTS_PER_DOLLAR = 100L
@@ -43,39 +44,47 @@ object Money {
  *
  * The field shows amounts with the device locale's decimal separator ("12,50" in Germany), so the
  * key the keyboard offers matches what is on screen.
+ *
+ * In a currency whose cents nobody uses (the yen, PP-114) the field takes whole numbers only and shows
+ * a saved amount rounded half up, as the rest of the app does; the amount saved keeps its cents until
+ * the host types a new one. [decimals] is the currency's: 2, or 0 for whole units.
  */
 object MoneyInput {
-    /** At most $999,999,999.99. */
+    /** At most 999,999,999.99. */
     const val MAX_WHOLE_DIGITS = 9
     private const val MAX_FRACTION_DIGITS = 2
 
     /** True if [text] may stand in the field while the user types; "" and "12," are fine. */
-    fun isAcceptable(text: String): Boolean {
+    fun isAcceptable(text: String, decimals: Int = MoneyFormat.current.decimals): Boolean {
         val separatorCount = text.count { it.isSeparator() }
-        val wellFormed = separatorCount <= 1 && text.all { it in '0'..'9' || it.isSeparator() }
+        val maxSeparators = if (decimals > 0) 1 else 0
+        val wellFormed = separatorCount <= maxSeparators && text.all { it in '0'..'9' || it.isSeparator() }
         val whole = text.takeWhile { !it.isSeparator() }
         val fraction = text.dropWhile { !it.isSeparator() }.drop(1)
-        return wellFormed && whole.length <= MAX_WHOLE_DIGITS && fraction.length <= MAX_FRACTION_DIGITS
+        return wellFormed && whole.length <= MAX_WHOLE_DIGITS && fraction.length <= decimals.coerceAtMost(MAX_FRACTION_DIGITS)
     }
 
     /** The amount in [text], in cents; null when there is no amount yet ("", ","). */
-    fun parseCents(text: String): Long? {
+    fun parseCents(text: String, decimals: Int = MoneyFormat.current.decimals): Long? {
         val trimmed = text.trim()
         val hasDigits = trimmed.any { it in '0'..'9' }
-        if (!hasDigits || !isAcceptable(trimmed)) return null
+        if (!hasDigits || !isAcceptable(trimmed, decimals)) return null
         val whole = trimmed.takeWhile { !it.isSeparator() }.ifEmpty { "0" }
         val fraction = trimmed.dropWhile { !it.isSeparator() }.drop(1).padEnd(MAX_FRACTION_DIGITS, '0')
         return whole.toLong() * Money.CENTS_PER_DOLLAR + fraction.toLong()
     }
 
-    /** How the field shows [cents]: "25" for whole amounts, else "12.50" or "12,50" by locale. */
-    fun format(cents: Long, locale: Locale = Locale.getDefault()): String {
+    /**
+     * How the field shows [cents]: "25" for whole amounts, else "12.50" or "12,50" by locale. With
+     * [decimals] 0, whole units rounded half up: 1250 is "13".
+     */
+    fun format(cents: Long, locale: Locale = Locale.getDefault(), decimals: Int = MoneyFormat.current.decimals): String {
         val whole = cents / Money.CENTS_PER_DOLLAR
         val fraction = cents % Money.CENTS_PER_DOLLAR
-        return if (fraction == 0L) {
-            whole.toString()
-        } else {
-            "$whole${decimalSeparator(locale)}${fraction.toString().padStart(MAX_FRACTION_DIGITS, '0')}"
+        return when {
+            decimals == 0 -> (if (fraction * 2 >= Money.CENTS_PER_DOLLAR) whole + 1 else whole).toString()
+            fraction == 0L -> whole.toString()
+            else -> "$whole${decimalSeparator(locale)}${fraction.toString().padStart(MAX_FRACTION_DIGITS, '0')}"
         }
     }
 

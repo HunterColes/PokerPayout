@@ -83,4 +83,26 @@
     <string name="history_share_pool">Prize pool %1$s · %2$s</string>
     <string name="history_share_row">%1$s %2$s</string>
     <string name="history_share_row_won">%1$s %2$s: %3$s</string>
+
+    <!-- One person under two names (S26b, PP-110): merged so the season adds up, with Undo -->
+    <string name="history_merge_hint">Same person under two names? Tap one to merge them.</string>
+    <string name="history_open_player">Open %1$s</string>
+    <string name="history_also_counted">Also counted as %1$s</string>
+    <string name="history_also_heading">Their other names</string>
+    <string name="history_separate">Separate</string>
+    <string name="history_separate_name">Separate %1$s</string>
+    <string name="history_same_heading">Same person as…</string>
+    <string name="history_same_note">Pick their other name. Nights, points and wins then add up under one name.</string>
+    <string name="history_same_none">Nobody else could be them yet.</string>
+    <plurals name="history_same_left_out">
+        <item quantity="one">Not listed: %1$d player who played a night with %2$s.</item>
+        <item quantity="other">Not listed: %1$d players who played a night with %2$s.</item>
+    </plurals>
+    <string name="history_no_night_yet">No saved night yet</string>
+    <string name="history_keep_question">%1$s and %2$s are one person. Which name do you keep?</string>
+    <string name="history_keep">Keep %1$s</string>
+    <string name="history_back">Back</string>
+    <string name="history_close">Close</string>
+    <string name="history_merged">%1$s now counts as %2$s</string>
+    <string name="history_separated">%1$s counts on their own again</string>
 </resources>

@@ -21,6 +21,9 @@ import javax.inject.Inject
  *   still ends with exactly one player.
  * - Rebuys and add-ons count at the price each was bought at (PP-085), in the pool and in what each
  *   player paid, so changing the rebuy amount mid-game doesn't re-value earlier rebuys.
+ * - Every [BankPlayer] is one entry (PP-116): a late entry or a re-entry is a player of its own, with
+ *   its own place, bounty and entry, at the price it was bought at. So the field, the places paid
+ *   and the pools all count entries.
  */
 class SettleTournamentUseCase @Inject constructor(
     private val calculatePayouts: CalculatePayoutsUseCase
@@ -38,7 +41,8 @@ class SettleTournamentUseCase @Inject constructor(
             money = money,
             playerCount = players.size,
             rebuyCents = players.sumOf { it.rebuyCostCents(money) },
-            addOnCents = players.sumOf { it.addOnCostCents(money) }
+            addOnCents = players.sumOf { it.addOnCostCents(money) },
+            recordedEntries = players.mapNotNull { it.entryPrice }
         )
         val table = calculatePayouts(pool.prizePoolCents, weights, players.size, rounding)
         val champion = standings.championId
@@ -57,7 +61,7 @@ class SettleTournamentUseCase @Inject constructor(
                 knockoutBountyCents = bounties.knockoutCents[player.id] ?: 0L,
                 kingsBountyCents = if (isChampion) bounties.championCents else 0L,
                 unclaimedBountyCents = if (isChampion) bounties.unclaimedCents else 0L,
-                costCents = money.entryCents + rebuyCost + addOnCost,
+                costCents = player.entry(money).totalCents + rebuyCost + addOnCost,
                 paidOut = player.paidOut,
                 rebuyCostCents = rebuyCost,
                 addOnCostCents = addOnCost,
@@ -65,7 +69,7 @@ class SettleTournamentUseCase @Inject constructor(
             )
         }
 
-        val entriesPaid = players.count { it.boughtIn } * money.entryCents
+        val entriesPaid = players.filter { it.boughtIn }.sumOf { it.entry(money).totalCents }
         return Settlement(
             pool = pool,
             payoutTable = table,

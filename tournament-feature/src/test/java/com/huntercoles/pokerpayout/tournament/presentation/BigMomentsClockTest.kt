@@ -237,7 +237,7 @@ class BigMomentsClockTest {
 
         backIn(JO)
         assertNull("the Undo took the bubble back", viewModel.state.moment)
-        assertEquals(setOf<String>(), timerPreferences.getBigMomentsReached())
+        assertEquals(emptyMap<String, Int>(), timerPreferences.getBigMomentsMarked())
 
         knockOut(JO, by = DANA)
         val again = viewModel.state.moment!!
@@ -254,7 +254,7 @@ class BigMomentsClockTest {
         val money = viewModel.state.moment!!
         // Ben back in: four left, on the bubble again, so only the money goes
         backIn(BEN)
-        assertEquals(setOf(BigMoment.BUBBLE.name), timerPreferences.getBigMomentsReached())
+        assertEquals("the bubble, marked with five out", mapOf("BUBBLE" to 5), timerPreferences.getBigMomentsMarked())
         assertNull("in the money no more: its banner goes", viewModel.state.moment)
         knockOut(BEN)
         assertEquals(BigMoment.IN_THE_MONEY, viewModel.state.moment!!.moment)
@@ -349,25 +349,49 @@ class BigMomentsClockTest {
     fun anUpdateMidGameMarksNothingOld() {
         toTheBubble()
         timerPreferences.setHasTimerStarted(true)
-        assertNull("nothing saved before this version", timerPreferences.getBigMomentsReached())
+        assertNull("nothing saved before this version", timerPreferences.getBigMomentsMarked())
         val viewModel = newViewModel()
         assertNull(viewModel.state.moment)
-        assertEquals(setOf(BigMoment.BUBBLE.name), timerPreferences.getBigMomentsReached())
+        assertEquals(mapOf("BUBBLE" to 5), timerPreferences.getBigMomentsMarked())
         knockOut(THEO)
         assertEquals(BigMoment.IN_THE_MONEY, viewModel.state.moment!!.moment)
     }
 
+    /**
+     * A late arrival (or a re-entry: a new entry, as the clock counts) after the bubble: nobody who
+     * was out comes back, so the bubble isn't taken back, and when the field is back at four left
+     * it isn't shown a second time. The money still comes when it is reached.
+     */
     @Test
-    fun aLateArrivalTakesTheBubbleBack() {
+    fun aLateArrivalNeitherTakesBackNorBringsAgainTheBubble() {
         val viewModel = startedClock()
         toTheBubble()
+        val bubble = viewModel.state.moment!!
         tournamentPreferences.setPlayerCount(NAMES.size + 1)
         testDispatcher.scheduler.runCurrent()
         assertEquals(5, viewModel.state.table.playersLeft)
-        // Ten players now: two tables' worth, five left. Nobody went out, so that's no final table.
-        assertNull("the bubble's banner goes, and nothing comes in its place", viewModel.state.moment)
-        knockOut(THEO)
-        assertEquals("the bubble again, with the late arrival in", BigMoment.BUBBLE, viewModel.state.moment!!.moment)
+        assertEquals("the bubble's banner stays", bubble, viewModel.state.moment)
+        viewModel.send(TimerIntent.MomentSeen(bubble.id))
+
+        knockOut(THEO) // four left again, of ten
+        assertNull("no second bubble", viewModel.state.moment)
+        knockOut(PRIYA) // three left: the money
+        assertEquals(BigMoment.IN_THE_MONEY, viewModel.state.moment!!.moment)
+        verify(exactly = 2) { soundManager.playSound(MOMENT_SOUND) }
+    }
+
+    /** A late arrival that moves the field past a line brings no moment by itself: no final table without a knockout. */
+    @Test
+    fun aLateArrivalBringsNoMomentByItself() {
+        val viewModel = startedClock()
+        listOf(BEN, RITA, ALEX, SAM).forEach { knockOut(it) }
+        tournamentPreferences.setPlayerCount(NAMES.size + 1) // ten players at tables of nine, six left
+        testDispatcher.scheduler.runCurrent()
+        assertNull(viewModel.state.moment)
+        knockOut(JO) // five left: nothing new
+        assertNull("no final table: it came without a knockout", viewModel.state.moment)
+        knockOut(THEO) // four left: the bubble
+        assertEquals(BigMoment.BUBBLE, viewModel.state.moment!!.moment)
     }
 
     @Test

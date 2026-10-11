@@ -170,19 +170,19 @@ private fun PaymentRow(transfer: Transfer, line: AnnotatedString, paid: Boolean,
             color = PokerColors.CardWhite,
             softWrap = false,
         )
-        Box(Modifier.size(PokerDimens.MinTouch), contentAlignment = Alignment.Center) { PaidBox(paid) }
+        Box(Modifier.size(PokerDimens.MinTouch), contentAlignment = Alignment.Center) { TickBox(paid) }
     }
 }
 
-/** The tick: a FeltEdge outline, gold with a check once paid. */
+/** The tick: a FeltEdge outline, gold with a check once ticked (paid, or at the table tonight). */
 @Composable
-private fun PaidBox(paid: Boolean) {
+internal fun TickBox(ticked: Boolean) {
     val shape = RoundedCornerShape(6.dp)
     Box(
         modifier = Modifier
             .size(22.dp)
             .then(
-                if (paid) {
+                if (ticked) {
                     Modifier.background(PokerColors.PokerGold, shape)
                 } else {
                     Modifier.border(2.dp, PokerColors.FeltEdge, shape)
@@ -190,7 +190,9 @@ private fun PaidBox(paid: Boolean) {
             ),
         contentAlignment = Alignment.Center,
     ) {
-        if (paid) Icon(PokerIcons.Check, contentDescription = null, tint = PokerColors.FeltDeep, modifier = Modifier.size(18.dp))
+        if (ticked) {
+            Icon(PokerIcons.Check, contentDescription = null, tint = PokerColors.FeltDeep, modifier = Modifier.size(18.dp))
+        }
     }
 }
 

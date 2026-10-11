@@ -15,6 +15,7 @@ import com.huntercoles.pokerpayout.core.audio.music.MusicTrack
 import com.huntercoles.pokerpayout.core.audio.music.Playlist
 import com.huntercoles.pokerpayout.core.audio.music.RepeatMode
 import com.huntercoles.pokerpayout.core.preferences.MusicPreferences
+import com.huntercoles.pokerpayout.core.preferences.PhonePrefs
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -54,7 +55,9 @@ class MusicViewModelTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         val context: Context = ApplicationProvider.getApplicationContext()
-        context.getSharedPreferences(MusicPreferences.FILE, Context.MODE_PRIVATE).edit().clear().commit()
+        listOf(MusicPreferences.FILE, PhonePrefs.FILE).forEach {
+            context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
+        }
         preferences = MusicPreferences(context)
     }
 

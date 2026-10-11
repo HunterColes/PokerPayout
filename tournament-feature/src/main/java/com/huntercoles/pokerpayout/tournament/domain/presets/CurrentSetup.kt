@@ -25,6 +25,9 @@ class CurrentSetup @Inject constructor(
 ) {
     fun canLoad(): Boolean = !timerPreferences.getHasTimerStarted()
 
+    /** Every [Starter], fitted to tonight ([starter]), in the order the presets sheet lists them. */
+    fun starters(): List<StarterSetup> = Starter.entries.map { StarterSetup(it, starter(it)) }
+
     /** The chip set from Tools, as it is now. */
     fun chipSet(): ChipSetSettings = chipPreferences.current()
 
@@ -53,7 +56,17 @@ class CurrentSetup @Inject constructor(
             ),
             payouts = PresetPayouts.of(tournament.getPayoutSettings(), tournament.getPlayerCount()),
             chipSet = if (includeChipSet) chipPreferences.current() else null,
+            lateEntryUntilLevel = tournament.getLateEntryUntilLevel(),
         )
+    }
+
+    /**
+     * [starter] fitted to tonight (PP-113): the smallest chip in setup now (the one the clock plays,
+     * once it has started), the food the host charges, and tonight's players.
+     */
+    fun starter(starter: Starter): PresetSetup {
+        val now = capture(includeChipSet = false)
+        return starter.setupFor(now.blinds.smallestChip, now.money.foodCents, tournamentPreferences.getPlayerCount())
     }
 
     /**
@@ -90,6 +103,7 @@ class CurrentSetup @Inject constructor(
             setRebuyCents(money.rebuyCents)
             setAddOnCents(money.addOnCents)
             setRebuyUntilLevel(target.rebuyUntilLevel)
+            setLateEntryUntilLevel(target.lateEntryUntilLevel)
             setPayoutSettings(target.payouts.settingsFor(getPlayerCount()))
             setGameDurationHours(blinds.durationMinutes / MINUTES_PER_HOUR)
             setRoundLengthMinutes(blinds.roundLengthMinutes)

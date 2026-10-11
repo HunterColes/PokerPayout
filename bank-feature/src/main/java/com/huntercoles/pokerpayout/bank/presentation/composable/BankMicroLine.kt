@@ -31,7 +31,8 @@ import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 
 /**
- * The line under a name, as one text with small icons in it: knockouts (☠ 2), who knocked the
+ * The line under a name, as one text with small icons in it: a re-entry's number ("Entry 2",
+ * PP-116), knockouts (☠ 2), who knocked the
  * player out and when ("by Marcus · L5"), "1st · champion", and on a small phone the counts of
  * columns that closed and moved here (↻ 1 · + 1). One line, ending in "…" if it must; above a 1.3
  * font scale it may wrap to a second.
@@ -79,6 +80,10 @@ internal fun MicroLine(row: BankRowModel, layout: BankLayout) {
 
 private const val MICRO_WRAPS_ABOVE = 1.3f
 
+/** Whether [row] has a line under its name; [BankRow] leaves room above the name for one. */
+@Composable
+internal fun hasMicroLine(row: BankRowModel, layout: BankLayout): Boolean = microParts(row, layout).isNotEmpty()
+
 /** One piece of the micro line: words, an optional icon before them, and what TalkBack says instead. */
 private class MicroPart(val text: String, val icon: MicroIcon? = null, val spoken: String? = null)
 
@@ -91,7 +96,13 @@ private enum class MicroIcon(val vector: ImageVector, val tint: Color?) {
 
 @Composable
 private fun microParts(row: BankRowModel, layout: BankLayout): List<MicroPart> =
-    placeParts(row, layout) + listOfNotNull(bountyPart(row, layout), knockoutPart(row, layout)) + collapsedParts(row, layout)
+    listOfNotNull(entryPart(row)) + placeParts(row, layout) +
+        listOfNotNull(bountyPart(row, layout), knockoutPart(row, layout)) + collapsedParts(row, layout)
+
+/** A re-entry (PP-116): which of the player's entries this row is ("Entry 2"). */
+@Composable
+private fun entryPart(row: BankRowModel): MicroPart? =
+    row.entryNumber?.let { MicroPart(stringResource(R.string.bank_micro_entry, it)) }
 
 /** Progressive bounties (PP-035): the bounty on the player's head ($7.50), growing with each knockout. */
 @Composable

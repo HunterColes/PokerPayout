@@ -65,12 +65,16 @@ internal object SetupFieldStyle {
     val Shape = RoundedCornerShape(PokerDimens.CornerControl)
 }
 
-/** What goes around a setup field's text: the label, then the box with an optional prefix and suffix. */
+/**
+ * What goes around a setup field's text: the label, then the box with an optional prefix and suffix.
+ * [symbolAfter] is a money symbol written after the amount ("€", PP-114), as large as a prefix.
+ */
 internal class FieldDecor(
     val label: String,
     val prefix: String? = null,
     val suffix: String? = null,
     val placeholder: String? = null,
+    val symbolAfter: String? = null,
 )
 
 @Composable
@@ -97,6 +101,7 @@ internal fun SetupFieldDecoration(decor: FieldDecor, focused: Boolean, isEmpty: 
                 }
                 inner()
             }
+            decor.symbolAfter?.let { Text(it, style = SetupFieldStyle.Prefix) }
             decor.suffix?.let { Text(it, style = SetupFieldStyle.Suffix) }
         }
     }

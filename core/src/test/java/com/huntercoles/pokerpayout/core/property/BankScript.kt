@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout.core.property
 
 import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
+import com.huntercoles.pokerpayout.core.domain.model.EntryPrice
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
@@ -31,6 +32,11 @@ internal data class NightScript(
     val steps: List<Step>,
     /** Players may join late and no-shows may leave before the first knockout. */
     val lateRegistration: Boolean,
+    /**
+     * PP-116: late entries and re-entries through the Bank, each at a price of its own (a step that
+     * would join late with [lateRegistration] makes one of these instead).
+     */
+    val entries: Boolean = false,
 )
 
 /**
@@ -40,7 +46,9 @@ internal data class NightScript(
  * Knockouts are credited to someone still in, to nobody, to someone already out (recorded late), or,
  * as stale saved data can, to the knocked-out player themself or to an id nobody has. A credited
  * mystery knockout draws one of the envelopes left, as the Bank does. A player joining late gets the
- * next id; a no-show leaving removes the highest id, as the player count's stepper does.
+ * next id; a no-show leaving removes the highest id, as the player count's stepper does. With
+ * [NightScript.entries] (PP-116) a late entry or a re-entry gets the next id instead, at an entry
+ * price of its own, a re-entry naming its player's first entry.
  */
 internal class BankNight(val script: NightScript) {
     private val settle = SettleTournamentUseCase(CalculatePayoutsUseCase())
@@ -88,9 +96,12 @@ internal class BankNight(val script: NightScript) {
             6 -> if (order.isNotEmpty()) bringBack(order[step.who.mod(order.size)])
             7 -> purchase(step) { player, prices -> player.copy(rebuyPricesCents = prices) }
             8 -> purchase(step) { player, prices -> player.copy(addOnPricesCents = prices) }
-            9 -> if (script.lateRegistration) {
-                val id = players.lastKey() + 1
-                players[id] = BankPlayer(id, boughtIn = true)
+            9 -> when {
+                script.entries -> if (step.pick % 2 == 0) lateEntry(step) else reEnter(step)
+                script.lateRegistration -> {
+                    val id = players.lastKey() + 1
+                    players[id] = BankPlayer(id, boughtIn = true)
+                }
             }
             else -> if (script.lateRegistration && order.isEmpty() && players.size > 2) players.remove(players.lastKey())
         }
@@ -121,6 +132,35 @@ internal class BankNight(val script: NightScript) {
     private fun bringBack(id: Int) {
         order.remove(id)
         players[id] = players.getValue(id).copy(eliminatedBy = null, bountyDrawCents = null)
+    }
+
+    /** PP-116: a player arriving late, at an entry price of its own (paid now, or not yet). */
+    private fun lateEntry(step: Step) {
+        val id = players.lastKey() + 1
+        players[id] = BankPlayer(id, boughtIn = step.credit % 3 != 0, entryPrice = entryPrice(step))
+    }
+
+    /** PP-116: a player whose every entry is out buys back in as a new entry; nothing if nobody can. */
+    private fun reEnter(step: Step) {
+        val person = BankPlayer.people(players.values.toList())
+        val canReEnter = players.values.groupBy { person.getValue(it.id) }
+            .filterValues { entries -> entries.all { it.id in order } }
+            .keys.toList()
+        if (canReEnter.isEmpty()) return
+        val id = players.lastKey() + 1
+        val first = canReEnter[step.who.mod(canReEnter.size)]
+        players[id] = BankPlayer(id, boughtIn = step.credit % 3 != 0, entryPrice = entryPrice(step), reEntryOf = first)
+    }
+
+    /** Today's entry, or one at other amounts (the amounts changed since). */
+    private fun entryPrice(step: Step): EntryPrice = if (step.credit % 2 == 0) {
+        EntryPrice.of(money)
+    } else {
+        EntryPrice(
+            buyInCents = PRICES[step.who.mod(PRICES.size)],
+            foodCents = PRICES[step.credit.mod(PRICES.size)],
+            bountyCents = PRICES[(step.who + step.pick).mod(PRICES.size)],
+        )
     }
 
     private fun purchase(step: Step, record: (BankPlayer, List<Long>) -> BankPlayer) {
@@ -159,12 +199,14 @@ internal class BankNight(val script: NightScript) {
 
         val steps = Arb.bind(Arb.int(0..10), Arb.int(0..30), Arb.int(0..30), Arb.int(0..30), ::Step)
 
-        fun scripts(maxSteps: Int = 40, lateRegistration: Boolean = false) = Arb.bind(
+        fun scripts(maxSteps: Int = 40, lateRegistration: Boolean = false, entries: Boolean = false) = Arb.bind(
             Arb.int(2..14),
             settings,
             structures,
             Arb.element(PayoutRounding.entries),
             Arb.list(steps, 0..maxSteps),
-        ) { players, money, weights, rounding, steps -> NightScript(players, money, weights, rounding, steps, lateRegistration) }
+        ) { players, money, weights, rounding, steps ->
+            NightScript(players, money, weights, rounding, steps, lateRegistration, entries)
+        }
     }
 }

@@ -51,6 +51,7 @@ import com.huntercoles.pokerpayout.core.domain.history.NightCsv
 import com.huntercoles.pokerpayout.core.domain.history.SavedNight
 import com.huntercoles.pokerpayout.core.domain.history.Standing
 import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
+import com.huntercoles.pokerpayout.core.domain.players.PlayerNames
 import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 import com.huntercoles.pokerpayout.tools.R
 import com.huntercoles.pokerpayout.tools.presentation.HistoryIntent
@@ -116,7 +117,8 @@ internal fun rememberHistoryText(): HistoryText {
 /**
  * History (S16, PP-037), stateless: the season's points standings with a year picker and its player
  * of the year, then the saved nights, the latest first, and the CSV (a file, or shared). A night opens in full
- * ([NightContent]). With nothing saved yet it says how to save a night.
+ * ([NightContent]). With nothing saved yet it says how to save a night. A player tapped in the
+ * standings opens in a sheet, to merge two names of one person or separate them ([PlayerSheet], PP-110).
  */
 @Suppress("LongParameterList") // a screen: its state, its intents, its three ways out, and a modifier
 @Composable
@@ -139,6 +141,8 @@ fun HistoryContent(
         )
     } else {
         NightsList(state, onIntent, onBack, onExport, modifier)
+        // A player from the standings: their names, to merge or separate (S26b, PP-110)
+        state.player?.let { PlayerSheet(it, onIntent) }
     }
 }
 
@@ -243,21 +247,35 @@ private fun SeasonSection(state: HistoryUiState, text: HistoryText, onIntent: (H
     HistoryCard {
         state.standings.forEachIndexed { index, standing ->
             if (index > 0) HorizontalDivider(color = PokerColors.FeltLine)
-            StandingRow(standing, text)
+            StandingRow(standing, text) { onIntent(HistoryIntent.OpenPlayer(standing.name)) }
         }
     }
     Text(stringResource(R.string.history_points_rule), style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
+    Text(stringResource(R.string.history_merge_hint), style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
 }
 
-/** "1st  Dana / 3 nights · 2 wins  18"; TalkBack reads it as one: "1st, Dana, 18 points, 3 nights · 2 wins". */
+/**
+ * "1st  Dana / 3 nights · 2 wins  18"; TalkBack reads it as one: "1st, Dana, 18 points, 3 nights · 2
+ * wins". A tap opens the player, to merge two of their names (PP-110); a seat nobody named ("Player
+ * 3") is nobody's, so it doesn't open.
+ */
 @Composable
-private fun StandingRow(standing: Standing, text: HistoryText) {
+private fun StandingRow(standing: Standing, text: HistoryText, onOpen: () -> Unit) {
     val top = standing.rank == 1
     val spoken = listOf(ordinalOf(standing.rank), standing.name, text.points(standing.points), text.record(standing))
         .joinToString(", ")
+    val open = stringResource(R.string.history_open_player, standing.name)
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = PokerDimens.MinTouch)
+            .then(
+                if (PlayerNames.isPlaceholder(standing.name)) {
+                    Modifier
+                } else {
+                    Modifier.clickable(onClickLabel = open, role = Role.Button, onClick = onOpen)
+                },
+            )
             .padding(vertical = 6.dp)
             .semantics(mergeDescendants = true) { contentDescription = spoken },
         verticalAlignment = Alignment.CenterVertically,

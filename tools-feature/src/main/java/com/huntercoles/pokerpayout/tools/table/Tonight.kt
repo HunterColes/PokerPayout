@@ -1,9 +1,7 @@
 package com.huntercoles.pokerpayout.tools.table
 
-import com.huntercoles.pokerpayout.core.domain.model.BankPlayer
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
-import com.huntercoles.pokerpayout.core.preferences.PlayerNamesProvider
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import javax.inject.Inject
 
@@ -29,31 +27,20 @@ fun interface TonightSource {
 
 /**
  * Tonight from the Bank and the Tournament settings, settled the way the Payouts tab settles it
- * (the same pool, structure and rounding), so the prizes match that tab to the cent. A player is
- * left until the Bank records them out.
+ * (the same pool, structure and rounding, late entries and re-entries included, PP-116), so the
+ * prizes match that tab to the cent. An entry is left until the Bank records it out; a player who
+ * re-entered is left on their new entry only.
  */
 class BankTonight @Inject constructor(
     private val tournament: TournamentPreferences,
     private val bank: BankPreferences,
     private val settle: SettleTournamentUseCase,
-    private val names: PlayerNamesProvider,
 ) : TonightSource {
     override fun tonight(): Tonight {
         val config = tournament.getCurrentTournamentConfig()
         val ids = (1..config.numPlayers).toList()
-        val players = ids.map { id ->
-            BankPlayer(
-                id = id,
-                boughtIn = bank.getPlayerBuyInStatus(id),
-                paidOut = bank.getPlayerPayedOutStatus(id),
-                eliminatedBy = bank.getPlayerEliminatedBy(id),
-                rebuyPricesCents = bank.getPlayerRebuyPrices(id),
-                addOnPricesCents = bank.getPlayerAddonPrices(id),
-                bountyDrawCents = bank.getPlayerBountyDraw(id),
-            )
-        }
         val settlement = settle(
-            players = players,
+            players = bank.recordedPlayers(config.numPlayers),
             eliminationOrder = bank.getEliminationOrder(),
             money = config.money,
             weights = config.payoutWeights,
@@ -61,7 +48,7 @@ class BankTonight @Inject constructor(
         )
         val decided = settlement.standings.placeByPlayer.keys
         return Tonight(
-            playersLeft = names.currentNames().filterIndexed { index, _ -> (index + 1) !in decided },
+            playersLeft = ids.filter { it !in decided }.map { id -> bank.getPlayerName(id).trim().ifEmpty { "Player $id" } },
             prizes = ids.map { place -> settlement.payoutTable.amountFor(place) },
         )
     }

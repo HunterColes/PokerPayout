@@ -67,6 +67,7 @@ private object PresetJsonWriter {
         .put(REBUY, setup.money.rebuyCents)
         .put(ADD_ON, setup.money.addOnCents)
         .put(REBUY_UNTIL, setup.rebuyUntilLevel)
+        .put(LATE_ENTRY_UNTIL, setup.lateEntryUntilLevel)
 
     private fun blinds(blinds: PresetBlinds): JSONObject = JSONObject()
         .put(DURATION, blinds.durationMinutes)
@@ -119,6 +120,8 @@ private object PresetJsonReader {
                 blinds = blinds(json.getJSONObject(BLINDS)),
                 payouts = payouts(json.getJSONObject(PAYOUTS)),
                 chipSet = json.optJSONObject(CHIP_SET)?.let { chipSet(it) },
+                // PP-116: a preset saved before the late entry cutoff has none, so no cutoff
+                lateEntryUntilLevel = if (moneyJson.has(LATE_ENTRY_UNTIL)) moneyJson.atLeast(LATE_ENTRY_UNTIL, 0) else 0,
             ),
         )
     }
@@ -203,6 +206,9 @@ private const val BOUNTY = "bounty"
 private const val REBUY = "rebuy"
 private const val ADD_ON = "addOn"
 private const val REBUY_UNTIL = "rebuyUntil"
+
+/** PP-116, added to format 1 (older readers ignore it; older presets lack it and load with no cutoff). */
+private const val LATE_ENTRY_UNTIL = "lateEntryUntil"
 private const val BLINDS = "blinds"
 private const val DURATION = "minutes"
 private const val LEVEL_LENGTH = "levelMinutes"

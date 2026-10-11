@@ -30,7 +30,7 @@ DEST="$REPO_ROOT/metadata/en-US/images/phoneScreenshots"
 
 # The game, in order: the tour's steps (tour.sh --list) and the listing's (steps-listing.sh)
 STEPS=(
-  launch listing-money blinds smallest-chip breaks ready-ticket
+  launch welcome-dismiss listing-money blinds smallest-chip breaks ready-ticket
   listing-bank-names listing-buy-ins listing-start listing-midgame
   listing-shot-clock listing-shot-table-view listing-shot-bank listing-shot-payouts
   listing-finish listing-shot-settle-up listing-settle-close

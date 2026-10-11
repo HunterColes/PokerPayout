@@ -298,4 +298,29 @@
         <item quantity="one">Clear %d player</item>
         <item quantity="other">Clear %d players</item>
     </plurals>
+
+    <!-- Tonight's players, picked from the regulars (S26, PP-110) -->
+    <string name="bank_regulars">Tonight\'s players</string>
+    <string name="bank_regulars_pick">Pick tonight\'s players</string>
+    <plurals name="bank_regulars_seats">
+        <item quantity="one">%1$d of %2$d seat named. Tap a name to seat them, or again to free the seat.</item>
+        <item quantity="other">%1$d of %2$d seats named. Tap a name to seat them, or again to free the seat.</item>
+    </plurals>
+    <plurals name="bank_regulars_full">
+        <item quantity="one">All %d seat named. Picking another adds a seat.</item>
+        <item quantity="other">All %d seats named. Picking another adds a seat.</item>
+    </plurals>
+    <string name="bank_regulars_max">All %d seats named: the most a tournament can have.</string>
+    <string name="bank_regulars_add_label">Add a name</string>
+    <string name="bank_regulars_add">Add</string>
+    <string name="bank_regulars_heading">Regulars</string>
+    <string name="bank_regulars_order">most nights lately first</string>
+    <plurals name="bank_regulars_played">
+        <item quantity="one">%1$d night · last %2$s</item>
+        <item quantity="other">%1$d nights · last %2$s</item>
+    </plurals>
+    <string name="bank_regulars_new">No saved night yet</string>
+    <string name="bank_regulars_empty">No regulars yet. Names you type in the Bank and the players of saved nights show up here.</string>
+    <string name="bank_regulars_no_match">Nobody called “%1$s” yet. Add seats them.</string>
+    <string name="bank_regulars_done">Done</string>
 </resources>

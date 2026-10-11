@@ -25,12 +25,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.components.leaveOnHardwareEnter
+import com.huntercoles.pokerpayout.core.utils.MoneyFormat
 import com.huntercoles.pokerpayout.core.utils.MoneyInput
 import java.util.Locale
 
 /** What a money field shows for [cents]: nothing for 0, so the label reads as a placeholder. */
-private fun moneyFieldText(cents: Long, locale: Locale): String =
-    if (cents == 0L) "" else MoneyInput.format(cents, locale)
+private fun moneyFieldText(cents: Long, locale: Locale, decimals: Int): String =
+    if (cents == 0L) "" else MoneyInput.format(cents, locale, decimals)
 
 /**
  * An amount from a money field: typed ([committed] false) or final ([committed] true, the field was
@@ -48,9 +49,12 @@ internal data class MoneyEntry(val cents: Long, val committed: Boolean, val cent
  * - An empty field sends nothing while typing: clearing a field to retype it is not a command.
  * - Leaving the field (focus loss, Done, tab switch) commits: empty means 0. Then the text shows
  *   the saved amount in the device locale ("12,50" in Germany).
- * - Both '.' and ',' work as the decimal separator, whatever the locale.
+ * - Both '.' and ',' work as the decimal separator, whatever the locale. In a currency without
+ *   cents (the yen, PP-114) only whole numbers go in, and an amount saved with cents shows rounded
+ *   but stays as it is until a new one is typed: leaving the field untouched commits the saved amount.
  *
- * It looks like the other setup fields: [label] above the box ("Buy-in"), a "$" before the amount.
+ * It looks like the other setup fields: [label] above the box ("Buy-in"), the host's money symbol
+ * before the amount ("$") or after it ("€").
  */
 // The branches are the field's text/focus/commit rules listed above, kept together on purpose.
 @Suppress("CyclomaticComplexMethod")
@@ -64,21 +68,25 @@ internal fun MoneyTextField(
 ) {
     val focusManager = LocalFocusManager.current
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
-    var text by remember { mutableStateOf(TextFieldValue(moneyFieldText(valueCents, locale))) }
+    val currency = MoneyFormat.current
+    var text by remember { mutableStateOf(TextFieldValue(moneyFieldText(valueCents, locale, currency.decimals))) }
     var isFocused by remember { mutableStateOf(false) }
     var centsBeforeEdit by remember { mutableLongStateOf(valueCents) }
     val currentOnAmount by rememberUpdatedState(onAmount)
+    val latestValue by rememberUpdatedState(valueCents)
 
     fun send(cents: Long, committed: Boolean) = currentOnAmount(MoneyEntry(cents, committed, centsBeforeEdit))
 
     fun commit() {
         if (text.text.isBlank()) send(0L, committed = false)
-        send(MoneyInput.parseCents(text.text) ?: 0L, committed = true)
+        // Untouched, the field commits what is saved: in yen "13" stands for a saved 12.50, which stays.
+        val untouched = text.text == moneyFieldText(latestValue, locale, currency.decimals)
+        send(if (untouched) latestValue else MoneyInput.parseCents(text.text, currency.decimals) ?: 0L, committed = true)
     }
 
     // Outside changes (reset, an amount the ViewModel kept) show up once the user isn't typing.
-    LaunchedEffect(valueCents, isFocused, locale) {
-        val saved = moneyFieldText(valueCents, locale)
+    LaunchedEffect(valueCents, isFocused, locale, currency) {
+        val saved = moneyFieldText(valueCents, locale, currency.decimals)
         if (!isFocused && text.text != saved) {
             text = TextFieldValue(saved, selection = TextRange(saved.length))
         }
@@ -94,16 +102,19 @@ internal fun MoneyTextField(
     BasicTextField(
         value = text,
         onValueChange = { typed ->
-            if (MoneyInput.isAcceptable(typed.text)) {
+            if (MoneyInput.isAcceptable(typed.text, currency.decimals)) {
                 val textChanged = typed.text != text.text
                 text = typed
-                if (textChanged) MoneyInput.parseCents(typed.text)?.let { send(it, committed = false) }
+                if (textChanged) MoneyInput.parseCents(typed.text, currency.decimals)?.let { send(it, committed = false) }
             }
         },
         enabled = !isLocked,
         singleLine = true,
         textStyle = SetupFieldStyle.Number,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = if (currency.hasCents) KeyboardType.Decimal else KeyboardType.Number,
+            imeAction = ImeAction.Done,
+        ),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
         interactionSource = interactions,
         cursorBrush = SolidColor(PokerColors.PokerGold),
@@ -116,7 +127,7 @@ internal fun MoneyTextField(
             },
         decorationBox = { inner ->
             SetupFieldDecoration(
-                FieldDecor(label, prefix = CURRENCY_PREFIX),
+                FieldDecor(label, prefix = currency.fieldPrefix, symbolAfter = currency.fieldSuffix),
                 focused = focused,
                 isEmpty = text.text.isEmpty(),
                 inner = inner,
@@ -124,9 +135,6 @@ internal fun MoneyTextField(
         },
     )
 }
-
-/** The mockups' money prefix; amounts are typed in the device's own number format. */
-private const val CURRENCY_PREFIX = "$"
 
 /** Sends typed amounts to [onTyped] and committed ones to [onCommitted]. */
 internal fun amountHandler(onTyped: (Long) -> Unit, onCommitted: (MoneyEntry) -> Unit = {}) =

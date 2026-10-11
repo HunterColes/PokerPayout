@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.huntercoles.pokerpayout.core.constants.TournamentConstants
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
@@ -55,7 +56,7 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiSta
 import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetsIntent
 
 /** The players stepper's range (as the slider it replaces). */
-internal val PlayerRange = 3..30
+internal val PlayerRange = TournamentConstants.MIN_PLAYERS..TournamentConstants.MAX_PLAYERS
 
 private val SectionShape = RoundedCornerShape(PokerDimens.CornerCard)
 
@@ -63,7 +64,7 @@ private val SectionShape = RoundedCornerShape(PokerDimens.CornerCard)
  * S1 v2, before the start: the whole page is setup, under the [ReadyTicket] that previews the clock
  * it builds. Presets first (a saved night in one tap, PP-032), then people, money, blinds, payouts,
  * in the order hosts decide them, then a sticky "Start clock". Money and blinds fold to one-line
- * summaries.
+ * summaries. On a new install the [WelcomeCard] sits above the ticket until dismissed (PP-113).
  */
 @Composable
 internal fun SetupContent(
@@ -81,6 +82,12 @@ internal fun SetupContent(
                 .padding(start = gutter, end = gutter, top = 4.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (setup.showWelcome) {
+                WelcomeCard(
+                    onSeeStarters = { actions.onPresetIntent(PresetsIntent.Open) },
+                    onDismiss = { actions.onSetupIntent(TournamentConfigIntent.DismissWelcome) },
+                )
+            }
             ReadyTicket(timer)
             PresetsRow(midGame = false, onOpen = { actions.onPresetIntent(PresetsIntent.Open) })
             PlayersCard(setup, hint = R.string.setup_players_hint) {
@@ -172,7 +179,8 @@ internal fun SetupSection(
 }
 
 /**
- * "Players · Bank gets one row per player" with a stepper. Mid-game: "A late entry adds a Bank row".
+ * "Players · Bank gets one row per player" with a stepper. Mid-game: "Late arrival? Add them in the
+ * Bank" (its Late entry takes their buy-in at today's price, PP-116; the stepper still adds a row).
  * Once a mystery envelope is drawn the count can't go lower (PP-035): minus is off and the hint says why.
  */
 @Composable
@@ -232,6 +240,35 @@ internal fun RebuysUntilSelect(timer: TimerUiState, onTimerIntent: (TimerIntent)
             }
         },
         onPick = { onTimerIntent(TimerIntent.UpdateRebuyUntil(it)) },
+        modifier = modifier,
+    )
+}
+
+/**
+ * The late entry cutoff (PP-116): no cutoff, or the end of a level. Until then the Bank's Late entry
+ * adds a player who arrives late, or a re-entry for one who is out.
+ */
+@Composable
+internal fun LateEntryUntilSelect(
+    setup: TournamentConfigUiState,
+    timer: TimerUiState,
+    onSetupIntent: (TournamentConfigIntent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val resources = LocalContext.current.resources
+    val last = maxOf(timer.regularLevelCount, setup.lateEntryUntilLevel, 1)
+    SetupSelectField(
+        label = stringResource(R.string.setup_late_entry_until),
+        options = listOf(0) + (1..last),
+        selected = setup.lateEntryUntilLevel,
+        optionText = { level ->
+            if (level == 0) {
+                resources.getString(R.string.setup_rebuys_until_none)
+            } else {
+                resources.getString(R.string.setup_rebuys_until_level, level)
+            }
+        },
+        onPick = { onSetupIntent(TournamentConfigIntent.UpdateLateEntryUntil(it)) },
         modifier = modifier,
     )
 }

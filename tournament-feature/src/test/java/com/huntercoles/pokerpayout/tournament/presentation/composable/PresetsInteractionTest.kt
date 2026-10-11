@@ -25,6 +25,8 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.ViewModelStore
 import com.huntercoles.pokerpayout.core.design.PokerTheme
+import com.huntercoles.pokerpayout.tournament.domain.presets.Starter
+import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentMode
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentUi
 import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetSheet
@@ -44,7 +46,8 @@ import java.util.TimeZone
 /**
  * What the presets' controls send (PP-032): the Presets row on the setup page and in the mid-game
  * panel, and in the sheet the list (load, save, share, rename, delete), the save and rename forms
- * and the load question. Mid-game a preset can't be loaded, and the list says why.
+ * and the load question. Mid-game a preset can't be loaded, and the list says why. The starter
+ * nights (load, copy, their load question) and the welcome that points at them (PP-113).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w360dp-h780dp-port")
@@ -120,7 +123,7 @@ class PresetsInteractionTest {
         compose.setContent {
             PokerTheme(reducedMotion = true) { TournamentContent(setup, timer, ui, actions) }
         }
-        compose.onNodeWithText("Load a saved setup, save this one or share it").assertExists()
+        compose.onNodeWithText("Load a starter or a saved setup, save this one or share it").assertExists()
         compose.onNode(hasText("Presets") and hasClickAction()).tap()
         assertEquals(listOf<PresetsIntent>(PresetsIntent.Open), sent)
 
@@ -241,6 +244,58 @@ class PresetsInteractionTest {
         compose.waitForIdle()
         compose.onNodeWithText("Rename").tap()
         assertEquals(listOf<PresetsIntent>(PresetsIntent.Rename(deep, "Deep stack Saturday")), sent)
+    }
+
+    @Test
+    fun `a starter loads with a tap, and its menu copies it into the saved presets`() {
+        showSheet(PresetsFixture.list)
+        compose.onNodeWithText("STARTERS").assertExists()
+        compose.onNodeWithText("3 h · 20-min levels · 2,500 chips · $20 buy-in · $5 bounty").assertExists()
+        compose.onNodeWithText("4 h · 20-min levels · 5,000 chips · ante from L7 · $30 buy-in").assertExists()
+        compose.onNodeWithText("Classic").tap()
+        compose.onNodeWithContentDescription("More options for the Turbo starter").tap()
+        compose.onNode(hasText("Copy to my presets") and hasClickAction()).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(PresetsIntent.LoadStarter(Starter.CLASSIC), PresetsIntent.CopyStarter(Starter.TURBO)), sent)
+    }
+
+    @Test
+    fun `mid-game a starter can't be loaded, but can still be copied`() {
+        showSheet(PresetsFixture.list.copy(canLoad = false))
+        compose.onNode(hasText("Bounty night") and hasClickAction()).assertIsNotEnabled()
+        compose.onNodeWithText("Bounty night").tap()
+        compose.onNodeWithContentDescription("More options for the Bounty night starter").tap()
+        compose.onNode(hasText("Copy to my presets") and hasClickAction()).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf<PresetsIntent>(PresetsIntent.CopyStarter(Starter.BOUNTY_NIGHT)), sent)
+    }
+
+    @Test
+    fun `a starter's load question loads it, or goes back to the list`() {
+        showSheet(PresetsFixture.list.copy(sheet = PresetSheet.ConfirmStarter(Starter.TURBO)))
+        compose.onNodeWithText("Load Turbo?").assertExists()
+        compose.onNodeWithText("Load starter").tap()
+        compose.onNodeWithText("Keep mine").tap()
+        assertEquals(listOf(PresetsIntent.ConfirmLoadStarter(Starter.TURBO), PresetsIntent.Open), sent)
+    }
+
+    @Test
+    fun `the welcome opens the starters, and its close button dismisses it`() {
+        val setupSent = mutableListOf<TournamentConfigIntent>()
+        val actions = TournamentActions(onSetupIntent = { setupSent += it }, onPresetIntent = { sent += it })
+        var setup by mutableStateOf(fixture.setupState())
+        compose.setContent {
+            PokerTheme(reducedMotion = true) { TournamentContent(setup, fixture.ready, TournamentUi(), actions) }
+        }
+        compose.onNodeWithText("Everything stays on this phone", substring = true).assertDoesNotExist()
+
+        setup = setup.copy(showWelcome = true)
+        compose.waitForIdle()
+        compose.onNodeWithText("Everything stays on this phone", substring = true).assertExists()
+        compose.onNodeWithText("See starters").tap()
+        compose.onNodeWithContentDescription("Dismiss welcome").tap()
+        assertEquals(listOf<PresetsIntent>(PresetsIntent.Open), sent)
+        assertEquals(listOf<TournamentConfigIntent>(TournamentConfigIntent.DismissWelcome), setupSent)
     }
 
     @Test

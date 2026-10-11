@@ -109,6 +109,23 @@ class MysteryBountyTest {
         assertEquals(10 * 500L - 1_500L, left.sum())
     }
 
+    /**
+     * PP-116: a late entry (or a re-entry) after the $15 was drawn adds one envelope with its own
+     * bounty. The eight envelopes still in the pool stay as they were dealt; nothing is dealt again.
+     */
+    @Test
+    fun `a late entry adds one envelope of its bounty and deals nothing again`() {
+        val left = MysteryBounty.left(players = 9, bountyCents = 500, drawn = listOf(1_500L), late = listOf(500L))
+        assertEquals(listOf(600L, 600L, 500L, 300L, 300L, 300L, 300L, 300L, 300L), left)
+        assertEquals(10 * 500L - 1_500L, left.sum())
+        // Its envelope can be drawn like any other; one without a bounty adds none
+        assertEquals(
+            listOf(600L, 600L, 300L, 300L, 300L, 300L, 300L, 300L),
+            MysteryBounty.left(players = 9, bountyCents = 500, drawn = listOf(1_500L, 500L), late = listOf(500L, 0L)),
+        )
+        assertEquals(listOf(700L, 500L), MysteryBounty.lateEnvelopes(listOf(500L, 0L, 700L, -5L)))
+    }
+
     @Test
     fun `a pool already drawn past what is in it leaves nothing, and no envelopes are left for nobody`() {
         // Players removed after big envelopes were drawn: nothing left to deal

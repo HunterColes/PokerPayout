@@ -6,10 +6,13 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.design.components.SnackbarController
+import com.huntercoles.pokerpayout.core.domain.history.NightStore
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatusProvider
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
+import com.huntercoles.pokerpayout.core.domain.players.Regulars
+import com.huntercoles.pokerpayout.core.domain.players.RegularsStore
 import com.huntercoles.pokerpayout.core.domain.settle.SettleUpUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.DrawEnvelopeUseCase
@@ -18,6 +21,7 @@ import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
+import com.huntercoles.pokerpayout.core.time.TimeSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestDispatcher
 import kotlin.random.Random
@@ -53,6 +57,21 @@ class BankTestKit(private val dispatcher: TestDispatcher) {
         private set
     var audioPreferences: AudioPreferences
         private set
+
+    /** History's nights and the regulars' own store (PP-110), for the tonight's players sheet. */
+    var nights: NightStore
+        private set
+    var regularsStore: RegularsStore
+        private set
+
+    /** The phone's clock for the regulars: noon UTC on Friday 9 October 2026. */
+    val time = object : TimeSource {
+        override fun elapsedRealtimeMillis(): Long = 0L
+
+        override fun wallClockMillis(): Long = TODAY_MILLIS
+
+        override fun bootCount(): Int = -1
+    }
     val clock = FakeClockStatus()
     val snackbars = SnackbarController()
     private val stores = mutableListOf<ViewModelStore>()
@@ -61,13 +80,15 @@ class BankTestKit(private val dispatcher: TestDispatcher) {
     var draws: Random = Random(DRAW_SEED)
 
     init {
-        listOf("tournament_prefs", "bank_prefs", "timer_prefs", "audio_prefs").forEach {
+        listOf("tournament_prefs", "bank_prefs", "timer_prefs", "audio_prefs", "regulars", "night_history").forEach {
             context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
         }
         tournamentPreferences = TournamentPreferences(context)
         bankPreferences = BankPreferences(context)
         timerPreferences = TimerPreferences(context)
         audioPreferences = AudioPreferences(context)
+        nights = NightStore(context)
+        regularsStore = RegularsStore(context)
     }
 
     fun newViewModel(): BankViewModel {
@@ -83,7 +104,8 @@ class BankTestKit(private val dispatcher: TestDispatcher) {
                 audioPreferences,
                 BankFeedback(context, snackbars),
                 DrawEnvelopeUseCase(draws),
-                SettleUpUseCase()
+                SettleUpUseCase(),
+                Regulars(nights, regularsStore, time)
             ) as T
         }
         val viewModel = ViewModelProvider(store, factory)[BankViewModel::class.java]
@@ -106,6 +128,8 @@ class BankTestKit(private val dispatcher: TestDispatcher) {
         bankPreferences = BankPreferences(context)
         timerPreferences = TimerPreferences(context)
         audioPreferences = AudioPreferences(context)
+        nights = NightStore(context)
+        regularsStore = RegularsStore(context)
         return newViewModel()
     }
 
@@ -195,5 +219,6 @@ class BankTestKit(private val dispatcher: TestDispatcher) {
 
     private companion object {
         const val DRAW_SEED = 35
+        const val TODAY_MILLIS = 1_791_547_200_000L
     }
 }

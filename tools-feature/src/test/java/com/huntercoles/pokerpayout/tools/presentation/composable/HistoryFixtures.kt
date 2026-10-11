@@ -2,6 +2,8 @@ package com.huntercoles.pokerpayout.tools.presentation.composable
 
 import com.huntercoles.pokerpayout.core.domain.history.NightPlayer
 import com.huntercoles.pokerpayout.core.domain.history.SavedNight
+import com.huntercoles.pokerpayout.core.domain.players.KnownPlayer
+import com.huntercoles.pokerpayout.core.domain.players.PlayerMerges
 import com.huntercoles.pokerpayout.tools.presentation.HistoryUiState
 import java.time.LocalDate
 
@@ -68,4 +70,28 @@ internal object HistoryFixtures {
     val night = HistoryUiState.of(nights, openId = friday.id)
 
     val empty = HistoryUiState.of(emptyList())
+
+    // One person under two names (S26b, PP-110) ------------------------------------------------------
+
+    /** A short night after the three: Al won, then Jo and Sam ($150). */
+    val october = SavedNight(
+        id = 4L,
+        date = LocalDate.of(2026, 10, 9),
+        structureName = null,
+        prizePoolCents = 15_000L,
+        players = listOf(player("Al", 1, 10_000L), player("Jo", 2, 5_000L), player("Sam", 3)),
+    )
+
+    /** "Alex K." was typed in the Bank and merged into Alex; "Alexa" only typed in the Bank. */
+    private val names = listOf(KnownPlayer("Alexa", LocalDate.of(2026, 10, 8)), KnownPlayer("Alex K.", LocalDate.of(2026, 9, 30)))
+    private val merged = PlayerMerges.NONE.merge("Alex K.", "Alex")
+
+    /**
+     * Alex opened from the standings: one night (1 point), Alex K. counted as him; Al and Alexa look
+     * alike, then Jo and Sam; Dana, Marcus, Priya and Theo played with him, so they aren't offered.
+     */
+    val player = HistoryUiState.of(listOf(october) + nights, merges = merged, known = names).withPlayer("Alex")
+
+    /** Al picked as the same person as Alex: which name to keep? */
+    val keepWhich = player.withPlayer("Alex", picked = "Al")
 }

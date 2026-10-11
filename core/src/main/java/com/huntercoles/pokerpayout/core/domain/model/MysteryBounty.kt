@@ -36,23 +36,35 @@ object MysteryBounty {
     }
 
     /**
-     * The envelopes still in the pool for [players] players at [bountyCents] once [drawn] have been
-     * drawn: the deal without the drawn ones.
-     *
-     * A player joining or leaving after the first draw changes the deal, and an envelope already
-     * drawn may not be in the new one. Then the money left (the new pool minus everything drawn) is
-     * dealt again, the same way, into one envelope for each one not yet drawn (players minus
-     * envelopes drawn), so the envelopes left never hold more than the pool has left.
+     * Late entries and re-entries (PP-116): one envelope each, holding that entry's own bounty
+     * ([bountiesCents]), biggest first; an entry without a bounty adds none. The envelopes already
+     * dealt are never dealt again for them.
      */
-    fun left(players: Int, bountyCents: Long, drawn: List<Long>): List<Long> {
-        val dealt = envelopes(players, bountyCents)
+    fun lateEnvelopes(bountiesCents: List<Long>): List<Long> = bountiesCents.filter { it > 0L }.sortedDescending()
+
+    /**
+     * The envelopes still in the pool for [players] players at [bountyCents], plus one for each late
+     * entry ([late], [lateEnvelopes]), once [drawn] have been drawn: the envelopes without the drawn
+     * ones.
+     *
+     * A player added or removed by the player count after the first draw changes the deal, and an
+     * envelope already drawn may not be in the new one. Then the money left (the new pool minus
+     * everything drawn) is dealt again, the same way, into one envelope for each one not yet drawn
+     * (envelopes minus envelopes drawn), so the envelopes left never hold more than the pool has left.
+     */
+    fun left(players: Int, bountyCents: Long, drawn: List<Long>, late: List<Long> = emptyList()): List<Long> {
+        // A deal is biggest first already, so without late entries this is the deal itself
+        val dealt = (envelopes(players, bountyCents) + lateEnvelopes(late)).sortedDescending()
         val rest = remaining(dealt, drawn)
         val everyDrawFromThisDeal = rest.size + drawn.size == dealt.size
-        val count = players - drawn.size
+        val count = dealt.size - drawn.size
         return when {
             everyDrawFromThisDeal -> rest
-            count <= 0 || bountyCents <= 0L -> emptyList()
-            else -> deal(count, (dealt.sum() - drawn.sum()).coerceAtLeast(0L), unitFor(bountyCents))
+            count <= 0 -> emptyList()
+            else -> {
+                val unit = unitFor(bountyCents.takeIf { it > 0L } ?: dealt.first())
+                deal(count, (dealt.sum() - drawn.sum()).coerceAtLeast(0L), unit)
+            }
         }
     }
 

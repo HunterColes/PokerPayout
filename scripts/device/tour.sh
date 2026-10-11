@@ -339,6 +339,32 @@ s_launch() {
     "text~=Level 1 · ready" text=20:00 "has=Buy-in" "Start clock" || return 1
   require_tab_selected Tournament
 }
+# The first run (PP-113): a new install (launch cleared the data) gets one welcome line above the
+# ticket, pointing at the starter nights in the presets sheet. A starter loads with one tap (a new
+# tournament has nothing to lose, so there's no question) and Undo puts the setup back as it was.
+s_starters() {
+  ui assert-text "text~=Everything stays on this phone" "text=See starters" "desc=Dismiss welcome" || return 1
+  ui tap "text=See starters"
+  ui wait "text=STARTERS"
+  ui scroll-to "text=Bounty night" --in scrollable --max 4
+  ui assert-text "text=Turbo" "text=Classic" "text=Deep stack" "text=Bounty night" "desc=More options for the Turbo starter" \
+    || return 1
+  ui tap "text=Turbo"
+  ui wait-gone "text=STARTERS"
+  ui assert-text "text=Turbo loaded" text=UNDO "text~=Level 1 · ready" text=10:00 || return 1
+  ui tap text=UNDO
+  ui wait-gone text=UNDO --timeout 15 || return 1
+  ui assert-text "text~=Level 1 · ready" text=20:00 "text~=Everything stays on this phone"
+}
+# ✕ hides the welcome for good: gone at once, and a fresh start of the app doesn't bring it back.
+s_welcome_dismiss() {
+  ui tap "desc=Dismiss welcome"
+  ui wait-gone "desc=Dismiss welcome" || return 1
+  ui launch                                   # force-stop and start again, the data kept
+  ui assert-text "text~=Level 1 · ready" text=20:00 "has=Buy-in" "Start clock" || return 1
+  if ui find "desc=Dismiss welcome" --timeout 2 >/dev/null 2>&1; then echo "[ui] FAIL the welcome came back"; return 1; fi
+  require_tab_selected Tournament
+}
 s_tournament_config() {
   # One keystroke at a time, with recomposition in between: v1.1.12 moved the cursor in front of
   # the '.' after every change and turned "12.50" into "120.5" (B10).
@@ -354,14 +380,18 @@ s_tournament_config() {
 # pool · 3 places paid") to the cent, and to "Adds up to $125" under them; one row per place paid;
 # no lower place paying more; with a unit (cents) every place below 1st a whole number of units.
 # A row is one node for TalkBack ("1st, Still playing, $63, 50%") or, failing that, the texts on
-# one line.
-check_payout_table() { # $1 = ui dump, $2 = rounding unit in cents (default 100)
-  python3 - "$(page_dump "$1")" "${2:-100}" <<'PY'
+# one line. In euros (PP-114) the amounts read "1.234,50 €", a no-break space before the sign.
+check_payout_table() { # $1 = ui dump, $2 = rounding unit in cents (default 100), $3 = dollar (default) or euro
+  python3 - "$(page_dump "$1")" "${2:-100}" "${3:-dollar}" <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 unit = int(sys.argv[2])
-AMOUNT = r"\$[\d,]+(?:\.\d\d)?"
+EURO = sys.argv[3] == "euro"
+AMOUNT = r"[\d.]+(?:,\d\d)?[\u00a0 ]€" if EURO else r"\$[\d,]+(?:\.\d\d)?"
 def cents(s):
-    whole, _, frac = s[1:].replace(",", "").partition(".")
+    if EURO:
+        whole, _, frac = s.rstrip("€\u00a0 ").replace(".", "").partition(",")
+    else:
+        whole, _, frac = s[1:].replace(",", "").partition(".")
     return int(whole) * 100 + int(frac or 0)
 nodes = []
 for n in ET.parse(sys.argv[1]).iter("node"):
@@ -713,19 +743,63 @@ s_live_clock_back() {
   ui assert-text "text~=Level 1 of 9 · running" "text~=Level 1 · time left" || return 1
   wait_live_clock
 }
+# What's in front (the top resumed activity, as `ui top` prints it) once it has stopped changing: the
+# same three looks in a row, a second apart, within about 20 s. Prints the last look either way.
+settled_front() {
+  local last="" now same=0 i
+  for i in $(seq 1 20); do
+    now="$(ui top 2>/dev/null || true)"
+    if [[ -n "$now" && "$now" == "$last" ]]; then
+      same=$((same + 1))
+      if (( same >= 2 )); then echo "$now"; return 0; fi
+    else
+      same=0
+    fi
+    last="$now"
+    sleep 1
+  done
+  echo "${last:-nothing}"
+  return 1
+}
+# Waits (up to ~15 s) for the app's screen to be the one in front.
+wait_app_in_front() {
+  local i
+  for i in $(seq 1 15); do
+    [[ "$(ui top 2>/dev/null || true)" == *"$APP_ID/"* ]] && return 0
+    sleep 1
+  done
+  echo "[ui] FAIL the app didn't come back in front: $(ui top 2>/dev/null || echo nothing)"
+  return 1
+}
 s_live_clock_flap() {
   # Away and back ten times in quick succession with the clock running. The monkey found it
   # (seed 35): coming back sends the live clock's service Hide and leaving again sends Show, and a
   # Hide that ended the service with the Show still pending made Android crash the app
   # (ForegroundServiceDidNotStartInTimeException). One shell, no waits, so the trips overlap. The
   # launcher's intent brings the task back, as the launcher does, rather than stacking new screens.
-  local trips="" i
+  #
+  # `input keyevent` returns before Android acts on Home (the launcher starts a moment later), so
+  # under load the last trip's Home can land after the last return and leave the launcher in front:
+  # the tour racing itself, not the app (#57's release tour: the launcher's start came 10 ms after
+  # the app's last one). So the step waits until what's in front stops changing. If it's the
+  # launcher, the app is away with the clock running, so the live clock must show; then the app is
+  # opened once more, as the host would. Either way the clock must be on screen and still running.
+  local trips="" i front
   for i in $(seq 1 10); do
     trips+="input keyevent KEYCODE_HOME; "
     trips+="am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n $APP_ID/$MAIN_ACTIVITY >/dev/null; "
   done
   adb_ shell "$trips" >/dev/null 2>&1 || true
   sleep 12 # past Android's 10 s for a pending startForeground
+  front="$(settled_front)" || { echo "[ui] FAIL what's in front never settled: $front"; return 1; }
+  if [[ "$front" == *"$APP_ID/"* ]]; then
+    echo "in front after the trips: the app"
+  else
+    echo "in front after the trips: ${front} (the last Home landed after the last return)"
+    wait_live_clock 'android\.title=.*\(Level [0-9]+\)' '"Pause"' || return 1
+    adb_ shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || return 1
+    wait_app_in_front || return 1
+  fi
   ui wait "desc=Pause timer" --timeout 15 || return 1
   ui assert-text "text~=Level 1 of 9 · running" || return 1
   wait_live_clock
@@ -950,6 +1024,28 @@ s_bank_rename() {
   ui wait "Start clock"
   tab Bank
   ui assert-text text=Alice
+}
+# Tonight's players (S26, PP-110): picked from the regulars rather than typed. Alice, typed a moment
+# ago, is a regular already and ticked; a name added in the sheet takes the first seat nobody named
+# (Player 2), and a tap frees that seat again, so the steps after still find Player 2.
+s_bank_regulars() {
+  ui tap "text=Pick tonight's players"
+  ui assert-text "text=Tonight's players" "re=^1 of [0-9]+ seats named" "text=REGULARS" "desc=Add a name" || return 1
+  ui assert "has=Alice|No saved night yet" checked
+}
+s_bank_regulars_add() {
+  ui set-text "desc=Add a name" --value Bea
+  ui tap text=Add
+  ui assert-text "re=^2 of [0-9]+ seats named" || return 1
+  ui assert "has=Bea|No saved night yet" checked
+}
+s_bank_regulars_free() {
+  ui tap "has=Bea|No saved night yet"
+  ui wait-gone "has=Bea|No saved night yet" checked
+  ui assert-text "re=^1 of [0-9]+ seats named" || return 1
+  ui tap text=Done
+  ui wait-gone "text=Tonight's players"
+  ui assert-text text=Alice "text=Player 2"
 }
 s_bank_buyin() {
   # No confirm dialog any more: the tap records the buy-in, and the snackbar says what happened
@@ -1194,7 +1290,68 @@ s_history_save() {
   ui back                                      # the night -> History
   ui assert-text "text=1 night saved" || return 1
   ui back                                      # History -> the Tools list
-  ui assert-text "text=Seat draw" text=History
+  ui assert-text "text=Saved nights and the season's points" text=History   # the History row: more tools since 1.4.8 can push Seat draw out of view
+}
+
+# One person under two names (S26b, PP-110): Alice opened from the standings; Bea (added in the Bank's
+# sheet, never at a saved night) could be her, and the seats nobody named are nobody. Picked, the sheet
+# asks which name to keep; Keep Alice merges at once, and UNDO takes it back. Ends on the Tools list.
+s_history_merge() {
+  ui scroll-to text=History --max 4
+  ui tap text=History
+  ui tap "desc=1st, Alice, 5 points, 1 night · 1 win"
+  ui assert-text "text=SAME PERSON AS…" "text~=Pick their other name" || return 1
+  ui tap "has=Bea|No saved night yet"
+  ui assert-text "text~=Alice and Bea are one person" "text=Keep Alice" "text=Keep Bea" || return 1
+}
+s_history_merge_undo() {
+  ui tap "text=Keep Alice"
+  ui assert-text "text=Bea now counts as Alice" text=UNDO "desc=1st, Alice, 5 points, 1 night · 1 win" || return 1
+  ui tap text=UNDO
+  ui wait-gone "text=Bea now counts as Alice"
+  ui back                                      # History -> the Tools list
+  ui assert-text "text=Saved nights and the season's points" text=History   # the History row: the list stays scrolled to it
+}
+
+# Currency (PP-114) ---------------------------------------------------------------------------------
+# Tools > Currency (S25): pick the euro, and the Payouts tab (the finished night) reads in euros and
+# still adds up to the cent; then back to the dollar, which every step after this one reads.
+open_currency() {
+  tab Tools
+  ui scroll-to "text=Currency" --max 6
+  ui tap "text=Currency"
+  ui assert-text "text=How amounts show" desc=Back "text=Dollar" "text=Euro" || return 1
+  require_tab_selected Tools
+}
+currency_picked() { # $1 = the currency's name; checks the last dump
+  local picked; picked="$(control_on "$PP_UI_LAST_XML" "$1")"; echo "$1 picked=$picked"
+  [[ "$picked" == true ]] || { echo "[ui] FAIL $1 isn't picked"; return 1; }
+}
+s_currency() {
+  open_currency || return 1
+  currency_picked Dollar || return 1           # the tour's fresh install on an en-US phone
+  ui tap "text=Euro"
+  ui assert "text=Euro" || return 1
+  currency_picked Euro || return 1
+  ui back                                      # Currency -> the Tools list, whose row says so
+  ui assert-text "text~=Euro · 1.234,50"
+}
+s_currency_payouts() {
+  tab Payouts
+  ui assert-text "re=^[0-9.,]+.€ prize pool · 2 places paid$" "desc=Share the payouts" "text~=Alice" || return 1
+  if ui find 're=\$[0-9]' --timeout 1 >/dev/null 2>&1; then echo "[ui] FAIL a dollar amount on the Payouts tab in euros"; return 1; fi
+  check_payout_table "$PP_UI_LAST_XML" 100 euro
+}
+s_currency_back() {
+  open_currency || return 1
+  ui tap "text=Dollar"
+  ui assert "text=Dollar" || return 1
+  currency_picked Dollar || return 1
+  ui back
+  ui assert-text "text~=Dollar · \$1,234.50" || return 1
+  tab Payouts
+  ui assert-text "text~=prize pool · 2 places paid" || return 1
+  check_payout_table "$PP_UI_LAST_XML"
 }
 
 # Clearing the Rebuy amount to retype it must not wipe recorded rebuys (PP-014).
@@ -2032,51 +2189,101 @@ s_bank_pko() {
   ui wait-gone "text=Player 2 is out"
   ui assert-text "text~=Player 1 takes \$2.50, bounty now \$7.50" "has=Player 1|bounty \$7.50, 1 knockout"
 }
-# Big moments (PP-111) -----------------------------------------------------------------------------
-# The PKO night above, on the clock: five players, Player 2 out, two places paid, and the seat
-# draw's tables of three (from its steps). The Bank's knockouts bring the bubble and the final table
-# at once (three left: the bigger, the final table, shows; the pill says the bubble) and heads-up
-# (two) to the clock; the table view's Knock out makes the champion, whose screen (S29) takes the
-# clock's place. Its UNDO takes it back, the
-# knockout again brings it again, and then its way to History: pay out in the Bank, then "Save
-# this night" on it. A banner's title starts its text ("re=^"), the pill beside the players left
-# is in capitals, so the two can't be mistaken.
-s_moments_start() {
+
+# Late entries and re-entries (PP-116), after bank-pko (Player 2 is out, by Player 1). With the clock
+# running, Late entry under the Bank's list takes a late arrival at today's entry, or buys a player
+# who is out back in as a new entry; the players left and the places count entries, and Undo takes
+# a re-entry back. Each reads the subtitle's "N of M left" first, so any field size works.
+BANK_LEFT=0
+BANK_OF=0
+bank_counts() {
+  local line; line="$(ui texts | grep -oE '[0-9]+ of [0-9]+ left' | head -1)"
+  [[ "$line" =~ ^([0-9]+)\ of\ ([0-9]+)\ left$ ]] || { echo "[ui] FAIL no \"N of M left\" in the Bank's top bar"; return 1; }
+  BANK_LEFT=${BASH_REMATCH[1]}
+  BANK_OF=${BASH_REMATCH[2]}
+}
+open_late_entry() {
+  ui scroll-to "text=Late entry" --max 4
+  ui tap "text=Late entry"
+  ui assert-text "text~=to sit down ·" "text=Open all night." "text~=Or re-enter a player who is out" "text~=Out in"
+}
+s_bank_late_entry() {
   tab Tournament
   ui tap "Start clock"
+  ui wait "desc=Pause timer" || return 1
+  tab Bank
+  bank_counts || return 1
+  open_late_entry || return 1
+  ui set-text "desc=Late arrival's name" --value Kai
+  ui tap "text~=Add · "
+  ui wait-gone "text~=Or re-enter a player who is out"
+  ui assert-text "text~=Kai joins late · \$" "text~=$((BANK_LEFT + 1)) of $((BANK_OF + 1)) left" || return 1
+  ui scroll-to "desc=Kai, buy-in, paid" --max 4
+  ui assert-text "desc=Kai, buy-in, paid"
+}
+s_bank_re_entry() {
+  bank_counts || return 1
+  open_late_entry || return 1
+  ui tap "text~=Out in"
+  ui wait-gone "text~=Or re-enter a player who is out"
+  ui assert-text "text~=Player 2 re-enters · \$" "text~=$((BANK_LEFT + 1)) of $((BANK_OF + 1)) left" || return 1
+  # The first entry stays out, last of the field now, with nothing to bring back; the new one plays on
+  local place=$((BANK_OF + 1))
+  ui scroll-to "desc=Player 2, out, ${place}th, knocked out by Player 1" --max 4
+  ui assert-text "desc=Player 2, out, ${place}th, knocked out by Player 1" "Entry 2"
+}
+s_bank_re_entry_undo() {
+  # The top bar's Undo (the snackbar may have gone): the new entry goes, the first can come back
+  ui tap "desc~=Undo: Player 2 re-enters"
+  ui wait-gone "Entry 2"
+  bank_counts || return 1
+  ui scroll-to "desc=Player 2, out, ${BANK_OF}th, knocked out by Player 1. Bring back" --max 4
+  ui assert-text "desc=Player 2, out, ${BANK_OF}th, knocked out by Player 1. Bring back"
+}
+# Big moments (PP-111), after the late entries: the clock running, six entries (Player 1 to 5 and
+# Kai), Player 2 out by Player 1, the seat draw's tables of three (from its steps). Two Bank
+# knockouts leave three: the final table, or in the money if three are paid (one knockout can reach
+# both the bubble and the final table; the bigger shows, the pill says the rest). Then heads-up; the
+# table view's Knock out makes the champion, whose screen (S29) takes the clock's place. Its UNDO
+# takes it back, the knockout again brings it again, and then its way to History: pay out in the
+# Bank, then "Save this night" on it. A banner's title starts its text ("re=^"); pills are in
+# capitals, so the two can't be mistaken.
+s_moments_start() {
+  tab Tournament
   ui wait "desc=Pause timer"
 }
 # Knocks Player $1 out at the Bank, credited to nobody ($2 empty) or to Player $2.
 bank_knockout() {
   tab Bank
+  ui scroll-to "desc=Knock out Player $1" --max 4
   ui tap "desc=Knock out Player $1"
   if [[ -n "${2:-}" ]]; then ui tap "text~=Player $2"; else ui tap "re=^Nobody"; fi
   ui tap "text=Knock out Player $1"
   ui wait-gone "text=Player $1 is out"
 }
-s_moment_final_table() {
-  # Player 3 out at the Bank: three left, two paid, at the seat draw's table of three. Back on the
-  # clock the banner says "Final table" and the pill beside the level says the bubble.
+s_moment_three_left() {
+  # Player 3 out (nobody), Player 4 (by Player 1): three left of six. Back on the clock, the banner.
   bank_knockout 3
+  bank_knockout 4 1
   tab Tournament
-  ui assert-text "re=^Final table" "text=ON THE BUBBLE" "desc=Table view"
+  ui assert-text "re=^(Final table|In the money!)" "desc=Table view"
 }
 s_moment_heads_up() {
-  # Player 4 out, by Player 1: two left, both paid. Heads-up is the bigger moment, so it shows.
-  bank_knockout 4 1
+  # Player 5 out, by Player 1: Player 1 and Kai, heads-up
+  bank_knockout 5 1
   tab Tournament
   ui assert-text "re=^Heads-up" "desc=Table view"
 }
-# The table view's Knock out: Player 5, by Player 1. The table view comes first if it isn't up.
-table_knockout_player_5() {
+# The table view's Knock out: Kai, by Player 1. The table view comes first if it isn't up.
+table_knockout_kai() {
   if ! ui find "desc=Exit table view" --timeout 1 >/dev/null 2>&1; then
     ui tap "desc=Table view"
     ui wait "desc=Exit table view"
   fi
   ui tap "text=Knock out"
   ui wait "text=Who's out?"
-  ui tap "text=Player 5" --scroll-in scrollable
-  ui wait "text=Who knocked Player 5 out?"
+  ui tap "text=Kai" --scroll-in scrollable
+  ui wait "text=Who knocked Kai out?"
   ui tap "text=Player 1" --scroll-in scrollable
   ui wait "text=CHAMPION"
 }
@@ -2084,7 +2291,7 @@ s_moment_champion() {
   # The last knockout, from the table view: the champion's screen takes the clock's place, and the
   # snackbar's UNDO over it takes the knockout back at once (inside its 8 s): the screen goes, the
   # table view's clock and its Knock out are back.
-  table_knockout_player_5
+  table_knockout_kai
   ui tap text=UNDO
   ui wait-gone "text=CHAMPION"
   ui assert-text "text=Knock out" "desc=Exit table view"
@@ -2092,7 +2299,7 @@ s_moment_champion() {
 s_moment_again() {
   # Recorded again, the champion's screen (S29) opens again: what the paid places won and, while
   # they are owed, the way to the Bank
-  table_knockout_player_5
+  table_knockout_kai
   ui assert-text "text=Pay out in the Bank" "text=PAYOUTS" "desc=Back to the clock"
 }
 s_moment_pay() {
@@ -2101,11 +2308,11 @@ s_moment_pay() {
   ui wait "text~=Finished · Player 1 wins · "
   require_tab_selected Bank || return 1
   local p
-  for p in 1 5; do
-    ui scroll-to "desc~=Player $p, paid out, " --max 3
-    ui tap "desc~=Player $p, paid out, "
+  for p in "Player 1" Kai; do
+    ui scroll-to "desc~=$p, paid out, " --max 4
+    ui tap "desc~=$p, paid out, "
     ui tap "text~=Mark paid · \$"
-    ui wait-gone "text=Pay Player $p"
+    ui wait-gone "text=Pay $p"
   done
 }
 s_moment_save() {
@@ -2137,6 +2344,8 @@ s_app_alive() {
 }
 
 step launch               "Fresh launch (data cleared): setup page, ready ticket" s_launch
+step starters             "Welcome > See starters: Turbo loads, Undo puts it back" s_starters
+step welcome-dismiss      "Dismiss the welcome; a fresh start doesn't bring it back" s_welcome_dismiss
 step tournament-config    "Type buy-in 12.50 key by key, bounty 5, players 10"  s_tournament_config
 step payouts-tab          "Payouts tab (S6): rows add up to the prize pool"     s_payouts_tab
 step payouts-preset       "Top-heavy: 1st gets what its preview said"           s_payouts_preset
@@ -2176,6 +2385,9 @@ step tournament-reset-ok  "Reset: setup unfolds, level 1 ready"                 
 step rebuy-amount         "Rebuy amount \$10 for the Bank steps"                 s_rebuy_amount
 step bank                 "Bank tab (S5 v2): labelled header, top bar"          s_bank
 step bank-rename          "Rename Player 1 to Alice, switch tabs, name kept"    s_bank_rename
+step bank-regulars        "Tonight's players (S26): Alice a regular already"    s_bank_regulars
+step bank-regulars-add    "Add Bea in the sheet: she takes Player 2's seat"     s_bank_regulars_add
+step bank-regulars-free   "Tap Bea again: Player 2 again; Done"                 s_bank_regulars_free
 step bank-buyin           "Buy-in in one tap; snackbar with UNDO"               s_bank_buyin
 step bank-undo            "UNDO takes the buy-in back; record it again"         s_bank_undo
 step bank-rebuy           "Record a rebuy in one tap"                           s_bank_rebuy
@@ -2202,6 +2414,11 @@ step payouts-nav          "Payouts tab: the finished night by name, adds up"    
 step payouts-nav-editor   "Payouts tab: structure sheet opens and closes"       s_payouts_nav_editor
 step payouts-nav-back     "Back from a tab returns to Tournament (B16)"         s_payouts_nav_back
 step history-save         "Pay everyone: save the night once; it is in History" s_history_save
+step history-merge        "History (S26b): could Alice be Bea? Which to keep"   s_history_merge
+step history-merge-undo   "Keep Alice: merged at once; UNDO takes it back"      s_history_merge_undo
+step currency             "Tools > Currency (S25): pick the euro, row says so"  s_currency
+step currency-payouts     "Payouts in euros: 1.234,50 €, rows still add up"     s_currency_payouts
+step currency-back        "Back to the dollar: Payouts in dollars again"        s_currency_back
 step tools                "Tools tab: tool list and Sound (S7)"                 s_tools
 step sound-off            "Sound off: switch off, volume and chime rest"        s_sound_off
 step sound-on             "Sound back on; test chime"                           s_sound_on
@@ -2252,8 +2469,11 @@ step rail-tools           "Rail: Tools tab"                                     
 step rail-payouts         "Rail: Payouts tab, table adds up"                    s_rail_payouts
 step rail-restored        "Phone width again: bottom bar back, tab kept"        s_rail_restored
 step bank-pko             "PKO: Player 1 takes \$2.50, bounty up to \$7.50"     s_bank_pko
-step moments-start        "Big moments: start the clock on the PKO night"       s_moments_start
-step moment-final-table   "A Bank knockout: \"Final table\", on the bubble"     s_moment_final_table
+step bank-late-entry      "Clock on; Late entry: Kai joins at today's entry"    s_bank_late_entry
+step bank-re-entry        "Re-entry: Player 2 buys back in; the bust stays"     s_bank_re_entry
+step bank-re-entry-undo   "Undo the re-entry: the first entry can come back"     s_bank_re_entry_undo
+step moments-start        "Big moments: the clock, after the late entries"      s_moments_start
+step moment-three-left    "Two Bank knockouts: three left, its moment shows"    s_moment_three_left
 step moment-heads-up      "Another: \"Heads-up\" on the clock"                  s_moment_heads_up
 step moment-champion      "Table view knockout: champion's screen; UNDO, gone"  s_moment_champion
 step moment-again         "Knocked out again: the champion's screen (S29)"      s_moment_again

@@ -136,8 +136,14 @@ private fun breakdownLines(sheet: BankSheet.PayOut): List<Pair<String, Long>> {
 @Composable
 private fun knockoutsLabel(sheet: BankSheet.PayOut): String {
     val count = sheet.owed.knockouts
+    val each = sheet.knockoutEachCents
     return when (sheet.money.bountyMode) {
-        BountyMode.STANDARD -> stringResource(R.string.bank_pay_knockouts, count, formatMoney(sheet.money.bountyCents))
+        BountyMode.STANDARD -> if (each != null) {
+            stringResource(R.string.bank_pay_knockouts, count, formatMoney(each))
+        } else {
+            // Late entries' bounties can differ (PP-116): the count, and the total beside it
+            pluralStringResource(R.plurals.bank_pay_knockouts_count, count, count)
+        }
         BountyMode.PROGRESSIVE -> pluralStringResource(R.plurals.bank_pay_knockouts_pko, count, count)
         BountyMode.MYSTERY -> pluralStringResource(R.plurals.bank_pay_envelopes, count, count)
     }
@@ -181,11 +187,12 @@ private fun BreakdownLine(label: String, amount: String, total: Boolean = false)
 @Composable
 private fun paidInAndNet(sheet: BankSheet.PayOut) = buildAnnotatedString {
     val owed = sheet.owed
-    val money = sheet.money
+    // This entry's own: a late entry's at the price it paid (PP-116)
+    val entry = sheet.entry
     val parts = buildList {
-        if (money.buyInCents > 0L) add(stringResource(R.string.bank_part_buy_in, formatMoney(money.buyInCents)))
-        if (money.bountyCents > 0L) add(stringResource(R.string.bank_part_bounty, formatMoney(money.bountyCents)))
-        if (money.foodCents > 0L) add(stringResource(R.string.bank_part_food, formatMoney(money.foodCents)))
+        if (entry.buyInCents > 0L) add(stringResource(R.string.bank_part_buy_in, formatMoney(entry.buyInCents)))
+        if (entry.bountyCents > 0L) add(stringResource(R.string.bank_part_bounty, formatMoney(entry.bountyCents)))
+        if (entry.foodCents > 0L) add(stringResource(R.string.bank_part_food, formatMoney(entry.foodCents)))
         when {
             sheet.rebuys == 1 -> add(stringResource(R.string.bank_part_rebuy, formatMoney(owed.rebuyCostCents)))
             sheet.rebuys > 1 ->

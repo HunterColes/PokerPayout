@@ -89,6 +89,14 @@ class BankFeedback @Inject constructor(
 
     fun backIn(name: String): String = context.getString(R.string.bank_done_back_in, name)
 
+    /** "Sam joins late · $50 paid" (PP-116). */
+    fun lateEntry(name: String, cents: Long): String =
+        context.getString(R.string.bank_done_late_entry, name, FormatUtils.formatMoney(cents))
+
+    /** "Rita re-enters · $50 paid" (PP-116). */
+    fun reEntry(name: String, cents: Long): String =
+        context.getString(R.string.bank_done_re_entry, name, FormatUtils.formatMoney(cents))
+
     fun paid(name: String, cents: Long): String =
         context.getString(R.string.bank_done_paid, name, FormatUtils.formatMoney(cents))
 

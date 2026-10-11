@@ -1,100 +1,52 @@
 package com.huntercoles.pokerpayout.core.utils
 
+import com.huntercoles.pokerpayout.core.testing.withCurrency
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class FormatUtilsTest {
 
-    // ========== formatCurrency Tests ==========
-    
+    // ========== formatCents and formatMoney (the dollar; every currency: AppCurrencyTest) ==========
+
     @Test
-    fun `formatCurrency - whole number`() {
-        assertEquals("$100.00", FormatUtils.formatCurrency(100.0))
-    }
-    
-    @Test
-    fun `formatCurrency - with cents`() {
-        assertEquals("$25.50", FormatUtils.formatCurrency(25.50))
-    }
-    
-    @Test
-    fun `formatCurrency - zero`() {
-        assertEquals("$0.00", FormatUtils.formatCurrency(0.0))
-    }
-    
-    @Test
-    fun `formatCurrency - small amount`() {
-        assertEquals("$0.25", FormatUtils.formatCurrency(0.25))
-    }
-    
-    @Test
-    fun `formatCurrency - large amount with commas`() {
-        assertEquals("$1,234.56", FormatUtils.formatCurrency(1234.56))
-    }
-    
-    @Test
-    fun `formatCurrency - very large amount`() {
-        assertEquals("$1,000,000.00", FormatUtils.formatCurrency(1000000.0))
+    fun `formatCents - whole number keeps its cents`() {
+        assertEquals("$100.00", FormatUtils.formatCents(10_000))
     }
 
-@Test
-    fun `formatCurrency - rounding to two decimals`() {
-        assertEquals("$10.67", FormatUtils.formatCurrency(10.666666))
+    @Test
+    fun `formatCents - with cents`() {
+        assertEquals("$25.50", FormatUtils.formatCents(2_550))
     }
 
-    // ========== formatCurrencyWhole Tests ==========
-    
     @Test
-    fun `formatCurrencyWhole - whole number`() {
-        assertEquals("$100", FormatUtils.formatCurrencyWhole(100.0))
-    }
-    
-    @Test
-    fun `formatCurrencyWhole - rounds down`() {
-        assertEquals("$25", FormatUtils.formatCurrencyWhole(25.49))
-    }
-    
-    @Test
-    fun `formatCurrencyWhole - rounds up`() {
-        assertEquals("$26", FormatUtils.formatCurrencyWhole(25.50))
-    }
-    
-    @Test
-    fun `formatCurrencyWhole - zero`() {
-        assertEquals("$0", FormatUtils.formatCurrencyWhole(0.0))
-    }
-    
-    @Test
-    fun `formatCurrencyWhole - large amount with commas`() {
-        assertEquals("$1,235", FormatUtils.formatCurrencyWhole(1234.56))
+    fun `formatCents - zero and a small amount`() {
+        assertEquals("$0.00", FormatUtils.formatCents(0))
+        assertEquals("$0.25", FormatUtils.formatCents(25))
     }
 
-    // ========== formatNegativeCurrency Tests ==========
-    
     @Test
-    fun `formatNegativeCurrency - positive number`() {
-        assertEquals("-$10.00", FormatUtils.formatNegativeCurrency(10.0))
+    fun `formatCents - large amounts with commas`() {
+        assertEquals("$1,234.56", FormatUtils.formatCents(123_456))
+        assertEquals("$1,000,000.00", FormatUtils.formatCents(100_000_000))
     }
-    
+
     @Test
-    fun `formatNegativeCurrency - with cents`() {
-        assertEquals("-$25.50", FormatUtils.formatNegativeCurrency(25.50))
+    fun `formatMoney - cents only when there are some`() {
+        assertEquals("$450", FormatUtils.formatMoney(45_000))
+        assertEquals("$95.50", FormatUtils.formatMoney(9_550))
+        assertEquals("-$10", FormatUtils.formatMoney(-1_000))
+        assertEquals("$0", FormatUtils.formatMoney(0))
     }
-    
+
     @Test
-    fun `formatNegativeCurrency - zero`() {
-        assertEquals("-$0.00", FormatUtils.formatNegativeCurrency(0.0))
-    }
-    
-    @Test
-    fun `formatNegativeCurrency - large amount`() {
-        assertEquals("-$1,234.56", FormatUtils.formatNegativeCurrency(1234.56))
-    }
-    
-    @Test
-    fun `formatNegativeCurrency - already negative input`() {
-        // Should still format correctly even if input is already negative
-        assertEquals("-$10.00", FormatUtils.formatNegativeCurrency(-10.0))
+    fun `formatMoney - in the currency asked for, or the one picked`() {
+        assertEquals("450\u00A0€", FormatUtils.formatMoney(45_000, AppCurrency.EURO))
+        assertEquals("¥96", FormatUtils.formatMoney(9_550, AppCurrency.YEN))
+        withCurrency(AppCurrency.POUND) {
+            assertEquals("£95.50", FormatUtils.formatMoney(9_550))
+            assertEquals("£95.50", FormatUtils.formatCents(9_550))
+        }
+        assertEquals("$95.50", FormatUtils.formatMoney(9_550))
     }
 
     // ========== formatDecimal Tests ==========

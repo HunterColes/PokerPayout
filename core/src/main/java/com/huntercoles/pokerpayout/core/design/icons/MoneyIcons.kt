@@ -42,12 +42,17 @@ object MoneyIcons {
         )
     }
 
-    /** Paid: a dollar sign with a tick. */
+    /**
+     * Paid: a banknote with a tick, so it fits every currency (PP-114; it was a dollar sign with the
+     * same tick). The note is [Cash]'s, smaller and up to the left; the tick keeps clear of it. In
+     * absolute coordinates and filled even-odd, like [Cash].
+     */
     val PaidCheck: ImageVector by lazy {
         icon(
             "PaidCheck",
-            "M11 13v-1c0-.55-.45-1-1-1H6V9h5V7H8.5V6h-2v1H5c-.55 0-1 .45-1 1v3c0 .55.45 1 1 1h4v2H4v2h2.5v1h2v-1H10" +
-                "c.55 0 1-.45 1-1zm8.59-.48-5.66 5.65-2.83-2.83-1.41 1.42L13.93 21 21 13.93z",
+            "M2 4.5H17V12.5H2Z M3.5 6V11H15.5V6Z M9.5 6.75A1.75 1.75 0 1 1 9.5 10.25A1.75 1.75 0 1 1 9.5 6.75Z " +
+                "M19.59 12.52L13.93 18.17L11.1 15.34L9.69 16.76L13.93 21L21 13.93Z",
+            evenOdd = true,
         )
     }
 

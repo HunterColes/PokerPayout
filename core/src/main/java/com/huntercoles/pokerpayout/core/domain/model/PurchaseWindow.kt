@@ -48,6 +48,13 @@ sealed interface PurchaseWindow {
             return if (ended) ClosedAfterLevel(cutoffLevel) else OpenUntilLevel(cutoffLevel)
         }
 
+        /**
+         * Late entries and re-entries (PP-116), for a cutoff of "late entry until level [cutoffLevel]"
+         * (`TournamentPreferences.lateEntryUntilLevel`, 0 for none): open through the end of that
+         * level, as rebuys are, and closed when it ends.
+         */
+        fun lateEntries(cutoffLevel: Int, clock: ClockStatus): PurchaseWindow = rebuys(cutoffLevel, clock)
+
         /** The add-on window: rebuys' cutoff, stretched to the end of the first break after it. */
         fun addOns(cutoffLevel: Int, clock: ClockStatus): PurchaseWindow {
             val breakIndex = clock.breakAfterLevels.indexOfFirst { it >= cutoffLevel }

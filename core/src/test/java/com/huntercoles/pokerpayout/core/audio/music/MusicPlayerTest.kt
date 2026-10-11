@@ -6,6 +6,7 @@ import android.media.MediaPlayer
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.preferences.MusicPreferences
+import com.huntercoles.pokerpayout.core.preferences.PhonePrefs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -42,7 +43,9 @@ class MusicPlayerTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        context.getSharedPreferences(MusicPreferences.FILE, Context.MODE_PRIVATE).edit().clear().commit()
+        listOf(MusicPreferences.FILE, PhonePrefs.FILE).forEach {
+            context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
+        }
         preferences = MusicPreferences(context)
         music = newMusic()
     }

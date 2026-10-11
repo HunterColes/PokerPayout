@@ -1,6 +1,5 @@
 package com.huntercoles.pokerpayout.tournament.presentation
 
-import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.domain.model.TableSeats
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
@@ -36,12 +35,8 @@ internal class ClockTable(
         val left = stillIn.size
         val stacks = players.toLong() + bank.rebuys + bank.addOns
         val chips = stacks * state.config.startingChips
-        val prizePool = PoolBreakdown.withRecordedPurchases(
-            config.money,
-            players,
-            bankPreferences.getRecordedRebuyCents(),
-            bankPreferences.getRecordedAddOnCents(),
-        ).prizePoolCents
+        // Purchases, late entries and re-entries at the prices paid (PP-085, PP-116)
+        val prizePool = bankPreferences.recordedPool(config.money, players).prizePoolCents
         val paid = payouts(prizePool, config.payoutWeights, players, config.payoutRounding).places
         val table = TableStats(
             playerCount = players,

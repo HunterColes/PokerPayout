@@ -38,23 +38,26 @@ internal class BountyLedger(
                 Knockout(victim, byId[victim]?.eliminatedBy?.takeIf { it != victim && it in byId })
             }
             val bounty = money.bountyCents.coerceAtLeast(0L)
+            // Each entry's own bounty: today's amount, or what a late entry or re-entry paid (PP-116)
+            val bounties = byId.mapValues { (_, player) -> (player.entryPrice?.bountyCents ?: bounty).coerceAtLeast(0L) }
             return when (money.bountyMode) {
-                BountyMode.STANDARD -> standard(byId.keys, knockouts, champion, bounty)
-                BountyMode.PROGRESSIVE -> progressive(byId.keys, knockouts, champion, bounty)
+                BountyMode.STANDARD -> standard(bounties, knockouts, champion)
+                BountyMode.PROGRESSIVE -> progressive(bounties, knockouts, champion)
                 BountyMode.MYSTERY -> mystery(byId, knockouts, champion, bounty)
             }
         }
 
         /** Each knockout wins the whole bounty; the champion keeps theirs and takes the unclaimed ones. */
-        private fun standard(ids: Set<Int>, knockouts: List<Knockout>, champion: Int?, bounty: Long): BountyLedger {
-            val counts = knockouts.mapNotNull { it.eliminator }.groupingBy { it }.eachCount()
-            val unclaimed = knockouts.count { it.eliminator == null }
+        private fun standard(bounties: Map<Int, Long>, knockouts: List<Knockout>, champion: Int?): BountyLedger {
+            // Eliminator to the bounty they won, one per knockout
+            val credited = knockouts.mapNotNull { (victim, eliminator) -> eliminator?.let { it to bounties.getValue(victim) } }
+            val unclaimed = knockouts.filter { it.eliminator == null }.sumOf { bounties.getValue(it.victim) }
             return BountyLedger(
-                knockouts = counts,
-                knockoutCents = counts.mapValues { (_, count) -> count * bounty },
-                heads = ids.associateWith { bounty },
-                championCents = if (champion != null) bounty else 0L,
-                unclaimedCents = if (champion != null) unclaimed * bounty else 0L,
+                knockouts = credited.groupingBy { it.first }.eachCount(),
+                knockoutCents = credited.groupBy({ it.first }, { it.second }).mapValues { (_, cents) -> cents.sum() },
+                heads = bounties,
+                championCents = champion?.let { bounties.getValue(it) } ?: 0L,
+                unclaimedCents = if (champion != null) unclaimed else 0L,
                 envelopesLeft = emptyList(),
             )
         }
@@ -66,8 +69,8 @@ internal class BountyLedger(
          * so takes the whole bounty in cash. Bounties nobody was credited with wait for the
          * champion, who also takes their own final bounty.
          */
-        private fun progressive(ids: Set<Int>, knockouts: List<Knockout>, champion: Int?, bounty: Long): BountyLedger {
-            val heads = ids.associateWith { bounty }.toMutableMap()
+        private fun progressive(bounties: Map<Int, Long>, knockouts: List<Knockout>, champion: Int?): BountyLedger {
+            val heads = bounties.toMutableMap()
             val cash = mutableMapOf<Int, Long>()
             val out = mutableSetOf<Int>()
             var unclaimed = 0L
@@ -97,7 +100,10 @@ internal class BountyLedger(
         /**
          * Each credited knockout wins the envelope drawn for it. Knockouts nobody was credited with
          * draw nothing, so their envelopes stay in the pool; the champion takes whatever is left.
-         * A player joining after envelopes were drawn adds to the pool ([MysteryBounty.left]).
+         * The envelopes are dealt for the entries made before the start; each late entry and
+         * re-entry (PP-116) adds one envelope holding its own bounty, and nothing is dealt again. A
+         * player added by the player count after envelopes were drawn adds to the pool
+         * ([MysteryBounty.left]).
          */
         private fun mystery(
             byId: Map<Int, BankPlayer>,
@@ -105,7 +111,9 @@ internal class BountyLedger(
             champion: Int?,
             bounty: Long,
         ): BountyLedger {
-            val pool = MysteryBounty.envelopes(byId.size, bounty).sum()
+            val dealtFor = byId.values.count { it.entryPrice == null }
+            val late = byId.values.mapNotNull { it.entryPrice?.bountyCents }
+            val pool = MysteryBounty.envelopes(dealtFor, bounty).sum() + MysteryBounty.lateEnvelopes(late).sum()
             val claimed = knockouts.mapNotNull { (victim, eliminator) ->
                 eliminator?.let { Draw(it, byId[victim]?.bountyDrawCents?.coerceAtLeast(0L)) }
             }
@@ -118,7 +126,7 @@ internal class BountyLedger(
                 // The envelopes left, as the pool holds them: everything dealt minus everything drawn
                 championCents = if (champion != null) (pool - drawn.sum()).coerceAtLeast(0L) else 0L,
                 unclaimedCents = 0L,
-                envelopesLeft = MysteryBounty.left(byId.size, bounty, drawn),
+                envelopesLeft = MysteryBounty.left(dealtFor, bounty, drawn, late),
             )
         }
 

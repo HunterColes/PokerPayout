@@ -43,7 +43,7 @@
     <!-- S1 v2: the setup page -->
     <string name="setup_players">Players</string>
     <string name="setup_players_hint">Bank gets one row per player</string>
-    <string name="setup_players_late_entry">A late entry adds a Bank row</string>
+    <string name="setup_players_late_entry">Late arrival? Add them in the Bank</string>
     <!-- Mystery bounties (PP-035): fewer players would re-deal the envelopes already drawn -->
     <string name="setup_players_envelopes_drawn">Can\'t go lower now that envelopes are drawn</string>
     <string name="setup_money_title">Money · per player</string>
@@ -65,6 +65,8 @@
     <string name="setup_rebuys_until">Rebuys until</string>
     <string name="setup_rebuys_until_none">No cutoff</string>
     <string name="setup_rebuys_until_level">End of L%1$d</string>
+    <!-- PP-116: until when a player can join late or re-enter (the options are the rebuy cutoff's) -->
+    <string name="setup_late_entry_until">Late entry until</string>
     <string name="setup_add_on">Add-on</string>
     <string name="setup_food">Food</string>
     <!-- %1$s is the amount, shown in gold -->

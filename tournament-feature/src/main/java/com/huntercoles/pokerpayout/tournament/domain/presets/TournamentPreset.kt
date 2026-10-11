@@ -37,6 +37,8 @@ data class TournamentPreset(
  *
  * @property rebuyUntilLevel the last level rebuys are allowed at; 0 = no cutoff.
  * @property chipSet the chip set, if the preset includes it.
+ * @property lateEntryUntilLevel the last level a player can join late or re-enter at (PP-116); 0 = no
+ *   cutoff, as presets saved before it load.
  */
 data class PresetSetup(
     val money: MoneySettings,
@@ -44,6 +46,7 @@ data class PresetSetup(
     val blinds: PresetBlinds,
     val payouts: PresetPayouts,
     val chipSet: ChipSetSettings? = null,
+    val lateEntryUntilLevel: Int = 0,
 ) {
     /**
      * This setup as loading it leaves it tonight: the payouts for [players] players

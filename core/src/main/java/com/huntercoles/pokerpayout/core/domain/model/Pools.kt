@@ -53,14 +53,24 @@ data class PoolBreakdown(
 
         /**
          * The pool with the rebuys and add-ons the Bank recorded, at the prices they were bought at
-         * (PP-085): [rebuyCents] and [addOnCents] are their totals.
+         * (PP-085): [rebuyCents] and [addOnCents] are their totals. [playerCount] counts entries:
+         * [recordedEntries] are the late entries and re-entries among them, at the prices they paid
+         * (PP-116); the others pay today's amounts.
          */
-        fun withRecordedPurchases(money: MoneySettings, playerCount: Int, rebuyCents: Long, addOnCents: Long): PoolBreakdown {
-            val players = playerCount.coerceAtLeast(0).toLong()
+        fun withRecordedPurchases(
+            money: MoneySettings,
+            playerCount: Int,
+            rebuyCents: Long,
+            addOnCents: Long,
+            recordedEntries: List<EntryPrice> = emptyList(),
+        ): PoolBreakdown {
+            val players = playerCount.coerceAtLeast(0)
+            val recorded = recordedEntries.take(players)
+            val atToday = (players - recorded.size).toLong()
             return PoolBreakdown(
-                buyInCents = players * money.buyInCents,
-                foodCents = players * money.foodCents,
-                bountyCents = players * money.bountyCents,
+                buyInCents = atToday * money.buyInCents + recorded.sumOf { it.buyInCents.coerceAtLeast(0L) },
+                foodCents = atToday * money.foodCents + recorded.sumOf { it.foodCents.coerceAtLeast(0L) },
+                bountyCents = atToday * money.bountyCents + recorded.sumOf { it.bountyCents.coerceAtLeast(0L) },
                 rebuyCents = rebuyCents.coerceAtLeast(0L),
                 addOnCents = addOnCents.coerceAtLeast(0L)
             )

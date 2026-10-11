@@ -45,6 +45,20 @@ class BankPlayerNamesProviderTest {
         assertEquals(listOf("Alice", "Player 2", "Carol", "Player 4"), provider().currentNames())
     }
 
+    /** PP-116: Carol re-entered as row 5, a late arrival took row 6: Carol is named once. */
+    @Test
+    fun `a re-entry adds no name, a late arrival does`() {
+        TournamentPreferences(context).setPlayerCount(6)
+        BankPreferences(context).apply {
+            savePlayerName(3, "Carol")
+            savePlayerName(5, "Carol")
+            savePlayerReEntryOf(5, 3)
+            savePlayerName(6, "Kai")
+        }
+
+        assertEquals(listOf("Player 1", "Player 2", "Carol", "Player 4", "Kai"), provider().currentNames())
+    }
+
     @Test
     fun `a name cleared in the Bank reads as its default, and the count follows the Tournament`() {
         BankPreferences(context).savePlayerName(2, "   ")

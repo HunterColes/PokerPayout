@@ -5,12 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
-import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.domain.model.Standings
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
+import com.huntercoles.pokerpayout.core.utils.MoneyFormat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +49,13 @@ class TournamentConfigViewModel @Inject constructor(
             }
         }
 
+        // The late entry cutoff (PP-116), as set here and as a new tournament clears it
+        viewModelScope.launch {
+            tournamentPreferences.lateEntryUntilLevel.collect { level ->
+                _uiState.update { it.copy(lateEntryUntilLevel = level) }
+            }
+        }
+
         // The pool and the payout table follow every settings change (including the Bank's
         // weights editor) and every purchase or knockout recorded in the Bank.
         viewModelScope.launch {
@@ -57,10 +64,20 @@ class TournamentConfigViewModel @Inject constructor(
         viewModelScope.launch {
             bankPreferences.revision.collect { refreshPayouts() }
         }
+        // PP-114: a currency picked on another tab (the yen rounds to ¥100s)
+        viewModelScope.launch {
+            MoneyFormat.changes.drop(1).collect { refreshPayouts() }
+        }
 
         // A preset loaded (PP-032) replaces the blind fields this keeps its own copy of
         viewModelScope.launch {
             tournamentPreferences.setupRevision.drop(1).collect { loadTournamentConfiguration() }
+        }
+
+        // PP-113: the welcome shows on a new install until dismissed; the first clock started ends it too
+        _uiState.update { it.copy(showWelcome = timerPreferences.getShowWelcome()) }
+        viewModelScope.launch {
+            timerPreferences.timerRunning.collect { running -> if (running) dismissWelcome() }
         }
     }
 
@@ -97,10 +114,17 @@ class TournamentConfigViewModel @Inject constructor(
             is TournamentConfigIntent.UpdateSmallestChip -> updateSmallestChip(intent.chip)
             is TournamentConfigIntent.UpdateStartingChips -> updateStartingChips(intent.chips)
             is TournamentConfigIntent.UpdateSelectedPanel -> updateSelectedPanel(intent.panel)
+            is TournamentConfigIntent.UpdateLateEntryUntil -> tournamentPreferences.setLateEntryUntilLevel(intent.level)
             TournamentConfigIntent.ShowResetDialog -> showResetDialog()
             TournamentConfigIntent.HideResetDialog -> hideResetDialog()
             TournamentConfigIntent.ConfirmReset -> confirmReset()
+            TournamentConfigIntent.DismissWelcome -> dismissWelcome()
         }
+    }
+
+    private fun dismissWelcome() {
+        timerPreferences.dismissWelcome()
+        _uiState.update { it.copy(showWelcome = false) }
     }
 
     private fun loadTournamentConfiguration() {
@@ -123,12 +147,8 @@ class TournamentConfigViewModel @Inject constructor(
         val config = tournamentPreferences.getCurrentTournamentConfig()
         val rebuys = bankPreferences.getTotalRebuyCount()
         val addOns = bankPreferences.getTotalAddonCount()
-        val pool = PoolBreakdown.withRecordedPurchases(
-            config.money,
-            config.numPlayers,
-            bankPreferences.getRecordedRebuyCents(),
-            bankPreferences.getRecordedAddOnCents(),
-        )
+        // Purchases, late entries and re-entries at the prices paid (PP-085, PP-116)
+        val pool = bankPreferences.recordedPool(config.money, config.numPlayers)
         val table = calculatePayoutsUseCase(
             prizePoolCents = pool.prizePoolCents,
             weights = config.payoutWeights,

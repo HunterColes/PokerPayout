@@ -3,6 +3,25 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.16 (on master, not published)
+
+House rake:
+
+- **A house rake in the setup**, with the money, beside "Late entry until": a percentage of the
+  prize pool the host keeps, 0% to 25% in 0.5% steps, **0% unless set**. The note under the money
+  says what the prize pool starts at after it.
+- **It comes off the prize pool only** (buy-ins, rebuys and add-ons), rounded down to the cent, before
+  the places are paid, so the places plus the rake add up to the money taken in, to the cent.
+  Bounties (standard, progressive and mystery) and food are never raked.
+- **Shown wherever the pool is:** the Payouts tab ("5% house rake −$22.50" under where the pool came
+  from, and "With the $22.50 house rake: $450 taken in." under the places), the Bank's pool
+  breakdown, the champion's screen, Settle up ("The bank keeps the 10% house rake, $45, for the
+  host."), the share texts, and History (a House rake figure; a rake column in the CSV, before
+  currency). The clock shows the prize pool after the rake.
+- **Saved** with presets (starters take none), with the night in History, and in backups. A new
+  tournament puts it back to 0%. Games, presets, backups and nights from before have none, so
+  nothing changes for them.
+
 ## 1.4.15 (on master, not published)
 
 A tidier Tools page:

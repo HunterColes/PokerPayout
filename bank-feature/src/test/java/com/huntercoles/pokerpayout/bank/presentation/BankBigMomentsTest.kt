@@ -291,39 +291,45 @@ class BankBigMomentsTest {
             var bank = night(night.mode, night.players)
             var clock = clock()
             night.steps.forEachIndexed { index, step ->
-                val before = clock.state
-                val markedBefore = marked()
+                val before = Seen(clock.state, marked())
                 val knockout = perform(bank, step)
                 if (step.kind == DIE) {
                     restart().let { (newBank, newClock) -> bank = newBank; clock = newClock }
                     expect(clock.state.moment == null && !clock.state.winnerOpen) { "step $index: shown again after a restart" }
-                    return@forEachIndexed
+                } else if (checked("step $index ($step)", knockout, before, Seen(clock.state, marked())) != null) {
+                    moments++
                 }
-                val after = clock.state
-                val markedAfter = marked()
-                val brought = reached(after).filterTo(mutableSetOf()) { it.name !in markedBefore.keys }
-                val shown = after.moment?.takeIf { it.id != before.moment?.id }?.moment
-                    ?: BigMoment.CHAMPION.takeIf { after.winnerOpen && !before.winnerOpen }
-                // A knockout, or an Undo that puts one back (of a Bring back): someone more is out
-                val wentOut = out(after) > out(before)
-                expect(shown == null || wentOut) { "step $index ($step): $shown shown with nobody more out" }
-                expect(!wentOut || BigMoments.headline(brought) == shown) {
-                    "step $index ($step): $brought brought, $shown shown"
-                }
-                expect(!knockout || wentOut || shown == null) { "step $index: a knockout that changed nothing showed $shown" }
-                val still = after.moment?.moment
-                expect(still == null || still.name in markedAfter.keys) { "step $index: $still isn't marked" }
-                val keep = if (out(after) < out(before)) markedBefore.filterValues { it <= out(after) } else markedBefore
-                expect(markedAfter.entries.containsAll(keep.entries)) {
-                    "step $index ($step): $markedBefore became $markedAfter"
-                }
-                expect(out(after) >= out(before) || markedAfter == keep) { "step $index ($step): kept $markedAfter, not $keep" }
-                expect(!after.winnerOpen || after.table.championName != null) { "step $index: a champion's screen, no champion" }
-                if (shown != null) moments++
             }
             kit.clear()
         }
         assertTrue("the random nights reached some moments: $moments", moments >= MOMENTS_AT_LEAST)
+    }
+
+    /** The clock's state and what it has marked, at one moment. */
+    private data class Seen(val state: TimerUiState, val marked: Map<String, Int>)
+
+    /**
+     * The checks after a step at [where]: what it showed (the moment, if any). A new moment only with
+     * someone more out (a knockout, or an Undo of a Bring back), and then the biggest the field
+     * newly reached of those not marked; with nobody back in, every mark kept; with someone back in,
+     * only the marks made with no more out than now.
+     */
+    private fun checked(where: String, knockout: Boolean, before: Seen, after: Seen): BigMoment? {
+        val brought = reached(after.state).filterTo(mutableSetOf()) { it.name !in before.marked.keys }
+        val shown = after.state.moment?.takeIf { it.id != before.state.moment?.id }?.moment
+            ?: BigMoment.CHAMPION.takeIf { after.state.winnerOpen && !before.state.winnerOpen }
+        val wentOut = out(after.state) > out(before.state)
+        val cameBack = out(after.state) < out(before.state)
+        expect(shown == null || wentOut) { "$where: $shown shown with nobody more out" }
+        expect(!wentOut || BigMoments.headline(brought) == shown) { "$where: $brought brought, $shown shown" }
+        expect(!knockout || wentOut || shown == null) { "$where: a knockout that changed nothing showed $shown" }
+        val still = after.state.moment?.moment
+        expect(still == null || still.name in after.marked.keys) { "$where: $still isn't marked" }
+        val keep = if (cameBack) before.marked.filterValues { it <= out(after.state) } else before.marked
+        expect(after.marked.entries.containsAll(keep.entries)) { "$where: ${before.marked} became ${after.marked}" }
+        expect(!cameBack || after.marked == keep) { "$where: kept ${after.marked}, not $keep" }
+        expect(!after.state.winnerOpen || after.state.table.championName != null) { "$where: a champion's screen, no champion" }
+        return shown
     }
 
     private fun out(state: TimerUiState): Int = state.table.playerCount - state.table.playersLeft

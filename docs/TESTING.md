@@ -152,9 +152,10 @@ selector.
 `set-text` clears and types only once the field it names has the focus. A hardware `enter` leaves
 the app in keyboard mode, where Android moves the focus to the first field it can, and a menu
 closing later hands the focus back to that field and scrolls it into view, under the next tap
-(that is how `14-breaks` once typed its note into Rebuy). So when the tap leaves the focus
-elsewhere, it finds the field and taps again, up to three times, and fails rather than type
-into another field.
+(that is how `14-breaks` once typed its note into Rebuy, after tapping the 30 px of the Break note
+still showing over the Start clock bar). So a field cut to a sliver by the page's edge is first
+dragged to the middle of the page, and when the tap leaves the focus elsewhere, set-text finds the
+field and taps again, up to three times, and fails rather than type into another field.
 
 If you later add `Modifier.testTag(...)`, you also need
 `Modifier.semantics { testTagsAsResourceId = true }` near the root composable (gate it on

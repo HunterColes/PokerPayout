@@ -643,6 +643,28 @@ def _field(node):
     return node
 
 
+def _into_view(field, nodes):
+    """A text field the page's edge cuts to a sliver (under 48 dp showing, smaller than any field
+    is) is dragged to the middle of the page's scroller before it is tapped: a tap on the sliver can
+    land on the bar beside it (14-breaks' Break note showed 30 px over the Start clock bar). True if
+    the page was dragged."""
+    if "EditText" not in field.cls:
+        return False
+    cont = main_container(nodes)
+    x1, y1, x2, y2 = field.bounds
+    if cont is None or y2 - y1 >= touch_slop() * 6:   # 6 x 8 dp: the 48 dp a field is at least
+        return False
+    if not any(p is cont for p in _ancestors(field)):
+        return False   # in a sheet or a dialog over the page: dragging the page could close it
+    mid = (cont.bounds[1] + cont.bounds[3]) // 2
+    cy = (y1 + y2) // 2
+    if abs(cy - mid) < touch_slop():
+        return False
+    drag(cont.bounds, "down" if cy > mid else "up", abs(cy - mid))
+    print("[ui] set-text: the field showed %d px; dragged the page to bring it into view" % (y2 - y1))
+    return True
+
+
 def _focused_field(matcher, timeout=4.0):
     """Polls until one of the fields the selector names has the focus; (that field, nodes) or
     (None, nodes) with whatever has it."""
@@ -670,6 +692,11 @@ def cmd_set_text(a):
         if node is None:
             fail("no field matching %s" % a.selector, nodes)
         target = _field(node)
+        if _into_view(target, nodes):
+            node, found, nodes = find(a.selector, a.timeout, a.index)
+            if node is None:
+                fail("no field matching %s after bringing it into view" % a.selector, nodes)
+            target = _field(node)
         x, y = target.center
         shell("input tap %d %d" % (x, y))
         time.sleep(0.3)   # let focus and the tap's cursor placement land before the keys

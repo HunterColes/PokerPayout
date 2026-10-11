@@ -305,7 +305,7 @@ class PresetsViewModelTest {
         assertEquals(ChipSetSummary(colours = home.owned.size, chips = home.totalChips, ready = true), viewModel.state.chipSet)
     }
 
-    /** The clock (activity-scoped) and the setup page keep their own copies; a loaded preset reaches both. */
+    /** The clock (activity-scoped) keeps its own copy of the blinds, the setup page the money; a loaded preset reaches both. */
     @Test
     fun `the clock and the setup page follow a loaded preset`() {
         val viewModel = viewModel()
@@ -320,7 +320,6 @@ class PresetsViewModelTest {
         assertEquals(15, clockState.config.roundLengthMinutes)
         assertEquals("3 hours of 15-minute levels", 12, clockState.baseBlindLevels.size)
         assertFalse(clockState.hasTimerStarted)
-        assertEquals(15, setupViewModel.uiState.value.roundLengthMinutes)
         assertEquals(4_000L, setupViewModel.uiState.value.money.buyInCents)
 
         // Started, the clock keeps its game whatever is pressed

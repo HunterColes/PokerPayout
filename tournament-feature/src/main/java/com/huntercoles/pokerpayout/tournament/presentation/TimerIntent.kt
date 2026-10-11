@@ -54,10 +54,7 @@ sealed class TimerIntent {
     /** 0 turns the big-blind ante off; otherwise the first level that has it. */
     data class UpdateBigBlindAnte(val fromLevel: Int) : TimerIntent()
 
-    // Dialogs and views
-    data object ShowInvalidConfigDialog : TimerIntent()
-    data object HideInvalidConfigDialog : TimerIntent()
-
+    // Views
     /** S3 forced on with ⤢ (or off with ✕); rotating a phone shows it too, without this flag. */
     data class SetTableView(val enabled: Boolean) : TimerIntent()
 

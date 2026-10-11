@@ -9,6 +9,7 @@ import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockTimeline
 import com.huntercoles.pokerpayout.tournament.domain.clock.LevelSegment
 import com.huntercoles.pokerpayout.tournament.domain.moments.BigMoment
+import java.util.Locale
 
 /** How urgent the time left in the current level is. Checked most urgent first (B14). */
 enum class TimeTone { NORMAL, LOW, CRITICAL }
@@ -21,7 +22,7 @@ data class Purchases(
     val addOnsTaken: Int = 0
 )
 
-/** Where rebuys stand, for the clock's info list ("Rebuys open until level 6", "Rebuys closed"). */
+/** Where rebuys stand, for the clock's info list ("Rebuys open until Level 6", "Rebuys closed after Level 6"). */
 sealed interface RebuyState {
     val taken: Int
 
@@ -83,7 +84,6 @@ data class TimerUiState(
     val timeline: ClockTimeline = ClockTimeline.EMPTY,
     /** Why the blind setup can't be played, or null when it can. */
     val setupProblem: BlindSetupProblem? = null,
-    val showInvalidConfigDialog: Boolean = false,
     val table: TableStats = TableStats(),
     /** S3 forced on with ⤢ until ✕ (a phone turned sideways shows it without this). */
     val isTableView: Boolean = false,
@@ -281,7 +281,11 @@ data class MomentBanner(
 @Immutable
 data class MomentSlotState(val moment: MomentBanner? = null, val champion: String? = null)
 
-/** Clock text: "12:34" under an hour, "1:02:03" from an hour. */
+/**
+ * Clock text: "12:34" under an hour, "1:02:03" from an hour. Always in Western digits, whatever the
+ * phone's language, as the rest of the clock's numbers: the digits are drawn in Barlow Condensed and
+ * fitted to the screen by their width.
+ */
 object ClockFormat {
     private const val SECONDS_PER_MINUTE = 60
     private const val SECONDS_PER_HOUR = 3600
@@ -292,25 +296,9 @@ object ClockFormat {
         val minutes = seconds % SECONDS_PER_HOUR / SECONDS_PER_MINUTE
         val rest = seconds % SECONDS_PER_MINUTE
         return if (hours > 0) {
-            "%d:%02d:%02d".format(hours, minutes, rest)
+            "%d:%02d:%02d".format(Locale.US, hours, minutes, rest)
         } else {
-            "%d:%02d".format(minutes, rest)
+            "%d:%02d".format(Locale.US, minutes, rest)
         }
-    }
-
-    /** "2:47:12" for the tournament line; always shows hours. */
-    fun long(totalSeconds: Int): String {
-        val seconds = totalSeconds.coerceAtLeast(0)
-        return "%d:%02d:%02d".format(
-            seconds / SECONDS_PER_HOUR,
-            seconds % SECONDS_PER_HOUR / SECONDS_PER_MINUTE,
-            seconds % SECONDS_PER_MINUTE
-        )
-    }
-
-    /** "+0:20" style offset of a level from the start. */
-    fun offset(seconds: Int): String {
-        val minutes = seconds / SECONDS_PER_MINUTE
-        return "+%d:%02d".format(minutes / SECONDS_PER_MINUTE, minutes % SECONDS_PER_MINUTE)
     }
 }

@@ -2,6 +2,7 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
@@ -260,44 +261,44 @@ class TournamentConfigViewModelTest {
         assertEquals(25_000L, viewModel.state.payoutTable.totalCents)
         assertEquals(PayoutPreset.STANDARD, viewModel.state.payoutPreset)
 
-        viewModel.send(TournamentConfigIntent.UpdatePayoutRounding(PayoutRounding.FIVE_DOLLARS))
+        // Rounded to $5 on the Payouts tab, while this ViewModel is alive
+        tournamentPreferences.setPayoutRounding(PayoutRounding.FIVE_DOLLARS)
+        settle()
         assertEquals(listOf(12_500L, 7_000L, 5_500L), viewModel.state.payoutTable.places.map { it.amountCents })
-        assertEquals(PayoutRounding.FIVE_DOLLARS, tournamentPreferences.getPayoutRounding())
     }
 
     @Test
-    fun presetsApplyToTheCurrentNumberOfPlacesAndPersist() {
+    fun theSetupFollowsTheStructureSavedOnThePayoutsTab() {
         tournamentPreferences.setPlayerCount(10)
         tournamentPreferences.setBuyIn(20.0)
         val viewModel = createViewModel()
 
-        viewModel.send(TournamentConfigIntent.ApplyPayoutPreset(PayoutPreset.TOP_HEAVY))
+        tournamentPreferences.setPayoutPreset(PayoutPreset.TOP_HEAVY, places = 3)
+        settle()
 
         assertEquals(PayoutPreset.TOP_HEAVY, viewModel.state.payoutPreset)
-        assertEquals(listOf(60, 30, 10), tournamentPreferences.getPayoutWeights())
         assertEquals(listOf(12_000L, 6_000L, 2_000L), viewModel.state.payoutTable.places.map { it.amountCents })
 
-        viewModel.send(TournamentConfigIntent.SetPaidPlaces(4))
-        assertEquals(listOf(55, 25, 13, 7), tournamentPreferences.getPayoutWeights())
+        tournamentPreferences.setPayoutPreset(PayoutPreset.TOP_HEAVY, places = 4)
+        settle()
+        assertEquals(4, viewModel.state.paidPlaces)
         assertEquals(PayoutPreset.TOP_HEAVY, createViewModel().state.payoutPreset)
     }
 
     @Test
     fun paidPlacesNeverExceedThePlayers() {
         tournamentPreferences.setPlayerCount(3)
+        tournamentPreferences.setPayoutWeights(PayoutPreset.STANDARD.weightsFor(9))
         val viewModel = createViewModel()
 
-        viewModel.send(TournamentConfigIntent.SetPaidPlaces(9))
-
         assertEquals(3, viewModel.state.paidPlaces)
-        assertEquals(1, viewModel.state.recommendedPlaces)
     }
 
     @Test
-    fun theBankWeightsEditorUpdatesTheTournamentTable() {
+    fun weightsSavedElsewhereUpdateTheTournamentTable() {
         val viewModel = createViewModel()
 
-        // Saved from the Bank tab while this ViewModel is alive
+        // Saved from another tab while this ViewModel is alive
         tournamentPreferences.setPayoutWeights(listOf(3, 2))
         settle()
 
@@ -341,6 +342,32 @@ class TournamentConfigViewModelTest {
         assertEquals(0, viewModel.state.rebuyPurchases)
         assertEquals(0, bankPreferences.getPlayerRebuys(10))
         assertEquals("Player 10", bankPreferences.getPlayerName(10))
+    }
+
+    /**
+     * The reset question reads the saved settings alone: the blinds are the clock's, which it saves
+     * where the setup's money is (the setup page used to keep a copy of them as well).
+     */
+    @Test
+    fun resetAsksOnlyWhenThereIsSomethingToReset() {
+        val viewModel = createViewModel()
+        viewModel.send(TournamentConfigIntent.ShowResetDialog)
+        assertFalse("a new tournament has nothing to reset", viewModel.state.showResetDialog)
+
+        // A level length changed on the clock's setup, saved as the clock saves it
+        tournamentPreferences.setRoundLengthMinutes(15)
+        viewModel.send(TournamentConfigIntent.ShowResetDialog)
+        assertTrue(viewModel.state.showResetDialog)
+        viewModel.send(TournamentConfigIntent.ConfirmReset)
+        assertFalse(viewModel.state.showResetDialog)
+        assertEquals(TournamentDefaults.ROUND_LENGTH_MINUTES, tournamentPreferences.getRoundLengthMinutes())
+
+        // Breaks are the clock's own settings
+        timerPreferences.setBreakEveryLevels(4)
+        viewModel.send(TournamentConfigIntent.ShowResetDialog)
+        assertTrue(viewModel.state.showResetDialog)
+        viewModel.send(TournamentConfigIntent.HideResetDialog)
+        assertFalse(viewModel.state.showResetDialog)
     }
 
     // The welcome (PP-113): the app's first start settles it (FirstRun, FirstRunTest)

@@ -206,7 +206,7 @@ class TimerViewModelTest {
         assertTrue(viewModel.state.isRunning)
         assertEquals(5, viewModel.state.elapsedSeconds)
         assertEquals("19:55", viewModel.levelClock)
-        assertEquals("2:59:55", ClockFormat.long(viewModel.state.tournamentRemainingSeconds))
+        assertEquals("2:59:55 to go", 2 * 3_600 + 59 * 60 + 55, viewModel.state.tournamentRemainingSeconds)
         assertTrue(timerPreferences.getTimerRunning())
         assertTrue(tournamentPreferences.getTournamentLocked())
 
@@ -306,13 +306,10 @@ class TimerViewModelTest {
         viewModel.send(TimerIntent.ToggleTimer)
         advanceSeconds(3)
 
-        assertTrue(viewModel.state.showInvalidConfigDialog)
         assertFalse(viewModel.state.isRunning)
+        assertFalse(viewModel.state.hasTimerStarted)
         assertEquals(0, viewModel.state.elapsedSeconds)
         assertFalse(timerPreferences.getTimerRunning())
-
-        viewModel.send(TimerIntent.HideInvalidConfigDialog)
-        assertFalse(viewModel.state.showInvalidConfigDialog)
     }
 
     @Test
@@ -614,13 +611,12 @@ class TimerViewModelTest {
         val problem = viewModel.state.setupProblem
         assertEquals(BlindSetupProblemKind.UNEVEN_ROUNDS, problem?.kind)
         viewModel.send(TimerIntent.ToggleTimer)
-        assertTrue(viewModel.state.showInvalidConfigDialog)
+        assertFalse("refused while the setup can't be played", viewModel.state.isRunning)
 
         viewModel.send(TimerIntent.ApplyFix(problem!!.fixes.first()))
 
         assertEquals(BlindSetupFix.UseRoundLength(20, 9), problem.fixes.first())
         assertNull(viewModel.state.setupProblem)
-        assertFalse(viewModel.state.showInvalidConfigDialog)
         assertEquals(20, tournamentPreferences.getRoundLengthMinutes())
         viewModel.send(TimerIntent.ToggleTimer)
         assertTrue(viewModel.state.isRunning)

@@ -92,8 +92,9 @@ class PayoutsViewModel @Inject constructor(
     /** Saves tonight once: nothing happens before it is over, or once History holds it. */
     private fun saveNight() {
         val players = finished ?: return
-        val pool = _uiState.value.pool.prizePoolCents
-        if (!nights.isSaved(players, pool)) nights.save(players, pool)
+        val pool = _uiState.value.pool
+        // The pool the places shared, and the house rake kept off it (PP-145)
+        if (!nights.isSaved(players, pool.prizePoolCents)) nights.save(players, pool.prizePoolCents, pool.rakeCents)
         refresh()
     }
 
@@ -146,7 +147,7 @@ class PayoutsViewModel @Inject constructor(
                 table = settlement.payoutTable,
                 firstPlaceByPreset = PayoutPreset.entries.associateWith { preset ->
                     calculatePayouts(
-                        prizePoolCents = settlement.pool.prizePoolCents,
+                        pool = settlement.pool,
                         weights = preset.weightsFor(places),
                         playerCount = config.numPlayers,
                         rounding = config.payoutRounding

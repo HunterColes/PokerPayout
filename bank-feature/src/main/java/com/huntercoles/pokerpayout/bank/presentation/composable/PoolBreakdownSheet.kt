@@ -72,8 +72,9 @@ internal fun PoolBreakdownSheetContent(state: BankUiState, onPayoutStructure: ()
 /**
  * Where the money in the box came from: the prize pool, with the rebuys and add-ons it already
  * holds shown as "of which" lines (they used to be listed as if on top of it, so the lines didn't
- * seem to add up), then the bounty pool, food and the total. Progressive and mystery bounties say
- * so on the bounty pool's line; a mystery pool also says what is still in its envelopes (PP-035).
+ * seem to add up), then the house rake that came off it (PP-145: the host's), the bounty pool, food
+ * and the total. Progressive and mystery bounties say so on the bounty pool's line; a mystery pool
+ * also says what is still in its envelopes (PP-035). The top-level lines add up to the total.
  */
 @Composable
 internal fun PoolBreakdownContent(state: BankUiState) {
@@ -82,6 +83,7 @@ internal fun PoolBreakdownContent(state: BankUiState) {
         Line(stringResource(R.string.bank_pool_prize), pool.prizePoolCents, strong = true)
         if (pool.rebuyCents > 0L) Line(stringResource(R.string.bank_pool_of_rebuys), pool.rebuyCents, sub = true)
         if (pool.addOnCents > 0L) Line(stringResource(R.string.bank_pool_of_add_ons), pool.addOnCents, sub = true)
+        if (!pool.rake.isNone) Line(stringResource(R.string.bank_pool_rake, pool.rake.label), pool.rakeCents)
         if (pool.bountyCents > 0L) Line(bountyPoolLabel(state.bountyMode), pool.bountyCents)
         val envelopes = state.envelopesLeft.size
         if (pool.bountyCents > 0L && state.bountyMode == BountyMode.MYSTERY && envelopes > 0) {

@@ -28,13 +28,15 @@ class NightRecorder @Inject constructor(
     fun isSaved(players: List<NightPlayer>, prizePoolCents: Long): Boolean =
         store.nights.value.any { it.prizePoolCents == prizePoolCents && it.players == players }
 
-    fun save(players: List<NightPlayer>, prizePoolCents: Long): SavedNight = store.add(
+    /** Saves tonight: the pool the places shared ([prizePoolCents]) and the house rake kept off it (PP-145). */
+    fun save(players: List<NightPlayer>, prizePoolCents: Long, rakeCents: Long = 0L): SavedNight = store.add(
         SavedNight(
             id = 0L,
             date = today(),
             structureName = presets.presets.value.firstOrNull { setup.matches(it.setup) }?.name,
             prizePoolCents = prizePoolCents,
             players = players,
+            rakeCents = rakeCents,
         ),
     )
 

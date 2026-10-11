@@ -57,6 +57,8 @@
 
     <!-- One night -->
     <string name="history_prize_pool">Prize pool</string>
+    <!-- PP-145: the house rake kept off the prize money that night -->
+    <string name="history_rake_stat">House rake</string>
     <string name="history_players_stat">Players</string>
     <string name="history_share">Share this night</string>
     <string name="history_delete">Delete this night</string>
@@ -81,6 +83,8 @@
     <string name="history_share_heading">Poker night, %1$s</string>
     <string name="history_share_heading_named">Poker night, %1$s (%2$s)</string>
     <string name="history_share_pool">Prize pool %1$s · %2$s</string>
+    <!-- PP-145: after the pool line, on a night with a house rake -->
+    <string name="history_share_rake">House rake %1$s</string>
     <string name="history_share_row">%1$s %2$s</string>
     <string name="history_share_row_won">%1$s %2$s: %3$s</string>
 

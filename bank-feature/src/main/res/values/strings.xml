@@ -235,6 +235,8 @@
     <string name="bank_pool_prize">Prize pool</string>
     <string name="bank_pool_of_rebuys">· of which rebuys</string>
     <string name="bank_pool_of_add_ons">· of which add-ons</string>
+    <!-- PP-145: what the house rake took off the prize money, "House rake · 5%" -->
+    <string name="bank_pool_rake">House rake · %1$s</string>
     <string name="bank_pool_bounty">Bounty pool</string>
     <string name="bank_pool_bounty_pko">Bounty pool · progressive</string>
     <string name="bank_pool_bounty_mystery">Bounty pool · mystery</string>
@@ -256,6 +258,8 @@
     </plurals>
     <string name="bank_settle_title">Settle up</string>
     <string name="bank_settle_note">The fewest payments that square everyone, counting what the Bank has taken in and paid out.</string>
+    <!-- PP-145: %1$s is the rate ("5%"), %2$s the amount -->
+    <string name="bank_settle_rake">The bank keeps the %1$s house rake, %2$s, for the host.</string>
     <plurals name="bank_settle_count">
         <item quantity="one">%d payment</item>
         <item quantity="other">%d payments</item>
@@ -279,6 +283,8 @@
     <string name="bank_settle_share_down">%1$s: in %2$s, won %3$s, down %4$s</string>
     <string name="bank_settle_share_even">%1$s: in %2$s, won %3$s, even</string>
     <string name="bank_settle_share_food">Food %1$s, kept by the bank.</string>
+    <!-- PP-145: "House rake (5%) $20, kept by the bank for the host." -->
+    <string name="bank_settle_share_rake">House rake (%1$s) %2$s, kept by the bank for the host.</string>
     <plurals name="bank_settle_share_payments">
         <item quantity="one">Settle up, 1 payment:</item>
         <item quantity="other">Settle up, %d payments:</item>

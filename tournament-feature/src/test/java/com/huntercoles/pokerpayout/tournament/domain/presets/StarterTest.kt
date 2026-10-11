@@ -99,6 +99,8 @@ class StarterTest {
             assertEquals(0L, setup.money.rebuyCents)
             assertEquals(0L, setup.money.addOnCents)
         }
+        // PP-145: no starter takes a house rake, at any chip
+        everyNight.forEach { (starter, setup) -> assertTrue("$starter takes no rake", setup.money.rake.isNone) }
     }
 
     @Test

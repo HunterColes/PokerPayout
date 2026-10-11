@@ -15,6 +15,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.lifecycle.ViewModelStore
 import com.huntercoles.pokerpayout.core.design.PokerTheme
 import com.huntercoles.pokerpayout.core.presentation.LocalTableKnockouts
@@ -172,6 +173,26 @@ class BigMomentsScreenTest {
         compose.onNodeWithText("Marcus").assertIsDisplayed()
         compose.onNodeWithText("$130").assertIsDisplayed()
         compose.onNodeWithText("Priya").assertIsDisplayed()
+    }
+
+    /** PP-145: with a house rake, the Payouts tab's line under the places: what they and the rake make. */
+    @Test
+    fun withAHouseRakeTheChampionsScreenSaysWhatCameIn() {
+        showWinner(winner)
+        compose.onNodeWithText("house rake", substring = true).assertDoesNotExist()
+        val raked = winner.copy(
+            prizeCents = 21_750L,
+            rows = listOf(
+                PayoutRowModel(1, 21_750L, 50.9, "Dana"),
+                PayoutRowModel(2, 12_000L, 28.1, "Marcus"),
+                PayoutRowModel(3, 9_000L, 21.1, "Priya"),
+            ),
+            rakeCents = 2_250L,
+            takenInCents = 45_000L,
+        )
+        shownWinner = raked
+        compose.waitForIdle()
+        compose.onNodeWithText("With the $22.50 house rake: $450 taken in.").performScrollTo().assertIsDisplayed()
     }
 
     @Test

@@ -94,6 +94,7 @@ class TournamentConfigViewModel @Inject constructor(
                 commitPurchaseAmount(PurchaseKind.REBUY, intent.cents, intent.centsBeforeEdit)
             is TournamentConfigIntent.CommitAddOnAmount ->
                 commitPurchaseAmount(PurchaseKind.ADD_ON, intent.cents, intent.centsBeforeEdit)
+            is TournamentConfigIntent.UpdateRake -> updateSettings { setRake(intent.rake) }
             TournamentConfigIntent.ConfirmClearPurchases -> confirmClearPurchases()
             TournamentConfigIntent.DismissClearPurchases -> keepPurchases()
             is TournamentConfigIntent.UpdateWeights -> updateWeights(intent.weights)
@@ -147,10 +148,11 @@ class TournamentConfigViewModel @Inject constructor(
         val config = tournamentPreferences.getCurrentTournamentConfig()
         val rebuys = bankPreferences.getTotalRebuyCount()
         val addOns = bankPreferences.getTotalAddonCount()
-        // Purchases, late entries and re-entries at the prices paid (PP-085, PP-116)
+        // Purchases, late entries and re-entries at the prices paid (PP-085, PP-116), less the house
+        // rake (PP-145)
         val pool = bankPreferences.recordedPool(config.money, config.numPlayers)
         val table = calculatePayoutsUseCase(
-            prizePoolCents = pool.prizePoolCents,
+            pool = pool,
             weights = config.payoutWeights,
             playerCount = config.numPlayers,
             rounding = config.payoutRounding

@@ -6,6 +6,7 @@ import com.huntercoles.pokerpayout.core.R
 import com.huntercoles.pokerpayout.core.domain.history.NightStore
 import com.huntercoles.pokerpayout.core.domain.history.Nights.night
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
 import com.huntercoles.pokerpayout.core.preferences.ChipCalculatorPreferences
@@ -90,6 +91,7 @@ class BackupFileV1Test {
         assertEquals(1_250L, tournament.getMoneySettings().buyInCents) // v1.1.x's 12.5f
         assertEquals(1_000L, tournament.getMoneySettings().rebuyCents)
         assertEquals(BountyMode.MYSTERY, tournament.getBountyMode())
+        assertEquals(HouseRake.NONE, tournament.getRake()) // PP-145: a backup from before the house rake has none
         assertEquals(20, tournament.getRoundLengthMinutes())
 
         val bank = BankPreferences(context)

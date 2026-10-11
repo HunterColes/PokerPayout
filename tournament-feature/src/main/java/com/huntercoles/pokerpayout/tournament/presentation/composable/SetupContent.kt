@@ -48,6 +48,7 @@ import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerStepper
 import com.huntercoles.pokerpayout.core.design.components.presetLabel
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
+import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
@@ -273,11 +274,20 @@ internal fun LateEntryUntilSelect(
     )
 }
 
-/** "Prize pool starts at $360 and grows with rebuys and add-ons." */
+/**
+ * "Prize pool starts at $360 and grows with rebuys and add-ons.", or with a house rake (PP-145)
+ * "Prize pool starts at $342 after the 5% house rake, and grows …": the buy-ins less the rake, worked
+ * out where every pool is ([PoolBreakdown]).
+ */
 @Composable
 private fun PrizePoolNote(setup: TournamentConfigUiState) {
-    val amount = money(setup.money.buyInCents * setup.playerCount)
-    val sentence = stringResource(R.string.setup_prize_pool_starts, amount)
+    val buyIns = PoolBreakdown.of(setup.money, setup.playerCount, rebuyCount = 0, addOnCount = 0)
+    val amount = money(buyIns.prizePoolCents)
+    val sentence = if (buyIns.rake.isNone) {
+        stringResource(R.string.setup_prize_pool_starts, amount)
+    } else {
+        stringResource(R.string.setup_prize_pool_starts_raked, amount, buyIns.rake.label)
+    }
     val at = sentence.indexOf(amount)
     Text(
         text = buildAnnotatedString {

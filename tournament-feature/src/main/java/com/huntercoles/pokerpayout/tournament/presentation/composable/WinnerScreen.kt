@@ -77,6 +77,10 @@ data class WinnerModel(
     /** Every paid place, 1st first, with who finished there. */
     val rows: List<PayoutRowModel>,
     val night: NightSave,
+    /** The house rake kept off the prize money (PP-145), in cents; 0 without one. */
+    val rakeCents: Long = 0L,
+    /** What came in for prizes: the paid places plus the rake, in cents. */
+    val takenInCents: Long = 0L,
 ) {
     companion object {
         /** The screen for [payouts]; null until there is a champion. */
@@ -89,6 +93,8 @@ data class WinnerModel(
                 bountyCents = payouts.bounties.championCents,
                 rows = payouts.rows,
                 night = payouts.night,
+                rakeCents = payouts.table.rakeCents,
+                takenInCents = payouts.table.takenInCents,
             )
         }
     }
@@ -138,7 +144,7 @@ internal fun WinnerContent(model: WinnerModel, onAction: (WinnerAction) -> Unit,
                         modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(end = 12.dp, bottom = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        WinnerPayouts(model.rows)
+                        WinnerPayouts(model)
                         WinnerSave(model.night, onAction)
                     }
                 }
@@ -154,7 +160,7 @@ internal fun WinnerContent(model: WinnerModel, onAction: (WinnerAction) -> Unit,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     ChampionCard(model, Modifier.fillMaxWidth())
-                    WinnerPayouts(model.rows)
+                    WinnerPayouts(model)
                     WinnerSave(model.night, onAction)
                 }
             }
@@ -233,12 +239,15 @@ private fun ChampionCard(model: WinnerModel, modifier: Modifier = Modifier, scro
     }
 }
 
-/** Each paid place: "1st  Dana  $225". */
+/**
+ * Each paid place: "1st  Dana  $225"; with a house rake (PP-145), the Payouts tab's line under them:
+ * "With the $22.50 house rake: $450 taken in."
+ */
 @Composable
-private fun WinnerPayouts(rows: List<PayoutRowModel>) {
+private fun WinnerPayouts(model: WinnerModel) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         PokerEyebrow(stringResource(R.string.winner_payouts))
-        rows.forEachIndexed { index, row ->
+        model.rows.forEachIndexed { index, row ->
             if (index > 0) HorizontalDivider(color = PokerColors.FeltLine)
             Row(
                 modifier = Modifier
@@ -268,6 +277,14 @@ private fun WinnerPayouts(rows: List<PayoutRowModel>) {
                     color = if (first) PokerColors.PokerGold else PokerColors.CardWhite,
                 )
             }
+        }
+        if (model.rakeCents > 0L) {
+            Text(
+                text = stringResource(R.string.payouts_rake_taken_in, money(model.rakeCents), money(model.takenInCents)),
+                style = MaterialTheme.typography.bodySmall,
+                color = PokerColors.Chalk,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }

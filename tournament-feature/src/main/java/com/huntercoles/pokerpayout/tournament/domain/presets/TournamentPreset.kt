@@ -32,8 +32,9 @@ data class TournamentPreset(
 }
 
 /**
- * What a preset holds: the money, the blinds, the payout structure and, when chosen, the chip set from
- * Tools. Never the players (their number or names), the Bank's purchases or the clock's progress.
+ * What a preset holds: the money (the house rake too, PP-145: 0% in presets saved before it), the
+ * blinds, the payout structure and, when chosen, the chip set from Tools. Never the players (their
+ * number or names), the Bank's purchases or the clock's progress.
  *
  * @property rebuyUntilLevel the last level rebuys are allowed at; 0 = no cutoff.
  * @property chipSet the chip set, if the preset includes it.

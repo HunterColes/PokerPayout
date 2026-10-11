@@ -299,13 +299,14 @@ private fun PresetMenu(preset: TournamentPreset, onIntent: (PresetsIntent) -> Un
     }
 }
 
-/** "$40 buy-in · 20-min levels · 5,000 chips · Standard · 3 paid · chip set". */
+/** "$40 buy-in · 20-min levels · 5,000 chips · Standard · 3 paid · chip set", the house rake after the buy-in if any. */
 @Composable
 private fun presetSummary(setup: PresetSetup): String {
     val formatter = rememberChipFormatter()
     val payouts = setup.payouts
     return listOfNotNull(
         stringResource(R.string.strip_buy_in, money(setup.money.buyInCents)),
+        setup.money.rake.takeUnless { it.isNone }?.let { stringResource(R.string.strip_rake, it.label) },
         stringResource(R.string.strip_level_length, setup.blinds.roundLengthMinutes),
         stringResource(R.string.strip_chips, formatter.format(setup.blinds.startingChips)),
         payouts.preset?.label ?: stringResource(R.string.setup_payouts_custom),

@@ -15,11 +15,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
 import com.huntercoles.pokerpayout.core.design.components.LocalShellSnackbars
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.navigation.NavTab
 import com.huntercoles.pokerpayout.core.presentation.LocalTableKnockouts
 import com.huntercoles.pokerpayout.core.testing.Device
@@ -126,6 +129,26 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         showAndCheck("S1_setup_mystery", scroll = true) {
             TournamentContent(mystery, fixture.ready, TournamentUi(), TournamentActions())
         }
+    }
+
+    /**
+     * PP-145: a 5% house rake beside the late entry cutoff, and the prize pool note under the money
+     * ("Prize pool starts at $342 after the 5% house rake …"). The golden is scrolled to them.
+     */
+    @Test
+    fun setupRake() {
+        val raked = setup.copy(config = setup.config.copy(money = setup.money.copy(rake = HouseRake.of(500))))
+        val name = "S1_setup_rake"
+        shownKey = name
+        shown = { InTournamentTab { TournamentContent(raked, fixture.ready, TournamentUi(), TournamentActions()) } }
+        screen.compose.waitForIdle()
+        val where = "$name on ${config.id}"
+        LayoutAssertions.assertTextFits(screen.compose, where)
+        LayoutAssertions.assertTouchTargets(screen.compose, where, strict = false)
+        screen.compose.onNodeWithText("after the 5% house rake", substring = true).performScrollTo()
+        screen.compose.waitForIdle()
+        if (config in DeviceMatrix.goldens) screen.compose.onRoot().captureGolden("screens", name, config)
+        screen.compose.forEachScrollPosition { LayoutAssertions.assertVisibleTextUnclipped(screen.compose, "$where, $it") }
     }
 
     @Test
@@ -267,6 +290,11 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         showAndCheck("S29_winner_save", scroll = true, golden = false) {
             TournamentContent(setup, over, running, TournamentActions(), winner = WINNER.copy(night = NightSave.Offered))
         }
+        // PP-145: with a house rake, the line under the places (checked, not drawn)
+        val raked = WINNER.copy(rakeCents = RAKE, takenInCents = WINNER.rows.sumOf { it.amountCents } + RAKE)
+        showAndCheck("S29_winner_rake", scroll = true, golden = false) {
+            TournamentContent(setup, over, running, TournamentActions(), winner = raked)
+        }
         val longName = WINNER.copy(championName = LONG_NAME, night = NightSave.Saved)
         showAndCheck("S29_winner_saved", scroll = true, golden = false) {
             TournamentContent(setup, over, running, TournamentActions(), winner = longName)
@@ -403,6 +431,7 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         private const val KNOCKOUT_DONE = "Theo is out in 7th · bounty to Dana"
         private const val PRIZE_3RD = 9_500L
         private const val LONG_NAME = "Christopher Montgomery"
+        private const val RAKE = 2_250L
 
         /** The mockups' night over: Dana wins the $450 pool, Standard to $5, her own bounty and Ben's. */
         private val WINNER = WinnerModel(

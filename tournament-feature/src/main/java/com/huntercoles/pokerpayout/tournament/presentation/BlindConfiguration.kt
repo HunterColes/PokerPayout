@@ -26,7 +26,7 @@ data class TableStats(
     val playersLeft: Int = TournamentDefaults.PLAYER_COUNT,
     /** Chips in play / players left, counting each buy-in, rebuy and add-on as one starting stack. */
     val averageStack: Int = 0,
-    /** Buy-ins, rebuys and add-ons, in cents: the pool the Payouts table splits. */
+    /** Buy-ins, rebuys and add-ons less the house rake (PP-145), in cents: the pool the Payouts table splits. */
     val prizePoolCents: Long = 0L,
     /** How many places the Payouts table pays. */
     val paidPlaces: Int = 0,

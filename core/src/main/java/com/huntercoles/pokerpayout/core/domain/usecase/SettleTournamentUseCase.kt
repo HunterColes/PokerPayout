@@ -24,6 +24,8 @@ import javax.inject.Inject
  * - Every [BankPlayer] is one entry (PP-116): a late entry or a re-entry is a player of its own, with
  *   its own place, bounty and entry, at the price it was bought at. So the field, the places paid
  *   and the pools all count entries.
+ * - The house rake (PP-145) comes off the prize pool before the places are paid, and stays with the
+ *   Bank (the host), as the food money does. Bounties are never raked.
  */
 class SettleTournamentUseCase @Inject constructor(
     private val calculatePayouts: CalculatePayoutsUseCase
@@ -44,7 +46,8 @@ class SettleTournamentUseCase @Inject constructor(
             addOnCents = players.sumOf { it.addOnCostCents(money) },
             recordedEntries = players.mapNotNull { it.entryPrice }
         )
-        val table = calculatePayouts(pool.prizePoolCents, weights, players.size, rounding)
+        // The house rake (PP-145) comes off the prize money first; the places share the rest
+        val table = calculatePayouts(pool, weights, players.size, rounding)
         val champion = standings.championId
         val bounties = BountyLedger.of(players, standings, money)
 

@@ -100,6 +100,8 @@ internal object BankEntries {
                 )
             },
             foodCents = result.pool.foodCents,
+            rakeCents = result.pool.rakeCents,
+            rake = result.pool.rake,
         )
     }
 }

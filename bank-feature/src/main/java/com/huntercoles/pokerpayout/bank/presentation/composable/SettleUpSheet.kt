@@ -68,7 +68,8 @@ internal fun SettleUpSheet(
  * Who pays whom once the night is over (it took over the cash game's settle-up in 1.4): the fewest
  * payments that square everyone, largest debts first, the Bank one side of some ("The bank pays
  * Dana"), each with a 48 dp tick for paid. Ticking the last one records everyone square in the Bank.
- * Then Share as text, for the group chat.
+ * With a house rake (PP-145) a line says the Bank keeps it for the host. Then Share as text, for the
+ * group chat.
  */
 @Composable
 internal fun SettleUpSheetContent(
@@ -92,6 +93,12 @@ internal fun SettleUpSheetContent(
             SettleNote(stringResource(R.string.bank_settle_square))
         } else {
             SettleNote(stringResource(R.string.bank_settle_note))
+        }
+        // PP-145: the house rake is the host's, so the Bank keeps it (the payments already leave it there)
+        if (settleUp.rakeCents > 0L) {
+            SettleNote(stringResource(R.string.bank_settle_rake, settleUp.rake.label, formatMoney(settleUp.rakeCents)))
+        }
+        if (transfers.isNotEmpty()) {
             Column {
                 PaymentsHeader(transfers.size)
                 val names = settleNames(state)

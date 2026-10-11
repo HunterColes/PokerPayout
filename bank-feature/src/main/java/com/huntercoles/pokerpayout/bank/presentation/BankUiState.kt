@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.bank.presentation
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.ClockStatus
 import com.huntercoles.pokerpayout.core.domain.model.EntryPrice
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
@@ -122,7 +123,7 @@ data class BankUiState(
     val totalPoolCents: Long get() = pool.totalCents
     val prizePoolCents: Long get() = pool.prizePoolCents
 
-    /** What the bank pays back out in total: the prize pool plus the bounty pool. */
+    /** What the bank pays back out in total: the prize pool (after the house rake, PP-145) plus the bounty pool. */
     val payableCents: Long get() = pool.payableCents
     val payoutWeights: List<Int> get() = payoutSettings.weights
     val isRebuyEnabled: Boolean get() = money.rebuyCents > 0L
@@ -175,7 +176,11 @@ data class SettleUpModel(
     /** In seat order. */
     val nights: List<PlayerNight>,
     /** The food money, which the Bank keeps. */
-    val foodCents: Long = 0L
+    val foodCents: Long = 0L,
+    /** The house rake (PP-145), which the Bank keeps for the host; 0 without one. */
+    val rakeCents: Long = 0L,
+    /** Its rate, for the words ("the 5% house rake"). */
+    val rake: HouseRake = HouseRake.NONE
 )
 
 /** What [name] put in tonight (entry, rebuys and add-ons) and won (prizes and bounties). */

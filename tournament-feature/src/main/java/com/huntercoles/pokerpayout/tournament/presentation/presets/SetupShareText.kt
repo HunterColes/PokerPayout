@@ -61,7 +61,7 @@ object SetupShareText {
         return lines.joinToString("\n").trim()
     }
 
-    /** "$40 buy-in · $5 bounty · $40 rebuy to the end of Level 4 · $10 add-on · $5 food". */
+    /** "$40 buy-in · $5 bounty · $40 rebuy to the end of Level 4 · $10 add-on · $5 food · 5% house rake". */
     private fun moneyLine(res: Resources, amounts: MoneySettings, rebuyUntilLevel: Int): String = listOfNotNull(
         res.getString(R.string.strip_buy_in, money(amounts.buyInCents)),
         amounts.bountyCents.takeIf { it > 0L }?.let { res.getString(R.string.strip_bounty, money(it)) },
@@ -74,6 +74,7 @@ object SetupShareText {
         },
         amounts.addOnCents.takeIf { it > 0L }?.let { res.getString(R.string.strip_add_on, money(it)) },
         amounts.foodCents.takeIf { it > 0L }?.let { res.getString(R.string.share_setup_food, money(it)) },
+        amounts.rake.takeUnless { it.isNone }?.let { res.getString(R.string.strip_rake, it.label) },
     ).joinToString(res.getString(R.string.strip_separator))
 
     /** "3 h · 20-min levels · 5,000 chips · smallest chip 25 · breaks every 4 · ante from L5". */

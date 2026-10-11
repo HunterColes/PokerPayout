@@ -27,7 +27,10 @@ object PayoutsShareText {
         }
     }.trimEnd()
 
-    /** "Prize pool $410 (9 buy-ins $360 · 1 rebuy $40 · 1 add-on $10)". */
+    /**
+     * "Prize pool $410 (9 buy-ins $360 · 1 rebuy $40 · 1 add-on $10)"; with a house rake (PP-145)
+     * "Prize pool $380 (10 buy-ins $400 · 5% house rake −$20)", the pool after the rake.
+     */
     fun poolLine(context: Context, pool: PoolBreakdown, players: Int, rebuys: Int, addOns: Int): String =
         context.getString(
             R.string.payouts_share_pool,
@@ -35,20 +38,40 @@ object PayoutsShareText {
             poolSources(context, pool, players, rebuys, addOns),
         )
 
-    /** "9 buy-ins $360 · 1 rebuy $40 · 5 add-ons $50". */
+    /**
+     * "9 buy-ins $360 · 1 rebuy $40 · 5 add-ons $50", under the Payouts tab's pool; a house rake has a
+     * line of its own under it there ([rakeLine]).
+     */
     fun poolSources(context: Context, state: PayoutsUiState): String =
-        poolSources(context, state.pool, state.playerCount, state.rebuyCount, state.addOnCount)
+        poolSources(context, state.pool, state.playerCount, state.rebuyCount, state.addOnCount, withRake = false)
 
-    /** "9 buy-ins $360 · 1 rebuy $40 · 5 add-ons $50", for [players] buy-ins and the purchases counted. */
-    fun poolSources(context: Context, pool: PoolBreakdown, players: Int, rebuys: Int, addOns: Int): String {
+    /**
+     * "9 buy-ins $360 · 1 rebuy $40 · 5 add-ons $50", for [players] buy-ins and the purchases counted,
+     * then, [withRake], the house rake that came off them (PP-145): "· 5% house rake −$20".
+     */
+    @Suppress("LongParameterList") // the pool, what it counts, and whether the rake goes on the line
+    fun poolSources(
+        context: Context,
+        pool: PoolBreakdown,
+        players: Int,
+        rebuys: Int,
+        addOns: Int,
+        withRake: Boolean = true,
+    ): String {
         val res = context.resources
         fun part(plural: Int, count: Int, cents: Long) = res.getQuantityString(plural, count, count, formatMoney(cents))
         val parts = buildList {
             add(part(R.plurals.payouts_buy_ins, players, pool.buyInCents))
             if (rebuys > 0) add(part(R.plurals.payouts_rebuys, rebuys, pool.rebuyCents))
             if (addOns > 0) add(part(R.plurals.payouts_add_ons, addOns, pool.addOnCents))
+            if (withRake) rakeLine(context, pool)?.let(::add)
         }
         return parts.joinToString(context.getString(R.string.payouts_separator))
+    }
+
+    /** "5% house rake −$20": what the house rake took off [pool] (PP-145); null without one. */
+    fun rakeLine(context: Context, pool: PoolBreakdown): String? = pool.rake.takeUnless { it.isNone }?.let { rake ->
+        context.getString(R.string.payouts_rake_part, rake.label, formatMoney(pool.rakeCents))
     }
 
     /** "1st: $180", and "1st: $180 · Alice" once [winner] has finished there. */

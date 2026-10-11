@@ -213,6 +213,14 @@ class HistoryViewModelTest {
         )
     }
 
+    /** PP-145: a night with a house rake says so after the pool. */
+    @Test
+    fun `a night with a house rake shares it after the pool`() {
+        val text = HistoryText(context.resources)
+        val raked = HistoryFixtures.friday.copy(rakeCents = 1_579L)
+        assertEquals("Prize pool \$300 · 6 players · House rake \$15.79", text.share(raked).lines()[1])
+    }
+
     // One person under two names (S26b, PP-110) ------------------------------------------------------
 
     /** The fixtures' nights, and one more where "Dana R." beat Marcus heads-up: 2 points and a win. */

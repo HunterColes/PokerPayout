@@ -13,6 +13,7 @@ import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
  * Dana: in $50, won $245, up $195
  * Sam: in $25, won $0, down $25
  * Food $45, kept by the bank.
+ * House rake (5%) $20, kept by the bank for the host.
  *
  * Settle up, 3 payments:
  * Sam pays Dana $25
@@ -34,10 +35,14 @@ object SettleUpShareText {
                 else -> resources.getString(R.string.bank_settle_share_even, night.name, paidIn, won)
             }
         }
-        val food = listOfNotNull(
-            settleUp.foodCents.takeIf { it > 0L }?.let { resources.getString(R.string.bank_settle_share_food, formatMoney(it)) }
+        val kept = listOfNotNull(
+            settleUp.foodCents.takeIf { it > 0L }?.let { resources.getString(R.string.bank_settle_share_food, formatMoney(it)) },
+            // PP-145: the house rake, the host's
+            settleUp.rakeCents.takeIf { it > 0L }?.let {
+                resources.getString(R.string.bank_settle_share_rake, settleUp.rake.label, formatMoney(it))
+            },
         )
-        return (listOf(resources.getString(R.string.bank_settle_share_title)) + players + food + "" + payments(resources, state))
+        return (listOf(resources.getString(R.string.bank_settle_share_title)) + players + kept + "" + payments(resources, state))
             .joinToString("\n")
     }
 

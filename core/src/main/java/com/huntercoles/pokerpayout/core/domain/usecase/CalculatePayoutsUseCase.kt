@@ -1,10 +1,12 @@
 package com.huntercoles.pokerpayout.core.domain.usecase
 
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlace
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutTable
+import com.huntercoles.pokerpayout.core.domain.model.PoolBreakdown
 import com.huntercoles.pokerpayout.core.utils.AppCurrency
 import com.huntercoles.pokerpayout.core.utils.MoneyFormat
 import javax.inject.Inject
@@ -25,9 +27,30 @@ import javax.inject.Inject
  *    rounded to $10 used to pay 9th place $0.)
  *
  * Example: pool $230, weights 50/30/20, $5 units. 2nd: 69.00 -> 70, 3rd: 46.00 -> 45, 1st: 115.
+ *
+ * **The house rake** (PP-145) comes off first: given the [PoolBreakdown], the table pays the money
+ * taken in for prizes less the rake ([HouseRake]), and carries the rake ([PayoutTable.rakeCents]), so
+ * the places plus the rake add up to what was taken in, to the cent. At 0% the table is exactly what
+ * it was before PP-145. Example: $400 in, a 5% rake: the house keeps $20 and the places share $380.
  */
 class CalculatePayoutsUseCase @Inject constructor() {
 
+    /**
+     * What the places of [pool] pay: the buy-ins, rebuys and add-ons less the house rake, with the
+     * rake on the table. Every screen that pays places from what was taken in comes through here.
+     */
+    operator fun invoke(
+        pool: PoolBreakdown,
+        weights: List<Int>,
+        playerCount: Int,
+        rounding: PayoutRounding = PayoutRounding.DEFAULT,
+        currency: AppCurrency = MoneyFormat.current,
+    ): PayoutTable {
+        val rake = pool.rakeCents.coerceIn(0L, pool.prizeInCents.coerceAtLeast(0L))
+        return invoke(pool.prizeInCents - rake, weights, playerCount, rounding, currency).copy(rakeCents = rake)
+    }
+
+    /** What the places of a prize pool of [prizePoolCents] pay, the house rake already off it (or none). */
     operator fun invoke(
         prizePoolCents: Long,
         weights: List<Int>,

@@ -43,6 +43,20 @@ class NightCodecTest {
         assertEquals(unnamed, NightCodec.decode(NightCodec.encode(unnamed)))
     }
 
+    /**
+     * PP-145: a night with a house rake keeps it; a night without one is written exactly as before
+     * (no "rake" key), and a night saved before the rake reads as none.
+     */
+    @Test
+    fun `the house rake comes back, and a night without one is written as before`() {
+        val raked = everyField.copy(rakeCents = 2_375L)
+        assertEquals(raked, NightCodec.decode(NightCodec.encode(raked)))
+        assertEquals(2_375L, json(raked).getLong("rake"))
+        assertFalse(json().has("rake"))
+        assertEquals(0L, NightCodec.decode(json().toString())?.rakeCents)
+        assertNull(NightCodec.decode(json(raked).put("rake", -1).toString()))
+    }
+
     @Test
     fun `players come back in finishing order, whatever order they were written in`() {
         val text = json().apply {

@@ -68,6 +68,29 @@ class HistoryPropertiesTest {
         }
 
     /**
+     * PP-145: a night played with a house rake saves it and reads it back exactly; its places add up to
+     * the pool they shared, which with the rake is what came in for prizes; and the CSV carries the rake
+     * on each of the night's rows.
+     */
+    @Test
+    fun `a night with a house rake keeps it, in History and in the CSV`() =
+        forAll(seed = 2026_1011_43L, iterations = 300, gen = rakedNights) { (night, takenIn) ->
+            expect(NightCodec.decode(NightCodec.encode(night)) == night) { "saved and read back differently: $night" }
+            expect(night.players.sumOf { it.prizeCents } == night.prizePoolCents) {
+                "the places don't add up to ${night.prizePoolCents}"
+            }
+            expect(night.prizePoolCents + night.rakeCents == takenIn) {
+                "pool ${night.prizePoolCents} + rake ${night.rakeCents}, $takenIn came in"
+            }
+            val rows = readCsv(NightCsv.of(listOf(night.copy(id = 1L)))).drop(1)
+            expect(rows.size == night.players.size) { "${rows.size} rows for ${night.players.size} players" }
+            rows.forEach { row ->
+                expect(row[NightCsv.HEADER.indexOf("rake")].cents() == night.rakeCents) { "the rake in $row" }
+                expect(row[NightCsv.HEADER.indexOf("prize_pool")].cents() == night.prizePoolCents) { "the pool in $row" }
+            }
+        }
+
+    /**
      * An independent RFC 4180 reader: fields split on commas, a quoted field may hold commas, line
      * breaks and doubled quotes, records end in CRLF.
      */
@@ -148,6 +171,21 @@ class HistoryPropertiesTest {
             val named = bank.players.keys.associateWith { nameList[it % NAMES] }
             val players = checkNotNull(NightResults.of(settlement, bank.players.values.toList(), named)) { "unfinished: $script" }
             Finished(SavedNight(id.toLong(), date, structure, settlement.pool.prizePoolCents, players))
+        }
+
+        /** PP-145: a finished night with a house rake, saved as the Payouts tab saves it, and what came in for prizes. */
+        val rakedNights = Arb.bind(BankNight.scripts(maxSteps = 25, raked = true), dates, Arb.int(1..9_999)) {
+                script, date, id ->
+            val bank = BankNight(script).apply {
+                play()
+                finish()
+                payEveryone()
+            }
+            val settlement = bank.settlement()
+            val named = bank.players.keys.associateWith { "Player $it" }
+            val players = checkNotNull(NightResults.of(settlement, bank.players.values.toList(), named)) { "unfinished: $script" }
+            val pool = settlement.pool
+            SavedNight(id.toLong(), date, null, pool.prizePoolCents, players, pool.rakeCents) to pool.prizeInCents
         }
     }
 }

@@ -32,6 +32,8 @@ internal object NightCodec {
             .put(POOL, night.prizePoolCents)
             .put(PLAYERS, players)
         night.structureName?.let { json.put(STRUCTURE, it) }
+        // PP-145: only a night with a house rake has one, so a night without reads as it always did
+        if (night.rakeCents > 0L) json.put(RAKE, night.rakeCents)
         return json.toString()
     }
 
@@ -72,6 +74,8 @@ internal object NightCodec {
             structureName = json.optString(STRUCTURE, "").trim().ifEmpty { null },
             prizePoolCents = json.atLeast(POOL, 0L),
             players = players,
+            // PP-145: nights saved before the house rake (or without one) have none
+            rakeCents = if (json.has(RAKE)) json.atLeast(RAKE, 0L) else 0L,
         )
     }
 
@@ -120,4 +124,7 @@ internal object NightCodec {
     private const val PRIZE = "prize"
     private const val KNOCKOUTS = "knockouts"
     private const val BOUNTIES = "bounties"
+
+    /** PP-145, added to format 1: older readers ignore it, and older nights lack it (no rake). */
+    private const val RAKE = "rake"
 }

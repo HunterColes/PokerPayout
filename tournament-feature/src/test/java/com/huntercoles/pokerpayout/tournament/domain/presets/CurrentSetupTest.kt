@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.tournament.domain.presets
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.model.MoneySettings
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
@@ -77,6 +78,7 @@ class CurrentSetupTest {
         tournament.setBountyCents(500L)
         tournament.setRebuyCents(3_500L)
         tournament.setAddOnCents(1_000L)
+        tournament.setRake(HouseRake.of(500))
         tournament.setRebuyUntilLevel(4)
         tournament.setLateEntryUntilLevel(3)
         tournament.setPayoutSettings(topHeavyFour(PayoutRounding.FIVE_DOLLARS))
@@ -117,7 +119,7 @@ class CurrentSetupTest {
         assertTrue(current.apply(stored))
 
         assertEquals(saved, current.capture(includeChipSet = true))
-        assertEquals(MoneySettings(4_050L, 550L, 500L, 3_500L, 1_000L), tournament.getMoneySettings())
+        assertEquals(MoneySettings(4_050L, 550L, 500L, 3_500L, 1_000L, rake = HouseRake.of(500)), tournament.getMoneySettings())
         assertEquals(4, tournament.getRebuyUntilLevel())
         assertEquals("the late entry cutoff (PP-116)", 3, tournament.getLateEntryUntilLevel())
         assertEquals(topHeavyFour(PayoutRounding.FIVE_DOLLARS), tournament.getPayoutSettings())
@@ -263,6 +265,27 @@ class CurrentSetupTest {
 
         current.apply(friday)
         assertFalse("already what the preset makes it", current.wouldOverwrite(friday))
+    }
+
+    /**
+     * PP-145: a preset brings its house rake back; a starter takes none, so loading one over a raked
+     * setup asks first (the rake is something the host chose) and leaves 0%.
+     */
+    @Test
+    fun `a preset brings its rake back, and a starter loads at 0 percent`() {
+        tournament.setRake(HouseRake.of(750))
+        val raked = savedAndRead(current.capture(includeChipSet = false))
+        assertEquals(HouseRake.of(750), raked.money.rake)
+
+        val classic = current.starter(Starter.CLASSIC)
+        assertEquals(HouseRake.NONE, classic.money.rake)
+        assertTrue("a rake is the host's choice", current.wouldOverwrite(classic))
+        assertTrue(current.apply(classic))
+        assertEquals(HouseRake.NONE, tournament.getRake())
+
+        assertTrue(current.apply(raked))
+        assertEquals(HouseRake.of(750), tournament.getMoneySettings().rake)
+        assertTrue(current.matches(raked))
     }
 
     @Test

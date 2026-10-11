@@ -35,16 +35,16 @@ internal class ClockTable(
         val left = stillIn.size
         val stacks = players.toLong() + bank.rebuys + bank.addOns
         val chips = stacks * state.config.startingChips
-        // Purchases, late entries and re-entries at the prices paid (PP-085, PP-116)
-        val prizePool = bankPreferences.recordedPool(config.money, players).prizePoolCents
-        val paid = payouts(prizePool, config.payoutWeights, players, config.payoutRounding).places
+        // Purchases, late entries and re-entries at the prices paid (PP-085, PP-116), less the house rake (PP-145)
+        val pool = bankPreferences.recordedPool(config.money, players)
+        val paid = payouts(pool, config.payoutWeights, players, config.payoutRounding).places
         val table = TableStats(
             playerCount = players,
             playersLeft = left,
             averageStack = if (left > 0) (chips / left).toInt() else 0,
             // The same prize pool the Payouts table splits (buy-ins, rebuys and add-ons at the prices
-            // they were bought at; no food or bounty)
-            prizePoolCents = prizePool,
+            // they were bought at, less the house rake; no food or bounty)
+            prizePoolCents = pool.prizePoolCents,
             paidPlaces = paid.size,
             championName = stillIn.singleOrNull()?.takeIf { players > 1 }?.let(bankPreferences::getPlayerName),
         )

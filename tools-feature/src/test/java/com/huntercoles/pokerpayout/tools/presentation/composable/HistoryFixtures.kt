@@ -71,6 +71,9 @@ internal object HistoryFixtures {
 
     val empty = HistoryUiState.of(emptyList())
 
+    /** PP-145: Friday played with a 5% house rake: the places shared $300 of the $315.79 in, the house kept $15.79. */
+    val rakedNight = HistoryUiState.of(listOf(friday.copy(rakeCents = 1_579L), september, holiday), openId = friday.id)
+
     // One person under two names (S26b, PP-110) ------------------------------------------------------
 
     /** A short night after the three: Al won, then Jo and Sam ($150). */

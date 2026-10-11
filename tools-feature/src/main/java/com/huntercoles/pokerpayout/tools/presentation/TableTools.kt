@@ -7,7 +7,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * What was typed into the table tools (Side pots, Deal maker, Outs & pot odds), kept while the app
+ * What was typed into the table tools (Side pots, Split the prizes), kept while the app
  * runs. Switching tabs closes a tool's screen; coming back finds the numbers where they were. A hand
  * or a deal is over long before the app is closed, so nothing is written to storage.
  */
@@ -15,7 +15,6 @@ import javax.inject.Singleton
 class TableToolsMemory @Inject constructor() {
     var sidePots: SidePotsUiState? = null
     var deal: DealUiState? = null
-    var outs: OutsUiState? = null
 }
 
 /** The strings the table tools' ViewModels need themselves: their snackbars. */

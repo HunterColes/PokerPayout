@@ -192,35 +192,18 @@ object PokerIcons {
         )
     }
 
-    /** The shot clock: an hourglass (Material Symbols' hourglass_empty). */
-    val Hourglass: ImageVector by lazy {
+    /** Side pots: a pot cut into shares (Material Symbols' pie_chart). */
+    val SplitPot: ImageVector by lazy {
         icon(
-            "Hourglass",
-            "M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6zm10" +
-                " 14.5V20H8v-3.5l4-4 4 4zm-4-5-4-4V4h8v3.5l-4 4z",
+            "SplitPot",
+            "M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2.03 0v8.99H22c-.47-4.74-4.24-8.52-8.97-8.99zm0 11.01V22c4.73-.47 " +
+                "8.5-4.25 8.97-8.99h-8.97z",
         )
     }
 
-    /** Dealer's choice: a wheel of four segments under a pointer (drawn for Poker Payout). */
-    val Wheel: ImageVector by lazy {
-        icon(
-            "Wheel",
-            "M10 .5h4L12 3.5z",
-            "M12.5 12.5V4.01A9 9 0 0 1 20.99 12.5z",
-            "M12.5 13.5h8.49A9 9 0 0 1 12.5 21.99z",
-            "M11.5 13.5v8.49A9 9 0 0 1 3.01 13.5z",
-            "M11.5 12.5H3.01A9 9 0 0 1 11.5 4.01z",
-        )
-    }
-
-    /** The equity quiz: a question mark in a circle (Material Symbols' help). */
-    val Quiz: ImageVector by lazy {
-        icon(
-            "Quiz",
-            "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75-.9.92" +
-                "C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41" +
-                " 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z",
-        )
+    /** Split the prizes (a deal): one way splitting in two (Material Symbols' call_split). */
+    val Split: ImageVector by lazy {
+        icon("Split", "M14 4l2.29 2.29-2.88 2.88 1.42 1.42 2.88-2.88L20 10V4zm-4 0H4v6l2.29-2.29 4.71 4.7V20h2v-8.41l-5.29-5.3z")
     }
     val Volume: ImageVector by lazy {
         icon(

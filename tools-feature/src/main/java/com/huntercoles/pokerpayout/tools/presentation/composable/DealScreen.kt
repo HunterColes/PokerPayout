@@ -25,7 +25,7 @@ import com.huntercoles.pokerpayout.tools.presentation.DealPlayer
 import com.huntercoles.pokerpayout.tools.presentation.DealUiState
 import com.huntercoles.pokerpayout.tools.presentation.DealViewModel
 
-/** The deal maker route ("Deal maker" in the Tools list). */
+/** The deal maker route ("Split the prizes" in the Tools list). */
 @Composable
 fun DealRoute(onBack: () -> Unit, viewModel: DealViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -33,11 +33,12 @@ fun DealRoute(onBack: () -> Unit, viewModel: DealViewModel = hiltViewModel()) {
 }
 
 /**
- * Deal maker (S22): the players left and their chips, then the deal by ICM and by chips side by
- * side, each adding up to the money shared to the cent, then the prizes left (tonight's payouts, or
- * typed) and an optional amount saved for the winner. On a phone the deal comes before the prizes,
- * which are usually tonight's as they are; from 600 dp the prizes sit under the players. Start over
- * (↺) reads tonight again, with Undo.
+ * Split the prizes (S22, the deal maker): a line on what a deal is, the players left and their
+ * chips, then who gets what by ICM and by chips side by side (each way said in a few words above
+ * the amounts), each adding up to the money shared to the cent, then the prizes left (tonight's
+ * payouts, or typed) and an optional amount saved for the winner. On a phone the deal comes before
+ * the prizes, which are usually tonight's as they are; from 600 dp the prizes sit under the
+ * players. Start over (↺) reads tonight again, with Undo.
  */
 @Composable
 fun DealContent(
@@ -54,6 +55,7 @@ fun DealContent(
     TableToolPage(
         title = stringResource(R.string.deal_title),
         subtitle = subtitle,
+        intro = stringResource(R.string.deal_intro),
         onBack = onBack,
         modifier = modifier,
         actions = {

@@ -4,6 +4,7 @@
     <string name="side_pots_title">Side pots</string>
     <!-- "3 players · 2,350 in" -->
     <string name="side_pots_subtitle">%1$s · %2$s in</string>
+    <string name="side_pots_intro">When someone is all in: type what each player put in this hand, and see each pot and who can win it.</string>
     <string name="side_pots_new_hand">New hand</string>
     <string name="side_pots_snackbar_new_hand">New hand: chips cleared</string>
 

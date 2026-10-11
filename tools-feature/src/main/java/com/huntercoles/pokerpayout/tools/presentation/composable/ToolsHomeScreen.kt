@@ -38,6 +38,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,6 +53,7 @@ import androidx.navigation.NavOptions
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerTopBar
 import com.huntercoles.pokerpayout.core.design.icons.MoneyIcons
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
@@ -71,43 +74,58 @@ private data class Tool(
     @StringRes val description: Int,
 )
 
-private val Tools = listOf(
-    Tool(NavigationDestination.OddsCalculator, PokerIcons.Cards, R.string.tools_odds_title, R.string.tools_odds_description),
-    Tool(NavigationDestination.ChipCalculator, PokerIcons.Chip, R.string.tools_chips_title, R.string.tools_chips_description),
-    Tool(NavigationDestination.HandRanks, PokerIcons.List, R.string.tools_ranks_title, R.string.tools_ranks_description),
-    Tool(NavigationDestination.SeatDraw, PokerIcons.Seat, R.string.tools_seats_title, R.string.tools_seats_description),
-    // The table tools (S20 to S22): mid-hand maths and the end-of-night deal
-    Tool(NavigationDestination.Outs, TableToolIcons.Percent, R.string.tools_outs_title, R.string.tools_outs_description),
-    Tool(
-        NavigationDestination.SidePots,
-        TableToolIcons.SplitPot,
-        R.string.tools_side_pots_title,
-        R.string.tools_side_pots_description,
+/** Tools that belong together, under a heading: the night in order, from setting up to going home. */
+private data class ToolGroup(@StringRes val title: Int, val tools: List<Tool>)
+
+private val ToolGroups = listOf(
+    ToolGroup(
+        R.string.tools_group_before,
+        listOf(
+            Tool(
+                NavigationDestination.ChipCalculator,
+                PokerIcons.Chip,
+                R.string.tools_chips_title,
+                R.string.tools_chips_description,
+            ),
+            Tool(NavigationDestination.SeatDraw, PokerIcons.Seat, R.string.tools_seats_title, R.string.tools_seats_description),
+        ),
     ),
-    Tool(NavigationDestination.DealMaker, TableToolIcons.Chop, R.string.tools_deal_title, R.string.tools_deal_description),
-    Tool(
-        NavigationDestination.ShotClock,
-        PokerIcons.Hourglass,
-        R.string.tools_shot_clock_title,
-        R.string.tools_shot_clock_description,
+    ToolGroup(
+        R.string.tools_group_during,
+        listOf(
+            Tool(
+                NavigationDestination.OddsCalculator,
+                PokerIcons.Cards,
+                R.string.tools_odds_title,
+                R.string.tools_odds_description,
+            ),
+            Tool(
+                NavigationDestination.SidePots,
+                PokerIcons.SplitPot,
+                R.string.tools_side_pots_title,
+                R.string.tools_side_pots_description,
+            ),
+            Tool(NavigationDestination.HandRanks, PokerIcons.List, R.string.tools_ranks_title, R.string.tools_ranks_description),
+        ),
     ),
-    Tool(
-        NavigationDestination.DealersChoice,
-        PokerIcons.Wheel,
-        R.string.tools_dealers_choice_title,
-        R.string.tools_dealers_choice_description,
+    ToolGroup(
+        R.string.tools_group_end,
+        listOf(
+            Tool(NavigationDestination.DealMaker, PokerIcons.Split, R.string.tools_deal_title, R.string.tools_deal_description),
+            Tool(
+                NavigationDestination.History,
+                PokerIcons.Trophy,
+                R.string.tools_history_title,
+                R.string.tools_history_description,
+            ),
+        ),
     ),
-    Tool(
-        NavigationDestination.EquityQuiz,
-        PokerIcons.Quiz,
-        R.string.tools_equity_quiz_title,
-        R.string.tools_equity_quiz_description,
-    ),
-    Tool(NavigationDestination.History, PokerIcons.Trophy, R.string.tools_history_title, R.string.tools_history_description),
-    Tool(NavigationDestination.Backup, PokerIcons.Save, R.string.tools_backup_title, R.string.tools_backup_description),
 )
 
-/** The Tools tab (S7): the tools as a list, the currency, then the Sound section, then the app's promise. */
+/**
+ * The Tools tab (S7): the tools in the order of a night (before the game, during play, the end of
+ * the night), then Sound and music, then the settings (currency and backup), then the app's promise.
+ */
 @Composable
 fun ToolsHomeScreen(
     navigationManager: NavigationManager,
@@ -152,14 +170,20 @@ fun ToolsHomeContent(
                 .padding(start = PokerDimens.Gutter, end = PokerDimens.Gutter, top = 4.dp, bottom = PokerDimens.Gutter),
             verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
-            Tools.forEach { tool ->
-                ToolRow(
-                    icon = tool.icon,
-                    title = stringResource(tool.title),
-                    description = stringResource(tool.description),
-                    onClick = { onOpenTool(tool.destination) },
-                )
+            ToolGroups.forEachIndexed { index, group ->
+                GroupHeading(stringResource(group.title), first = index == 0)
+                group.tools.forEach { tool ->
+                    ToolRow(
+                        icon = tool.icon,
+                        title = stringResource(tool.title),
+                        description = stringResource(tool.description),
+                        onClick = { onOpenTool(tool.destination) },
+                    )
+                }
             }
+            GroupHeading(stringResource(R.string.tools_group_sound))
+            SoundSection(state = state, onIntent = onIntent, onAllowNotifications = onAllowNotifications, onOpen = onOpenTool)
+            GroupHeading(stringResource(R.string.tools_group_settings))
             // PP-114: the money symbol, with what it is set to ("Euro · 1.234,50 €")
             ToolRow(
                 icon = MoneyIcons.Cash,
@@ -171,7 +195,12 @@ fun ToolsHomeContent(
                 ),
                 onClick = { onOpenTool(NavigationDestination.Currency) },
             )
-            SoundSection(state = state, onIntent = onIntent, onAllowNotifications = onAllowNotifications, onOpen = onOpenTool)
+            ToolRow(
+                icon = PokerIcons.Save,
+                title = stringResource(R.string.tools_backup_title),
+                description = stringResource(R.string.tools_backup_description),
+                onClick = { onOpenTool(NavigationDestination.Backup) },
+            )
             Text(
                 text = stringResource(R.string.tools_footer, versionName),
                 style = MaterialTheme.typography.bodySmall,
@@ -183,6 +212,17 @@ fun ToolsHomeContent(
             )
         }
     }
+}
+
+/** A group's heading in Barlow caps, a heading for TalkBack; more room above it than between rows, but the first. */
+@Composable
+private fun GroupHeading(text: String, first: Boolean = false) {
+    PokerEyebrow(
+        text = text,
+        modifier = Modifier
+            .padding(start = 4.dp, top = if (first) 4.dp else GroupGap)
+            .semantics { heading() },
+    )
 }
 
 /** A tool: icon tile, name and what it's for, and a chevron. The whole row is one button. */
@@ -257,6 +297,9 @@ private fun appVersionName(context: Context): String = runCatching {
 }.getOrNull().orEmpty()
 
 private val ToolRowMinHeight = 76.dp
+
+/** Above a group's heading, on top of the gap between rows. */
+private val GroupGap = 8.dp
 
 /** The Currency row's sample: 1,234.50 as the picked currency writes it. */
 private const val CURRENCY_ROW_SAMPLE_CENTS = 123_450L

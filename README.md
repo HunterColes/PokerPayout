@@ -155,7 +155,7 @@ merge until they're updated, so they always show the app as it is today.</sub>
   through it.
 - **No ads, no accounts, no analytics, no tracking.**
 - **Your data stays on your phone,** in the app's own storage. Something leaves only when you tap
-  Share, or save a file (a backup, a CSV, a preset) where you choose.
+  Share, or save a backup or a CSV file where you choose.
 
 The details are in [PRIVACY.md](PRIVACY.md).
 

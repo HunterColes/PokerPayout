@@ -166,6 +166,17 @@ class MusicPlayerTest {
         assertTrue(players.first().released)
     }
 
+    @Test
+    fun aTapOnTheSongPausedPlaysItFromTheStartToo() {
+        playing(a, b)
+        last.position = 42_000
+        music.pause()
+        music.playTrack(a.ref)
+        assertEquals(1, players.size) // the same player, not loaded again
+        assertEquals(0, last.position)
+        assertTrue(last.started)
+    }
+
     // ------------------------------------------------------------------ files that have gone
 
     @Test

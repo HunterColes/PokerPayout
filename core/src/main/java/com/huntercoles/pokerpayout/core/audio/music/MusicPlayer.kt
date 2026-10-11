@@ -177,7 +177,8 @@ class MusicPlayer @Inject constructor(
     fun playTrack(ref: String) {
         val playlist = _state.value.playlist
         if (playlist.tracks.none { it.ref == ref }) return
-        if (ref != loadedRef) releasePlayer()
+        // The song loaded already goes back to its start; any other is loaded afresh
+        if (ref == loadedRef && prepared) runCatching { player?.seekTo(0) } else releasePlayer()
         preferences.setPosition(null, 0)
         _state.update { it.copy(missing = it.missing - ref) }
         save(playlist.select(ref))

@@ -18,9 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.R
@@ -113,8 +110,10 @@ fun PokerSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifie
 
 /**
  * The snackbar itself: white text on FeltHigh, a gold "UNDO" (48 dp touch target), and the only
- * shadow in the app apart from sheets. The message wraps rather than truncates. TalkBack announces
- * it politely when it appears. A null [actionLabel] shows the message alone.
+ * shadow in the app apart from sheets. The message wraps rather than truncates. A null
+ * [actionLabel] shows the message alone. TalkBack announces it politely when it appears: the
+ * [SnackbarHost] it is shown in makes each snackbar a polite live region (one of its own as well
+ * would be read twice).
  */
 @Composable
 fun UndoSnackbar(
@@ -124,9 +123,7 @@ fun UndoSnackbar(
     actionLabel: String? = stringResource(R.string.design_undo),
 ) {
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .semantics { liveRegion = LiveRegionMode.Polite },
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(PokerDimens.CornerControl),
         color = PokerColors.FeltHigh,
         contentColor = PokerColors.CardWhite,

@@ -17,8 +17,9 @@ import org.robolectric.annotation.Config
 
 /**
  * The chime plays at the volume the Sound slider is at now, not the one it was at when the chime
- * was loaded (B12, PP-019: moving the slider did nothing until the app restarted). The player
- * records what it is asked to do; Robolectric's AudioManager grants focus.
+ * was loaded (B12, PP-019: moving the slider did nothing until the app restarted), and the music
+ * dips under a cue only while it sounds. The player records what it is asked to do; Robolectric's
+ * AudioManager grants focus.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -130,6 +131,50 @@ class SoundManagerTest {
         assertEquals(emptyList<String>(), player.calls)
     }
 
+    @Test
+    fun `a new clock screen preloading the chime lets the one sounding play on`() {
+        sound.preloadSound(CHIME)
+        player.finishPreparing()
+        sound.playSound(CHIME)
+        player.calls.clear()
+
+        sound.preloadSound(CHIME) // what a new clock screen does as it opens
+        assertEquals(emptyList<String>(), player.calls)
+        assertEquals(listOf("dip"), music)
+
+        player.finishPlaying()
+        assertEquals(listOf("dip", "up"), music)
+    }
+
+    @Test
+    fun `a cue cut short by loading another sound lets the music back up`() {
+        sound.preloadSound(CHIME)
+        player.finishPreparing()
+        sound.playSound(CHIME)
+
+        sound.preloadSound(OTHER_SOUND)
+
+        assertEquals(listOf("dip", "up"), music)
+        // The next cue dips the music again
+        player.finishPreparing()
+        sound.playSound(OTHER_SOUND)
+        assertEquals(listOf("dip", "up", "dip"), music)
+    }
+
+    @Test
+    fun `a sound that can't be loaded gives its player back and plays nothing`() {
+        val app: Context = ApplicationProvider.getApplicationContext()
+        val broken = SoundManager(BrokenSoundFiles(app), audioPreferences, ducking)
+        broken.newPlayer = { player }
+
+        broken.preloadSound(CHIME)
+        assertEquals(listOf("release"), player.calls.filter { it == "release" })
+
+        broken.playSound(CHIME)
+        assertEquals(listOf("release", "release"), player.calls.filter { it == "release" })
+        assertEquals(emptyList<String>(), music)
+    }
+
     /** The app's context, minus the sound files: the player here never reads one. */
     private class NoSoundFiles(base: Context) : ContextWrapper(base) {
         @Suppress("DEPRECATION")
@@ -138,6 +183,16 @@ class SoundManagerTest {
         }
 
         override fun getResources(): Resources = noFiles
+    }
+
+    /** The app's context, with sound files that can't be opened. */
+    private class BrokenSoundFiles(base: Context) : ContextWrapper(base) {
+        @Suppress("DEPRECATION")
+        private val broken = object : Resources(base.assets, base.resources.displayMetrics, base.resources.configuration) {
+            override fun openRawResourceFd(id: Int): AssetFileDescriptor = throw NotFoundException("no sound $id")
+        }
+
+        override fun getResources(): Resources = broken
     }
 
     /** A player that only writes down the volume it is given and when it starts. */
@@ -186,9 +241,16 @@ class SoundManagerTest {
         override fun start() {
             calls += "start"
         }
+
+        override fun reset() = Unit
+
+        override fun release() {
+            calls += "release"
+        }
     }
 
     private companion object {
         const val CHIME = 1
+        const val OTHER_SOUND = 2
     }
 }

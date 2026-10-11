@@ -49,13 +49,10 @@ import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 @Immutable
 data class PokerNavItem(val label: String, val icon: ImageVector)
 
-/**
- * The app's four destinations in order: the tournament clock, Bank, Payouts and Tools (D1).
- * [firstTabLabel] names the first tab: "Tournament" today; D3 may rename it "Clock".
- */
+/** The app's four destinations in order: Tournament (the clock), Bank, Payouts and Tools (D1). */
 @Composable
-fun pokerNavItems(firstTabLabel: String = stringResource(R.string.navigation_tournament)): List<PokerNavItem> = listOf(
-    PokerNavItem(firstTabLabel, PokerIcons.Timer),
+fun pokerNavItems(): List<PokerNavItem> = listOf(
+    PokerNavItem(stringResource(R.string.navigation_tournament), PokerIcons.Timer),
     PokerNavItem(stringResource(R.string.navigation_bank), PokerIcons.Wallet),
     PokerNavItem(stringResource(R.string.navigation_payouts), PokerIcons.Trophy),
     PokerNavItem(stringResource(R.string.navigation_tools), PokerIcons.Wrench),
@@ -173,6 +170,6 @@ internal val NavLabel = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.
 internal fun PokerNavBarPreview() {
     PokerPreviewPage(gutter = false) {
         PokerNavBar(items = pokerNavItems(), selectedIndex = 0, onSelect = {})
-        PokerNavBar(items = pokerNavItems(firstTabLabel = "Clock"), selectedIndex = 3, onSelect = {})
+        PokerNavBar(items = pokerNavItems(), selectedIndex = 3, onSelect = {})
     }
 }

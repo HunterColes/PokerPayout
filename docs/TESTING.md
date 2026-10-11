@@ -749,10 +749,11 @@ After recording locally with `recordRoborazziDebug`, every golden is rewritten i
 encoding, and git shows them all as changed. Run `scripts/dev/recompress-goldens.sh --changed` (it
 needs `oxipng` on the path, or `OXIPNG=/path/to/oxipng`) before committing, or record on GitHub.
 
-`scripts/dev/retired-goldens.sh` lists the committed goldens whose cell no test records any more,
-from `DeviceMatrix.goldens` and `DeviceMatrix.pinned` (`--check` exits 1 if there are any, `--delete`
-runs `git rm` on them). A `goldens.yml` run lists every golden it didn't write next to that list in
-its summary; the two match unless a test was renamed or removed.
+`scripts/dev/retired-goldens.sh` lists the committed goldens no test records any more: those whose
+test is gone (no test source of the module names them: the test was removed or renamed) and those
+whose cell left `DeviceMatrix.goldens` or `DeviceMatrix.pinned` (`--check` exits 1 if there are any,
+`--delete` runs `git rm` on them). A `goldens.yml` run lists every golden it didn't write next to
+that list in its summary; the two should match.
 
 ### Determinism
 

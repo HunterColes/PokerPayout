@@ -3,6 +3,17 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.17 (on master, not published)
+
+Tools review, nothing you can see changes:
+
+- **Split the prizes** has a new test: tonight's players and prizes match the Payouts tab with a
+  late entry, a re-entry at its own price and a house rake, to the cent.
+- **Cleaner checks:** the Tools module's lint and detekt baselines were all for code removed long
+  ago and are now empty; the odds engine's cancel tests no longer time themselves.
+- **Tidied:** an unused History string, a theme applied twice on the Odds screen, and the seat
+  draw's own copy of the name length limit are gone.
+
 ## 1.4.16 (on master, not published)
 
 House rake:

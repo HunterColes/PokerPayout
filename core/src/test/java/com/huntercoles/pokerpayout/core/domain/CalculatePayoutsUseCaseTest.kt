@@ -4,6 +4,7 @@ import com.huntercoles.pokerpayout.core.constants.TournamentConstants
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.testing.withCurrency
 import com.huntercoles.pokerpayout.core.utils.AppCurrency
@@ -32,6 +33,22 @@ class CalculatePayoutsUseCaseTest {
         withCurrency(AppCurrency.YEN) {
             assertEquals(yen, useCase(2_300_000L, listOf(50, 30, 20), 9, PayoutRounding.FIVE_DOLLARS))
         }
+    }
+
+    @Test
+    fun `the places stepper stops where a place would be paid nothing`() {
+        val standard = PayoutSettings(PayoutPreset.STANDARD.weightsFor(3), PayoutPreset.STANDARD, PayoutRounding.TEN_DOLLARS)
+        // $10 shared by 9 at $10 steps: 2nd's $3.64 would round to $0, so only 1st is paid
+        assertEquals(1, useCase.payablePlaces(1_000L, standard, 9))
+        // $1,000 at $1 steps: 9th's 1% is $10, so all 9 places pay
+        assertEquals(9, useCase.payablePlaces(100_000L, standard.copy(rounding = PayoutRounding.ONE_DOLLAR), 9))
+    }
+
+    @Test
+    fun `the places stepper has one place, not a crash, with no players`() {
+        val standard = PayoutSettings(PayoutPreset.STANDARD.weightsFor(1), PayoutPreset.STANDARD, PayoutRounding.ONE_DOLLAR)
+        assertEquals(1, useCase.payablePlaces(0L, standard, 0))
+        assertEquals(1, useCase.payablePlaces(4_000L, standard, -1))
     }
 
     @Test

@@ -190,9 +190,10 @@ internal fun PokerSegmentedControlPreview() {
                 onSelect = {},
                 label = { it },
             )
+            // History's season picker
             PokerSegmentedControl(
-                options = listOf("Tournament", "Cash game"),
-                selected = "Tournament",
+                options = listOf("All time", "2026"),
+                selected = "2026",
                 onSelect = {},
                 label = { it },
             )

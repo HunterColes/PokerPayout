@@ -26,6 +26,8 @@ class TournamentNavigationFactory @Inject constructor(
                     onOpenBank = { openTab(NavigationDestination.Bank) },
                     onOpenPayouts = { openTab(NavigationDestination.Payouts) },
                     onOpenSound = { openTab(NavigationDestination.Tools) },
+                    // PP-111: the champion's screen, once the night is saved
+                    onOpenHistory = { openTab(NavigationDestination.History) },
                 )
             }
         }

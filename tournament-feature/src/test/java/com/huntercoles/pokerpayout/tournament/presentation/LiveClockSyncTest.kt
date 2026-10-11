@@ -97,6 +97,7 @@ class LiveClockSyncTest {
                     clock,
                     audioPreferences,
                     FakeChipSets(),
+                    NineSeats,
                 )
                 return viewModel as T
             }

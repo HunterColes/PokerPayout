@@ -29,7 +29,9 @@ data class TableStats(
     /** Buy-ins, rebuys and add-ons, in cents: the pool the Payouts table splits. */
     val prizePoolCents: Long = 0L,
     /** How many places the Payouts table pays. */
-    val paidPlaces: Int = 0
+    val paidPlaces: Int = 0,
+    /** PP-111: the one player left once there is a champion (the Bank's name); null before. */
+    val championName: String? = null
 ) {
     /**
      * PP-135: where the players left stand against the paid places, for the table view. Nothing to

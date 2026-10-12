@@ -182,7 +182,7 @@ internal fun PokerNavRailPreview() {
     PokerPreviewPage(gutter = false) {
         Row(Modifier.height(320.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             PokerNavRail(items = pokerNavItems(), selectedIndex = 0, onSelect = {})
-            PokerNavRail(items = pokerNavItems(firstTabLabel = "Clock"), selectedIndex = 3, onSelect = {})
+            PokerNavRail(items = pokerNavItems(), selectedIndex = 3, onSelect = {})
         }
     }
 }

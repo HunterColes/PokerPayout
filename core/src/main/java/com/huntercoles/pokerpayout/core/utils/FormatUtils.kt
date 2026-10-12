@@ -14,7 +14,7 @@ import java.util.Locale
  * one convention and half the other ("$1.234,56"). Every money amount on screen, in a share text, a
  * snackbar or TalkBack goes through [formatMoney] or [formatCents]; nothing else writes a symbol.
  *
- * Other numbers (percentages, multipliers) keep [Locale.US] symbols: the app's text is English.
+ * Percentages keep [Locale.US] symbols ("2.5%"): the app's text is English.
  * Text that the user edits (money input fields) follows the device locale instead; see [MoneyInput].
  */
 object FormatUtils {
@@ -40,26 +40,10 @@ object FormatUtils {
         currency.format(cents, alwaysCents = false)
 
     /**
-     * Format a Double as decimal, removing trailing zeros
-     * Example: 5.00 -> "5", 5.50 -> "5.5", 5.123 -> "5.12"
-     */
-    fun formatDecimal(value: Double): String {
-        return decimalFormat("0.##").format(value)
-    }
-
-    /**
      * Format a Double as percentage (value is already in percentage form, not decimal)
      * Example: 50.0 -> "50%", 33.333333 -> "33.33%", 25.25 -> "25.25%"
      */
     fun formatPercent(value: Double): String {
         return "${decimalFormat("0.##").format(value)}%"
-    }
-
-    /**
-     * Format a Double as multiplier
-     * Example: 1.5 -> "1.5x", 2.0 -> "2x"
-     */
-    fun formatMultiplier(value: Double): String {
-        return "${decimalFormat("0.##").format(value)}x"
     }
 }

@@ -26,10 +26,8 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -38,20 +36,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.huntercoles.pokerpayout.core.R
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 
 /**
- * A labelled on/off chip, as on a Bank player row ("Buy-in", "Rebuy ×1", "Add-on").
+ * A labelled on/off chip ("Four-colour deck" in Odds, a player's "Folded" in Side pots).
  *
- * On is shown three ways: a FeltHigh fill, a gold check and white text. Locked (a rebuy after the
- * cutoff) shows a lock and a dashed edge, and can't be toggled. The chip is 36 dp tall inside a
- * 48 dp touch box. TalkBack reads it as a checkbox: "Rebuy, 1 taken, Locked, checked, disabled".
+ * On is shown three ways: a FeltHigh fill, a gold check and white text. The chip is 36 dp tall
+ * inside a 48 dp touch box. TalkBack reads it as a checkbox: "Four-colour deck, checked".
  *
- * @param icon shown while off and unlocked (a plus by default).
- * @param count how many were taken, shown as "×1" and read as "1 taken"; null hides it.
+ * @param icon shown while off (a plus by default).
  * @param spokenLabel what TalkBack reads instead of [label] where the chip repeats on every row and needs
  *   its row's name ("Dana folded"); null reads [label].
  */
@@ -62,50 +57,41 @@ fun ToggleChip(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    locked: Boolean = false,
     icon: ImageVector = PokerIcons.Plus,
-    count: Int? = null,
     spokenLabel: String? = null,
 ) {
-    val colors = toggleColors(checked, locked)
+    val colors = toggleColors(checked)
     val shape = CircleShape
     val interactions = remember { MutableInteractionSource() }
-    val spoken = spokenLabel ?: label
-    val name = if (count != null) stringResource(R.string.design_toggle_taken, spoken, count) else spoken
-    val description = if (locked) "$name, ${stringResource(R.string.design_locked)}" else name
+    val description = spokenLabel ?: label
     Row(
         modifier = modifier
             .toggleable(
                 value = checked,
                 interactionSource = interactions,
                 indication = null,
-                enabled = !locked,
                 role = Role.Checkbox,
                 onValueChange = onCheckedChange,
             )
-            // Read instead of the visible "Rebuy ×1"; the checked state is announced by the role.
+            // Read as one checkbox; the checked state is announced by the role.
             .semantics(mergeDescendants = true) { contentDescription = description }
             .minimumInteractiveComponentSize()
             .heightIn(min = PokerDimens.ChipToggleHeight)
             .clip(shape)
             .background(colors.container)
-            .drawBehind { drawChipEdge(colors.edge, dashed = locked) }
+            .drawBehind { drawChipEdge(colors.edge) }
             .indication(interactions, ripple(color = colors.content))
             .padding(start = 9.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val glyph = when {
-            locked -> PokerIcons.Lock
-            checked -> PokerIcons.Check
-            else -> icon
-        }
-        Icon(glyph, contentDescription = null, tint = colors.icon, modifier = Modifier.size(17.dp))
-        Text(
-            text = if (count != null) "$label ×$count" else label,
-            color = colors.content,
-            style = ChipLabel,
+        Icon(
+            imageVector = if (checked) PokerIcons.Check else icon,
+            contentDescription = null,
+            tint = colors.icon,
+            modifier = Modifier.size(17.dp),
         )
+        Text(text = label, color = colors.content, style = ChipLabel)
     }
 }
 
@@ -113,14 +99,14 @@ private val ChipLabel = TextStyle(fontWeight = FontWeight.Medium, fontSize = 13.
 
 private class ToggleColors(val container: Color, val content: Color, val icon: Color, val edge: Color?)
 
-private fun toggleColors(checked: Boolean, locked: Boolean): ToggleColors = when {
-    locked && checked -> ToggleColors(PokerColors.FeltDeep, PokerColors.Chalk, PokerColors.ChalkDim, PokerColors.FeltLine)
-    locked -> ToggleColors(Color.Transparent, PokerColors.ChalkDim, PokerColors.ChalkDim, PokerColors.FeltLine)
-    checked -> ToggleColors(PokerColors.FeltHigh, PokerColors.CardWhite, PokerColors.PokerGold, null)
-    else -> ToggleColors(Color.Transparent, PokerColors.Chalk, PokerColors.Chalk, PokerColors.FeltEdge)
-}
+private fun toggleColors(checked: Boolean): ToggleColors =
+    if (checked) {
+        ToggleColors(PokerColors.FeltHigh, PokerColors.CardWhite, PokerColors.PokerGold, null)
+    } else {
+        ToggleColors(Color.Transparent, PokerColors.Chalk, PokerColors.Chalk, PokerColors.FeltEdge)
+    }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawChipEdge(color: Color?, dashed: Boolean) {
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawChipEdge(color: Color?) {
     if (color == null) return
     val stroke = 1.dp.toPx()
     drawRoundRect(
@@ -128,10 +114,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawChipEdge(color:
         topLeft = Offset(stroke / 2, stroke / 2),
         size = Size(size.width - stroke, size.height - stroke),
         cornerRadius = CornerRadius(size.height / 2),
-        style = Stroke(
-            width = stroke,
-            pathEffect = if (dashed) PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx())) else null,
-        ),
+        style = Stroke(width = stroke),
     )
 }
 
@@ -142,12 +125,11 @@ internal fun ToggleChipPreview() {
     PokerPreviewPage {
         PokerStage(felt = true) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ToggleChip("Buy-in", checked = true, onCheckedChange = {})
+                ToggleChip("Four-colour deck", checked = true, onCheckedChange = {}, icon = PokerIcons.Diamond)
+                ToggleChip("Four-colour deck", checked = false, onCheckedChange = {}, icon = PokerIcons.Diamond)
+                ToggleChip("Folded", checked = true, onCheckedChange = {}, icon = PokerIcons.Cards)
+                ToggleChip("Folded", checked = false, onCheckedChange = {}, icon = PokerIcons.Cards)
                 ToggleChip("Add-on", checked = false, onCheckedChange = {})
-                ToggleChip("Rebuy", checked = true, onCheckedChange = {}, locked = true, count = 1)
-                ToggleChip("Rebuy", checked = false, onCheckedChange = {}, locked = true)
-                ToggleChip("Paid", checked = false, onCheckedChange = {}, icon = PokerIcons.Wallet)
-                ToggleChip("Bounty", checked = true, onCheckedChange = {}, count = 2)
             }
         }
     }

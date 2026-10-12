@@ -303,7 +303,9 @@ class TournamentPreferences @Inject constructor(
     }
 
     /**
-     * Check if tournament settings are in default state
+     * True when everything [resetAllTournamentData] resets is as a new tournament has it (the
+     * money with its bounty type and rake, the payouts, the blinds, and the rebuy and late entry
+     * cutoffs), so Reset has nothing to do.
      */
     fun isInDefaultState(): Boolean {
         val playerCount = getPlayerCount()
@@ -311,6 +313,8 @@ class TournamentPreferences @Inject constructor(
             getMoneySettings() == MoneySettings.DEFAULT &&
             getPayoutWeights() == defaultPayoutWeightsFor(playerCount) &&
             getPayoutRounding() == PayoutRounding.DEFAULT &&
+            getRebuyUntilLevel() == 0 &&
+            getLateEntryUntilLevel() == 0 &&
             !getTournamentLocked() &&
             getGameDurationHours() == TournamentDefaults.GAME_DURATION_HOURS &&
             getRoundLengthMinutes() == TournamentDefaults.ROUND_LENGTH_MINUTES &&

@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * Every screen of the app, as a type-safe route. The names are part of the saved navigation state,
- * so keep them when a screen is renamed on screen (the Tournament tab may become "Clock", D3).
+ * so keep them even if a screen's title changes.
  */
 sealed class NavigationDestination {
     @Serializable

@@ -57,11 +57,15 @@ class SoundManager @Inject constructor(
 
     /**
      * Preloads a sound effect without playing it.
-     * Call this early to ensure sound is ready when needed.
+     * Call this early to ensure sound is ready when needed. The sound already loaded is kept, so a
+     * chime that is sounding plays on (a new clock screen preloads while it may be).
      */
     fun preloadSound(@RawRes soundResId: Int) {
+        if (soundResId == currentSoundResId && mediaPlayer != null) return
         try {
             releasePlayer()
+            // A cue cut short by loading another sound is over: the music comes back up
+            if (sounding) ended()
             mediaPlayer = newPrepared(soundResId, startWhenReady = false)
             currentSoundResId = soundResId
         } catch (ignored: Exception) {
@@ -104,8 +108,23 @@ class SoundManager @Inject constructor(
         }
     }
 
-    /** A player for [soundResId] at the current volume, preparing; it starts once ready if [startWhenReady]. */
-    private fun newPrepared(@RawRes soundResId: Int, startWhenReady: Boolean): MediaPlayer = newPlayer().apply {
+    /**
+     * A player for [soundResId] at the current volume, preparing; it starts once ready if
+     * [startWhenReady]. One whose sound can't be loaded is released before the failure goes on.
+     */
+    private fun newPrepared(@RawRes soundResId: Int, startWhenReady: Boolean): MediaPlayer {
+        val player = newPlayer()
+        var loaded = false
+        try {
+            player.load(soundResId, startWhenReady)
+            loaded = true
+        } finally {
+            if (!loaded) runCatching { player.release() }
+        }
+        return player
+    }
+
+    private fun MediaPlayer.load(@RawRes soundResId: Int, startWhenReady: Boolean) {
         setAudioAttributes(attributes)
         context.resources.openRawResourceFd(soundResId)?.use {
             setDataSource(it.fileDescriptor, it.startOffset, it.length)
@@ -146,19 +165,6 @@ class SoundManager @Inject constructor(
             ducking.cueEnded()
         }
         audioManager.abandonAudioFocusRequest(audioFocusRequest)
-    }
-
-    /**
-     * Releases all audio resources.
-     * Should be called when the app is shutting down or audio is no longer needed.
-     */
-    fun release() {
-        releasePlayer()
-        try {
-            ended()
-        } catch (ignored: Exception) {
-            // Ignore any errors during cleanup
-        }
     }
 
     /**

@@ -272,7 +272,8 @@ class BlindFittingAlgorithmTest {
         
         assertTrue(
             smoothPercentage >= 60.0,
-            "At least 60% of blinds > ${BlindStructureConstants.SMOOTH_NUMBER_THRESHOLD} should end in 0, got ${smoothPercentage.toInt()}%"
+            "At least 60% of blinds > ${BlindStructureConstants.SMOOTH_NUMBER_THRESHOLD} should end in 0, " +
+                "got ${smoothPercentage.toInt()}%"
         )
     }
 }

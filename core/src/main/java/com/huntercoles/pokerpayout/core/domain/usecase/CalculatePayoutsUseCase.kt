@@ -74,12 +74,13 @@ class CalculatePayoutsUseCase @Inject constructor() {
 
     /**
      * The most places, up to [PayoutPlaces.maxFor] [playerCount], that each pay something with
-     * [settings] and this pool (rule 5): where the Payouts tab's stepper stops.
+     * [settings] and this pool (rule 5): where the Payouts tab's stepper stops. At least 1, even
+     * with no players (a damaged saved game), so the stepper always has a place to show.
      */
     fun payablePlaces(prizePoolCents: Long, settings: PayoutSettings, playerCount: Int): Int =
-        (PayoutPlaces.maxFor(playerCount) downTo 1).first { count ->
+        (PayoutPlaces.maxFor(playerCount) downTo 1).firstOrNull { count ->
             invoke(prizePoolCents, settings.withPlaces(count).weights, playerCount, settings.rounding).places.size == count
-        }
+        } ?: 1
 
     private fun table(pool: Long, paying: List<Int>, rounding: PayoutRounding, unit: Long): PayoutTable {
         val totalWeight = paying.sumOf { it.toLong() }

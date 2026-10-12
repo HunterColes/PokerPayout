@@ -92,6 +92,11 @@ object PokerColors {
     /** Diamonds in the optional four-colour deck. */
     val SuitDiamond4 = Color(0xFF1A5FD0)
 
+    // Overlays
+
+    /** Behind a sheet or a dialog, dimmed: the room under the table. */
+    val Scrim = Color(0xFF000000)
+
     // Standardized alpha values used across the UI.
 
     /** The paused clock dims its digits to 70%. */

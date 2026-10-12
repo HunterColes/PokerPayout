@@ -16,14 +16,6 @@ import javax.inject.Singleton
 @Qualifier
 annotation class MainImmediateScope // UI-related
 
-@Retention
-@Qualifier
-annotation class IoScope // I/O-related
-
-@Retention
-@Qualifier
-annotation class DefaultScope // CPU-related
-
 @Module
 @InstallIn(SingletonComponent::class)
 internal object CoroutinesScopeModule {
@@ -41,20 +33,4 @@ internal object CoroutinesScopeModule {
         @MainImmediateDispatcher mainImmediateDispatcher: CoroutineDispatcher,
         exceptionHandler: CoroutineExceptionHandler,
     ): CoroutineScope = CoroutineScope(SupervisorJob() + mainImmediateDispatcher + exceptionHandler)
-
-    @IoScope
-    @Singleton
-    @Provides
-    fun provideIoScope(
-        @IoDispatcher ioDispatcher: CoroutineDispatcher,
-        exceptionHandler: CoroutineExceptionHandler,
-    ): CoroutineScope = CoroutineScope(SupervisorJob() + ioDispatcher + exceptionHandler)
-
-    @DefaultScope
-    @Singleton
-    @Provides
-    fun provideDefaultScope(
-        @DefaultDispatcher defaultDispatcher: CoroutineDispatcher,
-        exceptionHandler: CoroutineExceptionHandler,
-    ): CoroutineScope = CoroutineScope(SupervisorJob() + defaultDispatcher + exceptionHandler)
 }

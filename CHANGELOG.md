@@ -3,6 +3,20 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.19 (on master, not published)
+
+Tournament review, nothing you can see changes in English:
+
+- **The clock's time is always in Western digits.** On a phone set to Persian, Arabic or Hindi it
+  showed that language's digits, in a fallback font, sized for the clock's own figures.
+- **One level builder:** the clock, the live clock notification, the Bank's cutoffs and the chip
+  set's color-up plan all build their blind levels in one place instead of three.
+- **Copy:** "Rebuys open until Level 6", with a capital L, as every other line says it.
+- **Tidied:** the setup page's leftovers from before the Payouts tab took the structure (ten
+  commands and their state nothing used), a "can't start" dialog nothing showed, and two unused
+  clock formats. The module's detekt baseline went from 31 entries to 3 and its lint baseline is
+  empty.
+
 ## 1.4.18 (on master, not published)
 
 Bank review:

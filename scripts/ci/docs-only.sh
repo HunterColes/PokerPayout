@@ -95,8 +95,10 @@ else
   done <<<"$files"
   if ((${#others[@]} == 0)); then
     docs_only=true why="all $count changed files are documentation"
+    ((count == 1)) && why="the one changed file is documentation"
   else
     why="${#others[@]} of $count changed files aren't documentation"
+    ((count == 1)) && why="the one changed file isn't documentation"
   fi
 fi
 

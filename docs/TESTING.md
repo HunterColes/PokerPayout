@@ -131,7 +131,7 @@ $D/ui.py tap text=Tools                      # exact text
 $D/ui.py tap "desc=Start timer"              # exact content-description
 $D/ui.py tap Odds                            # bare token: text or desc ==, else contains
 $D/ui.py tap "has=A|♠" --scroll-in scrollable   # smallest node containing both labels (a card)
-$D/ui.py set-text 'text=Buy-in ($)' --value 25  # tap field, clear it, type
+$D/ui.py set-text 'text=Buy-in ($)' --value 25  # tap field; once it has the focus, clear it, type
 $D/ui.py enter                               # IME action (commits Bank player names)
 $D/ui.py slide class=SeekBar --frac 0.3      # tap a slider at 30 % of its track
 $D/ui.py scroll down --times 2 | scroll-to "text~=High Card"
@@ -149,6 +149,14 @@ Selector tokens can be combined (`"text=Player 1" class=EditText`). The availabl
 fails, ui.py exits 1 and prints what *is* on screen, which is usually enough to fix the
 selector.
 
+`set-text` clears and types only once the field it names has the focus. A hardware `enter` leaves
+the app in keyboard mode, where Android moves the focus to the first field it can, and a menu
+closing later hands the focus back to that field and scrolls it into view, under the next tap
+(that is how `14-breaks` once typed its note into Rebuy, after tapping the 30 px of the Break note
+still showing over the Start clock bar). So a field cut to a sliver by the page's edge is first
+dragged to the middle of the page, and when the tap leaves the focus elsewhere, set-text finds the
+field and taps again, up to three times, and fails rather than type into another field.
+
 If you later add `Modifier.testTag(...)`, you also need
 `Modifier.semantics { testTagsAsResourceId = true }` near the root composable (gate it on
 `ApplicationInfo.FLAG_DEBUGGABLE` so release builds don't change). The tags then show up as
@@ -162,7 +170,7 @@ their labels line up (a row: the bottom bar; a column: the rail), so a screen ti
 word ("Tournament") is never tapped by mistake, and they check which tab is selected. The steps
 are:
 
-1. **Tournament** (39 steps: two on the first run, five on the Payouts tab, three on the house rake, two on presets and two on the live clock notification). The tab is one setup page (S1 v2) that folds into the clock on Start.
+1. **Tournament** (42 steps: two on the first run, five on the Payouts tab, three on the house rake, two on presets and three on the live clock notification). The tab is one setup page (S1 v2) that folds into the clock on Start.
    * Launch: the ready ticket (LEVEL 1 · READY, 20:00) and Start.
    * **First run** (PP-113, 2 steps): the data was just cleared, so the welcome line shows above the
      ticket. See starters opens the presets sheet with the four starter nights; Turbo loads at
@@ -200,11 +208,12 @@ are:
    * Start: the setup folds into the running clock (S2) with its strip. The first Start asks for
      notifications (Android 13+, PP-081); the tour allows it. -1 must take about a
      minute off the level's time left and +1 give it back (read from the digits).
-   * **Live clock (PP-081)**, two steps: Home with the clock running must post the live clock
+   * **Live clock (PP-081)**, three steps: Home with the clock running must post the live clock
      notification ("Level 1", "Blinds 25 / 50 · Next 50 / 100", a counting-down chronometer, Pause
      and Open, public on the lock screen), read from `dumpsys notification --noredact`. Back in the
-     app from the launcher, the clock must still be running and the notification gone (Pause and
-     Open in the shade are opt-in steps, see "Live clock" below). Skip to level
+     app from the launcher, the clock must still be running and the notification gone; then away
+     and back ten times fast, with nothing crashing (Pause and Open in the shade are opt-in steps,
+     see "Live clock" below). Skip to level
      2; at level 4 require "Next · Break" and the break with its note in the schedule; skip into
      the break (S4: "Break · back at Level 5", Last rebuy); pause.
    * Table view: the table-view button forces a landscape screen on the paused break; resume
@@ -335,7 +344,7 @@ are:
    Then Player 2 re-enters: one more again, the first entry last of the field with nothing to bring
    back, "Entry 2" under the new one; the top bar's Undo takes it back, and the first entry can be
    brought back again.
-10. **Big moments** (PP-111, 9 steps), after the late entries: the clock running, six entries
+10. **Big moments** (PP-111, 8 steps), after the late entries: the clock running, six entries
    (Player 1 to 5 and Kai), Player 2 out, the seat draw's tables of three. Player 3 and Player 4 out
    at the Bank leave three: "Final table" on the clock (or "In the money!" when three are paid; one
    knockout can reach the bubble and the final table, the bigger shows and the pill says the rest);
@@ -741,10 +750,11 @@ After recording locally with `recordRoborazziDebug`, every golden is rewritten i
 encoding, and git shows them all as changed. Run `scripts/dev/recompress-goldens.sh --changed` (it
 needs `oxipng` on the path, or `OXIPNG=/path/to/oxipng`) before committing, or record on GitHub.
 
-`scripts/dev/retired-goldens.sh` lists the committed goldens whose cell no test records any more,
-from `DeviceMatrix.goldens` and `DeviceMatrix.pinned` (`--check` exits 1 if there are any, `--delete`
-runs `git rm` on them). A `goldens.yml` run lists every golden it didn't write next to that list in
-its summary; the two match unless a test was renamed or removed.
+`scripts/dev/retired-goldens.sh` lists the committed goldens no test records any more: those whose
+test is gone (no test source of the module names them: the test was removed or renamed) and those
+whose cell left `DeviceMatrix.goldens` or `DeviceMatrix.pinned` (`--check` exits 1 if there are any,
+`--delete` runs `git rm` on them). A `goldens.yml` run lists every golden it didn't write next to
+that list in its summary; the two should match.
 
 ### Determinism
 
@@ -1238,5 +1248,5 @@ artifact. Report-only: not a gate.
 First run (wave 9): 1,761 of 2,229 mutants killed (79%), 87% of the 2,032 the tests reach; about
 16 minutes. Highest: the settlement and bounty maths (`BountyLedger` 56 of 60,
 `CalculatePayoutsUseCase` 31 of 34). Lowest: `BlindLadderSearch` (39 survivors, mostly in the
-"nice value" scoring) and `BlindSetupAdvisor` (20). `NightCodec` and `CashGame` show no coverage
-only because their tests run under Robolectric, which this run leaves out.
+"nice value" scoring) and `BlindSetupAdvisor` (20). `NightCodec` and `CashGame` (since removed)
+showed no coverage only because their tests run under Robolectric, which this run leaves out.

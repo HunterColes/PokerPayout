@@ -3,25 +3,34 @@ Free, no ads, offline. No internet permission, no accounts, no tracking.
 Everything for a home poker night: a tournament clock, payouts that add up to the cent, a bank of who paid what, and tools for the table.
 
 TOURNAMENT
-• Set up the night once: players, buy-in, bounty, rebuys (with a cutoff level), add-ons and food. Save it as a preset and load it next time
+• Set up the night once: players, buy-in, bounty, rebuys and late entry (each with a cutoff), add-ons, food and an optional house rake. Save it as a preset, or start from a ready-made night
+• Blinds from four numbers: game length, level length, starting stack and smallest chip. Every level is a multiple of your smallest chip, and a setup that can't work says why and offers the nearest fix
 • A blind clock with big digits, the next level, ±1 minute nudges, breaks with a note and a big-blind ante. It keeps time through sleep, restarts and reboots
 • The running clock in the notifications and on the lock screen, with a chime, a vibration or a flash for each new level
-• Blinds from four numbers: game length, level length, starting stack and smallest chip. Every level is a multiple of your smallest chip, and a setup that can't work says why and offers the nearest fix
 • Color-ups on breaks, and overtime levels if the game runs long
-• Turn the phone sideways for a full-screen table view
+• Turn the phone sideways for a full-screen table view, with knockouts right from the clock
+• The big moments on the clock: the bubble, in the money, the final table, heads-up and the champion
 
-PAYOUTS AND THE BANK
-• Top-heavy, standard and flat presets, or your own weights, rounded to $1, $5 or $10
+THE BANK AND PAYOUTS
 • Track buy-ins, rebuys, add-ons, knockouts, bounties and who has been paid, with Undo
+• Pick tonight's players from the people you've played with
+• Late arrivals and re-entries, each with its own buy-in and stack
 • Bounties three ways: standard, progressive (half now, half onto the winner's own bounty) or mystery envelopes
+• Top-heavy, standard and flat payouts, or your own weights. The places always add up to the prize pool
 • Settle up at the end: the fewest payments so everyone is square, with a tick for each
 • Share the payouts or the settle-up as text
 
 TOOLS
-• Odds for two to ten hands, and run it out card by card
 • Chip set: stacks from the chips you own, and a color-up plan
 • Seat draw: random seats and the high card for the button
+• Odds for two to ten hands, and run it out card by card
+• Side pots when someone is all in
 • Hand ranks
+• Split the prizes: a deal by ICM or chip chop
+• History: saved nights, season points and a CSV export
+• Cue sounds, and music from your phone that plays with the clock
+• Your currency: $, €, £, ₹, ¥, kr and more, or none
+• Backup: everything in one file you keep
 
 FREE AND OPEN SOURCE
 MIT licensed. Everything stays on your phone.

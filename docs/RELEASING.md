@@ -63,7 +63,7 @@ Without `--notes-file`, the script drafts notes from `git log <last tag>..HEAD`.
 |---|---|---|
 | preflight | Problems are warnings, except missing tools or JDK | Every check must pass: main checkout, `master`, clean tree, in sync with `origin`, `gh` logged in, tag and release free, versionCode above F-Droid's, `verify-signing.sh` passes, F-Droid's buildserver has the JDK the build needs |
 | unit tests | `testDebugUnitTest`: every module's JVM tests; fails if a module runs fewer tests than it declares (`--skip-tests`) | same |
-| device tour | `scripts/device/tour.sh --stop` if present, holding `/tmp/pokerpayout-emulator.lock` so it never fights an agent for the emulator (`--skip-tour`) | same |
+| device tour | `scripts/device/tour.sh --release --stop` (the R8 build that ships) if present, holding `/tmp/pokerpayout-emulator.lock` so it never fights an agent for the emulator (`--skip-tour`) | same |
 | bump | versionName (`--bump` / `--version`), versionCode +1, metadata mirror rebuilt from fdroiddata's current file plus the new `Builds` entry, What's New file, commit | same, committed on a new local branch `release/vX.Y.Z` in the main checkout |
 | build | `clean :app:assembleRelease`, signed with the debug key | signed with the release key |
 | APK checks | name, package/version, not debuggable, no INTERNET permission, v2 signature, no baseline profile, embedded commit = release commit, signer vs `AllowedAPKSigningKeys` (a mismatch is a warning; `--require-release-key` makes it fatal, exit 3) | signer mismatch is fatal |

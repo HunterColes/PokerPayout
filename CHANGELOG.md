@@ -3,6 +3,23 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.21 (on master, not published)
+
+Docs, store text and tour fixes:
+
+- **The store listing describes the app as it is now:** late entry and the house rake in setup,
+  starter nights, Knock out on the table view, the big moments, tonight's players, late arrivals
+  and re-entries, Side pots, Split the prizes, music, currency and backup. The eight store pictures
+  are shot again (the table view now shows Knock out). The README, the privacy page and the
+  contributing guide say the same.
+- **The device tour types only into the field it means:** a menu closing could hand the focus back
+  to another field and scroll it under the tap, so a break's note now and then went into Rebuy
+  (14-breaks). A field the page's edge cuts to a sliver is brought into view first, and nothing is
+  cleared or typed until the right field has the focus.
+- **Under the hood:** the launcher icon's folder is `mipmap-anydpi` (one lint baseline entry gone);
+  `retired-goldens.sh` also finds screenshot goldens whose test is gone, and the 42 the removed
+  tools left behind are deleted.
+
 ## 1.4.20 (on master, not published)
 
 Core review:

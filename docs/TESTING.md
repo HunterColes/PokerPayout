@@ -452,7 +452,10 @@ back (the rail's density, the matrix steps' rotation and keyboard).
 
 Reports: `<module>/build/reports/tests/testDebugUnitTest/index.html`. JUnit XML is in
 `<module>/build/test-results/testDebugUnitTest/`. CI (`.github/workflows/ci.yml`) runs the
-same three commands on every push and pull request and uploads these reports when it fails.
+same three commands on every push and pull request and uploads these reports when it fails. A
+change to documentation alone (Markdown, `docs/`, `metadata/` and the like; the list is in
+`scripts/ci/docs-only.sh`) skips them: the required check still reports and passes in seconds, and
+the device tour and monkey don't run.
 
 ### What runs
 
@@ -1224,7 +1227,8 @@ gh workflow run monkey.yml --ref <branch> -f seeds=1,2,3 -f events=10000     # o
 * **Report**: `build/device-reports/monkey-<timestamp>/summary.md` (a row per seed: events
   injected, time, verdict), `seed-<n>.txt` (the monkey's log, every event), `logcat-<n>.txt`, and
   `crash-<n>.png` (the screen when it failed). GitHub uploads them and shows the summary on the run.
-* `monkey.yml` runs on every pull request (not a required check) and by hand.
+* `monkey.yml` runs on every pull request that changes more than documentation (not a required
+  check) and by hand.
 
 ## 12. Mutation testing (PIT)
 

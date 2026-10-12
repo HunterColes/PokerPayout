@@ -9,6 +9,12 @@
 # re-records the goldens on purpose with ./gradlew recordRoborazziDebug. On a failure the
 # reference | diff | new images are uploaded with the reports (build/outputs/roborazzi).
 #
+# Documentation only (scripts/ci/docs-only.sh: Markdown, docs/, metadata/ and the like, nothing
+# under a module's src/): the job still runs and reports, since master's branch protection requires
+# it by name, but skips Java, Gradle and every check and passes in seconds. Don't move this to a
+# workflow-level paths filter: a required check that never reports blocks the pull request for
+# good. A dispatched run (by hand, goldens.yml, listing.yml) always runs everything.
+#
 # No secrets are used, and the token is read-only, so pull requests from forks run the same job.
 name: CI
 
@@ -31,25 +37,40 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # The whole history, without old file contents (commits and trees only, a few MB), so the
+      # next step can see what changed. The working tree is the same as a plain checkout.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+
+      # Sets docs_only=true only for a change to documentation alone. If it fails for any reason,
+      # the output is empty and everything runs.
+      - name: Documentation only?
+        id: changes
+        continue-on-error: true
+        run: scripts/ci/docs-only.sh
 
       - uses: actions/setup-java@v4
+        if: steps.changes.outputs.docs_only != 'true'
         with:
           distribution: temurin
           java-version: 21
 
       # Caches Gradle state (read-only outside the default branch) and validates the wrapper jar.
       - uses: gradle/actions/setup-gradle@v4
+        if: steps.changes.outputs.docs_only != 'true'
 
       - name: Unit tests and screenshot goldens (all modules)
+        if: steps.changes.outputs.docs_only != 'true'
         run: ./gradlew testDebugUnitTest --continue
 
       - name: Android Lint (new issues only)
-        if: success() || failure()
+        if: (success() || failure()) && steps.changes.outputs.docs_only != 'true'
         run: ./gradlew lintDebug --continue
 
       - name: detekt (new issues only)
-        if: success() || failure()
+        if: (success() || failure()) && steps.changes.outputs.docs_only != 'true'
         run: ./gradlew detekt --continue
 
       - name: Upload test, lint and detekt reports

@@ -2,7 +2,8 @@
 # (scripts/device/monkey.sh). Fixed seeds, logged, so a failure replays exactly; restricted to the
 # app's package; fails on a crash or an ANR in the app. The same AVD as the device tour.
 #
-# Runs on every pull request, and by hand:
+# Runs on every pull request except one that changes only documentation (scripts/ci/docs-only.sh;
+# the "Documentation only?" job decides), and by hand:
 #   gh workflow run monkey.yml --ref <branch> [-f seeds=1,2,3] [-f events=4000] [-f variant=debug|release]
 #
 # Not a required check. The report (summary.md, each seed's monkey log and logcat, the screen at a
@@ -36,8 +37,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Pull requests only: one that changes documentation alone (scripts/ci/docs-only.sh) skips the
+  # monkey. If this job fails for any reason, the monkey runs.
+  changes:
+    name: Documentation only?
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs_only: ${{ steps.changes.outputs.docs_only }}
+    steps:
+      # Commits and trees only for the history: enough to see what the pull request changes.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Documentation only?
+        id: changes
+        continue-on-error: true
+        run: scripts/ci/docs-only.sh
+
   monkey:
-    name: Monkey (${{ inputs.variant || 'debug' }})
+    # A plain name: a skipped job (a pull request that changes only documentation) shows its name
+    # unevaluated. A dispatched run's name says which build.
+    name: Monkey
+    needs: changes
+    # !cancelled(): run even though `changes` was skipped (a dispatched run) or failed.
+    if: >-
+      !cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.docs_only != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

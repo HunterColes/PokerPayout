@@ -3,7 +3,6 @@
 
     python3 scripts/listing/feature_graphic.py                # writes the PNG
     python3 scripts/listing/feature_graphic.py --out x.png    # somewhere else, to look at it first
-    python3 scripts/listing/feature_graphic.py --readme       # the README's picture (below)
 
 A felt table seen from above on the app's black ground, a gold line round the felt, the two cards of
 the app icon, the app's name in gold and one plain line. The colours are read from PokerColors.kt (the
@@ -11,10 +10,6 @@ app's design tokens), the font is Barlow Condensed (bundled with the app, OFL; D
 fallback, which ubuntu-latest has), and the cards are cut out of the listing's icon.png. Nothing is
 fetched from the web, and nothing random goes in, so a rerun with the same inputs and Pillow writes
 the same picture. Needs Pillow (python3-pil).
-
---readme writes the same table without the black ground: just the rounded table on transparency, cut
-to its edge, so it sits on GitHub's light and dark pages alike (docs/images/readme-table.png, 980 x
-456). Run both after changing the picture.
 """
 
 import argparse
@@ -32,7 +27,6 @@ COLORS_KT = os.path.join(REPO, "core/src/main/java/com/huntercoles/pokerpayout/c
 FONT_DIR = os.path.join(REPO, "core/src/main/res/font")
 ICON = os.path.join(REPO, "metadata/en-US/images/icon.png")
 OUT = os.path.join(REPO, "metadata/en-US/images/featureGraphic.png")
-README_OUT = os.path.join(REPO, "docs/images/readme-table.png")
 
 WIDTH, HEIGHT = 1024, 500
 TITLE = "Poker Payout"
@@ -100,12 +94,10 @@ def cards(height, color):
     return layer.resize((round(layer.width * scale), height), Image.LANCZOS)
 
 
-def draw(colors, readme=False):
+def draw(colors):
     s = SUPERSAMPLE
     w, h = WIDTH * s, HEIGHT * s
-    # For the README the ground is cut away at the end. Drawn on the felt's own edge colour, the
-    # table's soft rim keeps no dark fringe from the black once it's gone.
-    image = Image.new("RGB", (w, h), colors["FeltDeep"] if readme else colors["PokerBlack"])
+    image = Image.new("RGB", (w, h), colors["PokerBlack"])
 
     # The table: a stadium of felt on the black ground, lit from the middle
     inset = 22 * s
@@ -151,27 +143,17 @@ def draw(colors, readme=False):
     for line, box in zip(LINES, line_boxes):
         d.text((x - box[0], y - box[1]), line, font=line_font, fill=colors["CardWhite"])
         y += box[3] - box[1] + gap_line
-    if readme:
-        # Only the table: transparent round it, cut to its edge. Pillow scales RGBA premultiplied,
-        # so the edge stays clean.
-        image.putalpha(mask)
-        image = image.crop(table)
-        return image.resize((image.width // s, image.height // s), Image.LANCZOS)
     return image.resize((WIDTH, HEIGHT), Image.LANCZOS)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", help="where to write the PNG (default: the listing's featureGraphic.png, "
-                                  "or with --readme docs/images/readme-table.png)")
-    ap.add_argument("--readme", action="store_true",
-                    help="the README's picture: the table alone on transparency, cut to its edge")
+    ap.add_argument("--out", default=OUT, help="where to write the PNG (default: the listing's featureGraphic.png)")
     a = ap.parse_args()
-    out = a.out or (README_OUT if a.readme else OUT)
-    image = draw(poker_colors(), readme=a.readme)
+    image = draw(poker_colors())
     # No metadata chunks, so the file only changes when the picture does
-    image.save(out, format="PNG", optimize=True)
-    print("wrote %s (%dx%d, %d KB)" % (os.path.relpath(out, REPO), image.width, image.height, os.path.getsize(out) // 1024))
+    image.save(a.out, format="PNG", optimize=True)
+    print("wrote %s (%dx%d, %d KB)" % (os.path.relpath(a.out, REPO), WIDTH, HEIGHT, os.path.getsize(a.out) // 1024))
 
 
 if __name__ == "__main__":

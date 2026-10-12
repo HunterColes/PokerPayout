@@ -1,7 +1,8 @@
 <!--
   Pictures on this page update themselves:
-  - the table at the top is drawn by scripts/listing/feature_graphic.py --readme (the store's
-    feature graphic, without its black ground) into docs/images/readme-table.png;
+  - the table at the top (docs/images/readme-table.png) is the store's feature graphic, drawn by
+    scripts/listing/feature_graphic.py, without its black ground: the table alone on
+    transparency, cut to its rounded edge. Redraw it when the feature graphic changes;
   - the row under the badges is the store listing (metadata/en-US/images/phoneScreenshots/),
     re-shot on GitHub's emulator by .github/workflows/listing.yml;
   - the pictures in "More screenshots" are screenshot-test goldens (*/src/test/screenshots/), which

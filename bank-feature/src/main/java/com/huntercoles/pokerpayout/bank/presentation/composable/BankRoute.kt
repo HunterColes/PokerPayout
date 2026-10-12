@@ -1,7 +1,5 @@
 package com.huntercoles.pokerpayout.bank.presentation.composable
 
-import android.content.Context
-import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -15,6 +13,7 @@ import com.huntercoles.pokerpayout.bank.presentation.BankIntent
 import com.huntercoles.pokerpayout.bank.presentation.BankViewModel
 import com.huntercoles.pokerpayout.bank.presentation.SettleUpShareText
 import com.huntercoles.pokerpayout.core.presentation.findActivity
+import com.huntercoles.pokerpayout.core.presentation.shareText
 
 /**
  * The Bank tab: [BankContent] over the Bank's one [BankViewModel] ([bankViewModel]), with the
@@ -38,7 +37,10 @@ fun BankRoute(viewModel: BankViewModel = bankViewModel()) {
             if (intent !is BankIntent.PlayerNameChanged) focusManager.clearFocus()
             viewModel.acceptIntent(intent)
         },
-        onShareSettleUp = { SettleUpShareText.build(context.resources, uiState)?.let { shareText(context, it) } },
+        onShareSettleUp = {
+            SettleUpShareText.build(context.resources, uiState)
+                ?.let { shareText(context, it, context.getString(R.string.bank_settle_share_chooser)) }
+        },
     )
 }
 
@@ -51,13 +53,4 @@ fun BankRoute(viewModel: BankViewModel = bankViewModel()) {
 fun bankViewModel(): BankViewModel {
     val activity = LocalContext.current.findActivity() as? ComponentActivity
     return if (activity != null) hiltViewModel(viewModelStoreOwner = activity) else hiltViewModel()
-}
-
-/** Sends [text] to any app that takes plain text (the group chat); needs no permission. */
-private fun shareText(context: Context, text: String) {
-    val send = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, text)
-    }
-    context.startActivity(Intent.createChooser(send, context.getString(R.string.bank_settle_share_chooser)))
 }

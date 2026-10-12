@@ -51,6 +51,7 @@ import com.huntercoles.pokerpayout.core.presentation.HideSystemBars
 import com.huntercoles.pokerpayout.core.presentation.OnPhoneUpright
 import com.huntercoles.pokerpayout.core.presentation.RequestOrientation
 import com.huntercoles.pokerpayout.core.presentation.findActivity
+import com.huntercoles.pokerpayout.core.presentation.shareText
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.live.NotificationsAsk
@@ -66,7 +67,6 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentOrientation
 import com.huntercoles.pokerpayout.tournament.presentation.TournamentUi
 import com.huntercoles.pokerpayout.tournament.presentation.payouts.PayoutsViewModel
 import com.huntercoles.pokerpayout.tournament.presentation.presets.PresetsViewModel
-import com.huntercoles.pokerpayout.tournament.presentation.presets.shareSetup
 
 /**
  * The Tournament tab (S1 v2, S2, S3, S4). The clock's ViewModel belongs to the activity, so the clock
@@ -116,7 +116,7 @@ fun TournamentScreen(
             openPayouts = onOpenPayouts,
             openSound = onOpenSound,
             onPresetIntent = onPresetIntent,
-            shareText = { text -> shareSetup(context, text) },
+            shareText = { text -> shareText(context, text, context.getString(R.string.presets_share)) },
             onPayoutsIntent = payoutsViewModel::acceptIntent,
             openHistory = onOpenHistory,
         )

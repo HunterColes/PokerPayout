@@ -3,6 +3,26 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.20 (on master, not published)
+
+Core review:
+
+- **Reset sees the cutoffs.** A setup whose only change was "rebuys until level N" or "late entry
+  until level N" now offers Reset, which takes the cutoff back to none.
+- **The music comes back up after a cue.** Opening the clock while the chime played cut it off and
+  left the music (and other apps) dipped until the next cue; that cue then didn't dip the music.
+- **A tap on the song that's loaded plays it from the start,** as a tap on any other song does.
+- **A backup or CSV file that can't be reached any more** (access taken back, its app gone) says it
+  can't be read or saved, instead of closing the app. The Payouts tab no longer closes on a saved
+  game with no players either.
+- **TalkBack:** snackbars are read once, not twice; a sheet's handle is named ("Drag handle");
+  the steppers read the new count after each step.
+- **One share sheet** for payouts, the settle-up, a setup, a seat draw and a night in History.
+- **The launcher says "Poker Payout"**, as the store does (it said "PokerPayout").
+- **Tidied:** leftovers of the cash game page and of the "Clock" tab name that was never used,
+  unused parts of the on/off chips, sound, music and chip set code, and core's baselines (lint
+  empty, detekt 92 entries to 9). Tournament defaults are whole cents like every other amount.
+
 ## 1.4.19 (on master, not published)
 
 Tournament review, nothing you can see changes in English:

@@ -34,8 +34,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
@@ -52,7 +50,9 @@ import com.huntercoles.pokerpayout.bank.presentation.CellStatus
 import com.huntercoles.pokerpayout.bank.presentation.Purchase
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.design.PokerTypography
 import com.huntercoles.pokerpayout.core.design.components.leaveOnHardwareEnter
+import com.huntercoles.pokerpayout.core.domain.players.PlayerNames
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 
 /**
@@ -164,7 +164,7 @@ private fun NameField(row: BankRowModel, large: Boolean, onRename: (String) -> U
     val commit = { if (latestText != latestName) latestOnRename(latestText) }
 
     LaunchedEffect(focused) {
-        if (focused && row.name.matches(DefaultName) && value.selection.collapsed) {
+        if (focused && PlayerNames.isPlaceholder(row.name) && value.selection.collapsed) {
             value = value.copy(selection = TextRange(0, value.text.length))
         }
     }
@@ -221,5 +221,5 @@ private fun Modifier.underlineWhen(focused: Boolean): Modifier = drawBehind {
     }
 }
 
-private val DefaultName = Regex("^Player \\d+$")
-private val NameStyle = TextStyle(fontWeight = FontWeight.Medium, lineHeight = 20.sp)
+/** The name in a row: the type scale's titleSmall, a size up (15 sp, 16 sp on a tablet), set where it is used. */
+private val NameStyle = PokerTypography.titleSmall

@@ -35,7 +35,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
@@ -80,7 +79,7 @@ internal fun ChipsField(
         onChange = { typed -> onChange(typed.toLongOrNull()) },
         placeholder = placeholder,
         description = description,
-        textStyle = ChipsValue,
+        textStyle = PokerType.NumberM, // chip counts in the number face
         keyboard = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
         modifier = modifier,
         accept = { typed -> typed.length <= MAX_CHIP_DIGITS && typed.all(Char::isDigit) },
@@ -147,6 +146,3 @@ private fun OwnTextField(
         },
     )
 }
-
-/** Chip counts in the number face, a little smaller than a money field's. */
-private val ChipsValue = PokerType.NumberM.copy(fontSize = 20.sp, lineHeight = 24.sp)

@@ -267,7 +267,7 @@ internal fun SheetHeading(title: String, pill: @Composable () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = title,
-            style = PokerType.Title.copy(fontSize = 30.sp, lineHeight = 34.sp),
+            style = SheetTitle,
             color = PokerColors.CardWhite,
             overflow = TextOverflow.Clip,
             modifier = Modifier
@@ -277,6 +277,9 @@ internal fun SheetHeading(title: String, pill: @Composable () -> Unit) {
         pill()
     }
 }
+
+/** A Bank sheet's big title: the screen title's face, larger. */
+internal val SheetTitle = PokerType.Title.copy(fontSize = 30.sp, lineHeight = 34.sp)
 
 /** Dismiss on the left as a text button, confirm on the right, named after what it does. */
 @Suppress("LongParameterList") // two buttons: labels, actions and whether confirm is ready

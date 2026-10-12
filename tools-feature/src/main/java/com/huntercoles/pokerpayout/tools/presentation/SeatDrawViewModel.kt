@@ -129,7 +129,7 @@ class SeatDrawViewModel @Inject constructor(
     private fun setName(index: Int, name: String) {
         val players = _uiState.value.players
         if (index !in players.indices) return
-        setPlayers(players.toMutableList().apply { this[index] = name.take(MAX_NAME_LENGTH) })
+        setPlayers(players.toMutableList().apply { this[index] = name.take(MAX_PLAYER_NAME) })
     }
 
     /** Saves [players] for the draw; [fromBank] means they follow the Bank's again (nothing saved). */
@@ -174,9 +174,6 @@ class SeatDrawViewModel @Inject constructor(
     companion object {
         /** A full table's worth when the Bank has nobody. */
         const val DEFAULT_PLAYERS = 9
-
-        /** Long enough for any real name; short enough to keep a seat on one or two lines. */
-        const val MAX_NAME_LENGTH = 24
     }
 }
 

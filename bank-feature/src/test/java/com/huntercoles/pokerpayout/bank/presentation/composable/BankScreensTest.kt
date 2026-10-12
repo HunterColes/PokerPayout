@@ -252,7 +252,7 @@ class BankScreensTest(private val config: ScreenConfig) {
         check("Pool breakdown sheet, raked")
     }
 
-    // Settle up (1.4, from the cash game) --------------------------------------------------------------
+    // Settle up (1.4) ---------------------------------------------------------------------------------
 
     /** The night over with four buy-ins still open: Settle up under the meters. */
     @Test

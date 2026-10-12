@@ -166,6 +166,35 @@ class BankLateEntryTest {
         assertEquals(entry.totalCents, sheet.owed.costCents)
     }
 
+    /**
+     * The pay-out sheet's "Knockouts · 2 × $10" while every bounty knocked out is the same; once one
+     * differs (a late entry keeps the bounty it paid, the others follow today's), the count alone,
+     * beside the total.
+     */
+    @Test
+    fun knockoutsSayEachBountyOnlyWhileTheyAreAllTheSame() = with(kit) {
+        val viewModel = night()
+        viewModel.send(BankIntent.AddLateEntry("Kai"))
+        listOf(6, 5).forEach { viewModel.knockOut(it, 1) }
+        with(viewModel.payOutSheet(1)) {
+            assertEquals(500L, knockoutEachCents)
+            assertEquals(1_000L, owed.knockoutBountyCents)
+        }
+
+        tournamentPreferences.setBountyPerPlayer(10.0)
+        settle()
+        with(viewModel.payOutSheet(1)) {
+            assertEquals("Eve's and Finn's at today's $10", 1_000L, knockoutEachCents)
+            assertEquals(2_000L, owed.knockoutBountyCents)
+        }
+
+        viewModel.knockOut(7, 1)
+        with(viewModel.payOutSheet(1)) {
+            assertNull("$10, $10 and Kai's $5", knockoutEachCents)
+            assertEquals(2_500L, owed.knockoutBountyCents)
+        }
+    }
+
     @Test
     fun placesAndPayoutsCountEntries() = with(kit) {
         val viewModel = night()

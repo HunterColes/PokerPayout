@@ -34,15 +34,12 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.bank.R
 import com.huntercoles.pokerpayout.bank.presentation.BankIntent
 import com.huntercoles.pokerpayout.bank.presentation.BankSheet
-import com.huntercoles.pokerpayout.bank.presentation.MAX_ENTRY_NAME_LENGTH
 import com.huntercoles.pokerpayout.bank.presentation.ReEntryCandidate
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
-import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerField
 import com.huntercoles.pokerpayout.core.design.components.PokerSheet
@@ -50,6 +47,7 @@ import com.huntercoles.pokerpayout.core.design.components.leaveOnHardwareEnter
 import com.huntercoles.pokerpayout.core.design.icons.MoneyIcons
 import com.huntercoles.pokerpayout.core.domain.model.PurchaseWindow
 import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
+import com.huntercoles.pokerpayout.core.domain.players.PlayerNames
 import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 import java.text.NumberFormat
 import java.util.Locale
@@ -103,7 +101,7 @@ internal fun LateEntrySheetContent(
     ) {
         Text(
             text = stringResource(R.string.bank_late_title),
-            style = PokerType.Title.copy(fontSize = 30.sp, lineHeight = 34.sp),
+            style = SheetTitle,
             color = PokerColors.CardWhite,
             modifier = Modifier.semantics { heading() },
         )
@@ -118,7 +116,7 @@ internal fun LateEntrySheetContent(
         val description = stringResource(R.string.bank_late_name_description)
         PokerField(
             value = name,
-            onValueChange = { name = it.take(MAX_ENTRY_NAME_LENGTH) },
+            onValueChange = { name = it.take(PlayerNames.MAX_LENGTH) },
             label = stringResource(R.string.bank_late_name),
             keyboardType = KeyboardType.Text,
             textStyle = MaterialTheme.typography.bodyLarge,
@@ -172,7 +170,7 @@ internal fun ReEntryChoice(candidate: ReEntryCandidate, modifier: Modifier = Mod
     ) {
         Icon(MoneyIcons.Renew, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(20.dp))
         Column(Modifier.weight(1f)) {
-            Text(candidate.name, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp), color = PokerColors.CardWhite)
+            Text(candidate.name, style = MaterialTheme.typography.bodyLarge, color = PokerColors.CardWhite)
             candidate.place?.let { place ->
                 Text(
                     text = stringResource(R.string.bank_late_out_in, ordinalOf(place)),

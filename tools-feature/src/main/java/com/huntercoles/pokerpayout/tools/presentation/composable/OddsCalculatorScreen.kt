@@ -11,7 +11,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.huntercoles.pokerpayout.core.design.PokerTheme
 import com.huntercoles.pokerpayout.tools.presentation.OddsCalculatorIntent
 import com.huntercoles.pokerpayout.tools.presentation.OddsCalculatorViewModel
 
@@ -26,15 +25,13 @@ fun OddsCalculatorScreen(
     viewModel: OddsCalculatorViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    PokerTheme {
-        val runOut = state.runOut
-        BackHandler(enabled = runOut != null) { viewModel.acceptIntent(OddsCalculatorIntent.ExitRunItOut) }
-        ForcedLandscape(enabled = runOut?.landscape == true)
-        if (runOut != null) {
-            RunItOutContent(runOut, state.fourColourDeck, viewModel::acceptIntent)
-        } else {
-            OddsCalculatorContent(state, viewModel::acceptIntent, onBack = onBack)
-        }
+    val runOut = state.runOut
+    BackHandler(enabled = runOut != null) { viewModel.acceptIntent(OddsCalculatorIntent.ExitRunItOut) }
+    ForcedLandscape(enabled = runOut?.landscape == true)
+    if (runOut != null) {
+        RunItOutContent(runOut, state.fourColourDeck, viewModel::acceptIntent)
+    } else {
+        OddsCalculatorContent(state, viewModel::acceptIntent, onBack = onBack)
     }
 }
 

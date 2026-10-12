@@ -3,6 +3,8 @@ package com.huntercoles.pokerpayout.tools.presentation
 import android.content.Context
 import android.content.SharedPreferences
 import com.huntercoles.pokerpayout.core.design.components.SnackbarController
+import com.huntercoles.pokerpayout.core.domain.model.EntryPrice
+import com.huntercoles.pokerpayout.core.domain.model.HouseRake
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.domain.usecase.SettleTournamentUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
@@ -227,5 +229,40 @@ class DealViewModelTest {
         assertEquals(expected, source.tonight())
         bank.saveEliminationOrder(listOf(6, 2, 5, 4, 3))
         assertEquals(emptyList<String>(), source.tonight().playersLeft, "Dana won: nobody is left to deal")
+    }
+
+    /**
+     * PP-116 and PP-145, as the Payouts tab settles them: a late entry and a re-entry count at the
+     * price they were bought at, the house rake comes off before the places are paid, and a player
+     * who re-entered is left once, on the new entry.
+     */
+    @Test
+    fun `tonight counts late entries and re-entries at their price, after the house rake`() {
+        val stores = mutableMapOf<String, SharedPreferences>()
+        val context = mockk<Context> {
+            every { getSharedPreferences(any(), any()) } answers { stores.getOrPut(firstArg()) { InMemoryPreferences() } }
+        }
+        val tournament = TournamentPreferences(context)
+        val bank = BankPreferences(context)
+        tournament.setPlayerCount(8)
+        tournament.setBuyInCents(2_000)
+        tournament.setFoodCents(0)
+        tournament.setBountyCents(0)
+        tournament.setPayoutWeights(listOf(50, 30, 20))
+        tournament.setRake(HouseRake.of(500))
+        val names = listOf("Dana", "Marcus", "Sam", "Theo", "Jo", "Rita", "Lee", "Marcus")
+        names.forEachIndexed { index, name -> bank.savePlayerName(index + 1, name) }
+        // Lee sat down late and Marcus re-entered, both after the buy-in went up to $40
+        bank.savePlayerEntryPrice(7, EntryPrice(buyInCents = 4_000, foodCents = 0, bountyCents = 0))
+        bank.savePlayerEntryPrice(8, EntryPrice(buyInCents = 4_000, foodCents = 0, bountyCents = 0))
+        bank.savePlayerReEntryOf(8, 2)
+        bank.saveEliminationOrder(listOf(2, 6, 5, 4))
+        val source = BankTonight(tournament, bank, SettleTournamentUseCase(CalculatePayoutsUseCase()))
+
+        // Six at $20 and two at $40: $200 in, $10 to the house, $190 paid 50 / 30 / 20
+        val tonight = source.tonight()
+        assertEquals(listOf("Dana", "Sam", "Lee", "Marcus"), tonight.playersLeft)
+        assertEquals(listOf(9_500L, 5_700L, 3_800L, 0L, 0L, 0L, 0L, 0L), tonight.prizes)
+        assertEquals(19_000L, tonight.prizePoolCents)
     }
 }

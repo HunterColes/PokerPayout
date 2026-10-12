@@ -16,7 +16,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,7 +62,7 @@ internal fun SectionLabel(section: BankSection, count: Int, hint: String?, first
         if (hint != null) {
             Text(
                 text = hint,
-                style = HintStyle,
+                style = MicroStyle,
                 color = PokerColors.Chalk,
                 textAlign = TextAlign.End,
                 modifier = Modifier.weight(1f),
@@ -71,8 +70,6 @@ internal fun SectionLabel(section: BankSection, count: Int, hint: String?, first
         }
     }
 }
-
-private val HintStyle = TextStyle(fontSize = 11.5.sp, lineHeight = 14.sp)
 
 /**
  * Under the list once the clock is running (PP-116): Late entry, while entries are open, and where

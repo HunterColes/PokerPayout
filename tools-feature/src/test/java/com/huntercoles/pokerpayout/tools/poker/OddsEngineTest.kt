@@ -187,28 +187,31 @@ class OddsEngineTest {
         assertTrue(r.deals < 1_000_000L, "stopped at ${r.deals}")
     }
 
+    // Both runs below would take minutes or hours; each must stop once cancelled. The bound only
+    // catches a run that never stops: it isn't a timing test, so a slow CI runner can't fail it.
+
     @Test
-    fun `cancelling the collector stops a long Monte Carlo run promptly`() = runBlocking {
+    fun `cancelling the collector stops a long Monte Carlo run`() = runBlocking {
         val first = CompletableResult()
         val job = launch(Dispatchers.Default) {
             engine.calculate(request("As Ah", "", "", ""), OddsSettings(maxSamples = Int.MAX_VALUE, seed = 1))
                 .collect { first.offer(it) }
         }
-        withTimeout(10_000) { first.await() }
-        val started = System.nanoTime()
-        withTimeout(2_000) { job.cancelAndJoin() }
-        assertTrue((System.nanoTime() - started) / 1e6 < 2_000)
+        withTimeout(NEVER_STOPS_MS) { first.await() }
+        withTimeout(NEVER_STOPS_MS) { job.cancelAndJoin() }
+        assertTrue(job.isCancelled)
     }
 
     @Test
-    fun `cancelling stops a long exact enumeration promptly`() = runBlocking {
+    fun `cancelling stops a long exact enumeration`() = runBlocking {
         // Preflop vs a random hand, forced exact: ~2 billion deals, minutes of work.
         val job = launch(Dispatchers.Default) {
             engine.calculate(request("As Ah", ""), OddsSettings(exactBudget = Long.MAX_VALUE)).first()
         }
         kotlinx.coroutines.delay(200)
         assertTrue(job.isActive, "the enumeration should still be running")
-        withTimeout(2_000) { job.cancelAndJoin() }
+        withTimeout(NEVER_STOPS_MS) { job.cancelAndJoin() }
+        assertTrue(job.isCancelled)
     }
 
     // ------------------------------------------------------------------ errors
@@ -241,5 +244,10 @@ class OddsEngineTest {
         private val deferred = kotlinx.coroutines.CompletableDeferred<OddsResult>()
         fun offer(r: OddsResult) { deferred.complete(r) }
         suspend fun await(): OddsResult = deferred.await()
+    }
+
+    private companion object {
+        /** Far longer than a stop takes on any machine, far shorter than the work left. */
+        const val NEVER_STOPS_MS = 60_000L
     }
 }

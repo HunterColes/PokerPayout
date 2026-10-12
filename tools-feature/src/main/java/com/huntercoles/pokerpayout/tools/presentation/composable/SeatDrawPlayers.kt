@@ -51,10 +51,10 @@ import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerStepper
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.tools.R
+import com.huntercoles.pokerpayout.tools.presentation.MAX_PLAYER_NAME
 import com.huntercoles.pokerpayout.tools.presentation.SeatDrawIntent
 import com.huntercoles.pokerpayout.tools.presentation.SeatDrawText
 import com.huntercoles.pokerpayout.tools.presentation.SeatDrawUiState
-import com.huntercoles.pokerpayout.tools.presentation.SeatDrawViewModel
 import com.huntercoles.pokerpayout.tools.seats.SeatDrawer
 
 /**
@@ -225,7 +225,7 @@ private fun NameField(number: Int, value: String, placeholder: String, last: Boo
     BasicTextField(
         value = text,
         onValueChange = { typed ->
-            text = typed.take(SeatDrawViewModel.MAX_NAME_LENGTH)
+            text = typed.take(MAX_PLAYER_NAME)
             onChange(text)
         },
         modifier = Modifier

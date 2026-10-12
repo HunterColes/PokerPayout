@@ -32,9 +32,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The settle-up in the Bank (1.4; it took over the cash game's): who pays whom once the night is
- * over, the Bank one of the parties; a tick per payment that Undo, a restart and a reset respect; the
- * last tick records everyone square.
+ * The settle-up in the Bank (1.4): who pays whom once the night is over, the Bank one of the
+ * parties; a tick per payment that Undo, a restart and a reset respect; the last tick records
+ * everyone square.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)

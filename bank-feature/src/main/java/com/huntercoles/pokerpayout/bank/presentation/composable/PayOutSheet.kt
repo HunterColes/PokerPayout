@@ -26,12 +26,15 @@ import com.huntercoles.pokerpayout.bank.presentation.BankSheet
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
+import com.huntercoles.pokerpayout.core.design.components.PokerButton
+import com.huntercoles.pokerpayout.core.design.components.PokerButtonSize
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
 import com.huntercoles.pokerpayout.core.design.components.PokerPill
 import com.huntercoles.pokerpayout.core.design.components.PokerPillTone
 import com.huntercoles.pokerpayout.core.design.components.PokerSheet
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
+import com.huntercoles.pokerpayout.core.domain.model.PlayerSettlement
 import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
 import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 
@@ -52,7 +55,6 @@ internal fun PayOutSheet(sheet: BankSheet.PayOut, onSetPaid: (Boolean) -> Unit, 
 @Composable
 internal fun PayOutSheetContent(sheet: BankSheet.PayOut, onSetPaid: (Boolean) -> Unit, onDismiss: () -> Unit) {
     val owed = sheet.owed
-    val paid = owed.paidOut
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
@@ -72,31 +74,48 @@ internal fun PayOutSheetContent(sheet: BankSheet.PayOut, onSetPaid: (Boolean) ->
                     total = true,
                 )
             } else {
+                // Still playing: nothing yet; finished out of the money: nothing at all
+                val nothing = if (owed.place == null) R.string.bank_pay_nothing else R.string.bank_pay_nothing_finished
                 Text(
-                    text = stringResource(R.string.bank_pay_nothing),
+                    text = stringResource(nothing),
                     style = MaterialTheme.typography.bodyMedium,
                     color = PokerColors.Chalk,
                 )
             }
         }
         Text(text = paidInAndNet(sheet), style = MaterialTheme.typography.bodyMedium, color = PokerColors.Chalk)
-        if (paid) {
-            SheetButtons(
-                dismissLabel = stringResource(R.string.bank_close),
-                onDismiss = onDismiss,
-                confirmLabel = stringResource(R.string.bank_pay_mark_unpaid),
-                onConfirm = { onSetPaid(false) },
-                confirmVariant = PokerButtonVariant.DestructiveOutline,
-            )
-        } else {
-            SheetButtons(
-                dismissLabel = stringResource(R.string.bank_cancel),
-                onDismiss = onDismiss,
-                confirmLabel = stringResource(R.string.bank_pay_mark_paid, formatMoney(owed.winningsCents)),
-                onConfirm = { onSetPaid(true) },
-                confirmIcon = PokerIcons.Check,
-            )
-        }
+        PayOutButtons(owed, onSetPaid, onDismiss)
+    }
+}
+
+/**
+ * Mark paid for what is owed, or Mark not paid once paid. With nothing to hand over there is nothing
+ * to mark (the Bank ignores it too), so only Close.
+ */
+@Composable
+private fun PayOutButtons(owed: PlayerSettlement, onSetPaid: (Boolean) -> Unit, onDismiss: () -> Unit) {
+    when {
+        owed.paidOut -> SheetButtons(
+            dismissLabel = stringResource(R.string.bank_close),
+            onDismiss = onDismiss,
+            confirmLabel = stringResource(R.string.bank_pay_mark_unpaid),
+            onConfirm = { onSetPaid(false) },
+            confirmVariant = PokerButtonVariant.DestructiveOutline,
+        )
+        owed.winningsCents > 0L -> SheetButtons(
+            dismissLabel = stringResource(R.string.bank_cancel),
+            onDismiss = onDismiss,
+            confirmLabel = stringResource(R.string.bank_pay_mark_paid, formatMoney(owed.winningsCents)),
+            onConfirm = { onSetPaid(true) },
+            confirmIcon = PokerIcons.Check,
+        )
+        else -> PokerButton(
+            text = stringResource(R.string.bank_close),
+            onClick = onDismiss,
+            variant = PokerButtonVariant.Secondary,
+            size = PokerButtonSize.Small,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

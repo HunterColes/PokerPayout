@@ -3,6 +3,23 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.18 (on master, not published)
+
+Bank review:
+
+- **A $0 payout can't hide a prize.** With nothing to hand over, the pay-out sheet offers only
+  Close, and the Bank no longer records a payout of nothing. Before, a player still in who was
+  marked paid at $0 showed as paid for the prize they won later, and the settle-up left that prize
+  unpaid. A payout saved that way can still be taken back with Mark not paid. A player who finished
+  out of the money reads "Nothing to hand over."
+- **A late arrival's name goes with Undo.** A name being typed into a late entry's row when the
+  snackbar's Undo took the entry back no longer turns up on the next seat with that number.
+- **Settle up says "the bank" throughout** ("counting what the bank has taken in and paid out").
+- **Under the hood:** dead code and repeated rules gone, unused build dependencies dropped, and the
+  Bank's lint and detekt baselines emptied (every entry was for code removed long ago). New tests
+  for $0 payouts, the name after Undo, and the pay-out sheet's "Knockouts · 2 × $5" with a late
+  entry's own bounty.
+
 ## 1.4.17 (on master, not published)
 
 Tools review, nothing you can see changes:

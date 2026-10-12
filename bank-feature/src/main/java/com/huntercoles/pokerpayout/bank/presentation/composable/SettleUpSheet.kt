@@ -65,11 +65,10 @@ internal fun SettleUpSheet(
 }
 
 /**
- * Who pays whom once the night is over (it took over the cash game's settle-up in 1.4): the fewest
- * payments that square everyone, largest debts first, the Bank one side of some ("The bank pays
- * Dana"), each with a 48 dp tick for paid. Ticking the last one records everyone square in the Bank.
- * With a house rake (PP-145) a line says the Bank keeps it for the host. Then Share as text, for the
- * group chat.
+ * Who pays whom once the night is over: the fewest payments that square everyone, largest debts
+ * first, the Bank one side of some ("The bank pays Dana"), each with a 48 dp tick for paid. Ticking
+ * the last one records everyone square in the Bank. With a house rake (PP-145) a line says the Bank
+ * keeps it for the host. Then Share as text, for the group chat.
  */
 @Composable
 internal fun SettleUpSheetContent(

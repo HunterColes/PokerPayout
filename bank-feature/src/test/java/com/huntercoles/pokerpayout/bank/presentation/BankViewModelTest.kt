@@ -91,6 +91,58 @@ class BankViewModelTest {
         assertEquals(7_100L, viewModel.uiState.value.totalPaidOutCents)
     }
 
+    /**
+     * Nothing to hand over is nothing to mark paid. Marked paid at $0 while still in, a player would
+     * later show as paid for a prize nobody handed over, and the settle-up would leave it unpaid.
+     */
+    @Test
+    fun nothingToHandOverIsNeverMarkedPaid() = with(kit) {
+        configure(players = 3, buyIn = 20.0, weights = listOf(1))
+        val viewModel = newViewModel()
+        viewModel.act(BankIntent.SetPaid(1, true))
+        assertFalse("still in, nothing won yet", viewModel.player(1).paidOut)
+        assertNull("nothing to say or undo", snackbarMessage())
+        assertFalse(viewModel.uiState.value.canUndo)
+
+        viewModel.knockOut(3, null)
+        viewModel.send(BankIntent.SetPaid(3, true))
+        assertFalse("out of the money", viewModel.player(3).paidOut)
+
+        viewModel.knockOut(2, 1)
+        assertEquals(CellStatus.Owed, viewModel.row(1).paid.status)
+        assertEquals(0L, viewModel.uiState.value.totalPaidOutCents)
+        viewModel.send(BankIntent.SetPaid(1, true))
+        assertTrue("the champion's $60", viewModel.player(1).paidOut)
+        assertEquals(6_000L, viewModel.uiState.value.totalPaidOutCents)
+    }
+
+    /** Saved before the Bank ignored it, a $0 payout can still be taken back. */
+    @Test
+    fun aPayoutMarkedAtNothingCanStillBeTakenBack() = with(kit) {
+        configure(players = 3, buyIn = 20.0, weights = listOf(1))
+        bankPreferences.savePlayerPayedOutStatus(2, true)
+        val viewModel = newViewModel()
+        assertTrue(viewModel.player(2).paidOut)
+        viewModel.send(BankIntent.SetPaid(2, false))
+        assertFalse(viewModel.player(2).paidOut)
+    }
+
+    /**
+     * A name typed into a row that has gone since (a late entry taken back by the snackbar's Undo while
+     * its name was being typed) is dropped: it must not wait in storage for the next seat with that number.
+     */
+    @Test
+    fun aNameForARowThatHasGoneIsNotKept() = with(kit) {
+        configure(players = 3, buyIn = 20.0)
+        val viewModel = newViewModel()
+        viewModel.send(BankIntent.PlayerNameChanged(4, "Kai"))
+        assertEquals(3, viewModel.uiState.value.players.size)
+
+        tournamentPreferences.setPlayerCount(4)
+        settle()
+        assertEquals("Player 4", viewModel.player(4).name)
+    }
+
     @Test
     fun theBankUsesTheSamePayoutTableAsTheTournamentTab() = with(kit) {
         configure(players = 10, buyIn = 25.0, weights = listOf(35, 20, 15))

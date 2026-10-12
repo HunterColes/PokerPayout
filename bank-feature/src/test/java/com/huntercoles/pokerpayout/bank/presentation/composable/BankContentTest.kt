@@ -218,6 +218,19 @@ class BankContentTest {
         assertEquals(listOf(true), answers)
     }
 
+    /** Nothing to hand over yet: nothing to mark paid, only Close. */
+    @Test
+    fun thePayOutSheetWithNothingOwedOnlyCloses() {
+        val viewModel = with(kit) { BankScenes.beforeBuyIns(kit).also { it.send(BankIntent.OpenPayOut(BankScenes.DANA)) } }
+        val sheet = viewModel.uiState.value.sheet as BankSheet.PayOut
+        var closed = 0
+        setContent { PayOutSheetContent(sheet, onSetPaid = { error("nothing to mark paid") }, onDismiss = { closed++ }) }
+        compose.onNodeWithText("Nothing to hand over yet.").assertExists()
+        compose.onNodeWithText("Mark paid", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Close").performScrollTo().performClick()
+        assertEquals(1, closed)
+    }
+
     @Test
     fun theCountSheetSetsTheCount() {
         val viewModel = with(kit) { BankScenes.rebuysOpen(kit).also { it.send(BankIntent.OpenCount(

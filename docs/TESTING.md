@@ -1,4 +1,4 @@
-# Testing Poker Payout
+# Testing Poker Payout (throwaway: CI docs-only probe, never merge)
 
 Everything here runs headless on a Linux workstation: no phone, no emulator window, no
 sound. It is written so that a person *or* an AI agent can run it unattended.

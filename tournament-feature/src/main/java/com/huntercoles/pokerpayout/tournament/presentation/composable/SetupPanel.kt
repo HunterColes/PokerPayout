@@ -174,6 +174,7 @@ private fun AnyTimeFields(setup: TournamentConfigUiState, timer: TimerUiState, a
 @Composable
 private fun LockedSummary(setup: TournamentConfigUiState, timer: TimerUiState) {
     val formatter = rememberChipFormatter()
+    val separator = SetupSummary.stripSeparator()
     val amounts = setup.money
     val config = timer.config
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -183,12 +184,12 @@ private fun LockedSummary(setup: TournamentConfigUiState, timer: TimerUiState) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         LockedValue(
             label = stringResource(R.string.panel_money_amounts),
-            value = listOf(amounts.buyInCents, amounts.rebuyCents, amounts.addOnCents).joinToString(" · ") { money(it) },
+            value = listOf(amounts.buyInCents, amounts.rebuyCents, amounts.addOnCents).joinToString(separator) { money(it) },
             modifier = Modifier.weight(1f),
         )
         LockedValue(
             label = stringResource(R.string.panel_bounty_food),
-            value = listOf(amounts.bountyCents, amounts.foodCents).joinToString(" · ") { money(it) },
+            value = listOf(amounts.bountyCents, amounts.foodCents).joinToString(separator) { money(it) },
             modifier = Modifier.weight(1f),
         )
     }
@@ -200,7 +201,7 @@ private fun LockedSummary(setup: TournamentConfigUiState, timer: TimerUiState) {
         )
         LockedValue(
             label = stringResource(R.string.panel_stack_chip),
-            value = "${formatter.format(config.startingChips)} · ${formatter.format(config.smallestChip)}",
+            value = formatter.format(config.startingChips) + separator + formatter.format(config.smallestChip),
             modifier = Modifier.weight(1f),
         )
     }

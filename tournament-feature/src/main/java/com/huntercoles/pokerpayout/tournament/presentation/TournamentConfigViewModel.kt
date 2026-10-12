@@ -3,8 +3,6 @@ package com.huntercoles.pokerpayout.tournament.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
-import com.huntercoles.pokerpayout.core.domain.model.PayoutPlaces
-import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.Standings
 import com.huntercoles.pokerpayout.core.domain.usecase.CalculatePayoutsUseCase
 import com.huntercoles.pokerpayout.core.preferences.BankPreferences
@@ -20,6 +18,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * The Tournament setup before and during the night: the players, the money, the late entry cutoff, the
+ * reset and the welcome; and the pool and payout table they make, which follow every purchase and
+ * knockout the Bank records. The blinds are the clock's ([TimerViewModel]); the payout structure is
+ * set on the Payouts tab and read here.
+ */
 @HiltViewModel
 class TournamentConfigViewModel @Inject constructor(
     private val calculatePayoutsUseCase: CalculatePayoutsUseCase,
@@ -32,22 +36,7 @@ class TournamentConfigViewModel @Inject constructor(
     val uiState: StateFlow<TournamentConfigUiState> = _uiState.asStateFlow()
 
     init {
-        // Load all tournament configuration from preferences
         loadTournamentConfiguration()
-
-        // Listen for tournament lock state changes
-        viewModelScope.launch {
-            tournamentPreferences.tournamentLocked.collect { isLocked ->
-                _uiState.update { it.copy(isTournamentLocked = isLocked) }
-            }
-        }
-
-        // Listen for config expanded state changes
-        viewModelScope.launch {
-            tournamentPreferences.isConfigExpanded.collect { isExpanded ->
-                _uiState.update { it.copy(isConfigExpanded = isExpanded) }
-            }
-        }
 
         // The late entry cutoff (PP-116), as set here and as a new tournament clears it
         viewModelScope.launch {
@@ -56,8 +45,8 @@ class TournamentConfigViewModel @Inject constructor(
             }
         }
 
-        // The pool and the payout table follow every settings change (including the Bank's
-        // weights editor) and every purchase or knockout recorded in the Bank.
+        // The pool and the payout table follow every settings change (the Payouts tab's structure
+        // among them) and every purchase or knockout recorded in the Bank.
         viewModelScope.launch {
             tournamentPreferences.config.collect { refreshPayouts() }
         }
@@ -69,7 +58,7 @@ class TournamentConfigViewModel @Inject constructor(
             MoneyFormat.changes.drop(1).collect { refreshPayouts() }
         }
 
-        // A preset loaded (PP-032) replaces the blind fields this keeps its own copy of
+        // A preset loaded (PP-032) replaces the whole setup
         viewModelScope.launch {
             tournamentPreferences.setupRevision.drop(1).collect { loadTournamentConfiguration() }
         }
@@ -97,24 +86,6 @@ class TournamentConfigViewModel @Inject constructor(
             is TournamentConfigIntent.UpdateRake -> updateSettings { setRake(intent.rake) }
             TournamentConfigIntent.ConfirmClearPurchases -> confirmClearPurchases()
             TournamentConfigIntent.DismissClearPurchases -> keepPurchases()
-            is TournamentConfigIntent.UpdateWeights -> updateWeights(intent.weights)
-            is TournamentConfigIntent.UpdatePayoutSettings -> {
-                _uiState.update { it.copy(showWeightsEditor = false) }
-                updateSettings { setPayoutSettings(intent.settings) }
-            }
-            is TournamentConfigIntent.ApplyPayoutPreset -> applyPreset(intent.preset, currentPaidPlaces())
-            is TournamentConfigIntent.SetPaidPlaces ->
-                applyPreset(_uiState.value.payoutPreset ?: PayoutPreset.DEFAULT, intent.places)
-            is TournamentConfigIntent.UpdatePayoutRounding -> updateSettings { setPayoutRounding(intent.rounding) }
-            TournamentConfigIntent.ShowWeightsEditor -> _uiState.update { it.copy(showWeightsEditor = true) }
-            TournamentConfigIntent.HideWeightsEditor -> _uiState.update { it.copy(showWeightsEditor = false) }
-            is TournamentConfigIntent.ToggleConfigExpanded -> toggleConfigExpanded(intent.isExpanded)
-            is TournamentConfigIntent.ToggleBlindConfigExpanded -> toggleBlindConfigExpanded(intent.isExpanded)
-            is TournamentConfigIntent.UpdateGameDurationHours -> updateGameDurationHours(intent.hours)
-            is TournamentConfigIntent.UpdateRoundLength -> updateRoundLength(intent.minutes)
-            is TournamentConfigIntent.UpdateSmallestChip -> updateSmallestChip(intent.chip)
-            is TournamentConfigIntent.UpdateStartingChips -> updateStartingChips(intent.chips)
-            is TournamentConfigIntent.UpdateSelectedPanel -> updateSelectedPanel(intent.panel)
             is TournamentConfigIntent.UpdateLateEntryUntil -> tournamentPreferences.setLateEntryUntilLevel(intent.level)
             TournamentConfigIntent.ShowResetDialog -> showResetDialog()
             TournamentConfigIntent.HideResetDialog -> hideResetDialog()
@@ -129,16 +100,6 @@ class TournamentConfigViewModel @Inject constructor(
     }
 
     private fun loadTournamentConfiguration() {
-        _uiState.update {
-            it.copy(
-                gameDurationHours = tournamentPreferences.getGameDurationHours(),
-                roundLengthMinutes = tournamentPreferences.getRoundLengthMinutes(),
-                smallestChip = tournamentPreferences.getSmallestChip(),
-                startingChips = tournamentPreferences.getStartingChips(),
-                selectedPanel = tournamentPreferences.getSelectedPanel(),
-                isConfigExpanded = tournamentPreferences.getIsConfigExpanded()
-            )
-        }
         bankPreferences.removePlayersAbove(tournamentPreferences.getPlayerCount())
         refreshPayouts()
     }
@@ -168,7 +129,6 @@ class TournamentConfigViewModel @Inject constructor(
                 pool = pool,
                 payoutTable = table,
                 payoutPreset = tournamentPreferences.getPayoutPreset(),
-                recommendedPlaces = PayoutPlaces.recommended(config.numPlayers),
                 placeNames = placeNames,
                 rebuyPurchases = rebuys,
                 addOnPurchases = addOns,
@@ -275,28 +235,8 @@ class TournamentConfigViewModel @Inject constructor(
         saveAmount(prompt.kind, 0L)
     }
 
-    private fun currentPaidPlaces(): Int =
-        _uiState.value.paidPlaces.takeIf { it > 0 } ?: PayoutPlaces.recommended(_uiState.value.playerCount)
-
-    private fun applyPreset(preset: PayoutPreset, places: Int) {
-        val maxPlaces = PayoutPlaces.maxFor(_uiState.value.playerCount)
-        tournamentPreferences.setPayoutPreset(preset, places.coerceIn(1, maxPlaces))
-        refreshPayouts()
-    }
-
-    private fun updateWeights(weights: List<Int>) {
-        tournamentPreferences.setPayoutWeights(weights)
-        _uiState.update { it.copy(showWeightsEditor = false) }
-        refreshPayouts()
-    }
-
-    private fun toggleConfigExpanded(isExpanded: Boolean) {
-        tournamentPreferences.setIsConfigExpanded(isExpanded)
-        _uiState.update { it.copy(isConfigExpanded = isExpanded) }
-    }
-
+    /** The reset question, unless there is nothing to reset: setup and clock are already a new tournament's. */
     private fun showResetDialog() {
-        // Only show dialog if not already in default state
         if (!isInDefaultState()) {
             _uiState.update { it.copy(showResetDialog = true) }
         }
@@ -306,18 +246,9 @@ class TournamentConfigViewModel @Inject constructor(
         _uiState.update { it.copy(showResetDialog = false) }
     }
 
-    private fun isInDefaultState(): Boolean {
-        // Also ensure UI-only blind fields match their defaults so changing them enables Reset
-        val defaultUi = TournamentConfigUiState()
-        val ui = _uiState.value
-        return tournamentPreferences.isInDefaultState() &&
-            timerPreferences.isInDefaultState() &&
-            ui.gameDurationHours == defaultUi.gameDurationHours &&
-            ui.roundLengthMinutes == defaultUi.roundLengthMinutes &&
-            ui.smallestChip == defaultUi.smallestChip &&
-            ui.startingChips == defaultUi.startingChips
-            // Note: selectedPanel is already checked in tournamentPreferences.isInDefaultState()
-    }
+    /** The setup (money, payouts and blinds) and the clock are as a new tournament has them. */
+    private fun isInDefaultState(): Boolean =
+        tournamentPreferences.isInDefaultState() && timerPreferences.isInDefaultState()
 
     private fun confirmReset() {
         resetAllData()
@@ -325,9 +256,6 @@ class TournamentConfigViewModel @Inject constructor(
     }
 
     private fun resetAllData() {
-        // Preserve current selected panel
-        val currentSelectedPanel = _uiState.value.selectedPanel
-
         // The reset sets the rebuy and add-on amounts to zero; the dialog said the purchases
         // recorded at the old amounts go too, so the Bank never holds purchases worth nothing.
         if (_uiState.value.rebuyPurchases > 0) bankPreferences.clearAllRebuys()
@@ -335,57 +263,6 @@ class TournamentConfigViewModel @Inject constructor(
 
         tournamentPreferences.resetAllTournamentData()
         timerPreferences.resetAllTimerData()
-
-        // Restore the selected panel to what it was before reset
-        tournamentPreferences.setSelectedPanel(currentSelectedPanel)
-
-        // Reload tournament configuration from preferences
         loadTournamentConfiguration()
-
-        // Reset UI-only blind-related fields to their defaults. Use timer preference for duration.
-        val defaultUi = TournamentConfigUiState()
-        val defaultHours = (timerPreferences.getGameDurationMinutes() / MINUTES_PER_HOUR).coerceAtLeast(1)
-        _uiState.update {
-            it.copy(
-                gameDurationHours = defaultHours,
-                roundLengthMinutes = defaultUi.roundLengthMinutes,
-                smallestChip = defaultUi.smallestChip,
-                startingChips = defaultUi.startingChips,
-                selectedPanel = currentSelectedPanel // Preserve the selected panel
-            )
-        }
-    }
-
-    private fun toggleBlindConfigExpanded(isExpanded: Boolean) {
-        _uiState.update { it.copy(isBlindConfigExpanded = isExpanded) }
-    }
-
-    private fun updateGameDurationHours(hours: Int) {
-        _uiState.update { it.copy(gameDurationHours = hours) }
-        tournamentPreferences.setGameDurationHours(hours)
-    }
-
-    private fun updateRoundLength(minutes: Int) {
-        _uiState.update { it.copy(roundLengthMinutes = minutes) }
-        tournamentPreferences.setRoundLengthMinutes(minutes)
-    }
-
-    private fun updateSmallestChip(chip: Int) {
-        _uiState.update { it.copy(smallestChip = chip) }
-        tournamentPreferences.setSmallestChip(chip)
-    }
-
-    private fun updateStartingChips(chips: Int) {
-        _uiState.update { it.copy(startingChips = chips) }
-        tournamentPreferences.setStartingChips(chips)
-    }
-
-    private fun updateSelectedPanel(panel: String) {
-        _uiState.update { it.copy(selectedPanel = panel) }
-        tournamentPreferences.setSelectedPanel(panel)
-    }
-
-    private companion object {
-        const val MINUTES_PER_HOUR = 60
     }
 }

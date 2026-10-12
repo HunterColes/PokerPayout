@@ -7,7 +7,7 @@ import com.huntercoles.pokerpayout.core.navigation.NavigationFactory
 import com.huntercoles.pokerpayout.tournament.presentation.payouts.PayoutsScreen
 import javax.inject.Inject
 
-/** The Payouts tab. It lives here because the Tournament tab's ViewModel owns the payout table. */
+/** The Payouts tab ([PayoutsScreen]): the tournament's payouts, so it lives with the Tournament tab. */
 class PayoutsNavigationFactory @Inject constructor() : NavigationFactory {
 
     override fun create(builder: NavGraphBuilder) {

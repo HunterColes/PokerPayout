@@ -2,12 +2,11 @@ package com.huntercoles.pokerpayout.tournament.presentation
 
 import com.huntercoles.pokerpayout.core.domain.model.BountyMode
 import com.huntercoles.pokerpayout.core.domain.model.HouseRake
-import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
-import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
-import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 
 /**
- * User intents for the tournament config screen. Money is in cents.
+ * What the Tournament setup can be asked to do: the players, the money, the late entry cutoff, the
+ * reset and the welcome. Money is in cents. The blinds are the clock's ([TimerIntent]) and the payout
+ * structure the Payouts tab's.
  *
  * The `Update*` money intents carry the amount while the user types; the `Commit*` ones arrive when
  * the field is left (focus loss, Done, tab switch). Only a committed zero rebuy or add-on amount can
@@ -30,20 +29,6 @@ sealed class TournamentConfigIntent {
     data class UpdateRake(val rake: HouseRake) : TournamentConfigIntent()
     object ConfirmClearPurchases : TournamentConfigIntent()
     object DismissClearPurchases : TournamentConfigIntent()
-    data class UpdateWeights(val weights: List<Int>) : TournamentConfigIntent()
-    data class UpdatePayoutSettings(val settings: PayoutSettings) : TournamentConfigIntent()
-    data class ApplyPayoutPreset(val preset: PayoutPreset) : TournamentConfigIntent()
-    data class SetPaidPlaces(val places: Int) : TournamentConfigIntent()
-    data class UpdatePayoutRounding(val rounding: PayoutRounding) : TournamentConfigIntent()
-    object ShowWeightsEditor : TournamentConfigIntent()
-    object HideWeightsEditor : TournamentConfigIntent()
-    data class ToggleConfigExpanded(val isExpanded: Boolean) : TournamentConfigIntent()
-    data class ToggleBlindConfigExpanded(val isExpanded: Boolean) : TournamentConfigIntent()
-    data class UpdateGameDurationHours(val hours: Int) : TournamentConfigIntent()
-    data class UpdateRoundLength(val minutes: Int) : TournamentConfigIntent()
-    data class UpdateSmallestChip(val chip: Int) : TournamentConfigIntent()
-    data class UpdateStartingChips(val chips: Int) : TournamentConfigIntent()
-    data class UpdateSelectedPanel(val panel: String) : TournamentConfigIntent()
 
     /** The last level at which a player can join late or re-enter (PP-116); 0 = no cutoff. */
     data class UpdateLateEntryUntil(val level: Int) : TournamentConfigIntent()

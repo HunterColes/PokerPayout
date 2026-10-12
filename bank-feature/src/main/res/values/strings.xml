@@ -208,6 +208,8 @@
     </plurals>
     <string name="bank_pay_hand_over">Hand over</string>
     <string name="bank_pay_nothing">Nothing to hand over yet.</string>
+    <!-- Finished out of the money -->
+    <string name="bank_pay_nothing_finished">Nothing to hand over.</string>
     <string name="bank_pay_paid_in">%1$s paid in %2$s (%3$s).</string>
     <string name="bank_part_buy_in">buy-in %1$s</string>
     <string name="bank_part_bounty">bounty %1$s</string>
@@ -251,13 +253,13 @@
     <string name="bank_still_playing">still playing</string>
     <string name="bank_structure">Structure</string>
 
-    <!-- Settle up: who pays whom once the night is over (it took over the cash game's in 1.4) -->
+    <!-- Settle up: who pays whom once the night is over -->
     <plurals name="bank_settle_button">
         <item quantity="one">Settle up · %d payment</item>
         <item quantity="other">Settle up · %d payments</item>
     </plurals>
     <string name="bank_settle_title">Settle up</string>
-    <string name="bank_settle_note">The fewest payments that square everyone, counting what the Bank has taken in and paid out.</string>
+    <string name="bank_settle_note">The fewest payments that square everyone, counting what the bank has taken in and paid out.</string>
     <!-- PP-145: %1$s is the rate ("5%"), %2$s the amount -->
     <string name="bank_settle_rake">The bank keeps the %1$s house rake, %2$s, for the host.</string>
     <plurals name="bank_settle_count">

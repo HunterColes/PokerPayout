@@ -177,6 +177,7 @@ private fun bountiesTitle(bounties: BountiesModel): String = when (bounties.mode
 
 @Composable
 private fun BountyLine(name: String, detail: String, cents: Long) {
+    val separator = stringResource(R.string.payouts_separator)
     Row(
         modifier = Modifier.heightIn(min = 32.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -185,7 +186,7 @@ private fun BountyLine(name: String, detail: String, cents: Long) {
         Text(
             text = buildAnnotatedString {
                 append(name)
-                withStyle(SpanStyle(color = PokerColors.Chalk)) { append(" · $detail") }
+                withStyle(SpanStyle(color = PokerColors.Chalk)) { append(separator + detail) }
             },
             style = MaterialTheme.typography.bodyMedium,
             color = PokerColors.CardWhite,

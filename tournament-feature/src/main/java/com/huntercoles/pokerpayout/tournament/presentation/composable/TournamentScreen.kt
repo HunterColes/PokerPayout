@@ -107,8 +107,6 @@ fun TournamentScreen(
                 if (intent == TimerIntent.ToggleTimer && !before.hasTimerStarted && before.setupProblem == null) {
                     askForNotifications()
                 }
-                // The blind fields are mirrored in the setup ViewModel, which Reset reads.
-                intent.toConfigIntent()?.let(calculatorViewModel::acceptIntent)
                 timerViewModel.acceptIntent(intent)
             },
             updateUi = { transform -> ui = transform(ui) },

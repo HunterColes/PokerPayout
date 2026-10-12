@@ -1,34 +1,11 @@
 package com.huntercoles.pokerpayout.bank.presentation
 
-internal data class PlayerDisplayModel(
-    val player: PlayerData,
-    val placement: Int?
-)
-
-internal fun buildPlayerDisplayModels(
-    players: List<PlayerData>,
-    eliminationOrder: List<Int>
-): List<PlayerDisplayModel> {
-    if (players.isEmpty()) return emptyList()
-
-    val eliminationIndexLookup = eliminationOrder
-        .withIndex()
-        .associate { indexedValue -> indexedValue.value to indexedValue.index }
-    val originalIndexLookup = players
-        .mapIndexed { index, player -> player.id to index }
-        .toMap()
-    val totalPlayers = players.size
-
-    val sortedPlayers = players.sortedWith(
-        compareBy<PlayerData> { if (it.out) 1 else 0 }
-            .thenByDescending { player -> eliminationIndexLookup[player.id] ?: Int.MIN_VALUE }
-            .thenBy { player -> originalIndexLookup[player.id] ?: Int.MAX_VALUE }
-    )
-
-    return sortedPlayers.map { player ->
-        val placement = eliminationIndexLookup[player.id]?.let { eliminationIndex ->
-            (totalPlayers - eliminationIndex).coerceAtLeast(1)
-        }
-        PlayerDisplayModel(player = player, placement = placement)
-    }
+/**
+ * [players] in the order the Bank lists them: those still in, in seat order, then those out, the
+ * latest out first ([eliminationOrder] is oldest first). Places come from the settlement, not from here.
+ */
+internal fun bankOrder(players: List<PlayerData>, eliminationOrder: List<Int>): List<PlayerData> {
+    val outAt = eliminationOrder.withIndex().associate { (index, id) -> id to index }
+    // A stable sort: the players still in keep their seat order
+    return players.sortedWith(compareBy<PlayerData> { it.out }.thenByDescending { outAt[it.id] ?: -1 })
 }

@@ -3,8 +3,6 @@ package com.huntercoles.pokerpayout.tournament.domain.clock
 import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.time.ClockAnchor
-import com.huntercoles.pokerpayout.core.utils.BlindSetupAdvisor
-import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
 import com.huntercoles.pokerpayout.core.utils.BlindStructureInput
 import javax.inject.Inject
 
@@ -59,28 +57,16 @@ class SavedClock @Inject constructor(
     }
 
     private fun build(input: TimelineInput): ClockTimeline {
-        val problem = BlindSetupAdvisor.check(
-            durationMinutes = input.durationMinutes,
-            roundLengthMinutes = input.roundLengthMinutes,
-            smallestChip = input.smallestChip,
-            startingChips = input.startingChips
-        )
-        val levels = if (problem == null) {
-            runCatching {
-                BlindStructureCalculator.generateSchedule(
-                    BlindStructureInput(
-                        players = input.players,
-                        targetDurationMinutes = input.durationMinutes,
-                        smallestChip = input.smallestChip,
-                        startingStack = input.startingChips,
-                        roundLengthMinutes = input.roundLengthMinutes,
-                        bigBlindAnteFromLevel = input.anteFromLevel
-                    )
-                )
-            }.getOrDefault(emptyList())
-        } else {
-            emptyList()
-        }
+        val levels = ClockLevels.of(
+            BlindStructureInput(
+                players = input.players,
+                targetDurationMinutes = input.durationMinutes,
+                smallestChip = input.smallestChip,
+                startingStack = input.startingChips,
+                roundLengthMinutes = input.roundLengthMinutes,
+                bigBlindAnteFromLevel = input.anteFromLevel
+            )
+        ).levels
         return ClockTimeline.build(
             regularLevels = levels,
             roundLengthMinutes = input.roundLengthMinutes,

@@ -5,8 +5,6 @@ import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.utils.BlindLevel
 import com.huntercoles.pokerpayout.core.utils.BlindSchedule
 import com.huntercoles.pokerpayout.core.utils.BlindScheduleProvider
-import com.huntercoles.pokerpayout.core.utils.BlindSetupAdvisor
-import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
 import com.huntercoles.pokerpayout.core.utils.BlindStructureInput
 import com.huntercoles.pokerpayout.core.utils.ScheduledBreak
 import com.huntercoles.pokerpayout.core.utils.SmallestChipChoices
@@ -72,20 +70,14 @@ class ClockBlindScheduleProvider @Inject constructor(
     }
 
     /** The regular levels, or null when the clock can't run this setup. */
-    private fun regularLevels(setup: Setup): List<BlindLevel>? {
-        val problem = setup.run { BlindSetupAdvisor.check(durationMinutes, roundLengthMinutes, smallestChip, startingChips) }
-        if (problem != null) return null
-        return runCatching {
-            BlindStructureCalculator.generateSchedule(
-                BlindStructureInput(
-                    players = tournamentPreferences.getPlayerCount().coerceAtLeast(1),
-                    targetDurationMinutes = setup.durationMinutes,
-                    smallestChip = setup.smallestChip,
-                    startingStack = setup.startingChips,
-                    roundLengthMinutes = setup.roundLengthMinutes,
-                    bigBlindAnteFromLevel = setup.anteFromLevel
-                )
-            )
-        }.getOrNull()?.takeIf { it.isNotEmpty() }
-    }
+    private fun regularLevels(setup: Setup): List<BlindLevel>? = ClockLevels.of(
+        BlindStructureInput(
+            players = tournamentPreferences.getPlayerCount().coerceAtLeast(1),
+            targetDurationMinutes = setup.durationMinutes,
+            smallestChip = setup.smallestChip,
+            startingStack = setup.startingChips,
+            roundLengthMinutes = setup.roundLengthMinutes,
+            bigBlindAnteFromLevel = setup.anteFromLevel
+        )
+    ).levels.takeIf { it.isNotEmpty() }
 }

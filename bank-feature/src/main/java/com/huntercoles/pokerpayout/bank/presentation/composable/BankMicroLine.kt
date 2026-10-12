@@ -15,7 +15,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.em
@@ -25,6 +24,7 @@ import com.huntercoles.pokerpayout.bank.presentation.BankColumn
 import com.huntercoles.pokerpayout.bank.presentation.BankRowModel
 import com.huntercoles.pokerpayout.bank.presentation.BankSection
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerTypography
 import com.huntercoles.pokerpayout.core.design.components.mayTruncate
 import com.huntercoles.pokerpayout.core.design.icons.MoneyIcons
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
@@ -144,4 +144,5 @@ private fun collapsedParts(row: BankRowModel, layout: BankLayout): List<MicroPar
         MicroPart(count.toString(), if (rebuy) MicroIcon.Renew else MicroIcon.Plus, spoken).takeIf { count > 0 }
     }
 
-private val MicroStyle = TextStyle(fontSize = 11.5.sp, lineHeight = 14.sp)
+/** The list's small print, a touch under the type scale's bodySmall: the line under a name, and a section's hint. */
+internal val MicroStyle = PokerTypography.bodySmall.copy(fontSize = 11.5.sp, lineHeight = 14.sp)

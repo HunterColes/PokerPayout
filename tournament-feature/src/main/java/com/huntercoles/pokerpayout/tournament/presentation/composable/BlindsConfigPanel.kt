@@ -33,13 +33,11 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.components.leaveOnHardwareEnter
-import com.huntercoles.pokerpayout.core.utils.BlindSetupFix
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSettings
 import com.huntercoles.pokerpayout.tournament.presentation.BlindConfiguration
 import com.huntercoles.pokerpayout.tournament.presentation.TimerIntent
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
-import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigIntent
 
 private const val MAX_DURATION_HOURS = 24
 private const val MAX_BREAK_MINUTES = 120
@@ -226,24 +224,6 @@ internal fun AnteSelect(fromLevel: Int, levelCount: Int, onChange: (Int) -> Unit
         onPick = onChange,
         modifier = modifier,
     )
-}
-
-/**
- * Keeps the Tournament settings' copy of the blind fields in step with the clock's, so Reset and its
- * "already default?" check see the same values (TournamentConfigViewModel still stores them).
- */
-fun TimerIntent.toConfigIntent(): TournamentConfigIntent? = when (this) {
-    is TimerIntent.GameDurationHoursChanged ->
-        TournamentConfigIntent.UpdateGameDurationHours(hours.coerceIn(1, MAX_DURATION_HOURS))
-    is TimerIntent.UpdateRoundLength -> TournamentConfigIntent.UpdateRoundLength(minutes)
-    is TimerIntent.UpdateSmallestChip -> TournamentConfigIntent.UpdateSmallestChip(value)
-    is TimerIntent.UpdateStartingChips -> TournamentConfigIntent.UpdateStartingChips(value)
-    is TimerIntent.ApplyFix -> when (val fix = fix) {
-        is BlindSetupFix.UseRoundLength -> TournamentConfigIntent.UpdateRoundLength(fix.minutes)
-        is BlindSetupFix.UseStartingChips -> TournamentConfigIntent.UpdateStartingChips(fix.chips)
-    }
-    // A mid-game change is mirrored once the clock has applied it (it may be refused).
-    else -> null
 }
 
 /** A blind setup change made mid-game, through "Unlock to edit…": the clock keeps its level. */

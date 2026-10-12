@@ -2,7 +2,8 @@
 # needs no local machine. Same AVD as local runs: boot.sh creates it (API 34
 # google_apis_playstore x86_64, 1080x2400 @ 420dpi) and applies the same settings.
 #
-# Runs on every pull request (debug and release side by side), and by hand:
+# Runs on every pull request (debug and release side by side) except one that changes only
+# documentation (scripts/ci/docs-only.sh; the "Documentation only?" job decides), and by hand:
 #   gh workflow run device.yml --ref <branch> [-f variant=debug|release|both] [-f only=step,step]
 #
 # The device matrix (scripts/device/matrix.sh: the tour's steps on several screen sizes, font
@@ -60,9 +61,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Pull requests only: one that changes documentation alone (scripts/ci/docs-only.sh) skips the
+  # tour. If this job fails for any reason, the tour runs.
+  changes:
+    name: Documentation only?
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs_only: ${{ steps.changes.outputs.docs_only }}
+    steps:
+      # Commits and trees only for the history: enough to see what the pull request changes.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Documentation only?
+        id: changes
+        continue-on-error: true
+        run: scripts/ci/docs-only.sh
+
   tour:
-    name: Device tour (${{ matrix.variant }})
-    if: github.event_name == 'pull_request' || inputs.job == 'tour' || inputs.job == 'both'
+    # A plain name: a skipped job (a pull request that changes only documentation) shows its name
+    # unevaluated. GitHub adds the variant from the matrix: "Device tour (debug)".
+    name: Device tour
+    needs: changes
+    # !cancelled(): run even though `changes` was skipped (a dispatched run) or failed.
+    if: >-
+      !cancelled() && ((github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true')
+      || inputs.job == 'tour' || inputs.job == 'both')
     runs-on: ubuntu-latest
     timeout-minutes: 75
     strategy:

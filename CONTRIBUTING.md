@@ -91,11 +91,12 @@ path to its golden too.
 
 ## The device tour
 
-Every pull request also runs the app on an Android emulator on GitHub (the "Device tour" workflow,
-debug and release builds). It taps through the app's main paths and uploads a report with
-screenshots, the screen contents and the log. It isn't a required check yet, but please look at it
-when your change touches a screen. To run it on any branch: `gh workflow run device.yml --ref
-<branch>`. To run it locally with an emulator: `scripts/device/tour.sh --stop`.
+Every pull request that changes more than documentation also runs the app on an Android emulator
+on GitHub (the "Device tour" workflow, debug and release builds). It taps through the app's main
+paths and uploads a report with screenshots, the screen contents and the log. It isn't a required
+check yet, but please look at it when your change touches a screen. To run it on any branch:
+`gh workflow run device.yml --ref <branch>`. To run it locally with an emulator:
+`scripts/device/tour.sh --stop`.
 
 The full guide to all of this is [docs/TESTING.md](docs/TESTING.md). Releases, signing and
 F-Droid's reproducible builds are in [docs/RELEASING.md](docs/RELEASING.md).

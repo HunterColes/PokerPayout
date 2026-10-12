@@ -1,7 +1,8 @@
 # Poker Payout: notes for Claude
 
 A free, offline Android app for home poker nights: tournament clock and blinds, payouts, a bank
-that tracks who paid what, and tools (odds, chip set, hand ranks). Published on F-Droid and as
+that tracks who paid what, a house rake, and tools for the night (odds, chip set, seat draw, side pots,
+splitting the prizes, history, music). Published on F-Droid and as
 GitHub releases. No ads, no accounts, no internet permission.
 
 ## Layout
@@ -9,9 +10,9 @@ GitHub releases. No ads, no accounts, no internet permission.
 | Module | What lives there |
 |---|---|
 | `app` | `MainActivity` wiring, release build config (R8, signing from `keystore.properties`) |
-| `core` | Design system (`core/design`: `PokerTheme`, `PokerColors`, `PokerType`, components), navigation, preferences, money and blind maths, the cue sound packs and the music player (`core/audio`, docs/SOUNDS.md), the device-matrix test kit (`src/testFixtures`) |
-| `tournament-feature` | Tournament tab (setup, presets, clock, blinds, table view), the live clock notification and its service, and the Payouts tab |
-| `bank-feature` | Bank tab: buy-ins, rebuys, add-ons, knockouts and bounty types, settlement, and the cash game |
+| `core` | Design system (`core/design`: `PokerTheme`, `PokerColors`, `PokerType`, components), navigation, preferences, money and blind maths, the currency (`AppCurrency`), backups (`core/backup`), the cue sound packs and the music player (`core/audio`, docs/SOUNDS.md), the device-matrix test kit (`src/testFixtures`) |
+| `tournament-feature` | Tournament tab (setup with the house rake and late-entry cutoff, presets and starters, clock, blinds, table view with Knock out, big moments and the champion's screen), the live clock notification and its service, and the Payouts tab |
+| `bank-feature` | Bank tab: tonight's players (regulars), buy-ins, rebuys, add-ons, late entries and re-entries, knockouts and bounty types, and Settle up at the end of the night |
 | `tools-feature` | Tools hub, grouped in the order of a night: Chip set and Seat draw (before the game); Odds and Run it out, Side pots, Hand ranks (during play); Split the prizes (the deal maker: ICM and chip chop) and History (end of the night); then Sound (Cue sounds, Music) and Settings (Currency, Backup) |
 
 Jetpack Compose (Material 3), Hilt, MVI (`*Intent`, `*UiState`, `*ViewModel`), SharedPreferences.
@@ -20,7 +21,11 @@ Screens are a thin route plus a stateless `*Content(state, onIntent)` composable
 ## Conventions
 
 - **Money is whole cents (`Long`)** everywhere (`core/utils/Money.kt`). One payout calculation
-  (`CalculatePayoutsUseCase`) feeds every screen; payouts always add up to the pool to the cent.
+  (`CalculatePayoutsUseCase`) feeds every screen; payouts plus the rake always add up to the pool to
+  the cent. Show money through the shared currency formatter; never hard-code `$`.
+- **Saved data:** anything a host would want on a new phone joins `BackupCatalog` (a coverage test
+  enforces it); device-only state (permission prompts, picked music files) goes in `phone_prefs`,
+  which no backup carries.
 - **The clock never counts ticks.** Play time comes from a monotonic anchor, so sleep, process death
   and reboots can't make it drift (`TimerViewModel`; see `TimerViewModelTest`). Don't write
   preferences on every tick.
@@ -104,5 +109,7 @@ JDK 21 toolchain (F-Droid's buildserver has only JDK 21; bytecode targets 17). T
 - **Secrets never get read, printed or tested:** `keystore.properties`, `*.keystore` and
   `gitlab.token` sit untracked at the repo root (chmod 600). Signing checks go through
   `scripts/release/verify-signing.sh`, which prints only pass or fail.
+- F-Droid still pins the old signing key until fdroiddata MR !51221 merges, so F-Droid users stay
+  on 1.1.12 until then; GitHub releases carry the current version.
 - F-Droid metadata mirror: `metadata/com.huntercoles.pokerpayout.yml`. Changes to fdroiddata go
   through `scripts/release/fdroid-mr.sh`; track them with `scripts/release/fdroid-status.sh`.

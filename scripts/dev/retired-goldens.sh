@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Lists (or deletes) the committed screenshot goldens that no test records any more because their
-# cell left the golden list (PP-090). Computed from the code, without running anything: it reads
-# DeviceMatrix.kt in core's test fixtures,
-#   `goldens`  the cells every golden is recorded on, and
-#   `pinned`   named goldens recorded on their own cells only (Z1_clock_small, the *_font2x ones...).
-# A golden <module>/src/test/screenshots/<group>/<Name>/<Name>_<cell>.png is retired when <Name> is
-# pinned and <cell> isn't one of its cells, or <Name> isn't pinned and <cell> isn't in `goldens`.
-#
-# It can't see a golden whose test was renamed or removed (its cell may still be recorded); the
-# summary of a goldens.yml run lists every golden the run didn't write, which covers both.
+# Lists (or deletes) the committed screenshot goldens that no test records any more. Computed from
+# the code, without running anything. A golden <module>/src/test/screenshots/<group>/<Name>/
+# <Name>_<cell>.png is retired when
+#   - its test is gone: no test source of <module> names <Name> (the test was removed or renamed;
+#     every golden's name is written out whole in its test), or
+#   - its cell left the golden list (PP-090): <Name> is pinned and <cell> isn't one of its cells, or
+#     <Name> isn't pinned and <cell> isn't in `goldens`, from DeviceMatrix.kt in core's test
+#     fixtures (`goldens`: the cells every golden is recorded on; `pinned`: named goldens recorded
+#     on their own cells only, Z1_clock_small, the *_font2x ones...).
+# The summary of a goldens.yml run lists every golden the run didn't write, which should be the same.
 #
 #   scripts/dev/retired-goldens.sh            the retired goldens, then a count and size (exit 0)
 #   scripts/dev/retired-goldens.sh --check    the same, but exit 1 if there are any
@@ -94,13 +94,29 @@ listed = subprocess.run(
 ).stdout.decode().split("\0")
 golden_path = re.compile(r"^(?P<module>.+)/src/test/screenshots/(?P<group>[^/]+)/(?P<name>[^/]+)/(?P=name)_(?P<cell>.+)\.png$")
 
-retired, odd = [], []
+# Every test source of each module, as one text: a golden whose name isn't in it has no test.
+tests = subprocess.run(
+    ["git", "ls-files", "-z", "--", "*/src/test/*.kt"], check=True, capture_output=True,
+).stdout.decode().split("\0")
+test_text = {}
+for path in filter(None, tests):
+    module = path.split("/src/test/", 1)[0]
+    try:
+        test_text[module] = test_text.get(module, "") + open(path, encoding="utf-8").read()
+    except OSError as error:
+        fail(f"can't read {path}: {error}")
+
+retired, odd, untested = [], [], set()
 for path in filter(None, listed):
     match = golden_path.match(path)
     if not match:
         odd.append(path)
         continue
-    name, cell = match.group("name"), match.group("cell")
+    module, name, cell = match.group("module"), match.group("name"), match.group("cell")
+    if name not in test_text.get(module, ""):
+        untested.add(f"{module}: {name}")
+        retired.append(path)
+        continue
     keep = cell in pinned[name] if name in pinned else cell in recorded
     if not keep:
         retired.append(path)
@@ -119,6 +135,10 @@ print(
     f"recorded cells: {', '.join(sorted(recorded))}; {len(pinned)} pinned goldens",
     file=sys.stderr,
 )
+if untested:
+    print(f"no test names {len(untested)} of them (every cell of each is retired):", file=sys.stderr)
+    for entry in sorted(untested):
+        print(f"  {entry}", file=sys.stderr)
 if odd:
     print(f"{len(odd)} files under src/test/screenshots don't follow <Name>/<Name>_<cell>.png:", file=sys.stderr)
     for path in odd:

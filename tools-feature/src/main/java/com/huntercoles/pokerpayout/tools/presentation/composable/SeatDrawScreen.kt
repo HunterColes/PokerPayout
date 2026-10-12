@@ -1,7 +1,5 @@
 package com.huntercoles.pokerpayout.tools.presentation.composable
 
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -47,6 +45,7 @@ import com.huntercoles.pokerpayout.core.design.components.PokerIconButton
 import com.huntercoles.pokerpayout.core.design.components.PokerTopBar
 import com.huntercoles.pokerpayout.core.design.components.WidthClass
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
+import com.huntercoles.pokerpayout.core.presentation.shareText
 import com.huntercoles.pokerpayout.tools.R
 import com.huntercoles.pokerpayout.tools.presentation.SeatDrawIntent
 import com.huntercoles.pokerpayout.tools.presentation.SeatDrawText
@@ -66,18 +65,8 @@ fun SeatDrawRoute(onBack: () -> Unit, viewModel: SeatDrawViewModel = hiltViewMod
         state = state,
         onIntent = viewModel::acceptIntent,
         onBack = onBack,
-        onShare = { draw -> shareAsText(context, text.share(draw), subject = title, chooserTitle = chooser) },
+        onShare = { draw -> shareText(context, text.share(draw), chooserTitle = chooser, subject = title) },
     )
-}
-
-/** Hands [text] to any app that takes plain text (ACTION_SEND), through the system's share sheet. */
-private fun shareAsText(context: Context, text: String, subject: String, chooserTitle: String) {
-    val send = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_SUBJECT, subject)
-        putExtra(Intent.EXTRA_TEXT, text)
-    }
-    runCatching { context.startActivity(Intent.createChooser(send, chooserTitle)) }
 }
 
 @Composable

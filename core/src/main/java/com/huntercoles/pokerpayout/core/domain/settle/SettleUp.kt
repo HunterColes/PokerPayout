@@ -35,7 +35,7 @@ data class SettleUp(val balancesCents: Map<Int, Long>, val transfers: List<Trans
  * nobody paid in, the players pay each other.
  *
  * A player who re-entered (PP-116) settles once, for all their entries together, under their first
- * entry's id ([BankPlayer.personId]); each entry owes what it cost to sit down then.
+ * entry's id ([BankPlayer.people]); each entry owes what it cost to sit down then.
  */
 class SettleUpUseCase @Inject constructor() {
 

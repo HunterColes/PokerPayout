@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">PokerPayout</string>
+    <string name="app_name">Poker Payout</string>
 
     <!-- Navigation -->
     <string name="navigation_tournament">Tournament</string>
@@ -10,10 +10,10 @@
     <!-- Design-system components (core/design/components) -->
     <string name="design_back">Back</string>
     <string name="design_undo">Undo</string>
+    <!-- TalkBack's name for a sheet's handle, which closes the sheet -->
+    <string name="design_sheet_handle">Drag handle</string>
     <string name="design_decrease">Decrease %1$s</string>
     <string name="design_increase">Increase %1$s</string>
-    <string name="design_locked">Locked</string>
-    <string name="design_toggle_taken">%1$s, %2$d taken</string>
     <plurals name="design_knockouts">
         <item quantity="one">%d knockout</item>
         <item quantity="other">%d knockouts</item>

@@ -631,21 +631,86 @@ def cmd_clear(a):
     clear_focused()
 
 
+def _field(node):
+    """The text field a match stands for: itself, the EditText around it (a label inside the field),
+    or the one inside it (a wrapper carrying the field's name)."""
+    for n in [node, *_ancestors(node)]:
+        if "EditText" in n.cls:
+            return n
+    for n in node.subtree():
+        if "EditText" in n.cls:
+            return n
+    return node
+
+
+def _into_view(field, nodes):
+    """A text field the page's edge cuts to a sliver (under 48 dp showing, smaller than any field
+    is) is dragged to the middle of the page's scroller before it is tapped: a tap on the sliver can
+    land on the bar beside it (14-breaks' Break note showed 30 px over the Start clock bar). True if
+    the page was dragged."""
+    if "EditText" not in field.cls:
+        return False
+    cont = main_container(nodes)
+    x1, y1, x2, y2 = field.bounds
+    if cont is None or y2 - y1 >= touch_slop() * 6:   # 6 x 8 dp: the 48 dp a field is at least
+        return False
+    if not any(p is cont for p in _ancestors(field)):
+        return False   # in a sheet or a dialog over the page: dragging the page could close it
+    mid = (cont.bounds[1] + cont.bounds[3]) // 2
+    cy = (y1 + y2) // 2
+    if abs(cy - mid) < touch_slop():
+        return False
+    drag(cont.bounds, "down" if cy > mid else "up", abs(cy - mid))
+    print("[ui] set-text: the field showed %d px; dragged the page to bring it into view" % (y2 - y1))
+    return True
+
+
+def _focused_field(matcher, timeout=4.0):
+    """Polls until one of the fields the selector names has the focus; (that field, nodes) or
+    (None, nodes) with whatever has it."""
+    deadline = time.time() + timeout
+    while True:
+        _, nodes = snapshot()
+        for m in matcher(nodes):
+            f = _field(m)
+            if "EditText" in f.cls and f.flag("focused"):
+                return f, nodes
+        if time.time() >= deadline:
+            return None, nodes
+        time.sleep(0.3)
+
+
 def cmd_set_text(a):
-    node, found, nodes = find(a.selector, a.timeout, a.index)
-    if node is None:
-        fail("no field matching %s" % a.selector, nodes)
-    # If the match is a label inside a text field, target the enclosing EditText.
-    target = node
-    p = node
-    while p is not None and "EditText" not in p.cls:
-        p = p.parent
-    if p is not None:
-        target = p
-    x, y = target.center
-    shell("input tap %d %d" % (x, y))
-    time.sleep(0.3)   # let focus and the tap's cursor placement land before the keys
-    # Clear using the length we already know (saves a second ~2s dump).
+    # Tap the field, and clear it and type only once it has the focus. The screen can move between
+    # the dump and the tap: a menu closing hands the focus back to a field an earlier `enter` left it
+    # on, the keyboard comes up for it, and the page scrolls that field into view under the tap
+    # (14-breaks typed its note into Rebuy, clearing the price). Then the field is found and tapped
+    # again; typing blind would change a value nobody asked to change.
+    matcher = compile_selector(a.selector)
+    for attempt in range(1, 4):
+        node, found, nodes = find(a.selector, a.timeout, a.index)
+        if node is None:
+            fail("no field matching %s" % a.selector, nodes)
+        target = _field(node)
+        if _into_view(target, nodes):
+            node, found, nodes = find(a.selector, a.timeout, a.index)
+            if node is None:
+                fail("no field matching %s after bringing it into view" % a.selector, nodes)
+            target = _field(node)
+        x, y = target.center
+        shell("input tap %d %d" % (x, y))
+        time.sleep(0.3)   # let focus and the tap's cursor placement land before the keys
+        if "EditText" not in target.cls:
+            break         # not a text field uiautomator can see: type where the tap left focus
+        focused, nodes = _focused_field(matcher)
+        if focused is not None:
+            target = focused
+            break
+        elsewhere = [n.describe() for n in nodes if n.flag("focused")]
+        print("[ui] set-text: the tap at (%d,%d) didn't focus %s (focused: %s); try %d of 3"
+              % (x, y, " ".join(a.selector), "; ".join(elsewhere) or "nothing", attempt))
+    else:
+        fail("the field %s never took the focus" % " ".join(a.selector), nodes)
     count = max(len(target.text) + 4, 8) if "EditText" in target.cls else 32
     shell(clear_keys(count))
     if a.value:

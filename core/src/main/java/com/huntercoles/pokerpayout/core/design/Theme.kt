@@ -7,7 +7,6 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.graphics.Color
 
 /**
  * The makeover's Material scheme (dark only), so stray Material components look right. Poker
@@ -31,7 +30,7 @@ val PokerColorScheme: ColorScheme = darkColorScheme(
     outline = PokerColors.FeltEdge, outlineVariant = PokerColors.FeltLine,
     error = PokerColors.Danger, onError = PokerColors.PokerBlack,
     errorContainer = PokerColors.DangerWash, onErrorContainer = PokerColors.Danger,
-    scrim = Color.Black,
+    scrim = PokerColors.Scrim,
 )
 
 /** Corner radii: 6 card face, 12 control, 16 card, 28 sheet. */

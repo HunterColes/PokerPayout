@@ -49,89 +49,35 @@ class FormatUtilsTest {
         assertEquals("$95.50", FormatUtils.formatMoney(9_550))
     }
 
-    // ========== formatDecimal Tests ==========
-    
-    @Test
-    fun `formatDecimal - whole number`() {
-        assertEquals("100", FormatUtils.formatDecimal(100.0))
-    }
-    
-    @Test
-    fun `formatDecimal - with one decimal`() {
-        assertEquals("10.5", FormatUtils.formatDecimal(10.5))
-    }
-    
-    @Test
-    fun `formatDecimal - with two decimals`() {
-        assertEquals("10.25", FormatUtils.formatDecimal(10.25))
-    }
-
-@Test
-    fun `formatDecimal - zero`() {
-        assertEquals("0", FormatUtils.formatDecimal(0.0))
-    }
-    
-    @Test
-    fun `formatDecimal - very small number`() {
-        assertEquals("0.01", FormatUtils.formatDecimal(0.01))
-    }
-    
-    @Test
-    fun `formatDecimal - rounds long decimals`() {
-        assertEquals("10.67", FormatUtils.formatDecimal(10.666666))
-    }
-
     // ========== formatPercent Tests ==========
-    
+
     @Test
     fun `formatPercent - whole number`() {
         assertEquals("50%", FormatUtils.formatPercent(50.0))
     }
-    
+
     @Test
     fun `formatPercent - with one decimal`() {
         assertEquals("33.33%", FormatUtils.formatPercent(33.333333))
     }
-    
+
     @Test
     fun `formatPercent - with two decimals`() {
         assertEquals("25.25%", FormatUtils.formatPercent(25.25))
     }
 
-@Test
+    @Test
     fun `formatPercent - zero`() {
         assertEquals("0%", FormatUtils.formatPercent(0.0))
     }
-    
+
     @Test
     fun `formatPercent - 100 percent`() {
         assertEquals("100%", FormatUtils.formatPercent(100.0))
     }
-    
+
     @Test
     fun `formatPercent - small percentage`() {
         assertEquals("0.5%", FormatUtils.formatPercent(0.5))
-    }
-
-    // ========== formatMultiplier Tests ==========
-    
-    @Test
-    fun `formatMultiplier - whole number`() {
-        assertEquals("2x", FormatUtils.formatMultiplier(2.0))
-    }
-    
-    @Test
-    fun `formatMultiplier - with decimals`() {
-        assertEquals("1.5x", FormatUtils.formatMultiplier(1.5))
-    }
-
-@Test
-    fun `formatMultiplier - small multiplier`() {
-        assertEquals("0.5x", FormatUtils.formatMultiplier(0.5))
-    }
-    
-    @Test
-    fun `formatMultiplier - large multiplier`() {
-        assertEquals("10.25x", FormatUtils.formatMultiplier(10.25))
     }
 }

@@ -98,10 +98,10 @@ jobs:
             if [[ "$stale" == "$retired" ]]; then
               echo "The same list (or none), so \`scripts/dev/retired-goldens.sh --delete\` removes exactly these."
             elif [[ -n "$retired" ]]; then
-              echo "Not the same list. The goldens whose cell no test records any more:"
+              echo "Not the same list. The goldens whose test is gone or whose cell left the list:"
               echo '```'; echo "$retired"; echo '```'
             else
-              echo "None: the goldens above belong to tests that were renamed or removed."
+              echo "None: look at the goldens above by hand (a test that writes its name in pieces?)."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 

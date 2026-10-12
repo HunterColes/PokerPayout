@@ -2,7 +2,6 @@ package com.huntercoles.pokerpayout.core.domain.model
 
 import com.huntercoles.pokerpayout.core.constants.TournamentDefaults
 import com.huntercoles.pokerpayout.core.utils.AppCurrency
-import com.huntercoles.pokerpayout.core.utils.Money
 import com.huntercoles.pokerpayout.core.utils.MoneyFormat
 
 /**
@@ -24,11 +23,11 @@ data class MoneySettings(
 
     companion object {
         val DEFAULT = MoneySettings(
-            buyInCents = Money.centsOf(TournamentDefaults.BUY_IN),
-            foodCents = Money.centsOf(TournamentDefaults.FOOD_PER_PLAYER),
-            bountyCents = Money.centsOf(TournamentDefaults.BOUNTY_PER_PLAYER),
-            rebuyCents = Money.centsOf(TournamentDefaults.REBUY_PER_PLAYER),
-            addOnCents = Money.centsOf(TournamentDefaults.ADDON_PER_PLAYER)
+            buyInCents = TournamentDefaults.BUY_IN_CENTS,
+            foodCents = TournamentDefaults.FOOD_PER_PLAYER_CENTS,
+            bountyCents = TournamentDefaults.BOUNTY_PER_PLAYER_CENTS,
+            rebuyCents = TournamentDefaults.REBUY_PER_PLAYER_CENTS,
+            addOnCents = TournamentDefaults.ADDON_PER_PLAYER_CENTS
         )
     }
 }

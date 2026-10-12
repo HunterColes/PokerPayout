@@ -245,7 +245,7 @@ release.
 | What | How |
 |---|---|
 | Phone screenshots | `gh workflow run listing.yml --ref <branch>` (never master; `-f variant=debug` for the debug build, release is the default). It runs `scripts/device/listing.sh` on GitHub's emulator, commits the pictures to the branch, starts CI on that commit, and uploads them with the tour's report as an artifact. Locally: `flock /tmp/pokerpayout-emulator.lock scripts/device/listing.sh --stop` |
-| Feature graphic | `python3 scripts/listing/feature_graphic.py` (needs `python3-pil`). 1024 x 500: the felt and gold from `PokerColors.kt`, Barlow Condensed from `core/src/main/res/font`, the cards from `icon.png`. Run it again after changing any of those or its wording, and commit the PNG |
+| Feature graphic | `python3 scripts/listing/feature_graphic.py` (needs `python3-pil`). 1024 x 500: the felt and gold from `PokerColors.kt`, Barlow Condensed from `core/src/main/res/font`, the cards from `icon.png`. Run it again after changing any of those or its wording, and commit the PNG. Then run it with `--readme` too: the same table without the black ground, on transparency, for the top of the README (`docs/images/readme-table.png`) |
 | Words | The three `.txt` files, by hand |
 
 `listing.sh` plays one home game with the tour (`--list` shows the steps): nine named players, a $5
@@ -279,4 +279,4 @@ the feature list in `full_description.txt` carries what they show.
 | `metadata/en-US/` | title, descriptions, images, `changelogs/<versionCode>.txt`, read by F-Droid from the tag |
 | `scripts/device/listing.sh`, `scripts/device/steps-listing.sh` | the listing's phone screenshots, shot on the emulator ([Refreshing the store listing](#refreshing-the-store-listing)) |
 | `.github/workflows/listing.yml` | the same on GitHub's emulator, committed to the branch |
-| `scripts/listing/feature_graphic.py` | the listing's feature graphic |
+| `scripts/listing/feature_graphic.py` | the listing's feature graphic, and with `--readme` the README's table picture |

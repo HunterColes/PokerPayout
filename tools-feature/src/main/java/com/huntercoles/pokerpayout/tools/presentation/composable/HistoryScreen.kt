@@ -1,7 +1,5 @@
 package com.huntercoles.pokerpayout.tools.presentation.composable
 
-import android.content.Context
-import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,6 +50,7 @@ import com.huntercoles.pokerpayout.core.domain.history.SavedNight
 import com.huntercoles.pokerpayout.core.domain.history.Standing
 import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
 import com.huntercoles.pokerpayout.core.domain.players.PlayerNames
+import com.huntercoles.pokerpayout.core.presentation.shareText
 import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 import com.huntercoles.pokerpayout.tools.R
 import com.huntercoles.pokerpayout.tools.presentation.HistoryIntent
@@ -82,10 +81,10 @@ fun HistoryRoute(onBack: () -> Unit, viewModel: HistoryViewModel = hiltViewModel
         state = state,
         onIntent = viewModel::acceptIntent,
         onBack = onBack,
-        onShare = { night -> send(context, "text/plain", text.share(night), text.date(night.date), shareTitle) },
+        onShare = { night -> shareText(context, text.share(night), shareTitle, subject = text.date(night.date)) },
         onExport = { how ->
             when (how) {
-                CsvExport.Share -> send(context, CSV_TYPE, NightCsv.of(state.nights), exportSubject, exportTitle)
+                CsvExport.Share -> shareText(context, NightCsv.of(state.nights), exportTitle, exportSubject, CSV_TYPE)
                 CsvExport.Save -> runCatching { saveCsv.launch(csvFileName) }
             }
         },
@@ -96,16 +95,6 @@ fun HistoryRoute(onBack: () -> Unit, viewModel: HistoryViewModel = hiltViewModel
 enum class CsvExport { Share, Save }
 
 private const val CSV_TYPE = "text/csv"
-
-/** Hands [text] to any app that takes [type] (ACTION_SEND), through the system's share sheet; no permission needed. */
-private fun send(context: Context, type: String, text: String, subject: String, chooserTitle: String) {
-    val send = Intent(Intent.ACTION_SEND).apply {
-        this.type = type
-        putExtra(Intent.EXTRA_SUBJECT, subject)
-        putExtra(Intent.EXTRA_TEXT, text)
-    }
-    runCatching { context.startActivity(Intent.createChooser(send, chooserTitle)) }
-}
 
 @Composable
 internal fun rememberHistoryText(): HistoryText {

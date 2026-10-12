@@ -129,7 +129,7 @@ class MoneyTest {
                 assertEquals("$0.05", FormatUtils.formatCents(5), "$locale")
                 assertEquals("$1,000,000.00", FormatUtils.formatCents(100_000_000), "$locale")
                 assertEquals("33.33%", FormatUtils.formatPercent(33.333333), "$locale")
-                assertEquals("12.5", FormatUtils.formatDecimal(12.5), "$locale")
+                assertEquals("12.5%", FormatUtils.formatPercent(12.5), "$locale")
             }
         }
     }

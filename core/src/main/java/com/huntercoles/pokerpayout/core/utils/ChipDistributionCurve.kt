@@ -27,17 +27,14 @@ sealed class ChipDistributionCurve {
     abstract fun getValue(x: Double): Double
     
     /**
-     * Display name for UI
+     * The name the chip calculator showed and saved (`selected_curve`) up to 1.3.0. Saved data now:
+     * the chip set's migration reads it once ([getCurveByName]), so never rename one. The screens
+     * show their own names (tools-feature's string resources).
      */
     abstract val displayName: String
 
-    /** Stable id for saving the choice; never shown, never renamed (the display name may change). */
+    /** Stable id for saving the choice; never shown, never renamed. */
     abstract val id: String
-    
-    /**
-     * Description of the distribution philosophy
-     */
-    abstract val description: String
     
     /**
      * Linear Steep: y = -x + 1 (slope = -1)
@@ -51,7 +48,6 @@ sealed class ChipDistributionCurve {
         override fun getValue(x: Double): Double = -x + 1.0
         override val displayName = "Linear Steep"
         override val id = "linear_steep"
-        override val description = "Steep decline - strong emphasis on small chips"
     }
     
     /**
@@ -66,7 +62,6 @@ sealed class ChipDistributionCurve {
         override fun getValue(x: Double): Double = -0.5 * x + 1.0
         override val displayName = "Linear Moderate"
         override val id = "linear_moderate"
-        override val description = "Moderate decline - balanced chip distribution"
     }
     
     /**
@@ -88,7 +83,6 @@ sealed class ChipDistributionCurve {
         }
         override val displayName = "Bell Curve (Balanced)"
         override val id = "bell"
-        override val description = "Balanced distribution - most chips in middle denominations"
     }
     
     /**
@@ -102,7 +96,6 @@ sealed class ChipDistributionCurve {
         override fun getValue(x: Double): Double = x
         override val displayName = "Linear (More Large Chips)"
         override val id = "positive_linear"
-        override val description = "Late-game focused - emphasizes large denominations"
     }
     
     /**
@@ -116,7 +109,6 @@ sealed class ChipDistributionCurve {
         override fun getValue(x: Double): Double = exp(-3 * x)
         override val displayName = "Exponential (Cash Game)"
         override val id = "exponential"
-        override val description = "Heavy emphasis on small chips for cash games"
     }
     
     companion object {
@@ -131,9 +123,7 @@ sealed class ChipDistributionCurve {
             ExponentialDecay
         )
         
-        /**
-         * Get curve by display name
-         */
+        /** The curve the chip calculator saved as [name] ([displayName]), or null. */
         fun getCurveByName(name: String): ChipDistributionCurve? {
             return getAllCurves().find { it.displayName == name }
         }

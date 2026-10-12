@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** The Odds table as it was left (seats, their cards and folds, the board) and the four-colour deck. */
 @Singleton
 class OddsCalculatorPreferences @Inject constructor(
     @ApplicationContext private val context: Context
@@ -47,25 +48,6 @@ class OddsCalculatorPreferences @Inject constructor(
     var fourColourDeck: Boolean
         get() = prefs.getBoolean(FOUR_COLOUR_DECK_KEY, false)
         set(enabled) = prefs.edit().putBoolean(FOUR_COLOUR_DECK_KEY, enabled).apply()
-
-    fun resetAllData() {
-        prefs.edit().clear().apply()
-    }
-
-    fun isInDefaultState(): Boolean {
-        val playerCount = getPlayerCount()
-        if (playerCount != DEFAULT_PLAYER_COUNT) return false
-        
-        // Check if any player has cards
-        for (i in 1..10) {
-            if (getPlayerCards(i).isNotEmpty()) return false
-        }
-        
-        // Check if community cards exist
-        if (getCommunityCards().isNotEmpty()) return false
-        
-        return true
-    }
 
     companion object {
         private const val PLAYER_COUNT_KEY = "player_count"

@@ -45,8 +45,6 @@ data class PlayerStack(
     val chips: List<StackChip>,
     val shapeRelaxed: Boolean = false,
     val moreColoursThanAsked: Boolean = false,
-    /** How closely the counts follow the shape, 0 to 1. Internal: never shown (PP-033). */
-    val fitScore: Double = 0.0
 ) {
     val totalChips: Int get() = chips.sumOf { it.count }
     val totalValue: Long get() = chips.sumOf { it.worth }
@@ -352,7 +350,6 @@ class PlanStacksUseCase @Inject constructor() {
                     },
                     shapeRelaxed = found.shapeRelaxed,
                     moreColoursThanAsked = found.moreChipsThanAsked,
-                    fitScore = result.fitScore
                 )
             }
 

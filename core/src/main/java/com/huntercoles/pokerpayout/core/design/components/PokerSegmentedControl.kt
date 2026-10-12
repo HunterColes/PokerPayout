@@ -40,7 +40,7 @@ import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
 
 /**
- * One choice out of a few, side by side (payout presets, rounding, the Bank mode). Replaces
+ * One choice out of a few, side by side (payout presets, rounding, History's seasons). Replaces
  * FilterChip rows and the Player/Blinds/Payouts folder tabs.
  *
  * The selected segment gets a FeltHigh fill, a DarkGold outline and gold text. A segment may carry
@@ -190,9 +190,10 @@ internal fun PokerSegmentedControlPreview() {
                 onSelect = {},
                 label = { it },
             )
+            // History's season picker
             PokerSegmentedControl(
-                options = listOf("Tournament", "Cash game"),
-                selected = "Tournament",
+                options = listOf("All time", "2026"),
+                selected = "2026",
                 onSelect = {},
                 label = { it },
             )

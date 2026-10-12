@@ -8,13 +8,4 @@ interface CueDucking {
     fun cueStarted()
 
     fun cueEnded()
-
-    companion object {
-        /** No music to dip, as in tests of the cues alone. */
-        val NONE: CueDucking = object : CueDucking {
-            override fun cueStarted() = Unit
-
-            override fun cueEnded() = Unit
-        }
-    }
 }

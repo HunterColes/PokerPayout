@@ -20,12 +20,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.huntercoles.pokerpayout.core.R
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
@@ -57,8 +59,12 @@ fun PokerSheet(
         containerColor = PokerColors.FeltGreen,
         contentColor = PokerColors.CardWhite,
         tonalElevation = 0.dp,
-        scrimColor = Color.Black.copy(alpha = SCRIM_ALPHA),
-        dragHandle = { SheetHandle() },
+        scrimColor = PokerColors.Scrim.copy(alpha = SCRIM_ALPHA),
+        // The sheet makes its handle a TalkBack stop that closes it, so the handle needs a name
+        dragHandle = {
+            val handle = stringResource(R.string.design_sheet_handle)
+            SheetHandle(Modifier.semantics { contentDescription = handle })
+        },
     ) {
         PokerSheetBody(title = title, content = content)
     }
@@ -87,9 +93,9 @@ fun PokerSheetContent(
 }
 
 @Composable
-private fun SheetHandle() {
+private fun SheetHandle(modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .padding(top = 10.dp, bottom = 4.dp)
             .size(width = 36.dp, height = 4.dp)
             .background(PokerColors.DarkGold, RoundedCornerShape(2.dp)),

@@ -345,31 +345,17 @@ class BankPreferences @Inject constructor(
     }
 
     /**
-     * Check if bank data is in default state (all default names, no boxes checked)
+     * True when players 1 to [playerCount] are as a new Bank has them: default names, nothing
+     * ticked, no rebuys or add-ons, no knockout credited, no late entry or re-entry (PP-116).
      */
-    fun isInDefaultState(playerCount: Int): Boolean {
-        for (playerId in 1..playerCount) {
-            // Check if name was changed from default
-            val savedName = getPlayerName(playerId)
-            if (savedName != "Player $playerId") {
-                return false
-            }
-
-            // Check if any boxes are checked or any rebuys/addons exist
-            val hasStatusChange = getPlayerBuyInStatus(playerId) ||
-                getPlayerOutStatus(playerId) ||
-                getPlayerPayedOutStatus(playerId)
-            val hasRebuyAddon = getPlayerRebuys(playerId) > 0 || getPlayerAddons(playerId) > 0
-            // A knockout credited, or a late entry or re-entry (PP-116)
-            val hasEntryRecords = getPlayerEliminatedBy(playerId) != null ||
-                getPlayerEntryPrice(playerId) != null ||
-                getPlayerReEntryOf(playerId) != null
-
-            if (hasStatusChange || hasRebuyAddon || hasEntryRecords) {
-                return false
-            }
-        }
-        return true
+    fun isInDefaultState(playerCount: Int): Boolean = (1..playerCount).none { playerId ->
+        val renamed = getPlayerName(playerId) != "Player $playerId"
+        val ticked = getPlayerBuyInStatus(playerId) || getPlayerOutStatus(playerId) || getPlayerPayedOutStatus(playerId)
+        val bought = getPlayerRebuys(playerId) > 0 || getPlayerAddons(playerId) > 0
+        val recorded = getPlayerEliminatedBy(playerId) != null ||
+            getPlayerEntryPrice(playerId) != null ||
+            getPlayerReEntryOf(playerId) != null
+        renamed || ticked || bought || recorded
     }
 
     /**

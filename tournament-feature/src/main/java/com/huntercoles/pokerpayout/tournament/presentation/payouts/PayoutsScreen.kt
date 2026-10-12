@@ -1,7 +1,5 @@
 package com.huntercoles.pokerpayout.tournament.presentation.payouts
 
-import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -43,6 +41,7 @@ import com.huntercoles.pokerpayout.core.design.components.presetLabel
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.core.domain.model.PayoutPreset
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
+import com.huntercoles.pokerpayout.core.presentation.shareText
 import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.core.R as CoreR
@@ -55,17 +54,8 @@ fun PayoutsScreen(viewModel: PayoutsViewModel = hiltViewModel()) {
     PayoutsContent(
         state = state,
         onIntent = viewModel::acceptIntent,
-        onShare = { sharePayouts(context, PayoutsShareText.build(context, state)) },
+        onShare = { shareText(context, PayoutsShareText.build(context, state), context.getString(R.string.payouts_share)) },
     )
-}
-
-/** Sends [text] to any app that takes plain text (the group chat); needs no permission. */
-private fun sharePayouts(context: Context, text: String) {
-    val send = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, text)
-    }
-    context.startActivity(Intent.createChooser(send, context.getString(R.string.payouts_share)))
 }
 
 /**

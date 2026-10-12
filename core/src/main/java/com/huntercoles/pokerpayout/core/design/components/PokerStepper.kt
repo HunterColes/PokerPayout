@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -48,7 +49,8 @@ internal const val STEPPER_REPEAT_INTERVAL_MS = 80L
 /**
  * A count with gold minus and plus buttons (players, places, chips), instead of a slider. Each
  * button is 48 x 48 dp, stops at the ends of [range], and repeats while held. [label] names the
- * count for TalkBack: "Decrease Players", "Increase Players".
+ * count for TalkBack: "Decrease Players", "Increase Players", each with the count as its state, so
+ * the new count is read after a step.
  */
 @Composable
 fun PokerStepper(
@@ -72,6 +74,7 @@ fun PokerStepper(
         StepButton(
             icon = PokerIcons.Minus,
             description = stringResource(R.string.design_decrease, label),
+            state = value.toString(),
             enabled = value > range.first,
             onStep = { if (current > range.first) onValueChange(current - 1) },
         )
@@ -88,6 +91,7 @@ fun PokerStepper(
         StepButton(
             icon = PokerIcons.Plus,
             description = stringResource(R.string.design_increase, label),
+            state = value.toString(),
             enabled = value < range.last,
             onStep = { if (current < range.last) onValueChange(current + 1) },
         )
@@ -96,7 +100,7 @@ fun PokerStepper(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun StepButton(icon: ImageVector, description: String, enabled: Boolean, onStep: () -> Unit) {
+private fun StepButton(icon: ImageVector, description: String, state: String, enabled: Boolean, onStep: () -> Unit) {
     val interactions = remember { MutableInteractionSource() }
     val pressed by interactions.collectIsPressedAsState()
     var repeating by remember { mutableStateOf(false) }
@@ -125,7 +129,11 @@ private fun StepButton(icon: ImageVector, description: String, enabled: Boolean,
                 },
                 onClick = step,
             )
-            .semantics { contentDescription = description },
+            // The count as the button's state, so TalkBack reads the new one after each step
+            .semantics {
+                contentDescription = description
+                stateDescription = state
+            },
         contentAlignment = Alignment.Center,
     ) {
         Icon(

@@ -47,6 +47,7 @@ import com.huntercoles.pokerpayout.core.testing.Device
 import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -88,23 +89,22 @@ class ComponentSemanticsTest {
     }
 
     @Test
-    fun toggleChipIsACheckboxAndLockedMeansDisabled() {
-        var buyIn by mutableStateOf(false)
-        var rebuyTaps = 0
+    fun toggleChipIsACheckboxReadByItsRowsName() {
+        var deck by mutableStateOf(false)
+        var folded by mutableStateOf(true)
         show {
-            ToggleChip("Buy-in", checked = buyIn, onCheckedChange = { buyIn = it })
-            ToggleChip("Rebuy", checked = true, onCheckedChange = { rebuyTaps++ }, locked = true, count = 1)
+            ToggleChip("Four-colour deck", checked = deck, onCheckedChange = { deck = it })
+            ToggleChip("Folded", checked = folded, onCheckedChange = { folded = it }, spokenLabel = "Dana folded")
         }
-        val buyInChip = rule.onNodeWithContentDescription("Buy-in")
-        buyInChip.assert(hasRole(Role.Checkbox)).assert(hasToggleState(ToggleableState.Off))
-        buyInChip.performClick()
-        assertTrue(buyIn)
-        buyInChip.assert(hasToggleState(ToggleableState.On))
+        val deckChip = rule.onNodeWithContentDescription("Four-colour deck")
+        deckChip.assert(hasRole(Role.Checkbox)).assert(hasToggleState(ToggleableState.Off))
+        deckChip.performClick()
+        assertTrue(deck)
+        deckChip.assert(hasToggleState(ToggleableState.On))
 
-        val rebuy = rule.onNodeWithContentDescription("Rebuy, 1 taken, Locked")
-        rebuy.assertIsNotEnabled().assert(hasToggleState(ToggleableState.On))
-        rebuy.performClick()
-        assertEquals(0, rebuyTaps)
+        val foldedChip = rule.onNodeWithContentDescription("Dana folded")
+        foldedChip.assert(hasToggleState(ToggleableState.On)).performClick()
+        assertFalse(folded)
     }
 
     /** A place weighted at or above the one before it is an error TalkBack reads, not just a red amount (PP-024). */
@@ -147,15 +147,6 @@ class ComponentSemanticsTest {
     }
 
     @Test
-    fun navBarFirstTabCanBeRenamed() {
-        show {
-            PokerNavBar(pokerNavItems(firstTabLabel = "Clock"), selectedIndex = 0, onSelect = {})
-        }
-        rule.onNodeWithText("Clock").assertIsSelected()
-        rule.onNodeWithText("Tournament").assertDoesNotExist()
-    }
-
-    @Test
     fun stepperStopsAtItsEndsAndRepeatsWhileHeld() {
         var players by mutableIntStateOf(2)
         show {
@@ -164,6 +155,11 @@ class ComponentSemanticsTest {
         rule.onNodeWithContentDescription("Decrease Players").assertIsNotEnabled()
         rule.onNodeWithContentDescription("Increase Players").assertIsEnabled().performClick()
         assertEquals(3, players)
+        // TalkBack reads the new count after a step: it is each button's state
+        rule.onNodeWithContentDescription("Increase Players")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "3"))
+        rule.onNodeWithContentDescription("Decrease Players")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "3"))
 
         // Hold for 1.5 s of virtual time: a step on the long press, then one per repeat interval.
         rule.mainClock.autoAdvance = false

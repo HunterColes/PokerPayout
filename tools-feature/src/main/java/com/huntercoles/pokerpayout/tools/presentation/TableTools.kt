@@ -24,7 +24,10 @@ class TableToolMessages @Inject constructor(@ApplicationContext private val cont
     val undo: String get() = context.getString(R.string.table_tools_undo)
 }
 
-/** Long enough for any real name; short enough to keep a row on one or two lines. */
+/**
+ * The longest name a tool takes (Side pots, Split the prizes, Seat draw): long enough for any real
+ * name, short enough to keep a row or a seat on one or two lines.
+ */
 internal const val MAX_PLAYER_NAME = 24
 
 /** At most nine digits of chips (999,999,999), as in a money field's dollars. */

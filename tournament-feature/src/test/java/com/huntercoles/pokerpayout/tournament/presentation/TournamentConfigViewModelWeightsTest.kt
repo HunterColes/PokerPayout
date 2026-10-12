@@ -23,7 +23,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Payout weights on the Tournament tab, through the real [CalculatePayoutsUseCase]. Amounts in cents. */
+/**
+ * The Tournament tab's payout table as the player count and the saved structure (set on the Payouts
+ * tab) change, through the real [CalculatePayoutsUseCase]. Amounts in cents.
+ */
 @kotlinx.coroutines.ExperimentalCoroutinesApi
 @RunWith(RobolectricTestRunner::class)
 class TournamentConfigViewModelWeightsTest {
@@ -81,7 +84,7 @@ class TournamentConfigViewModelWeightsTest {
     @Test
     fun `custom weights within the player count are all paid`() {
         viewModel.acceptIntent(TournamentConfigIntent.UpdatePlayerCount(6))
-        viewModel.acceptIntent(TournamentConfigIntent.UpdateWeights(listOf(40, 30, 20, 10)))
+        tournamentPreferences.setPayoutWeights(listOf(40, 30, 20, 10))
 
         assertEquals(listOf(40, 30, 20, 10), tournamentPreferences.getPayoutWeights())
         // Prize pool 6 x 20 = 120
@@ -93,7 +96,7 @@ class TournamentConfigViewModelWeightsTest {
     @Test
     fun `never pays more places than there are players`() {
         // 5 players (default), 6 custom places (PP-016)
-        viewModel.acceptIntent(TournamentConfigIntent.UpdateWeights(listOf(35, 20, 15, 10, 8, 6)))
+        tournamentPreferences.setPayoutWeights(listOf(35, 20, 15, 10, 8, 6))
 
         assertEquals(5, state.payoutTable.places.size)
         assertEquals(10_000L, state.payoutTable.totalCents)
@@ -102,35 +105,31 @@ class TournamentConfigViewModelWeightsTest {
     @Test
     fun `presets follow the player count until the user picks the places`() {
         viewModel.acceptIntent(TournamentConfigIntent.UpdatePlayerCount(9))
-        viewModel.acceptIntent(TournamentConfigIntent.ApplyPayoutPreset(PayoutPreset.FLAT))
+        tournamentPreferences.setPayoutPreset(PayoutPreset.FLAT, places = 3)
         assertEquals(listOf(45, 32, 23), tournamentPreferences.getPayoutWeights())
 
         viewModel.acceptIntent(TournamentConfigIntent.UpdatePlayerCount(12))
         assertEquals(PayoutPreset.FLAT.weightsFor(4), tournamentPreferences.getPayoutWeights())
 
-        viewModel.acceptIntent(TournamentConfigIntent.SetPaidPlaces(2))
+        tournamentPreferences.setPayoutPreset(PayoutPreset.FLAT, places = 2)
         viewModel.acceptIntent(TournamentConfigIntent.UpdatePlayerCount(24))
         assertEquals(PayoutPreset.FLAT.weightsFor(2), tournamentPreferences.getPayoutWeights())
     }
 
     @Test
-    fun `the payout editor saves weights, preset and rounding together`() {
+    fun `a structure saved with its preset and rounding sets the table`() {
         viewModel.acceptIntent(TournamentConfigIntent.UpdatePlayerCount(10))
-        viewModel.acceptIntent(TournamentConfigIntent.ShowWeightsEditor)
-        assertTrue(state.showWeightsEditor)
 
-        viewModel.acceptIntent(
-            TournamentConfigIntent.UpdatePayoutSettings(
-                PayoutSettings(
-                    weights = listOf(60, 30, 10),
-                    preset = PayoutPreset.TOP_HEAVY,
-                    rounding = PayoutRounding.TEN_DOLLARS
-                )
+        // Saved from the Payouts tab's structure sheet
+        tournamentPreferences.setPayoutSettings(
+            PayoutSettings(
+                weights = listOf(60, 30, 10),
+                preset = PayoutPreset.TOP_HEAVY,
+                rounding = PayoutRounding.TEN_DOLLARS
             )
         )
 
-        assertFalse(state.showWeightsEditor)
-        assertEquals(PayoutPreset.TOP_HEAVY, tournamentPreferences.getPayoutPreset())
+        assertEquals(PayoutPreset.TOP_HEAVY, state.payoutPreset)
         assertEquals(PayoutRounding.TEN_DOLLARS, tournamentPreferences.getPayoutRounding())
         // $200 at $10: 2nd 60, 3rd 20, 1st 120
         assertEquals(listOf(12_000L, 6_000L, 2_000L), amounts)
@@ -138,8 +137,8 @@ class TournamentConfigViewModelWeightsTest {
 
     @Test
     fun `reset restores default weights, rounding and the timer`() {
-        viewModel.acceptIntent(TournamentConfigIntent.UpdateWeights(listOf(50, 30, 20)))
-        viewModel.acceptIntent(TournamentConfigIntent.UpdatePayoutRounding(PayoutRounding.FIVE_DOLLARS))
+        tournamentPreferences.setPayoutWeights(listOf(50, 30, 20))
+        tournamentPreferences.setPayoutRounding(PayoutRounding.FIVE_DOLLARS)
         timerPreferences.setGameDurationMinutes(240)
         assertFalse(timerPreferences.isInDefaultState())
 

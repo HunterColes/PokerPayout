@@ -17,13 +17,11 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.bank.R
 import com.huntercoles.pokerpayout.bank.presentation.BankSheet
 import com.huntercoles.pokerpayout.bank.presentation.Purchase
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
-import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.PokerSheet
 import com.huntercoles.pokerpayout.core.design.components.PokerStepper
 import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
@@ -54,7 +52,7 @@ internal fun CountSheetContent(sheet: BankSheet.Count, onSet: (Int) -> Unit, onD
                 if (rebuys) R.string.bank_count_title_rebuys else R.string.bank_count_title_add_ons,
                 sheet.name
             ),
-            style = PokerType.Title.copy(fontSize = 30.sp, lineHeight = 34.sp),
+            style = SheetTitle,
             color = PokerColors.CardWhite,
             modifier = Modifier.semantics { heading() },
         )

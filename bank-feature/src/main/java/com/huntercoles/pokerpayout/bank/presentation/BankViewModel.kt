@@ -251,8 +251,12 @@ class BankViewModel @Inject constructor(
 
     // Actions ------------------------------------------------------------------------------------
 
-    /** A name typed in a row, or a seat given to a regular (or back); a real name joins the regulars. */
+    /**
+     * A name typed in a row, or a seat given to a regular (or back); a real name joins the regulars.
+     * A row that has gone (a late entry taken back while its name was being typed) keeps no name.
+     */
     private fun updatePlayerName(playerId: Int, name: String) {
+        if (player(playerId) == null) return
         val normalized = name.ifBlank { "Player $playerId" }
         bankPreferences.savePlayerName(playerId, normalized)
         _uiState.update { state ->
@@ -536,11 +540,16 @@ class BankViewModel @Inject constructor(
         )
     }
 
+    /**
+     * Records [playerId]'s winnings as handed over, or not. With nothing to hand over there is no
+     * payout to record: marked paid with nothing owed, a player still in would show as paid for
+     * whatever they win later.
+     */
     private fun setPaid(playerId: Int, paid: Boolean) {
         val player = player(playerId) ?: return
         showSheet(null)
-        if (player.paidOut == paid) return
         val winnings = settlement?.forPlayer(playerId)?.winningsCents ?: 0L
+        if (player.paidOut == paid || (paid && winnings <= 0L)) return
         val message = if (paid) feedback.paid(player.name, winnings) else feedback.unpaid(player.name)
         record(message) { players, order -> players.replace(player.copy(paidOut = paid)) to order }
     }

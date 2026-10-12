@@ -18,7 +18,9 @@ enum class PurchaseKind { REBUY, ADD_ON }
 data class PurchaseClearPrompt(val kind: PurchaseKind, val count: Int, val keptAmountCents: Long)
 
 /**
- * UI state for the tournament config screen
+ * The Tournament setup: the players and the money, the pool and payout table they make (for the
+ * setup's summaries and the setup shared as text), and the setup's own questions. The blinds live in
+ * the clock's state ([TimerUiState.config]) and the payout structure is set on the Payouts tab.
  */
 data class TournamentConfigUiState(
     val config: TournamentConfigData = TournamentConfigData(
@@ -31,22 +33,12 @@ data class TournamentConfigUiState(
     val payoutTable: PayoutTable = PayoutTable.EMPTY,
     /** The preset the weights come from; null once edited by hand. */
     val payoutPreset: PayoutPreset? = PayoutPreset.DEFAULT,
-    val recommendedPlaces: Int = PayoutPlaces.recommended(TournamentDefaults.PLAYER_COUNT),
     /** Place to player name, for places already decided in the Bank. */
     val placeNames: Map<Int, String> = emptyMap(),
-    val isTournamentLocked: Boolean = false,
-    val isConfigExpanded: Boolean = true,
-    val isBlindConfigExpanded: Boolean = false,
-    val gameDurationHours: Int = TournamentDefaults.GAME_DURATION_HOURS,
-    val roundLengthMinutes: Int = TournamentDefaults.ROUND_LENGTH_MINUTES,
-    val smallestChip: Int = TournamentDefaults.SMALLEST_CHIP,
-    val startingChips: Int = TournamentDefaults.STARTING_CHIPS,
     val showResetDialog: Boolean = false,
-    val showWeightsEditor: Boolean = false,
     val purchaseClearPrompt: PurchaseClearPrompt? = null,
     val rebuyPurchases: Int = 0,
     val addOnPurchases: Int = 0,
-    val selectedPanel: String = "player",
     /** Someone is out in the Bank: the bounty type is fixed now (PP-035). */
     val knockoutsRecorded: Boolean = false,
     /** The Bank has drawn at least one mystery envelope for a knockout (PP-035). */

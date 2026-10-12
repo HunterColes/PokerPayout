@@ -206,7 +206,7 @@
     <string name="clock_info_overtime_by">+%1$s</string>
     <string name="clock_info_finished">Tournament finished</string>
     <string name="clock_info_rebuys_closed">Rebuys closed after Level %1$d</string>
-    <string name="clock_info_rebuys_until">Rebuys open until level %1$d</string>
+    <string name="clock_info_rebuys_until">Rebuys open until Level %1$d</string>
     <string name="clock_info_rebuys_open">Rebuys open all game</string>
     <plurals name="clock_taken">
         <item quantity="one">%d taken</item>

@@ -22,11 +22,10 @@ class ClockSaves(
         tournamentPreferences.setTournamentLocked(false)
     }
 
-    /** The clock running from [anchor]: money and blinds locked, the setup folded away. */
+    /** The clock running from [anchor]: money and blinds locked. */
     fun resumed(anchor: ClockAnchor) {
         timerPreferences.saveClock(anchor)
         tournamentPreferences.setTournamentLocked(true)
-        tournamentPreferences.setIsConfigExpanded(false)
     }
 }
 

@@ -9,11 +9,8 @@ import com.huntercoles.pokerpayout.core.preferences.TimerPreferences
 import com.huntercoles.pokerpayout.core.preferences.TournamentPreferences
 import com.huntercoles.pokerpayout.core.time.ClockAnchor
 import com.huntercoles.pokerpayout.core.time.TimeSource
-import com.huntercoles.pokerpayout.core.utils.BlindLevel
 import com.huntercoles.pokerpayout.core.utils.BlindSetupAdvisor
 import com.huntercoles.pokerpayout.core.utils.BlindSetupFix
-import com.huntercoles.pokerpayout.core.utils.BlindSetupProblem
-import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
 import com.huntercoles.pokerpayout.core.utils.BlindStructureInput
 import com.huntercoles.pokerpayout.core.utils.ChipSetChips
 import com.huntercoles.pokerpayout.core.utils.ChipSetProvider
@@ -23,6 +20,7 @@ import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSettings
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCueTimes
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCues
+import com.huntercoles.pokerpayout.tournament.domain.clock.ClockLevels
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSaves
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockTimeline
@@ -125,8 +123,6 @@ class TimerViewModel @Inject constructor(
 
     private fun acceptViewIntent(intent: TimerIntent) {
         when (intent) {
-            TimerIntent.ShowInvalidConfigDialog -> _uiState.update { it.copy(showInvalidConfigDialog = true) }
-            TimerIntent.HideInvalidConfigDialog -> _uiState.update { it.copy(showInvalidConfigDialog = false) }
             is TimerIntent.SetTableView -> _uiState.update { it.copy(isTableView = intent.enabled) }
             TimerIntent.ToggleMute -> audioPreferences.toggleMute()
             is TimerIntent.UpdateRebuyUntil -> tournamentPreferences.setRebuyUntilLevel(intent.level)
@@ -260,7 +256,8 @@ class TimerViewModel @Inject constructor(
         when {
             state.isFinished -> Unit
             state.isRunning -> pause()
-            !isValidBlindConfiguration(state) -> _uiState.update { it.copy(showInvalidConfigDialog = true) }
+            // Refused: the setup's verdict says why and offers the fixes (Start is off meanwhile)
+            !isValidBlindConfiguration(state) -> Unit
             else -> start()
         }
     }
@@ -610,7 +607,6 @@ class TimerViewModel @Inject constructor(
     }
 
     private fun applyFix(fix: BlindSetupFix) {
-        _uiState.update { it.copy(showInvalidConfigDialog = false) }
         when (fix) {
             is BlindSetupFix.UseRoundLength -> acceptIntent(TimerIntent.UpdateRoundLength(fix.minutes))
             is BlindSetupFix.UseStartingChips -> acceptIntent(TimerIntent.UpdateStartingChips(fix.chips))
@@ -630,31 +626,16 @@ class TimerViewModel @Inject constructor(
     }
 
     /** Why [config] can't be played (or null), and its regular levels (empty when it can't). */
-    private fun scheduleFor(config: BlindConfiguration): Pair<BlindSetupProblem?, List<BlindLevel>> {
-        val problem = BlindSetupAdvisor.check(
-            durationMinutes = config.gameDurationMinutes,
-            roundLengthMinutes = config.roundLengthMinutes,
+    private fun scheduleFor(config: BlindConfiguration): ClockLevels = ClockLevels.of(
+        BlindStructureInput(
+            players = tableConfig.numPlayers.coerceAtLeast(1),
+            targetDurationMinutes = config.gameDurationMinutes,
             smallestChip = config.smallestChip,
-            startingChips = config.startingChips
+            startingStack = config.startingChips,
+            roundLengthMinutes = config.roundLengthMinutes,
+            bigBlindAnteFromLevel = config.bigBlindAnteFromLevel
         )
-        val levels = if (problem == null) {
-            runCatching {
-                BlindStructureCalculator.generateSchedule(
-                    BlindStructureInput(
-                        players = tableConfig.numPlayers.coerceAtLeast(1),
-                        targetDurationMinutes = config.gameDurationMinutes,
-                        smallestChip = config.smallestChip,
-                        startingStack = config.startingChips,
-                        roundLengthMinutes = config.roundLengthMinutes,
-                        bigBlindAnteFromLevel = config.bigBlindAnteFromLevel
-                    )
-                )
-            }.getOrDefault(emptyList())
-        } else {
-            emptyList()
-        }
-        return problem to levels
-    }
+    )
 
     private fun rebuildSchedule() {
         val config = _uiState.value.config

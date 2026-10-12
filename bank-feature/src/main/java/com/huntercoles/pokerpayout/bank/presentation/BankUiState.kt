@@ -22,9 +22,6 @@ const val MAX_PURCHASE_COUNT = 20
 /** The most entries a night can have, late entries and re-entries included (PP-116). */
 const val MAX_ENTRIES = 60
 
-/** The longest name the late entry sheet takes (PP-116). */
-const val MAX_ENTRY_NAME_LENGTH = 40
-
 /** What can be bought after the entry: rebuys and add-ons. */
 enum class Purchase { REBUY, ADD_ON }
 

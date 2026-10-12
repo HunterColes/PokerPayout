@@ -21,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,7 +33,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.bank.R
 import com.huntercoles.pokerpayout.bank.presentation.BankIntent
 import com.huntercoles.pokerpayout.bank.presentation.BankSection
@@ -45,7 +43,6 @@ import com.huntercoles.pokerpayout.bank.presentation.RegularsModel
 import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
-import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.ConfirmSheet
 import com.huntercoles.pokerpayout.core.design.components.LocalWidthClass
 import com.huntercoles.pokerpayout.core.design.components.PayoutPreview

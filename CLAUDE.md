@@ -106,6 +106,7 @@ JDK 21 toolchain (F-Droid's buildserver has only JDK 21; bytecode targets 17). T
   and gets a `CHANGELOG.md` entry. Publishing is separate and only with the owner:
   `scripts/release/release.sh --publish` (PR, CI, merge, tag, GitHub release). F-Droid then builds
   the tag itself and must reproduce the APK byte for byte (`--repro-check`).
+- **`STATUS.md`** holds the Now line — update it at the end of every session (`Now (YYYY-MM-DD): ...`).
 - **Secrets never get read, printed or tested:** `keystore.properties`, `*.keystore` and
   `gitlab.token` sit untracked at the repo root (chmod 600). Signing checks go through
   `scripts/release/verify-signing.sh`, which prints only pass or fail.

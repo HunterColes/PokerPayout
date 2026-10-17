@@ -18,7 +18,10 @@ metadata/
 
 - **Pictures** are made by scripts, never by hand, and carry no metadata (no EXIF, no text
   chunks): see "Refreshing the store listing" in [docs/RELEASING.md](../docs/RELEASING.md#refreshing-the-store-listing).
-- **Words:** plain and short, leading with free, no ads, offline and no internet permission. When a
+- **Picture names are for good:** F-Droid never deletes a screenshot it has published, so never
+  rename or drop one in `listing.sh`'s `SHOTS`; see the docs link above.
+- **Words:** plain and short, leading with what the app does in the words people search for (poker
+  timer, blind clock, Texas Hold'em, payouts); offline and no internet permission come second. When a
   feature lands or goes, `full_description.txt` changes with it.
 - **The recipe** (`com.huntercoles.pokerpayout.yml`) is fdroiddata's file as of the last release,
   plus that release's build entry. `AllowedAPKSigningKeys` pins the release key's certificate (the

@@ -36,30 +36,9 @@ Builds:
     scandelete:
       - build-cache
 
-  - versionName: 1.2.0
-    versionCode: 25
-    commit: v1.2.0
-    subdir: app
-    gradle:
-      - yes
-
-  - versionName: 1.3.0
-    versionCode: 26
-    commit: v1.3.0
-    subdir: app
-    gradle:
-      - yes
-
-  - versionName: 1.3.14
-    versionCode: 40
-    commit: v1.3.14
-    subdir: app
-    gradle:
-      - yes
-
   - versionName: 1.4.22
     versionCode: 63
-    commit: v1.4.22
+    commit: 14135587b0bb02fc880a03488f96e3a7aadc1f84
     subdir: app
     gradle:
       - yes

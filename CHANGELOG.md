@@ -3,6 +3,19 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.23 (on master, not published)
+
+The store listing, found by the words people search for:
+
+- **The F-Droid summary and the description's first lines say what the app is:** a poker timer and
+  blind clock for Texas Hold'em home games, with payouts and a bank. F-Droid's search has no
+  keywords field, and the old text never said "timer", "Hold'em" or "calculator", so searches like
+  "poker timer", "blind timer", "texas holdem" and "chip calculator" found nothing. Offline and no
+  internet permission move to the second paragraph (every F-Droid app is free, with no ads).
+- **A published screenshot's name is for good:** F-Droid never deletes a picture it has shown, which
+  is why four 1.1.x pictures still sit between the new ones. `listing.sh` and RELEASING.md say so.
+- The recipe mirror matches fdroiddata again (only 1.4.22 was built there, pinned to its commit).
+
 ## [1.4.22](https://github.com/HunterColes/PokerPayout/releases/tag/v1.4.22) (2026-10-11)
 
 Maintenance update: everything in 1.4.0 to 1.4.21 below, published as one release.

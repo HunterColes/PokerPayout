@@ -40,6 +40,8 @@ STEPS=(
   app-alive
 )
 # step -> picture. The numbers set the order F-Droid shows them in; the table view is landscape.
+# Never rename or drop a name here: F-Droid keeps every picture it has published (fdroidserver#490),
+# so an old name stays on the listing (docs/RELEASING.md, "Refreshing the store listing").
 SHOTS=(
   "listing-shot-clock       01_clock.png"
   "listing-shot-table-view  02_table_view.png"

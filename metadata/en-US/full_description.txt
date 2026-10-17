@@ -1,11 +1,11 @@
-Free, no ads, offline. No internet permission, no accounts, no tracking.
+A poker tournament timer and blind clock for home games, with payouts that add up to the cent and a bank of who paid what.
 
-Everything for a home poker night: a tournament clock, payouts that add up to the cent, a bank of who paid what, and tools for the table.
+Enter the players, buy-in, rebuys, add-ons and bounties once. The poker clock raises the blinds on schedule, the payout calculator follows the prize pool, and Settle up says who pays whom. Made for a Texas Hold'em home game, and fine for any tournament poker. Works offline: no internet permission, no account, no ads.
 
-TOURNAMENT
+TOURNAMENT CLOCK
 • Set up the night once: players, buy-in, bounty, rebuys and late entry (each with a cutoff), add-ons, food and an optional house rake. Save it as a preset, or start from a ready-made night
 • Blinds from four numbers: game length, level length, starting stack and smallest chip. Every level is a multiple of your smallest chip, and a setup that can't work says why and offers the nearest fix
-• A blind clock with big digits, the next level, ±1 minute nudges, breaks with a note and a big-blind ante. It keeps time through sleep, restarts and reboots
+• A blind timer with big digits, the next level, ±1 minute nudges, breaks with a note and a big-blind ante. It keeps time through sleep, restarts and reboots
 • The running clock in the notifications and on the lock screen, with a chime, a vibration or a flash for each new level
 • Color-ups on breaks, and overtime levels if the game runs long
 • Turn the phone sideways for a full-screen table view, with knockouts right from the clock
@@ -21,9 +21,9 @@ THE BANK AND PAYOUTS
 • Share the payouts or the settle-up as text
 
 TOOLS
-• Chip set: stacks from the chips you own, and a color-up plan
+• Chip set: a chip calculator for starting stacks from the chips you own, and a color-up plan
 • Seat draw: random seats and the high card for the button
-• Odds for two to ten hands, and run it out card by card
+• Texas Holdem odds for two to ten hands, and run it out card by card
 • Side pots when someone is all in
 • Hand ranks
 • Split the prizes: a deal by ICM or chip chop
@@ -32,5 +32,4 @@ TOOLS
 • Your currency: $, €, £, ₹, ¥, kr and more, or none
 • Backup: everything in one file you keep
 
-FREE AND OPEN SOURCE
-MIT licensed. Everything stays on your phone.
+Open source under the MIT licence. Everything stays on your phone.

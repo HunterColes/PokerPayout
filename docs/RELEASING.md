@@ -255,13 +255,27 @@ snackbar or keyboard, the status bar in boot.sh's demo mode: 12:00, full battery
 screenshots become `01_clock.png` to `08_seat_draw.png` (`02_table_view.png` is landscape). Only a
 run where every step passed copies them; it then removes any other picture in the folder. A failed
 run changes nothing. `--copy-from <report>` copies the pictures of a run's report (the artifact)
-without an emulator. To change a picture, change its step, and its line in `SHOTS` in `listing.sh`.
-Look at every picture before merging.
+without an emulator. To change a picture, change its step and keep its name in `SHOTS` in
+`listing.sh`. Look at every picture before merging.
 
-The words: plain and short, leading with free, no ads, offline and no internet permission. No
-"professional", "casino" or superlatives. The short description stays within 80 characters, with no
-full stop (`fdroid lint` flags punctuation in a summary). F-Droid has no captions for screenshots, so
-the feature list in `full_description.txt` carries what they show.
+**A published picture's name is for good.** F-Droid copies each release's pictures into its repo
+and never deletes one (fdroidserver#490), so a renamed or dropped picture stays on the listing
+beside the new set, as four 1.1.x pictures did after 1.4.22 (`01_tournament`, `02_bank`,
+`03_tools_splits`, `04_tools_odds`). Only F-Droid's admins can remove one, through
+[fdroid/admin#377](https://gitlab.com/fdroid/admin/-/work_items/377). To show a different screen,
+shoot it under an existing name, or add a new name. If a name must go, release first, then post its
+path (`repo/com.huntercoles.pokerpayout/en-US/phoneScreenshots/<name>.png`) on admin#377.
+Before the release, an old tag's checkout could copy it back.
+
+The words: plain and short, leading with what the app does in the words people search for (poker
+timer, blind clock, tournament, Texas Hold'em, payouts, chip calculator). Every F-Droid app is free
+and has no ads, so offline and no internet permission go in the second paragraph, not the summary.
+F-Droid's search has no keywords field: the name counts most, then the summary, then the
+description, and the app needs every word of a search somewhere, so a word that never appears
+(timer, say) is never found. The client shows only the description's first three lines before
+"More". No "professional", "casino" or superlatives. The short description stays within 80
+characters, with no full stop (`fdroid lint` flags punctuation in a summary). F-Droid has no
+captions for screenshots, so the feature list in `full_description.txt` carries what they show.
 
 ## Files
 

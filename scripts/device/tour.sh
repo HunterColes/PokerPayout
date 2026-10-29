@@ -2057,7 +2057,7 @@ PY
 }
 s_rail_tools() {
   tab Tools
-  ui assert-text text=Odds "text=Chip set" text=Sound || return 1
+  ui assert-text text=Odds "text=Chip set" "text=Cue sounds" || return 1
   require_tab_selected Tools
 }
 s_rail_payouts() {

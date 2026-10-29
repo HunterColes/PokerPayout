@@ -26,7 +26,7 @@ import javax.inject.Inject
  *
  * - shows the notification, re-posted only when it changes ([LiveClockDriver]);
  * - keeps the process in the foreground, so Android doesn't freeze or kill it, and the clock's cues
- *   (chime, vibration) keep sounding on time, from here or from the clock's own screen; the music
+ *   (cue sound, vibration) keep sounding on time, from here or from the clock's own screen; the music
  *   plays on too ([TournamentMusicLink]);
  * - holds a partial wake lock while the clock runs, renewed at each look, so the CPU is awake when
  *   a cue is due even with the screen off.

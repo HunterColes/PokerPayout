@@ -84,7 +84,7 @@ sealed interface BankIntent {
     /** Takes back the newest action (up to the last 20). */
     data object Undo : BankIntent
 
-    /** The top bar's bell: the clock's chime on or off. */
+    /** The top bar's bell: the cue sounds on or off (the clock's bell and Tools > Cue sounds too). */
     data object ToggleMute : BankIntent
 
     // Tonight's players (S26, PP-110) ----------------------------------------------------------------

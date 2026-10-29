@@ -102,7 +102,7 @@ data class TimerUiState(
      * without pausing. Null in overtime and once finished.
      */
     val endsAtWallClock: Long? = null,
-    /** Chimes muted (the top bar's bell; Tools, Sound). */
+    /** Cue sounds muted (the top bar's bell; Tools > Cue sounds). */
     val isMuted: Boolean = false,
     /**
      * A mid-game blind change ([TimerIntent.KeepingLevel]) that can't be played, so it wasn't applied:

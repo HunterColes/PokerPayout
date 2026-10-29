@@ -49,7 +49,7 @@ class ClockCuesTest {
         override fun bootCount() = 1
     }
 
-    private val chime = ClockCue(ClockCueKind.CHIME, 1_196_000)
+    private val cueSound = ClockCue(ClockCueKind.SOUND, 1_196_000)
     private val change = ClockCue(ClockCueKind.LEVEL_CHANGE, 1_200_000)
     private val warning = ClockCue(ClockCueKind.ONE_MINUTE, 1_140_000)
 
@@ -81,11 +81,11 @@ class ClockCuesTest {
     }
 
     @Test
-    fun theChimeAloneVibratesNothing() {
-        // The chime leads the change by 4 s; the buzz and the flash come on the change itself
+    fun theCueSoundAloneVibratesNothing() {
+        // The cue sound leads the change by 4 s; the buzz and the flash come on the change itself
         assertEquals(
             CueActions(sound = CueEvent.LEVEL_UP, vibrate = null, flash = null),
-            CueActions.of(listOf(chime), true, true),
+            CueActions.of(listOf(cueSound), true, true),
         )
     }
 
@@ -93,11 +93,11 @@ class ClockCuesTest {
     fun eachSwitchTurnsOffOnlyItsOwnCue() {
         assertEquals(
             CueActions(sound = CueEvent.LEVEL_UP, vibrate = null, flash = SilentCue.LEVEL_CHANGE),
-            CueActions.of(listOf(chime, change), vibrateOn = false, flashOn = true),
+            CueActions.of(listOf(cueSound, change), vibrateOn = false, flashOn = true),
         )
         assertEquals(
             CueActions(sound = CueEvent.LEVEL_UP, vibrate = SilentCue.LEVEL_CHANGE, flash = null),
-            CueActions.of(listOf(chime, change), vibrateOn = true, flashOn = false),
+            CueActions.of(listOf(cueSound, change), vibrateOn = true, flashOn = false),
         )
         assertEquals(
             CueActions(sound = CueEvent.ONE_MINUTE, vibrate = null, flash = null),
@@ -107,7 +107,7 @@ class ClockCuesTest {
 
     @Test
     fun aLateLookThatPassesBothCallsOutTheChange() {
-        val actions = CueActions.of(listOf(warning, chime, change), vibrateOn = true, flashOn = true)
+        val actions = CueActions.of(listOf(warning, cueSound, change), vibrateOn = true, flashOn = true)
         assertEquals(SilentCue.LEVEL_CHANGE, actions.vibrate)
         assertEquals(SilentCue.LEVEL_CHANGE, actions.flash)
         assertEquals(CueEvent.LEVEL_UP, actions.sound)
@@ -127,7 +127,7 @@ class ClockCuesTest {
         val flashes = mutableListOf<SilentCue>()
         val collecting = launch(UnconfinedTestDispatcher(testScheduler)) { cues.flashes.toList(flashes) }
 
-        cues.play(listOf(chime))
+        cues.play(listOf(cueSound))
         time.now += 4_000
         cues.play(listOf(change))
         runCurrent()
@@ -146,8 +146,8 @@ class ClockCuesTest {
         time.now += 300
         cues.play(listOf(warning)) // the live notification's service, a moment later
         time.now += 3_700
-        cues.play(listOf(chime))
-        cues.play(listOf(chime))
+        cues.play(listOf(cueSound))
+        cues.play(listOf(cueSound))
 
         assertEquals(listOf(SilentCue.ONE_MINUTE), buzzes)
         verify(exactly = 1) { sound.playSound(any()) }
@@ -165,14 +165,14 @@ class ClockCuesTest {
     }
 
     @Test
-    fun switchedOffCuesDoNothingButTheChimeStillRings() = runTest {
+    fun switchedOffCuesDoNothingButTheCueSoundStillPlays() = runTest {
         audio.setVibrateCues(false)
         audio.setFlashCues(false)
         val cues = cues()
         val flashes = mutableListOf<SilentCue>()
         val collecting = launch(UnconfinedTestDispatcher(testScheduler)) { cues.flashes.toList(flashes) }
 
-        cues.play(listOf(chime, change))
+        cues.play(listOf(cueSound, change))
         runCurrent()
 
         assertTrue(buzzes.isEmpty())
@@ -208,13 +208,13 @@ class ClockCuesTest {
     private fun cuesWithBells() = cues().apply { packs = listOf(SoundPacks.Classic, bells) }
 
     @Test
-    fun aFreshInstallPlaysTheClassicPackTheChimeAtEveryChange() {
+    fun aFreshInstallPlaysTheClassicPackTheCueSoundAtEveryChange() {
         assertEquals(SoundPacks.CLASSIC_ID, audio.getSoundPack())
         val cues = cues()
-        val breakStart = ClockCue(ClockCueKind.CHIME, 2_396_000, CueEvent.BREAK_START)
-        val gameOver = ClockCue(ClockCueKind.CHIME, 9_596_000, CueEvent.GAME_OVER)
+        val breakStart = ClockCue(ClockCueKind.SOUND, 2_396_000, CueEvent.BREAK_START)
+        val gameOver = ClockCue(ClockCueKind.SOUND, 9_596_000, CueEvent.GAME_OVER)
 
-        cues.play(listOf(chime))
+        cues.play(listOf(cueSound))
         cues.play(listOf(breakStart))
         cues.play(listOf(gameOver))
         cues.play(listOf(warning)) // the classic pack has no minute sound
@@ -228,10 +228,10 @@ class ClockCuesTest {
         audio.setSoundPack("bells")
         val cues = cuesWithBells()
 
-        cues.play(listOf(chime))
-        cues.play(listOf(ClockCue(ClockCueKind.CHIME, 2_396_000, CueEvent.BREAK_START)))
-        cues.play(listOf(ClockCue(ClockCueKind.CHIME, 2_996_000, CueEvent.BREAK_END)))
-        cues.play(listOf(ClockCue(ClockCueKind.CHIME, 9_596_000, CueEvent.GAME_OVER)))
+        cues.play(listOf(cueSound))
+        cues.play(listOf(ClockCue(ClockCueKind.SOUND, 2_396_000, CueEvent.BREAK_START)))
+        cues.play(listOf(ClockCue(ClockCueKind.SOUND, 2_996_000, CueEvent.BREAK_END)))
+        cues.play(listOf(ClockCue(ClockCueKind.SOUND, 9_596_000, CueEvent.GAME_OVER)))
 
         verify(exactly = 1) { sound.playSound(LEVEL_SOUND) }
         verify(exactly = 1) { sound.playSound(BREAK_START_SOUND) }
@@ -276,7 +276,7 @@ class ClockCuesTest {
     }
 
     @Test
-    fun theClassicPackPlaysTheChimeForTheChampionAndNothingForTheOtherMoments() {
+    fun theClassicPackPlaysTheCueSoundForTheChampionAndNothingForTheOtherMoments() {
         val cues = cues()
         cues.playMoment(CueEvent.BIG_MOMENT)
         verify(exactly = 0) { sound.playSound(any()) }
@@ -287,12 +287,12 @@ class ClockCuesTest {
     @Test
     fun aPackThatIsGoneFallsBackToTheClassic() {
         audio.setSoundPack("a pack from a later version")
-        cuesWithBells().play(listOf(chime))
+        cuesWithBells().play(listOf(cueSound))
         verify(exactly = 1) { sound.playSound(R.raw.blind_level_up) }
     }
 
     @Test
-    fun thePickedPacksChimeIsTheOneLoadedAhead() {
+    fun thePickedPacksCueSoundIsTheOneLoadedAhead() {
         audio.setSoundPack("bells")
         cuesWithBells().preload()
         verify(exactly = 1) { sound.preloadSound(LEVEL_SOUND) }

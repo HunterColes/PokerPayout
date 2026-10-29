@@ -2,6 +2,9 @@
 <resources>
     <!-- Tools > Sound: the rows that open the cue sounds and the music -->
     <string name="tools_cue_sounds_title">Cue sounds</string>
+    <!-- The Cue sounds row on Tools: on or off, and the picked pack ("On · Classic") -->
+    <string name="tools_cue_sounds_on">On · %1$s</string>
+    <string name="tools_cue_sounds_off">Off · %1$s</string>
     <string name="tools_music_title">Music</string>
     <string name="tools_music_none">No songs yet</string>
     <plurals name="tools_music_songs">
@@ -53,7 +56,7 @@
     <!-- Cue sounds (S18) -->
     <string name="cue_sounds_title">Cue sounds</string>
     <string name="cue_sounds_subtitle">What the clock plays at each change</string>
-    <string name="cue_sounds_off">Sound is off, so the clock plays none of these. Turn it on in Tools.</string>
+    <string name="cue_sounds_off">Cue sounds are off, so the clock plays none of these. You can still hear each one here.</string>
     <string name="cue_sounds_more">More sound packs will come with updates.</string>
     <string name="cue_sounds_empty_slot">No sound</string>
     <string name="cue_sounds_preview">Play %1$s, %2$s</string>

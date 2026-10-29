@@ -134,7 +134,7 @@ internal fun PokerTopBarPreview() {
     PokerPreviewPage(gutter = false) {
         PokerStage {
             PokerTopBar(title = "Clock", subtitle = "Level 6 of 9 · running") {
-                PokerIconButton(PokerIcons.Bell, "Mute chime", onClick = {})
+                PokerIconButton(PokerIcons.Bell, "Mute cue sounds", onClick = {})
                 PokerIconButton(PokerIcons.Fullscreen, "Table view", onClick = {})
                 PokerIconButton(PokerIcons.More, "More options", onClick = {})
             }

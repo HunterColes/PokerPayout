@@ -4,7 +4,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasContentDescription
@@ -92,7 +91,7 @@ class ToolsHomeContentTest {
             "BEFORE THE GAME", "Chip set", "Seat draw",
             "DURING PLAY", "Odds", "Side pots", "Hand ranks",
             "END OF THE NIGHT", "Split the prizes", "History",
-            "SOUND AND MUSIC", "Sound",
+            "SOUND AND MUSIC", "Cue sounds", "Vibrate", "Music",
             "SETTINGS", "Currency", "Backup",
         )
         val at = expected.map { label -> page.indexOfFirst { it == label || it.startsWith("$label ") } }
@@ -110,29 +109,12 @@ class ToolsHomeContentTest {
     }
 
     @Test
-    fun theSoundRowIsOneSwitch() {
+    fun theCueSoundsSwitchVolumeAndTestButtonLiveOnCueSoundsNow() {
+        // #79: one place for the cue sounds; the hub links to it
         show(ToolsHomeUiState(soundOn = true))
-        val soundSwitch = compose.onNode(hasText("Sound") and isSwitch).performScrollTo()
-        soundSwitch.assertIsOn()
-        soundSwitch.performScrollTo().performClick()
-        assertEquals(listOf<ToolsHomeIntent>(ToolsHomeIntent.SetSoundOn(false)), intents)
-    }
-
-    @Test
-    fun withTheSoundOffTheVolumeAndTestChimeRest() {
-        show(ToolsHomeUiState(soundOn = false, volume = 0.5f))
-        compose.onNode(hasText("Sound") and isSwitch).assertIsOff()
-        compose.onNode(hasContentDescription("Chime volume")).assertIsNotEnabled()
-        compose.onNodeWithText("Test chime").assertIsNotEnabled()
-        compose.onNodeWithText("50%").assertExists()
-    }
-
-    @Test
-    fun testChimeAsksForTheChime() {
-        show(ToolsHomeUiState(soundOn = true))
-        compose.onNode(hasContentDescription("Chime volume")).assertIsEnabled()
-        compose.onNodeWithText("Test chime").performScrollTo().performClick()
-        assertEquals(listOf<ToolsHomeIntent>(ToolsHomeIntent.TestChime), intents)
+        compose.onNode(isSwitch and hasText("Cue sounds")).assertDoesNotExist()
+        compose.onNode(hasContentDescription("Cue sound volume")).assertDoesNotExist()
+        compose.onNodeWithText("Test chime").assertDoesNotExist()
     }
 
     @Test
@@ -152,8 +134,8 @@ class ToolsHomeContentTest {
     }
 
     @Test
-    fun theQuietCuesStayLiveWithTheSoundOff() {
-        // For a muted phone or a quiet room: they don't rest with the chime
+    fun theQuietCuesStayLiveWithTheCueSoundsOff() {
+        // For a muted phone or a quiet room: they don't rest with the cue sounds
         show(ToolsHomeUiState(soundOn = false, vibrate = true, flash = false))
         compose.onNode(hasText("Vibrate") and isSwitch).performScrollTo().assertIsOn().assertIsEnabled()
         compose.onNode(hasText("Flash the clock") and isSwitch).performScrollTo().assertIsOff().assertIsEnabled()
@@ -194,12 +176,18 @@ class ToolsHomeContentTest {
     }
 
     @Test
-    fun theCueSoundsRowNamesThePickedPackAndOpensThePacks() {
-        show(ToolsHomeUiState())
+    fun theCueSoundsRowSaysOnOrOffAndThePackAndOpensCueSounds() {
+        show(ToolsHomeUiState(soundOn = true))
         compose.onNodeWithText("Cue sounds").performScrollTo().assertExists()
-        compose.onNodeWithText("Classic").assertExists()
+        compose.onNodeWithText("On · Classic").assertExists()
         compose.onNodeWithText("Cue sounds").performClick()
         assertEquals(listOf<NavigationDestination>(NavigationDestination.CueSounds), opened)
+    }
+
+    @Test
+    fun mutedTheCueSoundsRowSaysOff() {
+        show(ToolsHomeUiState(soundOn = false))
+        compose.onNodeWithText("Off · Classic").performScrollTo().assertExists()
     }
 
     @Test

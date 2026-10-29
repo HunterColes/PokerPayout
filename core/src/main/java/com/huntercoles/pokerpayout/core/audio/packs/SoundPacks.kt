@@ -33,7 +33,7 @@ enum class CueEvent {
  * A set of cue sounds, one slot per [CueEvent]. A slot with no sound is silent; the vibration and the
  * flash still come. The sounds for a change of level or break start
  * [AudioConstants.LEVEL_CHANGE_SOUND_LEAD_SECONDS] before the change, so they should peak about that
- * far in, as the chime does. The one-minute sound plays on the minute, and a big moment's
+ * far in, as the cue sound does. The one-minute sound plays on the minute, and a big moment's
  * ([CueEvent.BIG_MOMENT], [CueEvent.CHAMPION]) as the knockout that brings it is recorded.
  *
  * Adding a pack or a sound: docs/SOUNDS.md.
@@ -55,8 +55,8 @@ object SoundPacks {
     const val CLASSIC_ID = "classic"
 
     /**
-     * The sounds the clock has always played: the chime at every change, nothing with a minute left.
-     * The champion (PP-111) gets the chime too; the other big moments show without a sound.
+     * The sounds the clock has always played: the cue sound at every change, nothing with a minute left.
+     * The champion (PP-111) gets the cue sound too; the other big moments show without a sound.
      */
     val Classic = SoundPack(
         id = CLASSIC_ID,

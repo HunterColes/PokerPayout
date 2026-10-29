@@ -65,7 +65,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 // One small function per action, and one injected source per thing the Bank reads (settings, records,
-// the clock, the chime, the snackbar, the envelope draw, the settle-up, the regulars).
+// the clock, the cue sound, the snackbar, the envelope draw, the settle-up, the regulars).
 @Suppress("TooManyFunctions", "LongParameterList")
 class BankViewModel @Inject constructor(
     private val tournamentPreferences: TournamentPreferences,

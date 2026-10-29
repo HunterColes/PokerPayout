@@ -12,7 +12,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Plays the clock's cue sounds (the chime, or the sound pack's sounds).
+ * Plays the clock's cue sounds (the picked sound pack's).
  * Uses MediaPlayer for longer audio files (10+ seconds) with proper audio focus management.
  *
  * Note: SoundPool has a 1MB limit per sound (~5.6 seconds at 44.1kHz stereo),
@@ -58,7 +58,7 @@ class SoundManager @Inject constructor(
     /**
      * Preloads a sound effect without playing it.
      * Call this early to ensure sound is ready when needed. The sound already loaded is kept, so a
-     * chime that is sounding plays on (a new clock screen preloads while it may be).
+     * cue sound that is sounding plays on (a new clock screen preloads while it may be).
      */
     fun preloadSound(@RawRes soundResId: Int) {
         if (soundResId == currentSoundResId && mediaPlayer != null) return

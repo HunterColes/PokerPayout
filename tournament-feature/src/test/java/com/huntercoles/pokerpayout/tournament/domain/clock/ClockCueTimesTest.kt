@@ -10,7 +10,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * When the clock's cues fall (PP-083): the chime 4 s before each change (as it always was), the level
+ * When the clock's cues fall (PP-083): the cue sound 4 s before each change (as it always was), the level
  * change itself, and the one-minute warning; crossing-based and never more than 2 s late.
  */
 class ClockCueTimesTest {
@@ -30,11 +30,11 @@ class ClockCueTimesTest {
         }
 
     @Test
-    fun `each level has its minute warning, its chime and its change, in that order`() {
+    fun `each level has its minute warning, its cue sound and its change, in that order`() {
         assertEquals(
             listOf(
                 ClockCue(ClockCueKind.ONE_MINUTE, round - 60_000),
-                ClockCue(ClockCueKind.CHIME, round - 4_000),
+                ClockCue(ClockCueKind.SOUND, round - 4_000),
                 ClockCue(ClockCueKind.LEVEL_CHANGE, round),
             ),
             everySecond(timeline(), 0L, round),
@@ -61,11 +61,11 @@ class ClockCueTimesTest {
         val change = round
 
         assertEquals(
-            listOf(ClockCueKind.CHIME, ClockCueKind.LEVEL_CHANGE),
+            listOf(ClockCueKind.SOUND, ClockCueKind.LEVEL_CHANGE),
             ClockCueTimes.crossed(timeline, change - 5_000, change + ClockCueTimes.GRACE_MILLIS).map { it.kind },
         )
         assertTrue(ClockCueTimes.crossed(timeline, change - 5_000, change + ClockCueTimes.GRACE_MILLIS + 1).isEmpty())
-        // The minute warning has its own two seconds: 3 s late is too late, even though the chime isn't due yet
+        // The minute warning has its own two seconds: 3 s late is too late, even though the cue sound isn't due yet
         val warning = round - 60_000
         assertTrue(ClockCueTimes.crossed(timeline, warning - 1_000, warning + 3_000).isEmpty())
     }
@@ -79,7 +79,7 @@ class ClockCueTimesTest {
         assertEquals(
             listOf(
                 ClockCue(ClockCueKind.ONE_MINUTE, breakEnd - 60_000),
-                ClockCue(ClockCueKind.CHIME, breakEnd - 4_000, CueEvent.BREAK_END),
+                ClockCue(ClockCueKind.SOUND, breakEnd - 4_000, CueEvent.BREAK_END),
                 ClockCue(ClockCueKind.LEVEL_CHANGE, breakEnd, CueEvent.BREAK_END),
             ),
             everySecond(withBreaks, breakOne.startSeconds * 1_000L, breakEnd),
@@ -91,7 +91,7 @@ class ClockCueTimesTest {
         // Breaks after levels 4 and 8; 12 levels, the last three overtime
         val withBreaks = timeline(BreakSettings(everyLevels = 4, lengthMinutes = 10))
         val changes = everySecond(withBreaks, 0L, withBreaks.endSeconds * 1_000L)
-            .filter { it.kind == ClockCueKind.CHIME }
+            .filter { it.kind == ClockCueKind.SOUND }
             .map { it.event }
         val level = CueEvent.LEVEL_UP
         assertEquals(
@@ -100,7 +100,7 @@ class ClockCueTimesTest {
                 List(3) { level } + CueEvent.GAME_OVER,
             changes,
         )
-        // The change itself names the same event as its chime; the minute warning is its own
+        // The change itself names the same event as its cue sound; the minute warning is its own
         val all = everySecond(withBreaks, 0L, withBreaks.endSeconds * 1_000L)
         assertEquals(changes, all.filter { it.kind == ClockCueKind.LEVEL_CHANGE }.map { it.event })
         assertTrue(all.filter { it.kind == ClockCueKind.ONE_MINUTE }.all { it.event == CueEvent.ONE_MINUTE })
@@ -116,7 +116,7 @@ class ClockCueTimesTest {
 
         assertTrue(cues.none { it.kind == ClockCueKind.ONE_MINUTE })
         assertEquals(oneMinute.segments.size, cues.count { it.kind == ClockCueKind.LEVEL_CHANGE })
-        assertEquals(oneMinute.segments.size, cues.count { it.kind == ClockCueKind.CHIME })
+        assertEquals(oneMinute.segments.size, cues.count { it.kind == ClockCueKind.SOUND })
     }
 
     @Test
@@ -133,16 +133,16 @@ class ClockCueTimesTest {
     }
 
     @Test
-    fun `the chime keeps its old timing exactly`() {
-        // Before PP-083 the clock chimed when a look passed (change - 4 s), unless the look was more
+    fun `the cue sound keeps its old timing exactly`() {
+        // Before PP-083 the clock played its cue sound when a look passed (change - 4 s), unless the look was more
         // than 2 s after the change itself. Every change of a timeline with breaks, overtime included.
         val timeline = timeline(BreakSettings(everyLevels = 3, lengthMinutes = 5))
         val end = timeline.endSeconds * 1_000L
 
-        val bySecond = everySecond(timeline, 0L, end).filter { it.kind == ClockCueKind.CHIME }.map { it.atMillis }
+        val bySecond = everySecond(timeline, 0L, end).filter { it.kind == ClockCueKind.SOUND }.map { it.atMillis }
         assertEquals(timeline.segments.map { it.endSeconds * 1_000L - 4_000 }, bySecond)
         // One look across the whole game comes too late for all of them but the last
-        val oneLook = ClockCueTimes.crossed(timeline, -1L, end).filter { it.kind == ClockCueKind.CHIME }
+        val oneLook = ClockCueTimes.crossed(timeline, -1L, end).filter { it.kind == ClockCueKind.SOUND }
         assertEquals(listOf(end - 4_000), oneLook.map { it.atMillis })
     }
 }

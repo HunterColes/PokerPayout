@@ -16,8 +16,8 @@
     <string name="bank_undo">Undo</string>
     <string name="bank_undo_last">Undo: %1$s</string>
     <string name="bank_undo_nothing">Nothing to undo</string>
-    <string name="bank_mute">Mute the clock\'s chime</string>
-    <string name="bank_unmute">Turn the clock\'s chime back on</string>
+    <string name="bank_mute">Mute cue sounds</string>
+    <string name="bank_unmute">Unmute cue sounds</string>
     <string name="bank_more">More options</string>
     <string name="bank_reset_menu">Reset bank…</string>
 

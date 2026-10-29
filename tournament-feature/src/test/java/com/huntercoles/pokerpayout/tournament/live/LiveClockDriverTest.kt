@@ -136,7 +136,7 @@ class LiveClockDriverTest {
         advance(1_100) // one minute left
         assertEquals(listOf(SilentCue.ONE_MINUTE), buzzes)
         verify(exactly = 0) { sound.playSound(any()) }
-        advance(56_000) // 4 s left: the chime
+        advance(56_000) // 4 s left: the cue sound
         verify(exactly = 1) { sound.playSound(R.raw.blind_level_up) }
         assertEquals(listOf(SilentCue.ONE_MINUTE), buzzes)
         advance(4_000) // the change

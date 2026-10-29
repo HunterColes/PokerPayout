@@ -14,7 +14,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * The sound packs: today's sounds are the default pack (the chime at every change, nothing with a
+ * The sound packs: today's sounds are the default pack (the cue sound at every change, nothing with a
  * minute left), packs are picked by an id that is saved under a key of its own, and a saved id no
  * pack has any more plays the default rather than nothing.
  */
@@ -40,9 +40,9 @@ class SoundPacksTest {
         assertNull(classic.soundFor(CueEvent.ONE_MINUTE))
     }
 
-    /** PP-111: the champion gets the chime, as the end of the clock does; the other big moments show without a sound. */
+    /** PP-111: the champion gets the cue sound, as the end of the clock does; the other big moments show without a sound. */
     @Test
-    fun theClassicPackChimesForTheChampionOnly() {
+    fun theClassicPackHasACueSoundForTheChampionOnly() {
         assertEquals(R.raw.blind_level_up, SoundPacks.Classic.soundFor(CueEvent.CHAMPION))
         assertNull(SoundPacks.Classic.soundFor(CueEvent.BIG_MOMENT))
     }

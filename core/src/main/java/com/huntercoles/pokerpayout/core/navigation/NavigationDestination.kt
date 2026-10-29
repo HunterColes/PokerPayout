@@ -41,7 +41,11 @@ sealed class NavigationDestination {
     @Serializable
     data object Music : NavigationDestination()
 
-    /** The cue sound packs, each sound heard before it's picked (Tools > Sound). */
+    /**
+     * Cue sounds: the clock's sound screen, its switch (the bells' mute) and volume, and the cue
+     * sound packs, each sound heard before it's picked (Tools > Sound and music, and the clock's
+     * "Sound settings", #79).
+     */
     @Serializable
     data object CueSounds : NavigationDestination()
 

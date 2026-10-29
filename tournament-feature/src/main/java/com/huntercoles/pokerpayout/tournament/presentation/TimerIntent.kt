@@ -15,7 +15,7 @@ sealed class TimerIntent {
     /**
      * D5: adds [minutes] to the time left in the current level or break (negative takes time off).
      * The clock stays inside the segment: +1 can't go past its full length, and -1 stops a second
-     * before its end, so the level change and its chime still happen.
+     * before its end, so the level change and its cue sound still happen.
      */
     data class NudgeMinutes(val minutes: Int) : TimerIntent()
 
@@ -25,7 +25,7 @@ sealed class TimerIntent {
     /** S4: the host ticks off (or un-ticks) the current break's color-up. Saved per break. */
     data class MarkColorUpDone(val done: Boolean = true) : TimerIntent()
 
-    /** The top bar's bell: chimes on or off (the same setting as Tools, Sound). */
+    /** The top bar's bell: cue sounds on or off (the same setting as the switch on Cue sounds and the Bank's bell). */
     data object ToggleMute : TimerIntent()
 
     // Blind setup

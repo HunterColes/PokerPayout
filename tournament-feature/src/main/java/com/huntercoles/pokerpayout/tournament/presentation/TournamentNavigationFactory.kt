@@ -25,7 +25,8 @@ class TournamentNavigationFactory @Inject constructor(
                 TournamentScreen(
                     onOpenBank = { openTab(NavigationDestination.Bank) },
                     onOpenPayouts = { openTab(NavigationDestination.Payouts) },
-                    onOpenSound = { openTab(NavigationDestination.Tools) },
+                    // #79: "Sound settings" and the bell's long press open Cue sounds itself, not the Tools list
+                    onOpenSound = { openTab(NavigationDestination.CueSounds) },
                     // PP-111: the champion's screen, once the night is saved
                     onOpenHistory = { openTab(NavigationDestination.History) },
                 )
@@ -34,8 +35,9 @@ class TournamentNavigationFactory @Inject constructor(
     }
 
     /**
-     * A link from the Tournament tab to another tab ("Record in Bank", the payouts row, the bell's
-     * long press) opens it as a tab tap does: on top of Tournament once, so Back comes home (B16).
+     * A link from the Tournament tab to another tab or a tool's screen ("Record in Bank", the payouts
+     * row, "Sound settings" and the bell's long press) opens it as a tab tap does: on top of
+     * Tournament once, so Back comes home (B16). A tool's screen keeps Tools selected (`NavTab`).
      */
     private fun openTab(tab: NavigationDestination) {
         navigationManager.navigate(object : NavigationCommand {

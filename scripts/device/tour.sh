@@ -1425,37 +1425,24 @@ s_tools() {
   ui scroll-to "text=Split the prizes" --max 4
   ui assert-text "text=END OF THE NIGHT" "text=Split the prizes" "text=A deal: stop early and share what's left by chips" \
     text=History || return 1
-  # The Sound section comes after the tools: on a phone it is below the fold
-  ui scroll-to "Test chime" --max 6
-  ui assert-text "text=SOUND AND MUSIC" text=Sound "desc=Chime volume" "Test chime"
+  # The Sound and music section comes after the tools: on a phone it is below the fold. The cue
+  # sounds' switch and volume live on Cue sounds (#79); the row says whether they are on.
+  ui scroll-to "text=Cue sounds" --max 6
+  ui assert-text "text=SOUND AND MUSIC" "text=Cue sounds" "text=On · Classic"
 }
-# The Sound row is one switch; the uiautomator node that holds "Sound" and is checkable.
-sound_checked() { # prints true/false from the last dump
-  python3 - "$PP_UI_LAST_XML" <<'PY'
-import sys, xml.etree.ElementTree as ET
-for n in ET.parse(sys.argv[1]).iter("node"):
-    if n.get("checkable") == "true" and any(d.get("text") == "Sound" for d in n.iter("node")):
-        print(n.get("checked"))
-        break
-PY
+s_sound_settings() {
+  # #79: the clock's ⋮ > Sound settings opens Cue sounds itself (it used to land on the top of the
+  # Tools list), with Tools selected; Back comes home to the clock.
+  tab Tournament
+  ui tap "desc=More options"
+  ui tap "text=Sound settings"
+  ui assert-text "text=Cue sounds" desc=Back "desc=Cue sound volume" "text~=The music has its own volume" || return 1
+  require_tab_selected Tools || return 1
+  ui back
+  ui assert "desc=More options" || return 1
+  require_tab_selected Tournament
 }
-s_sound_off() {
-  ui tap text=Sound
-  ui assert "desc=Chime volume" || return 1
-  local state; state="$(sound_checked)"; echo "sound switch checked=$state"
-  [[ "$state" == false ]] || { echo "[ui] FAIL the sound switch didn't turn off"; return 1; }
-  # With the sound off the volume and the test chime rest
-  ui find "desc=Chime volume" | grep -q DISABLED || { echo "[ui] FAIL volume still enabled while muted"; return 1; }
-}
-s_sound_on() {
-  ui tap text=Sound
-  ui assert "desc=Chime volume" || return 1
-  local state; state="$(sound_checked)"; echo "sound switch checked=$state"
-  [[ "$state" == true ]] || { echo "[ui] FAIL the sound switch didn't turn back on"; return 1; }
-  ui tap "Test chime"                          # plays the level chime once; must not crash
-  ui assert-text "Test chime" "desc=Chime volume"
-}
-# Cue sounds and music (Tools > Sound) ----------------------------------------
+# Cue sounds and music (Tools > Sound and music) --------------------------------
 # "true" when the control holding the text $2 (a switch, a radio, a segment) is on, in dump $1.
 control_on() { # $1 = dump, $2 = text
   python3 - "$1" "$2" <<'PY'
@@ -1467,17 +1454,52 @@ for n in ET.parse(sys.argv[1]).iter("node"):
         break
 PY
 }
+# The cue sounds' switch is one row; the checkable node that holds its description.
+sound_checked() { # prints true/false from the last dump
+  python3 - "$PP_UI_LAST_XML" <<'PY'
+import sys, xml.etree.ElementTree as ET
+for n in ET.parse(sys.argv[1]).iter("node"):
+    if n.get("checkable") == "true" and any("The music has its own volume" in (d.get("text") or "") for d in n.iter("node")):
+        print(n.get("checked"))
+        break
+PY
+}
 s_cue_sounds() {
-  # S18: Cue sounds, from the Sound section: the classic pack picked, each moment's sound played
-  # on a tap, the minute warning's slot empty, Tools still selected.
-  ui scroll-to "text=Cue sounds" --max 4
+  # S18: Cue sounds, from the Sound and music section: the switch and the volume on top, the
+  # classic pack picked, each moment's sound played on a tap, the minute warning's slot empty,
+  # Tools still selected.
+  tab Tools
+  ui scroll-to "text=Cue sounds" --max 6
   ui tap "text=Cue sounds"
-  ui assert-text "text=Cue sounds" desc=Back "text=Classic" "desc=Play New level, Classic" "text=No sound" || return 1
+  ui assert-text "text=Cue sounds" desc=Back "desc=Cue sound volume" "text=Classic" "desc=Play New level, Classic" \
+    "text=No sound" || return 1
   require_tab_selected Tools || return 1
   local picked; picked="$(control_on "$PP_UI_LAST_XML" Classic)"; echo "classic picked=$picked"
   [[ "$picked" == true ]] || { echo "[ui] FAIL the classic pack isn't picked"; return 1; }
-  ui tap "desc=Play New level, Classic"        # plays the chime once; must not crash
+  ui scroll-to "desc=Play New level, Classic" --max 4
+  ui tap "desc=Play New level, Classic"        # plays the cue sound once; must not crash
   ui assert-text "text=Classic" "desc=Play Game over, Classic"
+}
+s_sound_off() {
+  ui scroll-to "text~=The music has its own volume" --dir up --max 6
+  ui tap "text~=The music has its own volume"
+  ui assert "desc=Cue sound volume" || return 1
+  local state; state="$(sound_checked)"; echo "cue sounds switch checked=$state"
+  [[ "$state" == false ]] || { echo "[ui] FAIL the cue sounds switch didn't turn off"; return 1; }
+  # With the cue sounds off the volume rests; the screen says so, and a preview still plays
+  ui find "desc=Cue sound volume" | grep -q DISABLED || { echo "[ui] FAIL volume still enabled while muted"; return 1; }
+  ui assert-text "text~=Cue sounds are off" || return 1
+  ui scroll-to "desc=Play New level, Classic" --max 4
+  ui tap "desc=Play New level, Classic"        # a preview plays even when muted; must not crash
+}
+s_sound_on() {
+  ui scroll-to "text~=The music has its own volume" --dir up --max 6
+  ui tap "text~=The music has its own volume"
+  ui assert "desc=Cue sound volume" || return 1
+  local state; state="$(sound_checked)"; echo "cue sounds switch checked=$state"
+  [[ "$state" == true ]] || { echo "[ui] FAIL the cue sounds switch didn't turn back on"; return 1; }
+  ui find "desc=Cue sound volume" | grep -q DISABLED && { echo "[ui] FAIL volume still resting with the cue sounds on"; return 1; }
+  ui assert-text "desc=Cue sound volume" "text=Classic"
 }
 s_music() {
   # S18: Music, from the Sound section: no songs yet, nothing built in yet; Play with the clock
@@ -2323,10 +2345,11 @@ step history-merge-undo   "Keep Alice: merged at once; UNDO takes it back"      
 step currency             "Tools > Currency (S25): pick the euro, row says so"  s_currency
 step currency-payouts     "Payouts in euros: 1.234,50 €, rows still add up"     s_currency_payouts
 step currency-back        "Back to the dollar: Payouts in dollars again"        s_currency_back
-step tools                "Tools tab: tool list and Sound (S7)"                 s_tools
-step sound-off            "Sound off: switch off, volume and chime rest"        s_sound_off
-step sound-on             "Sound back on; test chime"                           s_sound_on
+step tools                "Tools tab: tool list and Sound and music (S7)"       s_tools
+step sound-settings       "Clock's Sound settings opens Cue sounds (#79)"       s_sound_settings
 step cue-sounds           "Cue sounds (S18): the classic pack, each sound plays" s_cue_sounds
+step sound-off            "Cue sounds off: volume rests, previews still play"   s_sound_off
+step sound-on             "Cue sounds back on"                                  s_sound_on
 step music                "Music (S18): no songs yet; play with the clock"      s_music
 step music-song           "Music: a song from the file picker plays, pauses"    s_music_song
 step hand-ranks           "Hand ranks (S12): how often by the river, kickers"   s_hand_ranks

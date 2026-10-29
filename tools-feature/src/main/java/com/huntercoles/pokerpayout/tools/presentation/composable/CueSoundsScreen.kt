@@ -31,6 +31,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.audio.packs.CueEvent
 import com.huntercoles.pokerpayout.core.audio.packs.SoundPack
+import com.huntercoles.pokerpayout.core.constants.AudioConstants
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.components.PokerIconButton
@@ -41,7 +42,7 @@ import com.huntercoles.pokerpayout.tools.presentation.CueSoundsIntent
 import com.huntercoles.pokerpayout.tools.presentation.CueSoundsUiState
 import com.huntercoles.pokerpayout.tools.presentation.CueSoundsViewModel
 
-/** The Cue sounds route (Tools > Sound > Cue sounds). */
+/** The Cue sounds route: Tools > Sound and music > Cue sounds, and the clock's "Sound settings". */
 @Composable
 fun CueSoundsRoute(onBack: () -> Unit, viewModel: CueSoundsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -49,10 +50,12 @@ fun CueSoundsRoute(onBack: () -> Unit, viewModel: CueSoundsViewModel = hiltViewM
 }
 
 /**
- * Cue sounds (S18), stateless: each sound pack with a sound per moment (a new level, a minute left,
- * a break starting and ending, the game over, and the night's big moments: the bubble, the final
- * table, heads-up and the champion, PP-111), each one played on a tap, and the pack the clock plays
- * picked. An empty slot says so. With the sound off, it says the clock plays none of them.
+ * Cue sounds (S18), stateless, the clock's one sound screen (#79): the cue sounds on or off (the
+ * bells' mute) and their volume, then each sound pack with a sound per moment (a new level, a
+ * minute left, a break starting and ending, the game over, and the night's big moments: the bubble,
+ * the final table, heads-up and the champion, PP-111), each one played on a tap, and the pack the
+ * clock plays picked. An empty slot says so. A preview plays even with the cue sounds off (hearing
+ * it is the point); with them off, the screen says so. The music is apart, on its own screen.
  */
 @Composable
 fun CueSoundsContent(
@@ -74,6 +77,7 @@ fun CueSoundsContent(
                 .padding(start = PokerDimens.Gutter, end = PokerDimens.Gutter, top = 4.dp, bottom = PokerDimens.Gutter),
             verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
+            OnOffCard(state = state, onIntent = onIntent)
             if (!state.soundOn) {
                 Text(
                     text = stringResource(R.string.cue_sounds_off),
@@ -95,6 +99,32 @@ fun CueSoundsContent(
                 color = PokerColors.Chalk,
             )
         }
+    }
+}
+
+/** The cue sounds on or off, and how loud; the volume is kept while they are off. */
+@Composable
+private fun OnOffCard(state: CueSoundsUiState, onIntent: (CueSoundsIntent) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(PokerDimens.CornerCard))
+            .background(PokerColors.FeltGreen)
+            .padding(PokerDimens.Gutter),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+    ) {
+        SwitchRow(
+            title = stringResource(R.string.tools_sound_title),
+            description = stringResource(R.string.tools_sound_description, AudioConstants.LEVEL_CHANGE_SOUND_LEAD_SECONDS),
+            checked = state.soundOn,
+            onChange = { onIntent(CueSoundsIntent.SetSoundOn(it)) },
+        )
+        VolumeRow(
+            volume = state.volume,
+            enabled = state.soundOn,
+            label = stringResource(R.string.tools_volume),
+            onVolume = { onIntent(CueSoundsIntent.SetVolume(it)) },
+        )
     }
 }
 

@@ -38,7 +38,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.audio.packs.SoundPacks
-import com.huntercoles.pokerpayout.core.constants.AudioConstants
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
@@ -55,11 +54,11 @@ import com.huntercoles.pokerpayout.tools.presentation.ToolsHomeUiState
 import kotlin.math.roundToInt
 
 /**
- * Sound, inline (it used to be a volume dialog behind a "Settings" tile): the chime on or off, its
- * volume, a button to hear it, and the way to the cue sound packs. Turning the sound off keeps the
- * volume for when it comes back. Then the quiet cues (PP-083), each its own switch and independent
- * of the sound, so a muted phone still buzzes and flashes; then the music, with a play button; and,
- * only while the app's notifications are off, the way to turn them on for the live clock (PP-081).
+ * Sound and music, inline on the Tools tab: the way to Cue sounds (the cue sounds on or off, their
+ * volume and the packs, #79), saying whether they are on and which pack plays. Then the quiet cues
+ * (PP-083), each its own switch and independent of the cue sounds, so a muted phone still buzzes and
+ * flashes; then the music, with a play button; and, only while the app's notifications are off, the
+ * way to turn them on for the live clock (PP-081).
  */
 @Composable
 internal fun SoundSection(
@@ -76,29 +75,11 @@ internal fun SoundSection(
             .padding(PokerDimens.Gutter),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        SwitchRow(
-            title = stringResource(R.string.tools_sound_title),
-            description = stringResource(R.string.tools_sound_description, AudioConstants.LEVEL_CHANGE_SOUND_LEAD_SECONDS),
-            checked = state.soundOn,
-            onChange = { onIntent(ToolsHomeIntent.SetSoundOn(it)) },
-        )
-        VolumeRow(
-            volume = state.volume,
-            enabled = state.soundOn,
-            label = stringResource(R.string.tools_volume),
-            onVolume = { onIntent(ToolsHomeIntent.SetVolume(it)) },
-        )
-        PokerButton(
-            text = stringResource(R.string.tools_test_chime),
-            onClick = { onIntent(ToolsHomeIntent.TestChime) },
-            variant = PokerButtonVariant.Secondary,
-            size = PokerButtonSize.Small,
-            icon = PokerIcons.Bell,
-            enabled = state.soundOn,
-        )
+        val pack = stringResource(SoundPacks.byId(state.soundPack).name)
+        val onOrOff = if (state.soundOn) R.string.tools_cue_sounds_on else R.string.tools_cue_sounds_off
         LinkRow(
             title = stringResource(R.string.tools_cue_sounds_title),
-            description = stringResource(SoundPacks.byId(state.soundPack).name),
+            description = stringResource(onOrOff, pack),
             onClick = { onOpen(NavigationDestination.CueSounds) },
         )
         HorizontalDivider(color = PokerColors.FeltLine)
@@ -212,7 +193,7 @@ private fun NotificationsOff(onAllow: () -> Unit) {
     }
 }
 
-/** A volume slider, quiet to loud, and the volume in percent. TalkBack hears [label] ("Chime volume"). */
+/** A volume slider, quiet to loud, and the volume in percent. TalkBack hears [label] ("Cue sound volume"). */
 @Composable
 internal fun VolumeRow(volume: Float, enabled: Boolean, label: String, onVolume: (Float) -> Unit) {
     val volumeLabel = label

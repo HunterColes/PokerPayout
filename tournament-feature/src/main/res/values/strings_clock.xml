@@ -12,8 +12,8 @@
     <string name="clock_subtitle_finished">Finished</string>
     <!-- Tablets: "Level 6 of 9 · running · 7 of 9 left" -->
     <string name="clock_subtitle_with_players">%1$s · %2$d of %3$d left</string>
-    <string name="clock_mute">Mute chimes</string>
-    <string name="clock_unmute">Unmute chimes</string>
+    <string name="clock_mute">Mute cue sounds</string>
+    <string name="clock_unmute">Unmute cue sounds</string>
     <string name="clock_sound_settings">Sound settings</string>
     <string name="clock_table_view">Table view</string>
     <string name="clock_exit_table_view">Exit table view</string>

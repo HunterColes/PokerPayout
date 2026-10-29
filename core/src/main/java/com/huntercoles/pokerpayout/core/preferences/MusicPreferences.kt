@@ -14,7 +14,7 @@ import javax.inject.Singleton
 
 /**
  * The music's settings and playlist (Tools > Sound > Music). The settings are in a file of their own
- * (`music_prefs`), so nothing here can touch a key the chime or the clock saved. The playlist and
+ * (`music_prefs`), so nothing here can touch a key the cue sound or the clock saved. The playlist and
  * where a song was paused are about this phone's files, so they live in [PhonePrefs.FILE], which no
  * backup takes (PP-137); older versions kept them in `music_prefs`, and they move once. The keys
  * at the foot of this file are saved data: never rename one.
@@ -48,7 +48,7 @@ class MusicPreferences @Inject constructor(@ApplicationContext context: Context)
         phone.edit().putString(PLAYLIST_KEY, PlaylistCodec.encode(playlist)).apply()
     }
 
-    /** The music's own volume, 0 to 1, apart from the chime's. */
+    /** The music's own volume, 0 to 1, apart from the cue sound's. */
     fun getVolume(): Float = prefs.getFloat(VOLUME_KEY, DEFAULT_VOLUME)
 
     fun setVolume(volume: Float) {

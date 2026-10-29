@@ -102,7 +102,7 @@ class BackupViewModelTest {
 
     private val snackbar get() = snackbars.hostState.currentSnackbarData?.visuals
 
-    /** The fixtures' three nights and a quieter chime, saved to [saved]; then the phone starts afresh. */
+    /** The fixtures' three nights and a quieter cue sound, saved to [saved]; then the phone starts afresh. */
     private fun backupSaved() {
         HistoryFixtures.nights.reversed().forEach { nights.add(it) }
         AudioPreferences(context).setVolume(0.4f)

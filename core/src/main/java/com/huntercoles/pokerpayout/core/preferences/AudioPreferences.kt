@@ -11,9 +11,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * The Sound section's settings (Tools, S7): the chime's volume and mute, and the quiet cues (PP-083)
- * that vibrate the phone and flash the clock at each level change and with one minute left; and the
- * cue sound pack the clock plays.
+ * The clock's sound settings: the cue sounds' volume and mute (Tools > Cue sounds, and the bells on
+ * the clock and the Bank), the quiet cues (PP-083) that vibrate the phone and flash the clock at
+ * each level change and with one minute left, and the cue sound pack the clock plays.
  */
 @Singleton
 @Suppress("TooManyFunctions") // a getter and a setter per saved setting

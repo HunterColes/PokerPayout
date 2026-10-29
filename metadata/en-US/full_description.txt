@@ -6,7 +6,7 @@ TOURNAMENT CLOCK
 • Set up the night once: players, buy-in, bounty, rebuys and late entry (each with a cutoff), add-ons, food and an optional house rake. Save it as a preset, or start from a ready-made night
 • Blinds from four numbers: game length, level length, starting stack and smallest chip. Every level is a multiple of your smallest chip, and a setup that can't work says why and offers the nearest fix
 • A blind timer with big digits, the next level, ±1 minute nudges, breaks with a note and a big-blind ante. It keeps time through sleep, restarts and reboots
-• The running clock in the notifications and on the lock screen, with a chime, a vibration or a flash for each new level
+• The running clock in the notifications and on the lock screen, with a cue sound, a vibration or a flash for each new level
 • Color-ups on breaks, and overtime levels if the game runs long
 • Turn the phone sideways for a full-screen table view, with knockouts right from the clock
 • The big moments on the clock: the bubble, in the money, the final table, heads-up and the champion

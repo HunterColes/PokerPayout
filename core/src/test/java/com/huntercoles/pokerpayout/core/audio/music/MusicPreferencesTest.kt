@@ -15,7 +15,7 @@ import kotlin.random.Random
 
 /**
  * The music's saved settings and playlist: the settings in a file of their own (`music_prefs`, so no
- * key of the chime's or the clock's can be touched), the playlist and the paused song's place in the
+ * key of the cue sound's or the clock's can be touched), the playlist and the paused song's place in the
  * phone's own file (`phone_prefs`, which no backup takes, PP-137), moved there once from where 1.4.6
  * saved them; defaults for a fresh install, the playlist back exactly as saved (songs, order, the one
  * playing, shuffle and its order, repeat), and text that can't be read coming back as an empty
@@ -88,7 +88,7 @@ class MusicPreferencesTest {
         assertEquals(setOf("volume", "auto_play", "break_music"), raw().all.keys)
         assertEquals(setOf("position_ref", "position_ms"), phone().all.keys)
         assertEquals("QUIET", raw().getString("break_music", null))
-        // Nothing went to the chime's file
+        // Nothing went to the cue sound's file
         assertTrue(context.getSharedPreferences("audio_prefs", Context.MODE_PRIVATE).all.isEmpty())
     }
 

@@ -1,0 +1,4 @@
+- Sound settings in the clock's menu now opens the sound screen: the on/off switch, the volume and the sound packs with their previews, together. Back returns to the clock.
+- One name for the mute: the clock's bell, the Bank's bell and the switch all say "cue sounds". Your saved settings carry over.
+- "Test chime" is gone: the play buttons on the sound screen play the same sound, even while muted.
+…

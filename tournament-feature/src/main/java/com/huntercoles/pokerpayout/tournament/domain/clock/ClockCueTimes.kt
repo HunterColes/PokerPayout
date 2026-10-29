@@ -5,8 +5,8 @@ import com.huntercoles.pokerpayout.core.constants.AudioConstants.LEVEL_CHANGE_SO
 
 /** The moments the clock calls out. */
 enum class ClockCueKind {
-    /** The chime, a few seconds before a level, a break or the game ends, so it peaks on the change. */
-    CHIME,
+    /** The cue sound, a few seconds before a level, a break or the game ends, so it peaks on the change. */
+    SOUND,
 
     /** The level (or break) changes: vibrate and flash (PP-083). */
     LEVEL_CHANGE,
@@ -27,11 +27,11 @@ data class ClockCue(
 )
 
 /**
- * When the clock's cues fall, from the timeline alone. Every segment (level or break) has a chime
+ * When the clock's cues fall, from the timeline alone. Every segment (level or break) has a cue sound
  * [LEVEL_CHANGE_SOUND_LEAD_SECONDS] before its end, a level change at its end, and a one-minute
  * warning when it is longer than a minute.
  *
- * Crossing-based, as the chime always was (B17): a cue sounds when a look at the clock passes it,
+ * Crossing-based, as the cue sound always was (B17): a cue sounds when a look at the clock passes it,
  * so pausing or resuming can't skip or repeat one, and one more than [GRACE_MILLIS] stale (the
  * device slept through it) stays silent rather than sounding late.
  */
@@ -60,13 +60,13 @@ object ClockCueTimes {
         val segment = timeline.segments[index]
         val change = changeAt(timeline, index)
         val end = segment.endSeconds * MILLIS_PER_SECOND
-        val chime = end - LEVEL_CHANGE_SOUND_LEAD_SECONDS * MILLIS_PER_SECOND
+        val sound = end - LEVEL_CHANGE_SOUND_LEAD_SECONDS * MILLIS_PER_SECOND
         val warning = end - WARNING_MILLIS
         return listOfNotNull(
             Due(ClockCue(ClockCueKind.ONE_MINUTE, warning, CueEvent.ONE_MINUTE), warning + GRACE_MILLIS)
                 .takeIf { segment.durationSeconds * MILLIS_PER_SECOND > WARNING_MILLIS },
-            // The chime keeps its old window: until GRACE_MILLIS after the change itself
-            Due(ClockCue(ClockCueKind.CHIME, chime, change), end + GRACE_MILLIS),
+            // The cue sound keeps its old window: until GRACE_MILLIS after the change itself
+            Due(ClockCue(ClockCueKind.SOUND, sound, change), end + GRACE_MILLIS),
             Due(ClockCue(ClockCueKind.LEVEL_CHANGE, end, change), end + GRACE_MILLIS),
         )
     }

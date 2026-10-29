@@ -197,9 +197,9 @@ class TournamentInteractionTest {
     @Test
     fun `the bell mutes on a tap and opens Sound on a hold`() {
         show(fixture.running, TournamentUi(mode = TournamentMode.Running))
-        tap("Mute chimes")
+        tap("Mute cue sounds")
         assertEquals(listOf(TimerIntent.ToggleMute), timerIntents)
-        compose.onNodeWithContentDescription("Mute chimes").performTouchInput { longClick() }
+        compose.onNodeWithContentDescription("Mute cue sounds").performTouchInput { longClick() }
         compose.waitForIdle()
         assertEquals(listOf("sound"), opened)
     }

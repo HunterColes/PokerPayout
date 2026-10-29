@@ -378,7 +378,7 @@ class TimerViewModelControlsTest {
     }
 
     @Test
-    fun `the bell mutes and unmutes the chimes`() {
+    fun `the bell mutes and unmutes the cue sounds`() {
         val viewModel = newViewModel()
         assertFalse(viewModel.state.isMuted)
 

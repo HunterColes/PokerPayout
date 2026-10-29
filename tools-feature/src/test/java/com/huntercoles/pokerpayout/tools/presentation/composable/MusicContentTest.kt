@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.tools.presentation.composable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -175,7 +176,7 @@ class MusicContentTest {
         showCues(MusicFixtures.cueSounds)
         compose.onNodeWithContentDescription("Play New level, Classic").performClick()
         compose.onNodeWithContentDescription("Play Game over, Classic").performScrollTo().performClick()
-        // PP-111: the champion's slot has the chime; the other big moments' is empty
+        // PP-111: the champion's slot has the cue sound; the other big moments' is empty
         compose.onNodeWithContentDescription("Play Champion, Classic").performScrollTo().performClick()
         assertEquals("the minute and the big moments", 2, compose.onAllNodesWithText("No sound").fetchSemanticsNodes().size)
         compose.onNodeWithContentDescription("Play 1 minute left, Classic").assertDoesNotExist()
@@ -198,15 +199,32 @@ class MusicContentTest {
     }
 
     @Test
-    fun withTheSoundOffTheScreenSaysTheClockPlaysNone() {
+    fun withTheCueSoundsOffTheScreenSaysTheClockPlaysNoneAndThePreviewsStillPlay() {
         showCues(MusicFixtures.cueSoundsOff)
-        compose.onNodeWithText("Sound is off", substring = true).assertExists()
+        compose.onNodeWithText("Cue sounds are off", substring = true).assertExists()
+        compose.onNodeWithText("You can still hear each one here", substring = true).assertExists()
+        compose.onNode(hasContentDescription("Cue sound volume")).assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Play New level, Classic").performScrollTo().assertIsEnabled().performClick()
+        assertEquals(listOf<CueSoundsIntent>(CueSoundsIntent.Preview(SoundPacks.CLASSIC_ID, CueEvent.LEVEL_UP)), cueIntents)
     }
 
     @Test
-    fun withTheSoundOnThereIsNothingToSay() {
+    fun withTheCueSoundsOnThereIsNothingToSay() {
         showCues(MusicFixtures.cueSounds)
-        compose.onNodeWithText("Sound is off", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Cue sounds are off", substring = true).assertDoesNotExist()
+        compose.onNode(hasContentDescription("Cue sound volume")).assertIsEnabled()
+        compose.onNodeWithText("70%").assertExists()
+    }
+
+    @Test
+    fun theCueSoundsSwitchIsOneSwitchAndSaysTheMusicIsApart() {
+        // #79: the bells' mute, by the same name; the music keeps its own volume
+        showCues(MusicFixtures.cueSounds)
+        val cueSwitch = compose.onNode(hasText("Cue sounds") and isSwitch)
+        cueSwitch.assertIsOn()
+        compose.onNodeWithText("The music has its own volume", substring = true).assertExists()
+        cueSwitch.performClick()
+        assertEquals(listOf<CueSoundsIntent>(CueSoundsIntent.SetSoundOn(false)), cueIntents)
     }
 
     private val isSwitch = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)

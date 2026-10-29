@@ -50,7 +50,7 @@ internal object MusicFixtures {
         tracks = songs + MusicTrack("bundled:chips", "Stacks of Chips"),
     )
 
-    val cueSounds = CueSoundsUiState(packs = SoundPacks.all, selected = SoundPacks.CLASSIC_ID, soundOn = true)
+    val cueSounds = CueSoundsUiState(packs = SoundPacks.all, selected = SoundPacks.CLASSIC_ID, soundOn = true, volume = 0.7f)
 
     val cueSoundsOff = cueSounds.copy(soundOn = false)
 }

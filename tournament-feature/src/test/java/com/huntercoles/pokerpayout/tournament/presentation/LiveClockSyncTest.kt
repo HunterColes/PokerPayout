@@ -286,7 +286,7 @@ class LiveClockSyncTest {
     }
 
     @Test
-    fun `with vibration off the clock does not vibrate, and the chime is untouched`() {
+    fun `with vibration off the clock does not vibrate, and the cue sound is untouched`() {
         audioPreferences.setVibrateCues(false)
         val viewModel = newViewModel()
         viewModel.send(TimerIntent.ToggleTimer)

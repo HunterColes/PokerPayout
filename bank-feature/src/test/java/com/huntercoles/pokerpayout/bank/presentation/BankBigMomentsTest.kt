@@ -181,7 +181,7 @@ class BankBigMomentsTest {
         bank.send(BankIntent.Undo)
         assertFalse("the top bar's Undo closes the champion's screen", clock.state.winnerOpen)
         assertNull(clock.state.table.championName)
-        verify(exactly = 1) { sound.playSound(R.raw.blind_level_up) } // the classic pack's chime, for the champion
+        verify(exactly = 1) { sound.playSound(R.raw.blind_level_up) } // the classic pack's cue sound, for the champion
     }
 
     @Test

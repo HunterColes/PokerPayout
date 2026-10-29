@@ -3,6 +3,28 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.24 (on master, not published)
+
+Sound settings, in one place (#79):
+
+- **Sound settings opens its own screen:** the clock's ⋮ > Sound settings (and holding the bell)
+  used to land on the top of the Tools list, with the sound controls far below. It now opens Cue
+  sounds, which holds the switch, the volume and the sound packs with their previews; Back comes
+  home to the clock. Tools > Sound and music keeps a Cue sounds row that says whether they are on
+  and which pack plays, then Vibrate, Flash and Music as before.
+- **One name for the mute:** the clock's bell, the Bank's bell and the switch all turn the same
+  setting on or off, and now all say so: "Mute cue sounds" / "Unmute cue sounds", and "Cue sounds"
+  on the switch. The switch says the music has its own volume: muting the cue sounds never stops
+  the music. Saved settings are untouched (same keys).
+- **Test chime is folded into the previews:** it played the picked pack's "New level" sound, which
+  the play buttons on Cue sounds already do. Previews play even with the cue sounds off (hearing
+  one is the point), and the screen says so.
+- **"Chime" is now "cue sound"** everywhere you read it: the app, the store description and the
+  README.
+- About #79 (the test sound sounded distorted): the sound itself stays as it is. Anyone who
+  doesn't like it can mute it with the bell or the switch, and Vibrate and Flash still mark each
+  level.
+
 ## 1.4.23 (on master, not published)
 
 The store listing, found by the words people search for:

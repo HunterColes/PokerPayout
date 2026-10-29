@@ -41,8 +41,8 @@ data class CueActions(val sound: CueEvent?, val vibrate: SilentCue?, val flash: 
                 ClockCueKind.ONE_MINUTE in kinds -> SilentCue.ONE_MINUTE
                 else -> null
             }
-            // So does the change's sound (the chime's moment) over the minute's
-            val sound = crossed.firstOrNull { it.kind == ClockCueKind.CHIME }?.event
+            // So does the change's sound (the cue sound's moment) over the minute's
+            val sound = crossed.firstOrNull { it.kind == ClockCueKind.SOUND }?.event
                 ?: crossed.firstOrNull { it.kind == ClockCueKind.ONE_MINUTE }?.event
             return CueActions(
                 sound = sound,
@@ -85,7 +85,7 @@ class ClockCues @Inject constructor(
     /** The pack the host picked; the default if it is gone. */
     private fun pack(): SoundPack = packs.firstOrNull { it.id == audioPreferences.getSoundPack() } ?: SoundPacks.default
 
-    /** Loads the pack's level sound (the chime) ahead of its first use. */
+    /** Loads the pack's level sound (the cue sound) ahead of its first use. */
     fun preload() {
         pack().soundFor(CueEvent.LEVEL_UP)?.let(soundManager::preloadSound)
     }

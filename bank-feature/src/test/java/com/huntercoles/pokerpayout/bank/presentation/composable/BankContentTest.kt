@@ -178,7 +178,7 @@ class BankContentTest {
         val viewModel = BankScenes.midGame(kit)
         show(viewModel.uiState.value)
         compose.onNodeWithContentDescription("Undo: Rita is out in 8th · bounty to Marcus").performClick()
-        compose.onNodeWithContentDescription("Mute the clock's chime").performClick()
+        compose.onNodeWithContentDescription("Mute cue sounds").performClick()
         compose.onNodeWithContentDescription("More options").performClick()
         compose.onNodeWithText("Reset bank…").performClick()
         assertEquals(listOf(BankIntent.Undo, BankIntent.ToggleMute, BankIntent.ShowResetConfirm), sent)

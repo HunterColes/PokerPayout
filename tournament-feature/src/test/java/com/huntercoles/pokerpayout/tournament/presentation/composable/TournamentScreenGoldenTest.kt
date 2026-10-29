@@ -446,7 +446,8 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
             night = NightSave.NotOver,
         )
         private val MIN_TOUCH = 48.dp
-        private val TOP_BAR_BUTTONS = listOf("Reset tournament", "Mute chimes", "Unmute chimes", "Table view", "More options")
+        private val TOP_BAR_BUTTONS =
+            listOf("Reset tournament", "Mute cue sounds", "Unmute cue sounds", "Table view", "More options")
         private val ADAPTIVE_GOLDENS =
             listOf("Z1_clock_small", "Z3_table_small_land", "Z4_clock_tablet", "S2_clock_running_font2x")
 

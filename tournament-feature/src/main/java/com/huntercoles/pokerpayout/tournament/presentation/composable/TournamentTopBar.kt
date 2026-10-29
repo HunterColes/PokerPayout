@@ -40,7 +40,7 @@ import com.huntercoles.pokerpayout.core.R as CoreR
 /**
  * The Tournament tab's header: the tab's name (renaming the tab, D3, renames it), a live subtitle
  * ("Level 6 of 9 · running"), and its actions. Before the start: reset. With a clock: the bell (mute
- * the chimes; hold it for Tools, Sound), ⤢ (the table view), and ⋮ (New tournament…, Sound settings).
+ * the cue sounds; hold it for Cue sounds), ⤢ (the table view), and ⋮ (New tournament…, Sound settings).
  * On small phones the bell moves into ⋮.
  */
 @Composable
@@ -109,7 +109,7 @@ private fun subtitle(timer: TimerUiState, mode: TournamentMode, wide: Boolean): 
     }
 }
 
-/** The bell: tap to mute or unmute the chimes; hold to open Tools, Sound. */
+/** The bell: tap to mute or unmute the cue sounds; hold to open Cue sounds. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BellButton(muted: Boolean, actions: TournamentActions) {

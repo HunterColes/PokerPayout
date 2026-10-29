@@ -70,7 +70,7 @@
   nearest fix.
 - A clock with big digits, the next level, ±1 minute nudges, breaks with a note and a big-blind
   ante. It keeps time through sleep, restarts and reboots.
-- The running clock in the notifications and on the lock screen, with a chime, a vibration or a
+- The running clock in the notifications and on the lock screen, with a cue sound, a vibration or a
   flash at each new level.
 - Color-ups on breaks, overtime levels if the game runs long, and a full-screen table view when
   you turn the phone sideways, with Knock out right on it.
@@ -113,7 +113,7 @@ In the order of the Tools tab, which follows a night:
   prizes to the cent.
 - **History:** saved nights, season points and the player of the year, and a CSV export for a
   spreadsheet.
-- **Sound and music:** a chime before each level, break and the end; vibrate and flash for quiet
+- **Sound and music:** a cue sound before each level, break and the end; vibrate and flash for quiet
   rooms; and a playlist of songs from your phone that plays with the clock.
 - **Currency:** $, €, £, ₹, ¥, kr and more, each written its own way, or no symbol at all.
 - **Backup:** everything the app saves in one file, kept where you choose, and restored from it.

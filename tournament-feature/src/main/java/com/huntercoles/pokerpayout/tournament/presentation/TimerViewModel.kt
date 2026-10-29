@@ -365,7 +365,7 @@ class TimerViewModel @Inject constructor(
     private fun show(elapsedMillis: Long, playCues: Boolean) {
         val state = _uiState.value
         val timeline = state.timeline
-        // The chime, and the quiet cues (PP-083), for every cue passed since the last look
+        // The cue sound, and the quiet cues (PP-083), for every cue passed since the last look
         if (playCues) cues.play(ClockCueTimes.crossed(timeline, lastSeenMillis, elapsedMillis))
         lastSeenMillis = elapsedMillis
 
@@ -420,7 +420,7 @@ class TimerViewModel @Inject constructor(
     /**
      * D5: ± [minutes] of time left in the current level or break. Adding time can't go past the
      * segment's full length; taking it off stops a second before the end, so the change (and its
-     * chime, if the clock is running) still happens. Saved like any jump.
+     * cue sound, if the clock is running) still happens. Saved like any jump.
      */
     private fun nudge(minutes: Int) {
         val state = _uiState.value
@@ -434,7 +434,7 @@ class TimerViewModel @Inject constructor(
         if (target == elapsed) return
         anchor = anchorAt(target, running = anchor.running)
         timerPreferences.saveClock(anchor)
-        // Time added: the level's end (and its chime) are ahead again. Time taken off: a chime the
+        // Time added: the level's end (and its cue sound) are ahead again. Time taken off: a cue sound the
         // nudge skipped over is played by the next look, as when a tick runs late.
         if (target < elapsed) lastSeenMillis = target
         show(target, playCues = anchor.running)
@@ -713,7 +713,7 @@ class TimerViewModel @Inject constructor(
     }
 
     /**
-     * The rebuy cutoff (Tournament setup) and the chime's mute (Tools, Sound), as they change; and a
+     * The rebuy cutoff (Tournament setup) and the cue sound's mute (Tools > Cue sounds), as they change; and a
      * whole setup put in before the start (a preset loaded, PP-032), read again as a blind change.
      */
     private fun observeSettings() {

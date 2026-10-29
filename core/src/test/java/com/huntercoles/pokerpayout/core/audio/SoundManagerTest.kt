@@ -16,7 +16,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The chime plays at the volume the Sound slider is at now, not the one it was at when the chime
+ * The cue sound plays at the volume the Sound slider is at now, not the one it was at when the cue sound
  * was loaded (B12, PP-019: moving the slider did nothing until the app restarted), and the music
  * dips under a cue only while it sounds. The player records what it is asked to do; Robolectric's
  * AudioManager grants focus.
@@ -53,10 +53,10 @@ class SoundManagerTest {
 
     @Test
     fun `the music dips while a cue sounds and comes back up after`() {
-        sound.preloadSound(CHIME)
+        sound.preloadSound(CUE)
         player.finishPreparing()
 
-        sound.playSound(CHIME)
+        sound.playSound(CUE)
         assertEquals(listOf("dip"), music)
 
         player.finishPlaying()
@@ -65,7 +65,7 @@ class SoundManagerTest {
 
     @Test
     fun `a cue that fails lets the music back up`() {
-        sound.playSound(CHIME) // not loaded: loads, then starts once ready
+        sound.playSound(CUE) // not loaded: loads, then starts once ready
         player.finishPreparing()
         assertEquals(listOf("dip"), music)
 
@@ -76,69 +76,69 @@ class SoundManagerTest {
     @Test
     fun `with the sound off nothing dips`() {
         audioPreferences.setMuted(true)
-        sound.preloadSound(CHIME)
+        sound.preloadSound(CUE)
         player.finishPreparing()
-        sound.playSound(CHIME)
+        sound.playSound(CUE)
         assertEquals(emptyList<String>(), music)
     }
 
     @Test
     fun `a preview plays even with the sound off`() {
-        sound.preloadSound(CHIME)
+        sound.preloadSound(CUE)
         player.finishPreparing()
         player.calls.clear()
 
         audioPreferences.setMuted(true)
-        sound.previewSound(CHIME)
+        sound.previewSound(CUE)
 
         assertEquals(listOf("volume 1.0", "start"), player.calls)
     }
 
     @Test
-    fun `a loaded chime plays at the volume the slider is at now (B12)`() {
+    fun `a loaded cue sound plays at the volume the slider is at now (B12)`() {
         audioPreferences.setVolume(0.8f)
-        sound.preloadSound(CHIME)
+        sound.preloadSound(CUE)
         player.finishPreparing()
         player.calls.clear()
 
         audioPreferences.setVolume(0.3f)
-        sound.playSound(CHIME)
+        sound.playSound(CUE)
 
         assertEquals(listOf("volume 0.3", "start"), player.calls)
     }
 
     @Test
-    fun `turned down to nothing, the chime is silent`() {
-        sound.preloadSound(CHIME)
+    fun `turned down to nothing, the cue sound is silent`() {
+        sound.preloadSound(CUE)
         player.finishPreparing()
         player.calls.clear()
 
         audioPreferences.setVolume(0f)
-        sound.playSound(CHIME)
+        sound.playSound(CUE)
 
         assertEquals(listOf("volume 0.0", "start"), player.calls)
     }
 
     @Test
-    fun `with the sound off, the chime doesn't play`() {
-        sound.preloadSound(CHIME)
+    fun `with the sound off, the cue sound doesn't play`() {
+        sound.preloadSound(CUE)
         player.finishPreparing()
         player.calls.clear()
 
         audioPreferences.setMuted(true)
-        sound.playSound(CHIME)
+        sound.playSound(CUE)
 
         assertEquals(emptyList<String>(), player.calls)
     }
 
     @Test
-    fun `a new clock screen preloading the chime lets the one sounding play on`() {
-        sound.preloadSound(CHIME)
+    fun `a new clock screen preloading the cue sound lets the one sounding play on`() {
+        sound.preloadSound(CUE)
         player.finishPreparing()
-        sound.playSound(CHIME)
+        sound.playSound(CUE)
         player.calls.clear()
 
-        sound.preloadSound(CHIME) // what a new clock screen does as it opens
+        sound.preloadSound(CUE) // what a new clock screen does as it opens
         assertEquals(emptyList<String>(), player.calls)
         assertEquals(listOf("dip"), music)
 
@@ -148,9 +148,9 @@ class SoundManagerTest {
 
     @Test
     fun `a cue cut short by loading another sound lets the music back up`() {
-        sound.preloadSound(CHIME)
+        sound.preloadSound(CUE)
         player.finishPreparing()
-        sound.playSound(CHIME)
+        sound.playSound(CUE)
 
         sound.preloadSound(OTHER_SOUND)
 
@@ -167,10 +167,10 @@ class SoundManagerTest {
         val broken = SoundManager(BrokenSoundFiles(app), audioPreferences, ducking)
         broken.newPlayer = { player }
 
-        broken.preloadSound(CHIME)
+        broken.preloadSound(CUE)
         assertEquals(listOf("release"), player.calls.filter { it == "release" })
 
-        broken.playSound(CHIME)
+        broken.playSound(CUE)
         assertEquals(listOf("release", "release"), player.calls.filter { it == "release" })
         assertEquals(emptyList<String>(), music)
     }
@@ -250,7 +250,7 @@ class SoundManagerTest {
     }
 
     private companion object {
-        const val CHIME = 1
+        const val CUE = 1
         const val OTHER_SOUND = 2
     }
 }

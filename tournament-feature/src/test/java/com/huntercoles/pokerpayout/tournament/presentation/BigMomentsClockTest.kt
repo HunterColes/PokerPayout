@@ -202,7 +202,7 @@ class BigMomentsClockTest {
     }
 
     @Test
-    fun theClassicPackPlaysTheChimeForTheChampionAndNothingForTheOthers() {
+    fun theClassicPackPlaysTheCueSoundForTheChampionAndNothingForTheOthers() {
         audioPreferences.setSoundPack(SoundPacks.CLASSIC_ID)
         startedClock()
         toTheBubble()

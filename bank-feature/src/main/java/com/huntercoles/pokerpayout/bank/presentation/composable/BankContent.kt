@@ -61,7 +61,7 @@ import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 import com.huntercoles.pokerpayout.core.R as CoreR
 
 /**
- * The Bank (S5 v2), stateless: the top bar (live subtitle, Undo, the chime bell and ⋮), the money
+ * The Bank (S5 v2), stateless: the top bar (live subtitle, Undo, the cue sounds' bell and ⋮), the money
  * summary, the labelled sticky header and one line per player, in sections. While a seat has no
  * name, "Pick tonight's players" (from the regulars, PP-110) sits above the list; ⋮ has it always.
  * Below 360 dp closed columns fold into the line under each name (Z2); from 840 dp the list gets

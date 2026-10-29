@@ -32,23 +32,23 @@ class ToolsTabScreenTest(private val config: ScreenConfig) {
     val screen = ScreenTestRule(config)
 
     @Test
-    fun toolsDefault() = check("S7_tools_default", ToolsHomeUiState(soundOn = true, volume = 0.7f))
+    fun toolsDefault() = check("S7_tools_default", ToolsHomeUiState(soundOn = true))
 
     @Test
-    fun toolsMuted() = check("S7_tools_muted", ToolsHomeUiState(soundOn = false, volume = 0.7f))
+    fun toolsMuted() = check("S7_tools_muted", ToolsHomeUiState(soundOn = false))
 
-    /** PP-083: the quiet cues switched off, the chime on. */
+    /** PP-083: the quiet cues switched off, the cue sounds on. */
     @Test
     fun toolsCuesOff() = check(
         "S7_tools_cues_off",
-        ToolsHomeUiState(soundOn = true, volume = 0.7f, vibrate = false, flash = false),
+        ToolsHomeUiState(soundOn = true, vibrate = false, flash = false),
     )
 
     /** PP-081: the app's notifications are off, so the section offers to turn them on (a tablet: no vibrator). */
     @Test
     fun toolsNotificationsOff() = check(
         "S7_tools_notifications_off",
-        ToolsHomeUiState(soundOn = false, volume = 0.7f, canVibrate = false, notificationsOff = true),
+        ToolsHomeUiState(soundOn = false, canVibrate = false, notificationsOff = true),
     )
 
     /** Songs in the list, one playing: the Music row with its pause button. */
@@ -57,7 +57,6 @@ class ToolsTabScreenTest(private val config: ScreenConfig) {
         "S7_tools_music",
         ToolsHomeUiState(
             soundOn = true,
-            volume = 0.7f,
             music = MusicSummary(songs = 5, playing = true, current = "Midnight Card Room"),
         ),
     )

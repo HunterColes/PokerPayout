@@ -109,6 +109,8 @@ class NavBarTest {
             NavigationDestination.ChipCalculator,
             NavigationDestination.SeatDraw,
             NavigationDestination.History,
+            NavigationDestination.Music,
+            NavigationDestination.CueSounds,
             NavigationDestination.Backup,
             NavigationDestination.Currency,
             NavigationDestination.SidePots,
@@ -120,6 +122,24 @@ class NavBarTest {
             listOf("Tournament", "Bank", "Payouts").forEach { tab(it).assertIsNotSelected() }
             back()
         }
+    }
+
+    @Test
+    fun theClocksSoundSettingsOpensCueSoundsUnderToolsAndBackComesHome() {
+        // #79: the clock's "Sound settings" and the bell's long press, as TournamentNavigationFactory opens them
+        showApp()
+        compose.runOnUiThread {
+            nav.navigate(NavigationDestination.CueSounds) {
+                popUpTo<NavigationDestination.Tournament> { inclusive = false }
+                launchSingleTop = true
+            }
+        }
+        compose.waitForIdle()
+        assertOn(NavigationDestination.CueSounds)
+        tab("Tools").assertIsSelected()
+        back()
+        assertOn(NavigationDestination.Tournament)
+        assertNull("Tournament should be the only screen left", nav.previousBackStackEntry)
     }
 
     @Test
@@ -205,6 +225,8 @@ class NavBarTest {
                 builder.composable<NavigationDestination.ChipCalculator> { Text(SCREEN + NavigationDestination.ChipCalculator) }
                 builder.composable<NavigationDestination.SeatDraw> { Text(SCREEN + NavigationDestination.SeatDraw) }
                 builder.composable<NavigationDestination.History> { Text(SCREEN + NavigationDestination.History) }
+                builder.composable<NavigationDestination.Music> { Text(SCREEN + NavigationDestination.Music) }
+                builder.composable<NavigationDestination.CueSounds> { Text(SCREEN + NavigationDestination.CueSounds) }
                 builder.composable<NavigationDestination.Backup> { Text(SCREEN + NavigationDestination.Backup) }
                 builder.composable<NavigationDestination.Currency> { Text(SCREEN + NavigationDestination.Currency) }
                 builder.composable<NavigationDestination.SidePots> { Text(SCREEN + NavigationDestination.SidePots) }

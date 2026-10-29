@@ -23,7 +23,7 @@ import org.robolectric.annotation.GraphicsMode
  * fits and is never clipped at any scroll position, 48 dp targets that don't overlap. Goldens on
  * [DeviceMatrix.goldens]: `S18_music_empty` (a fresh install), `S18_music_playing` (five songs, one
  * playing, one whose file has gone, with the clock and quieter on breaks), `S18_music_editing` (move
- * and remove), `S18_cue_sounds` and `S18_cue_sounds_off` (the sound switched off). Every file gone
+ * and remove), `S18_cue_sounds` and `S18_cue_sounds_off` (the cue sounds off). Every file gone
  * and the built-in songs (none ship yet) get the layout checks too.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)

@@ -374,7 +374,7 @@ class TimerViewModelTest {
     }
 
     @Test
-    fun `sleeping through a level change lands on the right level without a stale chime`() {
+    fun `sleeping through a level change lands on the right level without a stale cue sound`() {
         val viewModel = newViewModel()
         viewModel.send(TimerIntent.ToggleTimer)
         advanceSeconds(60)
@@ -498,7 +498,7 @@ class TimerViewModelTest {
     }
 
     @Test
-    fun `the end chime plays when the final level is resumed after a pause (B17)`() {
+    fun `the end cue sound plays when the final level is resumed after a pause (B17)`() {
         val viewModel = newViewModel()
         viewModel.goToLevel(12) // the last overtime level
         viewModel.send(TimerIntent.ToggleTimer)
@@ -541,7 +541,7 @@ class TimerViewModelTest {
     // ------------------------------------------------------------------ PP-026: breaks and antes
 
     @Test
-    fun `breaks appear in the schedule and on the clock, with a chime at start and end`() {
+    fun `breaks appear in the schedule and on the clock, with a cue sound at start and end`() {
         val viewModel = newViewModel()
         viewModel.send(
             TimerIntent.UpdateBreakEvery(4),

@@ -27,9 +27,11 @@ import org.robolectric.RobolectricTestRunner
 import com.huntercoles.pokerpayout.core.R as CoreR
 
 /**
- * The cue sound picker: it shows the saved pack (the classic one on a fresh install), picking a pack
- * saves it, an id no pack has is ignored, and a slot's sound plays on request even with the sound
- * off, while an empty slot plays nothing.
+ * Cue sounds, the clock's sound screen: the cue sounds on at full volume on a fresh install; the
+ * switch and the volume save under the keys the old volume dialog and the bells use (`is_muted`,
+ * `volume`); the saved pack shows (the classic one on a fresh install), picking a pack saves it, an
+ * id no pack has is ignored, and a slot's sound plays on request even with the cue sounds off,
+ * while an empty slot plays nothing.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -68,6 +70,62 @@ class CueSoundsViewModelTest {
         assertEquals(SoundPacks.Classic, state.picked)
         assertTrue(state.soundOn)
         assertEquals(SoundPacks.all, state.packs)
+    }
+
+    @Test
+    fun aFreshInstallHasTheCueSoundsOnAtFullVolume() {
+        val state = newViewModel().uiState.value
+        assertTrue(state.soundOn)
+        assertEquals(1f, state.volume, 0f)
+    }
+
+    @Test
+    fun showsTheVolumeAndMuteSavedByTheOldVolumeDialogAndTheBells() {
+        val context: Context = ApplicationProvider.getApplicationContext()
+        context.getSharedPreferences("audio_prefs", Context.MODE_PRIVATE).edit()
+            .putFloat("volume", 0.4f)
+            .putBoolean("is_muted", true)
+            .commit()
+        audio = AudioPreferences(context)
+        val state = newViewModel().uiState.value
+        assertFalse(state.soundOn)
+        assertEquals(0.4f, state.volume, 0f)
+    }
+
+    @Test
+    fun turningTheCueSoundsOffMutesAndKeepsTheVolume() {
+        val viewModel = newViewModel()
+        viewModel.acceptIntent(CueSoundsIntent.SetVolume(0.6f))
+        viewModel.acceptIntent(CueSoundsIntent.SetSoundOn(false))
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.soundOn)
+        assertEquals(0.6f, viewModel.uiState.value.volume, 0f)
+        assertTrue(audio.getIsMuted())
+        assertEquals(0.6f, audio.getVolume(), 0f)
+
+        viewModel.acceptIntent(CueSoundsIntent.SetSoundOn(true))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.soundOn)
+        assertFalse(audio.getIsMuted())
+    }
+
+    @Test
+    fun theVolumeStaysBetweenSilentAndFull() {
+        val viewModel = newViewModel()
+        viewModel.acceptIntent(CueSoundsIntent.SetVolume(1.5f))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1f, viewModel.uiState.value.volume, 0f)
+        viewModel.acceptIntent(CueSoundsIntent.SetVolume(-0.2f))
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(0f, viewModel.uiState.value.volume, 0f)
+    }
+
+    @Test
+    fun theSwitchLeavesTheQuietCuesAsTheyAre() {
+        newViewModel().acceptIntent(CueSoundsIntent.SetSoundOn(false))
+        assertTrue(audio.getVibrateCues())
+        assertTrue(audio.getFlashCues())
     }
 
     @Test

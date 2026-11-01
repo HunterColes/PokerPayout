@@ -38,7 +38,8 @@ import org.robolectric.annotation.GraphicsMode
  * The Payouts tab (S6) inside the app's shell on every cell of the device matrix, on the mockups'
  * game ([PayoutsGame]): text fits and isn't clipped at any scroll position, targets are 48 dp
  * without overlap. Goldens on [DeviceMatrix.goldens]: Standard / $5 / 3 places, Top-heavy, custom
- * weights, the finished night with names, and the settled night offering "Save this night" (PP-037);
+ * weights, the finished night with names, the settled night offering "Save this night" (PP-037),
+ * and a 30-character winner of a $123,456.78 pool (#49);
  * `S6_payouts_font2x` on its [DeviceMatrix.pinned] cells.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -182,6 +183,28 @@ class PayoutsTabScreenTest(private val config: ScreenConfig) {
             golden("S6_payouts_yen")
             assertRoundToOnOneLine("yen")
             check("Payouts, in yen")
+        }
+    }
+
+    /** #49: a 30-character winner and a $123,456.78 pool fit at every size and font scale. */
+    @Test
+    fun aLongNameAndABigPoolFit() {
+        game.longNight()
+        show()
+        assertEquals(30, PayoutsGame.LONG_NAME.length)
+        screen.compose.onNodeWithText("$123,456.78 prize pool", substring = true).assertExists()
+        golden("S6_payouts_long")
+        check("Payouts, long name and big pool")
+    }
+
+    /** #49: the same night in yen, whole yen: a ¥123,457 pool. */
+    @Test
+    fun aLongNameAndABigPoolFitInYen() {
+        withCurrency(AppCurrency.YEN) {
+            game.longNight()
+            show()
+            screen.compose.onNodeWithText("¥123,457 prize pool", substring = true).assertExists()
+            check("Payouts, long name and big pool in yen")
         }
     }
 

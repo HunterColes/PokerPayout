@@ -1,5 +1,7 @@
 package com.huntercoles.pokerpayout.tournament.presentation.payouts
 
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollTo
@@ -15,12 +17,15 @@ import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.testing.forEachScrollPosition
+import com.huntercoles.pokerpayout.core.testing.withCurrency
+import com.huntercoles.pokerpayout.core.utils.AppCurrency
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -151,6 +156,32 @@ class PayoutsTabScreenTest(private val config: ScreenConfig) {
         game.settled()
         show(PayoutsIntent.SaveNight)
         check("Payouts, night saved")
+    }
+
+    /** The "Round to" label sits on its own line above its control, so it never wraps to "Round / to". */
+    private fun assertRoundToOnOneLine(where: String) {
+        val layouts = mutableListOf<TextLayoutResult>()
+        screen.compose.onNodeWithText("Round to").performScrollTo()
+            .fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+        assertEquals("\"Round to\" lines in $where on ${config.id}", 1, layouts.single().lineCount)
+    }
+
+    @Test
+    fun roundToSitsOnOneLineAboveItsControl() {
+        game.midGame()
+        show()
+        assertRoundToOnOneLine("dollars")
+    }
+
+    /** The yen's rounding steps (¥100 / ¥500 / ¥1,000) are the widest labels the control carries. */
+    @Test
+    fun inYenTheRoundingChoicesFit() {
+        withCurrency(AppCurrency.YEN) {
+            game.midGame()
+            show()
+            assertRoundToOnOneLine("yen")
+            check("Payouts, in yen")
+        }
     }
 
     @Test

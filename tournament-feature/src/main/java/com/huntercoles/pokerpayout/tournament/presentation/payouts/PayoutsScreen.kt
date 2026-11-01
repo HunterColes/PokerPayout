@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -174,7 +173,7 @@ private const val HERO_EM_PER_CHAR = 0.55f
 @Composable
 private fun StructurePicker(state: PayoutsUiState, onIntent: (PayoutsIntent) -> Unit) {
     val labels = PayoutPreset.entries.associateWith { presetLabel(it) }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
         Text(
             stringResource(R.string.payouts_structure_label),
             style = MaterialTheme.typography.bodySmall,
@@ -194,12 +193,11 @@ private fun StructurePicker(state: PayoutsUiState, onIntent: (PayoutsIntent) -> 
 
 @Composable
 private fun RoundingPicker(state: PayoutsUiState, onIntent: (PayoutsIntent) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
         Text(
             text = stringResource(R.string.payouts_round_to),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
             color = PokerColors.Chalk,
-            modifier = Modifier.weight(1f),
         )
         PokerSegmentedControl(
             options = PayoutRounding.entries,
@@ -207,7 +205,6 @@ private fun RoundingPicker(state: PayoutsUiState, onIntent: (PayoutsIntent) -> U
             onSelect = { onIntent(PayoutsIntent.SelectRounding(it)) },
             label = { it.label },
             enabled = !state.isLocked,
-            modifier = Modifier.widthIn(max = 196.dp).fillMaxWidth(),
         )
     }
 }

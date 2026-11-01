@@ -192,6 +192,11 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         check("S2_clock_final_minutes", fixture.level(6, FINAL_MINUTES_LEFT), running)
         check("S2_clock_overtime", fixture.overtime, running, scroll = true)
         check("S2_clock_finished", fixture.finished, running, scroll = true)
+        // #11: a ¥430,000 prize pool (yen, no decimals) on the clock and, sideways, the table view
+        withCurrency(AppCurrency.YEN) {
+            val table = fixture.running.table.let { it.copy(prizePoolCents = it.prizePoolCents * YEN_SCALE) }
+            check("S2_clock_yen", fixture.running.copy(table = table), running, scroll = true)
+        }
         // Ready: the clock before its first start (the tab itself shows setup then).
         showAndCheck("S2_clock_ready", scroll = false) {
             Column(Modifier.fillMaxSize()) {
@@ -331,6 +336,12 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         showAndCheck("S29_winner_saved", scroll = true, golden = false) {
             TournamentContent(setup, over, running, TournamentActions(), winner = longName)
         }
+        // #11: yen (no decimals) at 1,000x, long names on the places and a rake: drawn on every golden cell
+        withCurrency(AppCurrency.YEN) {
+            showAndCheck("S29_winner_yen", scroll = true) {
+                TournamentContent(setup, over, running, TournamentActions(), winner = WINNER_YEN)
+            }
+        }
     }
 
     /** One player left, Dana: the champion. */
@@ -468,6 +479,7 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         private const val YEN_BOUNTY = 200_000L
         private const val YEN_ADD_ON = 500_000L
         private const val YEN_FOOD = 100_000L
+        private const val YEN_SCALE = 1_000L
 
         /** The mockups' night over: Dana wins the $450 pool, Standard to $5, her own bounty and Ben's. */
         private val WINNER = WinnerModel(
@@ -480,6 +492,20 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
                 PayoutRowModel(3, PRIZE_3RD, 21.1, "Priya"),
             ),
             night = NightSave.NotOver,
+        )
+
+        /** The same night in yen at 1,000x, with long names on the paid places and a 5% rake. */
+        private val WINNER_YEN = WINNER.copy(
+            championName = LONG_NAME,
+            prizeCents = WINNER.prizeCents * YEN_SCALE,
+            bountyCents = WINNER.bountyCents * YEN_SCALE,
+            rows = listOf(
+                PayoutRowModel(1, 22_500L * YEN_SCALE, 50.0, LONG_NAME),
+                PayoutRowModel(2, 13_000L * YEN_SCALE, 28.9, "Alexandria Whitfield"),
+                PayoutRowModel(3, PRIZE_3RD * YEN_SCALE, 21.1, "Priya"),
+            ),
+            rakeCents = RAKE * YEN_SCALE,
+            takenInCents = (22_500L + 13_000L + PRIZE_3RD + RAKE) * YEN_SCALE,
         )
         private val MIN_TOUCH = 48.dp
         private val TOP_BAR_BUTTONS =

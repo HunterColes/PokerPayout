@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -62,8 +64,11 @@ internal fun ClockHero(uiState: TimerUiState, width: Dp, cap: Dp, onIntent: ((Ti
             PokerEyebrow(
                 text = clockEyebrow(uiState),
                 color = eyebrowColor(uiState),
+                // As tall as a pill, so the digits stay put when PAUSED or FINAL MINUTE comes and goes
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
+                    .heightIn(min = PokerDimens.PillHeight)
+                    .wrapContentHeight()
                     .semantics { liveRegion = LiveRegionMode.Polite },
             )
             clockPills(uiState).forEach { PokerPill(it.text, tone = it.tone) }
@@ -242,7 +247,7 @@ internal fun WithWidth(modifier: Modifier = Modifier, content: @Composable (Dp) 
 }
 
 internal val ControlSize = 52.dp
-private val CompactControl = 48.dp
+private val CompactControl = PokerDimens.MinTouch
 private val PlayButtonSize = 76.dp
 private val CompactPlay = 64.dp
 private const val ICON_SHARE = 0.45f

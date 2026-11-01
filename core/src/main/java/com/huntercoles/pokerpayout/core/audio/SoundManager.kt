@@ -5,6 +5,9 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.RawRes
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -12,7 +15,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Plays the clock's cue sounds (the picked sound pack's).
+ * Plays the clock's cue sounds (the picked sound pack's, or a file the host picked: [playFile]).
  * Uses MediaPlayer for longer audio files (10+ seconds) with proper audio focus management.
  *
  * Note: SoundPool has a 1MB limit per sound (~5.6 seconds at 44.1kHz stereo),
@@ -21,6 +24,7 @@ import javax.inject.Singleton
  * While a cue sounds, [ducking] dips the music under it; the cue also asks for transient, duckable
  * audio focus, so another app's music dips too.
  */
+@Suppress("TooManyFunctions") // one player for the pack cues and a picked file, so both live here
 @Singleton
 class SoundManager @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -33,6 +37,11 @@ class SoundManager @Inject constructor(
 
     /** A cue is sounding: the music is dipped until it ends. */
     private var sounding = false
+
+    /** Fades out and stops a file cue at its end ([playFile]); null when none is due. */
+    private var fading: Runnable? = null
+
+    private val handler: Handler by lazy { Handler(Looper.getMainLooper()) }
 
     /** Makes each player; a test puts in one that records what it is asked to do. */
     internal var newPlayer: () -> MediaPlayer = { MediaPlayer() }
@@ -86,6 +95,104 @@ class SoundManager @Inject constructor(
 
     /** Plays [soundResId] once so the host can hear it (the cue sound picker), even with the sound off. */
     fun previewSound(@RawRes soundResId: Int) = start(soundResId)
+
+    /**
+     * Plays the sound file at [uri] (a content URI the host picked) from [fromMillis] into it, and
+     * stops it at [endMillis] with a short fade (0 plays it to the end). Respects mute, ducks the music
+     * and takes the audio focus like [playSound]. False when the file can't be opened: the caller then
+     * plays the pack's sound. A preloaded pack sound is let go and loads again on its next play.
+     */
+    fun playFile(uri: String, fromMillis: Long = 0, endMillis: Long = 0): Boolean =
+        audioPreferences.getIsMuted() || startFile(uri, fromMillis, endMillis)
+
+    /** Plays the file at [uri] like [playFile] so the host can hear it, even with the sound off. */
+    fun previewFile(uri: String, fromMillis: Long = 0, endMillis: Long = 0): Boolean =
+        startFile(uri, fromMillis, endMillis)
+
+    private fun startFile(uri: String, fromMillis: Long, endMillis: Long): Boolean {
+        releasePlayer()
+        // A cue cut short by this one is over: the music comes back up
+        if (sounding) ended()
+        val player = newPlayer()
+        val opened = try {
+            player.setAudioAttributes(attributes)
+            player.setDataSource(context, Uri.parse(uri))
+            true
+        } catch (ignored: Exception) {
+            false
+        }
+        val focused = opened &&
+            audioManager.requestAudioFocus(audioFocusRequest) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        if (!focused) {
+            runCatching { player.release() }
+            // No focus (a call): the file is fine, so the caller doesn't fall back to the pack
+            return opened
+        }
+        mediaPlayer = player
+        return try {
+            player.loadFile(fromMillis.coerceAtLeast(0), endMillis)
+            true
+        } catch (ignored: Exception) {
+            releasePlayer()
+            ended()
+            false
+        }
+    }
+
+    private fun MediaPlayer.loadFile(fromMillis: Long, endMillis: Long) {
+        val volume = audioPreferences.getVolume()
+        setVolume(volume, volume)
+        setOnPreparedListener { player ->
+            if (player !== mediaPlayer) return@setOnPreparedListener
+            if (fromMillis > 0) player.seekTo(fromMillis.toInt())
+            begin(player)
+            if (endMillis > 0) stopAt(player, endMillis - fromMillis, volume)
+        }
+        setOnCompletionListener { player ->
+            if (player !== mediaPlayer) return@setOnCompletionListener
+            cancelFade()
+            ended()
+        }
+        setOnErrorListener { player, _, _ ->
+            if (player === mediaPlayer) {
+                cancelFade()
+                ended()
+            }
+            true // handled
+        }
+        prepareAsync()
+    }
+
+    /** Fades [player] out over the last [FADE_MILLIS] (at most) of [playMillis], then stops it. */
+    private fun stopAt(player: MediaPlayer, playMillis: Long, volume: Float) {
+        val fadeMillis = FADE_MILLIS.coerceAtMost(playMillis.coerceAtLeast(0))
+        val stepMillis = fadeMillis / FADE_STEPS
+        val fade = object : Runnable {
+            private var step = 0
+
+            override fun run() {
+                if (player !== mediaPlayer) return
+                step++
+                if (step >= FADE_STEPS) {
+                    fading = null
+                    runCatching { player.stop() }
+                    releasePlayer()
+                    ended()
+                } else {
+                    val left = volume * (FADE_STEPS - step) / FADE_STEPS
+                    runCatching { player.setVolume(left, left) }
+                    handler.postDelayed(this, stepMillis)
+                }
+            }
+        }
+        fading = fade
+        handler.postDelayed(fade, (playMillis - fadeMillis + stepMillis).coerceAtLeast(0))
+    }
+
+    private fun cancelFade() {
+        fading?.let { handler.removeCallbacks(it) }
+        fading = null
+    }
 
     private fun start(@RawRes soundResId: Int) {
         try {
@@ -171,6 +278,7 @@ class SoundManager @Inject constructor(
      * Internal helper to release the MediaPlayer instance.
      */
     private fun releasePlayer() {
+        cancelFade()
         try {
             mediaPlayer?.apply {
                 if (isPlaying) {
@@ -186,5 +294,11 @@ class SoundManager @Inject constructor(
             currentSoundResId = -1
             isPrepared = false
         }
+    }
+
+    private companion object {
+        /** A file cue with an end fades out over this long before it (or over all of it, if shorter). */
+        const val FADE_MILLIS = 300L
+        const val FADE_STEPS = 6
     }
 }

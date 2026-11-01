@@ -23,8 +23,9 @@ import org.robolectric.annotation.GraphicsMode
  * fits and is never clipped at any scroll position, 48 dp targets that don't overlap. Goldens on
  * [DeviceMatrix.goldens]: `S18_music_empty` (a fresh install), `S18_music_playing` (five songs, one
  * playing, one whose file has gone, with the clock and quieter on breaks), `S18_music_editing` (move
- * and remove), `S18_cue_sounds` and `S18_cue_sounds_off` (the cue sounds off). Every file gone
- * and the built-in songs (none ship yet) get the layout checks too.
+ * and remove), `S18_cue_sounds`, `S18_cue_sounds_off` (the cue sounds off) and `S18_cue_sounds_custom`
+ * (the host's own file with its peak, #22). Every file gone, the built-in songs (none ship yet) and
+ * the own file missing with an end point get the layout checks too.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -54,6 +55,12 @@ class MusicScreenTest(private val config: ScreenConfig) {
     @Test
     fun cueSoundsOff() = cueSounds("S18_cue_sounds_off", MusicFixtures.cueSoundsOff)
 
+    @Test
+    fun cueSoundsCustom() = cueSounds("S18_cue_sounds_custom", MusicFixtures.cueSoundsCustom)
+
+    @Test
+    fun cueSoundsCustomMissing() = cueSounds(name = null, MusicFixtures.cueSoundsCustomMissing)
+
     private fun music(name: String?, state: MusicUiState) {
         screen.compose.setContent {
             InAppShell(NavTab.Tools) {
@@ -63,13 +70,13 @@ class MusicScreenTest(private val config: ScreenConfig) {
         check(name ?: "S18 (layout only)", golden = name)
     }
 
-    private fun cueSounds(name: String, state: CueSoundsUiState) {
+    private fun cueSounds(name: String?, state: CueSoundsUiState) {
         screen.compose.setContent {
             InAppShell(NavTab.Tools) {
                 CueSoundsContent(state, onIntent = {}, onBack = {})
             }
         }
-        check(name, golden = name)
+        check(name ?: "S18 cue sounds (layout only)", golden = name)
     }
 
     private fun check(label: String, golden: String?) {

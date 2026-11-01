@@ -58,7 +58,7 @@ import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
  */
 internal object SetupFieldStyle {
     val Label = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.5.sp, lineHeight = 16.sp)
-    val Number = PokerType.NumberM.copy(fontSize = 22.sp, lineHeight = 26.sp, color = PokerColors.CardWhite)
+    val Number = PokerType.NumberAmount.copy(color = PokerColors.CardWhite)
     val Text = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, color = PokerColors.CardWhite)
     val Prefix = Number.copy(fontWeight = FontWeight.Medium, color = PokerColors.Chalk)
     val Suffix = TextStyle(fontSize = 13.sp, lineHeight = 16.sp, color = PokerColors.Chalk)
@@ -90,7 +90,7 @@ internal fun SetupFieldDecoration(decor: FieldDecor, focused: Boolean, isEmpty: 
                 .clip(SetupFieldStyle.Shape)
                 .background(PokerColors.DarkGreen)
                 .border(edgeWidth, edgeColor, SetupFieldStyle.Shape)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .padding(horizontal = PokerDimens.SpacingMedium, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -195,7 +195,7 @@ internal fun <T> SetupSelectField(
                     .clip(SetupFieldStyle.Shape)
                     .background(PokerColors.DarkGreen)
                     .border(1.dp, PokerColors.FeltEdge, SetupFieldStyle.Shape)
-                    .padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+                    .padding(start = PokerDimens.SpacingMedium, end = PokerDimens.SpacingSmall, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(optionText(selected), style = SetupFieldStyle.Number, modifier = Modifier.weight(1f))

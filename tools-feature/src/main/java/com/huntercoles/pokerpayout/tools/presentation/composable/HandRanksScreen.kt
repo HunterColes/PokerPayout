@@ -101,10 +101,10 @@ fun HandRanksContent(fourColour: Boolean, onBack: () -> Unit, modifier: Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(start = PokerDimens.Gutter, end = PokerDimens.Gutter, top = 4.dp, bottom = PokerDimens.Gutter),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
             ) {
                 if (twoColumns) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
                         HandList(Hands.take(Hands.size / 2), 1, fourColour, Modifier.weight(1f))
                         HandList(Hands.drop(Hands.size / 2), Hands.size / 2 + 1, fourColour, Modifier.weight(1f))
                     }
@@ -128,7 +128,7 @@ private fun HandList(hands: List<HandExample>, first: Int, fourColour: Boolean, 
     Column(
         modifier = modifier
             .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(horizontal = PokerDimens.SpacingMedium, vertical = 4.dp),
     ) {
         hands.forEachIndexed { i, hand ->
             if (i > 0) HorizontalDivider(thickness = 1.dp, color = PokerColors.FeltLine)
@@ -145,7 +145,7 @@ private fun HandRow(number: Int, hand: HandExample, fourColour: Boolean) {
         modifier = Modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {}
-            .padding(top = 12.dp, bottom = 12.dp, end = 4.dp),
+            .padding(top = PokerDimens.SpacingMedium, bottom = PokerDimens.SpacingMedium, end = 4.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(verticalAlignment = Alignment.Top) {

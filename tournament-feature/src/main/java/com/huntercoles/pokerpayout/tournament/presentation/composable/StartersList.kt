@@ -64,7 +64,7 @@ private fun StarterItem(starter: StarterSetup, canLoad: Boolean, onIntent: (Pres
                     role = Role.Button,
                     onClick = { onIntent(PresetsIntent.LoadStarter(starter.starter)) },
                 )
-                .padding(vertical = 8.dp),
+                .padding(vertical = PokerDimens.SpacingSmall),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
@@ -100,18 +100,21 @@ private fun StarterMenu(starter: StarterSetup, name: String, onIntent: (PresetsI
     }
 }
 
-/** "3 h · 20-min levels · 5,000 chips · $20 buy-in · $5 bounty", with "ante from L7" when it has one. */
+/**
+ * "$20 buy-in · $5 bounty · 3 h · 20-min levels · 5,000 chips", with "ante from L7" when it has one:
+ * money first, as a saved preset's line reads, so the two lists scan the same way.
+ */
 @Composable
 private fun starterSummary(setup: PresetSetup): String {
     val formatter = rememberChipFormatter()
     val blinds = setup.blinds
     return listOfNotNull(
+        stringResource(R.string.strip_buy_in, money(setup.money.buyInCents)),
+        setup.money.bountyCents.takeIf { it > 0L }?.let { stringResource(R.string.strip_bounty, money(it)) },
         stringResource(R.string.strip_hours, blinds.durationMinutes / MINUTES_PER_HOUR),
         stringResource(R.string.strip_level_length, blinds.roundLengthMinutes),
         stringResource(R.string.strip_chips, formatter.format(blinds.startingChips)),
         blinds.anteFromLevel.takeIf { it > 0 }?.let { stringResource(R.string.strip_ante_from, it) },
-        stringResource(R.string.strip_buy_in, money(setup.money.buyInCents)),
-        setup.money.bountyCents.takeIf { it > 0L }?.let { stringResource(R.string.strip_bounty, money(it)) },
     ).joinToString(stringResource(R.string.strip_separator))
 }
 

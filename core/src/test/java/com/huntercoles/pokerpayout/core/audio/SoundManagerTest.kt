@@ -5,15 +5,25 @@ import android.content.ContextWrapper
 import android.content.res.AssetFileDescriptor
 import android.content.res.Resources
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.MediaPlayer
+import android.net.Uri
+import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowAudioManager
+import java.time.Duration
 
 /**
  * The cue sound plays at the volume the Sound slider is at now, not the one it was at when the cue sound
@@ -175,6 +185,116 @@ class SoundManagerTest {
         assertEquals(emptyList<String>(), music)
     }
 
+    // ------------------------------------------------------------------ a picked file (playFile)
+
+    @Test
+    fun `a file plays from its offset, fades and stops at its end, and lets the music back up`() {
+        assertTrue(sound.playFile(FILE, fromMillis = 1500, endMillis = 9000))
+        assertEquals(listOf("open $FILE", "volume 1.0", "prepare"), player.calls)
+        player.calls.clear()
+
+        player.finishPreparing()
+        assertEquals(listOf("seek 1500", "start"), player.calls)
+        assertEquals(listOf("dip"), music)
+        player.calls.clear()
+
+        // 7500 ms of play to 9000; nothing fades before its last 300 ms
+        later(7199)
+        assertEquals(emptyList<String>(), player.calls)
+        later(250)
+        assertTrue(player.calls.isNotEmpty() && player.calls.all { it.startsWith("volume ") })
+        assertFalse("stop" in player.calls)
+        assertEquals(listOf("dip"), music)
+
+        later(51)
+        assertTrue("stop" in player.calls)
+        assertEquals(listOf("dip", "up"), music)
+        assertNotNull(focus().lastAbandonedAudioFocusRequest)
+    }
+
+    @Test
+    fun `a file with no end plays to its end`() {
+        sound.playFile(FILE, fromMillis = 0, endMillis = 0)
+        player.finishPreparing()
+        assertEquals(listOf("open $FILE", "volume 1.0", "prepare", "start"), player.calls)
+
+        later(60_000)
+        assertFalse("stop" in player.calls)
+        player.finishPlaying()
+        assertEquals(listOf("dip", "up"), music)
+        assertNotNull(focus().lastAbandonedAudioFocusRequest)
+    }
+
+    @Test
+    fun `with the sound off a file doesn't play`() {
+        audioPreferences.setMuted(true)
+        assertTrue(sound.playFile(FILE, fromMillis = 1500, endMillis = 9000))
+        player.finishPreparing()
+
+        assertEquals(emptyList<String>(), player.calls)
+        assertEquals(emptyList<String>(), music)
+        assertNull(focus().lastAudioFocusRequest)
+    }
+
+    @Test
+    fun `a file preview plays even with the sound off`() {
+        audioPreferences.setMuted(true)
+        assertTrue(sound.previewFile(FILE, fromMillis = 200, endMillis = 0))
+        player.finishPreparing()
+
+        assertEquals(listOf("seek 200", "start"), player.calls.takeLast(2))
+        assertEquals(listOf("dip"), music)
+    }
+
+    @Test
+    fun `a file that can't be opened says so and holds no player or focus`() {
+        player.openFails = true
+
+        assertFalse(sound.playFile(FILE, fromMillis = 1500, endMillis = 9000))
+
+        assertEquals(listOf("release"), player.calls)
+        assertEquals(emptyList<String>(), music)
+        assertNull(focus().lastAudioFocusRequest)
+    }
+
+    @Test
+    fun `the clock's preloaded cue sound still plays after a file (hardening)`() {
+        sound.preloadSound(CUE)
+        player.finishPreparing()
+
+        sound.playFile(FILE, fromMillis = 1500, endMillis = 9000)
+        player.finishPreparing()
+        later(7500)
+        assertEquals(listOf("dip", "up"), music)
+        player.calls.clear()
+
+        sound.playSound(CUE) // loads again, then starts once ready
+        player.finishPreparing()
+        assertTrue("start" in player.calls)
+        assertEquals(listOf("dip", "up", "dip"), music)
+    }
+
+    @Test
+    fun `a pack cue that cuts a file short stops its fade`() {
+        sound.playFile(FILE, fromMillis = 0, endMillis = 2000)
+        player.finishPreparing()
+
+        sound.playSound(CUE)
+        player.finishPreparing()
+        player.calls.clear()
+
+        later(5000)
+        assertEquals(emptyList<String>(), player.calls)
+        assertEquals(listOf("dip"), music)
+    }
+
+    private fun later(millis: Long) = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(millis))
+
+    private fun focus(): ShadowAudioManager {
+        val app: Context = ApplicationProvider.getApplicationContext()
+        return shadowOf(app.getSystemService(Context.AUDIO_SERVICE) as AudioManager)
+    }
+
     /** The app's context, minus the sound files: the player here never reads one. */
     private class NoSoundFiles(base: Context) : ContextWrapper(base) {
         @Suppress("DEPRECATION")
@@ -198,6 +318,9 @@ class SoundManagerTest {
     /** A player that only writes down the volume it is given and when it starts. */
     private class RecordingPlayer : MediaPlayer() {
         val calls = mutableListOf<String>()
+
+        /** A picked file that can't be opened (its grant was taken back, or it was deleted). */
+        var openFails = false
         private var onPrepared: MediaPlayer.OnPreparedListener? = null
         private var onCompletion: MediaPlayer.OnCompletionListener? = null
         private var onError: MediaPlayer.OnErrorListener? = null
@@ -226,11 +349,24 @@ class SoundManagerTest {
             onError = listener
         }
 
-        override fun seekTo(msec: Int) = Unit
+        override fun seekTo(msec: Int) {
+            calls += "seek $msec"
+        }
+
+        override fun setDataSource(context: Context, uri: Uri) {
+            if (openFails) throw java.io.IOException("can't open $uri")
+            calls += "open $uri"
+        }
 
         override fun setAudioAttributes(attributes: AudioAttributes?) = Unit
 
-        override fun prepareAsync() = Unit
+        override fun prepareAsync() {
+            calls += "prepare"
+        }
+
+        override fun stop() {
+            calls += "stop"
+        }
 
         override fun isPlaying(): Boolean = false
 
@@ -252,5 +388,6 @@ class SoundManagerTest {
     private companion object {
         const val CUE = 1
         const val OTHER_SOUND = 2
+        const val FILE = "content://picked/cue.mp3"
     }
 }

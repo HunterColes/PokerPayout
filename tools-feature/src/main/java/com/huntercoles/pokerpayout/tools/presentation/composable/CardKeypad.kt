@@ -82,7 +82,10 @@ internal fun CardKeypad(
             .clip(dock.shape)
             .background(PokerColors.FeltDeep)
             .drawBehind { drawLine(PokerColors.DarkGold, Offset.Zero, Offset(size.width, 0f), strokeWidth = 1.dp.toPx()) }
-            .padding(start = 8.dp - KEY_INSET, end = 8.dp - KEY_INSET, top = 6.dp, bottom = 10.dp),
+            .padding(
+                start = PokerDimens.SpacingSmall - KEY_INSET, end = PokerDimens.SpacingSmall - KEY_INSET,
+                top = 6.dp, bottom = 10.dp,
+            ),
     ) {
         KeypadHeader(target, onIntent)
         KeyRows(state, target, onIntent, dock)
@@ -176,7 +179,7 @@ private fun KeypadHeader(target: SlotRef, onIntent: (OddsCalculatorIntent) -> Un
     }
     val separator = stringResource(R.string.odds_separator)
     FlowRow(
-        modifier = Modifier.fillMaxWidth().padding(start = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = PokerDimens.SpacingSmall),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(

@@ -54,7 +54,7 @@ internal fun BlindsCard(blinds: BlindsUp, modifier: Modifier = Modifier, wide: B
             .fillMaxWidth()
             .clip(CardShape)
             .background(PokerColors.FeltGreen)
-            .padding(16.dp)
+            .padding(PokerDimens.SpacingDefault)
             .semantics(mergeDescendants = true) {},
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -69,7 +69,10 @@ internal fun BlindsCard(blinds: BlindsUp, modifier: Modifier = Modifier, wide: B
                 // Blinds and ante share one fitted size, the ante a little smaller, so neither crowds out the other.
                 val together = listOfNotNull(current, ante).joinToString("  ")
                 val size = rememberFittedSize(together, PokerType.DisplayL, width, PhoneBlinds)
-                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+                ) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         PokerEyebrow(stringResource(R.string.clock_blinds))
                         WithWidth { column ->

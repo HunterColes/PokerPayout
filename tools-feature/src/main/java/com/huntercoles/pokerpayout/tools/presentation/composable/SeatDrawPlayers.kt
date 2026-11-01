@@ -48,7 +48,6 @@ import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonSize
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
-import com.huntercoles.pokerpayout.core.design.components.PokerStepper
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.tools.R
 import com.huntercoles.pokerpayout.tools.presentation.MAX_PLAYER_NAME
@@ -100,7 +99,7 @@ private fun FoldHeader(state: SeatDrawUiState, text: SeatDrawText, open: Boolean
                 role = Role.Button,
                 onClick = { onOpen(!open) },
             ),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -130,17 +129,19 @@ private fun FoldHeader(state: SeatDrawUiState, text: SeatDrawText, open: Boolean
 @Composable
 private fun PlayersSettings(state: SeatDrawUiState, text: SeatDrawText, onIntent: (SeatDrawIntent) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SettingRow(
+        StepperSetting(
             label = stringResource(R.string.seat_draw_players),
             value = state.players.size,
             range = SeatDrawer.MIN_PLAYERS..SeatDrawer.MAX_PLAYERS,
             onChange = { onIntent(SeatDrawIntent.SetPlayerCount(it)) },
+            stepperModifier = Modifier.widthIn(min = StepperWidth),
         )
-        SettingRow(
+        StepperSetting(
             label = stringResource(R.string.seat_draw_seats_per_table),
             value = state.seatsPerTable,
             range = SeatDrawer.MIN_SEATS_PER_TABLE..SeatDrawer.MAX_SEATS_PER_TABLE,
             onChange = { onIntent(SeatDrawIntent.SetSeatsPerTable(it)) },
+            stepperModifier = Modifier.widthIn(min = StepperWidth),
         )
         if (state.editingNames) {
             NameFields(state, onIntent)
@@ -151,11 +152,17 @@ private fun PlayersSettings(state: SeatDrawUiState, text: SeatDrawText, onIntent
                 color = PokerColors.CardWhite,
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Icon(PokerIcons.Seat, contentDescription = null, tint = PokerColors.Chalk, modifier = Modifier.size(18.dp))
             Text(text = text.plan(state.tableSizes), style = MaterialTheme.typography.bodyMedium, color = PokerColors.Chalk)
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+        ) {
             PokerButton(
                 text = stringResource(if (state.editingNames) R.string.seat_draw_names_done else R.string.seat_draw_edit_names),
                 onClick = { onIntent(SeatDrawIntent.EditNames(open = !state.editingNames)) },
@@ -175,28 +182,10 @@ private fun PlayersSettings(state: SeatDrawUiState, text: SeatDrawText, onIntent
     }
 }
 
-/** A label and its stepper, side by side when they fit, the stepper under the label when not. */
-@Composable
-private fun SettingRow(label: String, value: Int, range: IntRange, onChange: (Int) -> Unit) {
-    SideBySideOrStacked(
-        modifier = Modifier.fillMaxWidth(),
-        first = { Text(text = label, style = MaterialTheme.typography.titleSmall, color = PokerColors.CardWhite) },
-        second = {
-            PokerStepper(
-                value = value,
-                onValueChange = onChange,
-                range = range,
-                label = label,
-                modifier = Modifier.widthIn(min = StepperWidth),
-            )
-        },
-    )
-}
-
 /** One field per player, numbered; a blank one is drawn as its "Player N". */
 @Composable
 private fun NameFields(state: SeatDrawUiState, onIntent: (SeatDrawIntent) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
         state.players.forEachIndexed { index, name ->
             NameField(
                 number = index + 1,
@@ -246,7 +235,7 @@ private fun NameField(number: Int, value: String, placeholder: String, last: Boo
                     .clip(shape)
                     .background(PokerColors.DarkGreen)
                     .border(if (focused) 2.dp else 1.dp, if (focused) PokerColors.PokerGold else PokerColors.FeltEdge, shape)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(horizontal = PokerDimens.SpacingMedium, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

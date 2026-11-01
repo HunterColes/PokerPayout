@@ -63,8 +63,8 @@ internal fun PayoutsCard(content: @Composable ColumnScope.() -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = PokerDimens.SpacingDefault, vertical = PokerDimens.SpacingMedium),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         content = content,
     )
 }
@@ -81,7 +81,10 @@ internal fun PlacesCard(state: PayoutsUiState, onIntent: (PayoutsIntent) -> Unit
         PayoutRows(state.rows)
         HorizontalDivider(color = PokerColors.FeltLine)
         AddsUp(state)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+        ) {
             val placesLabel = stringResource(R.string.payouts_places_stepper)
             Text(
                 placesLabel,
@@ -97,7 +100,10 @@ internal fun PlacesCard(state: PayoutsUiState, onIntent: (PayoutsIntent) -> Unit
             )
         }
         if (state.places != state.recommendedPlaces && !state.isLocked) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+            ) {
                 Text(
                     text = pluralStringResource(
                         R.plurals.payouts_recommend,
@@ -157,7 +163,7 @@ private fun AddsUp(state: PayoutsUiState) {
 internal fun SaveNightCard(night: NightSave, onIntent: (PayoutsIntent) -> Unit) {
     PayoutsCard {
         if (night == NightSave.Saved) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
                 Icon(
                     PokerIcons.Check,
                     contentDescription = null,
@@ -204,7 +210,7 @@ private fun PayoutRow(row: PayoutRowModel) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(vertical = PokerDimens.SpacingSmall)
             // TalkBack reads the row as one: "1st, Still playing, $225, 50%".
             .semantics(mergeDescendants = true) {},
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -212,7 +218,7 @@ private fun PayoutRow(row: PayoutRowModel) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
                 text = ordinalOf(row.place),
-                style = PokerType.NumberM.copy(fontSize = 22.sp, lineHeight = 26.sp),
+                style = PokerType.NumberAmount,
                 color = if (first) PokerColors.PokerGold else PokerColors.CardWhite,
                 modifier = Modifier.widthIn(min = 44.dp),
             )
@@ -232,7 +238,7 @@ private fun PayoutRow(row: PayoutRowModel) {
         Row(
             modifier = Modifier.padding(start = 54.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         ) {
             ShareBar(row.sharePercent, Modifier.weight(1f))
             Text(

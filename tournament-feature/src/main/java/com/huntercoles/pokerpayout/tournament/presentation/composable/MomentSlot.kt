@@ -147,7 +147,7 @@ private fun MomentCard(banner: MomentBanner, glint: Boolean, style: MomentStyle)
             }
             .padding(horizontal = 14.dp, vertical = style.padding),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Icon(momentIcon(banner.moment), contentDescription = null, tint = accent, modifier = Modifier.size(style.icon))
         MomentWords(title, line.takeUnless { style == MomentStyle.Brief }, style, accent, Modifier.weight(1f))
@@ -166,7 +166,7 @@ private fun MomentWords(title: String, line: String?, style: MomentStyle, accent
     } else {
         FlowRow(
             modifier = modifier,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             val titleStyle = if (style == MomentStyle.Brief) BriefTitle else CompactTitle
@@ -229,7 +229,7 @@ private fun ChampionCard(name: String, style: MomentStyle, onOpen: () -> Unit) {
         Row(
             modifier = Modifier
                 .align(Alignment.CenterVertically)
-                .padding(vertical = 8.dp)
+                .padding(vertical = PokerDimens.SpacingSmall)
                 .semantics(mergeDescendants = true) {},
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),

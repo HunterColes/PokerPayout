@@ -55,6 +55,9 @@ object PokerType {
     /** Table cells, amounts, field values. */
     val NumberM = DisplayL.copy(fontSize = 20.sp, lineHeight = 24.sp)
 
+    /** Money amounts in rows and sheets: side pots, payouts, settle up, deal splits, field values. */
+    val NumberAmount = DisplayL.copy(fontSize = 22.sp, lineHeight = 26.sp)
+
     /** Small numbers: pills, segmented previews, chip values. */
     val NumberS = DisplayL.copy(fontSize = 15.sp, lineHeight = 18.sp)
 

@@ -28,7 +28,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
@@ -138,7 +137,7 @@ private fun ChipSetToggle(chipSet: ChipSetSummary, checked: Boolean, onChange: (
             .heightIn(min = PokerDimens.MinTouch)
             .toggleable(value = checked, role = Role.Switch, onValueChange = onChange),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Column(Modifier.weight(1f)) {
             Text(

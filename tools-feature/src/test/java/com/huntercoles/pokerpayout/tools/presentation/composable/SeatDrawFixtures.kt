@@ -13,8 +13,8 @@ internal object SeatDrawFixtures {
     /** The mockups' nine players: one table at nine a table. */
     val nine = listOf("Dana", "Marcus", "Priya", "Theo", "Jo", "Sam", "Alex", "Rita", "Ben")
 
-    /** Fourteen: two tables of 7 at nine a table. */
-    val fourteen = nine + listOf("Kim", "Lou", "Max", "Nia", "Omar")
+    /** Fourteen: two tables of 7 at nine a table, one with a long name (it wraps beside its card and pills). */
+    val fourteen = nine + listOf("Christopher Montgomery", "Lou", "Max", "Nia", "Omar")
 
     private fun state(players: List<String>, draw: SeatDraw?) =
         SeatDrawUiState(players = players, seatNames = players, fromBank = true, draw = draw)

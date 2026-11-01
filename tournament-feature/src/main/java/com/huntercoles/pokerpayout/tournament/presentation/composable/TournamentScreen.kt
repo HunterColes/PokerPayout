@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.components.ConfirmSheet
 import com.huntercoles.pokerpayout.core.design.components.LocalWidthClass
 import com.huntercoles.pokerpayout.core.design.components.RequestShellChrome
@@ -265,7 +266,7 @@ private fun ClockBackdrop(timer: TimerUiState, layout: ClockLayout, gutter: Dp) 
             .wrapContentHeight(Alignment.Top, unbounded = true)
             .clearAndSetSemantics {}
             .padding(start = gutter, end = gutter, top = BACKDROP_TOP),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         WithWidth(Modifier.fillMaxWidth()) { width ->
             ClockHero(timer, width, if (layout == ClockLayout.TwoPane) TABLET_HERO else PHONE_HERO, onIntent = null)

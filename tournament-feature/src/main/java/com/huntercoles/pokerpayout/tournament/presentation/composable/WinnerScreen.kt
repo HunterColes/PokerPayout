@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
@@ -134,15 +135,25 @@ internal fun WinnerContent(model: WinnerModel, onAction: (WinnerAction) -> Unit,
     ) {
         if (maxWidth > maxHeight) {
             Row(
-                modifier = Modifier.fillMaxSize().padding(start = 24.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+                modifier = Modifier.fillMaxSize().padding(
+                    start = 24.dp, end = PokerDimens.SpacingMedium,
+                    top = PokerDimens.SpacingSmall, bottom = PokerDimens.SpacingSmall,
+                ),
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
             ) {
-                ChampionCard(model, Modifier.weight(1f).fillMaxHeight().padding(vertical = 8.dp), scroll = true)
+                ChampionCard(
+                    model,
+                    Modifier.weight(1f).fillMaxHeight().padding(vertical = PokerDimens.SpacingSmall),
+                    scroll = true,
+                )
                 Column(Modifier.weight(1f)) {
                     WinnerTopRow(onAction)
                     Column(
-                        modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(end = 12.dp, bottom = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(end = PokerDimens.SpacingMedium, bottom = PokerDimens.SpacingSmall),
+                        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
                     ) {
                         WinnerPayouts(model)
                         WinnerSave(model.night, onAction)
@@ -156,8 +167,12 @@ internal fun WinnerContent(model: WinnerModel, onAction: (WinnerAction) -> Unit,
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
-                        .padding(start = 12.dp, end = 12.dp, bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                        .padding(
+                            start = PokerDimens.SpacingMedium,
+                            end = PokerDimens.SpacingMedium,
+                            bottom = PokerDimens.SpacingDefault,
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingDefault),
                 ) {
                     ChampionCard(model, Modifier.fillMaxWidth())
                     WinnerPayouts(model)
@@ -201,9 +216,9 @@ private fun ChampionCard(model: WinnerModel, modifier: Modifier = Modifier, scro
             modifier = Modifier
                 .fillMaxWidth()
                 .then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
-                .padding(horizontal = 16.dp, vertical = 20.dp),
+                .padding(PokerDimens.SpacingDefault),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         ) {
             Icon(PokerIcons.Crown, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(CrownSize))
             PokerEyebrow(stringResource(R.string.winner_eyebrow), color = PokerColors.PokerGold)
@@ -241,52 +256,72 @@ private fun ChampionCard(model: WinnerModel, modifier: Modifier = Modifier, scro
 
 /**
  * Each paid place: "1st  Dana  $225"; with a house rake (PP-145), the Payouts tab's line under them:
- * "With the $22.50 house rake: $450 taken in."
+ * "With the $22.50 house rake: $450 taken in." Rows are spaced like the Payouts tab's.
  */
 @Composable
 private fun WinnerPayouts(model: WinnerModel) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        PokerEyebrow(stringResource(R.string.winner_payouts))
-        model.rows.forEachIndexed { index, row ->
-            if (index > 0) HorizontalDivider(color = PokerColors.FeltLine)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp)
-                    // TalkBack reads a row as one: "1st, Dana, $225"
-                    .semantics(mergeDescendants = true) {},
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                val first = row.place == 1
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        // Narrow for the text size (a small phone at large text): the amount goes under the name
+        val stacked = maxWidth / LocalDensity.current.fontScale < InlineAmountMinWidth
+        Column(Modifier.fillMaxWidth()) {
+            PokerEyebrow(stringResource(R.string.winner_payouts), Modifier.semantics { heading() })
+            model.rows.forEachIndexed { index, row ->
+                if (index > 0) HorizontalDivider(color = PokerColors.FeltLine)
+                WinnerPayoutRow(row, stacked)
+            }
+            if (model.rakeCents > 0L) {
                 Text(
-                    text = ordinalOf(row.place),
-                    style = PokerType.NumberM,
-                    color = if (first) PokerColors.PokerGold else PokerColors.CardWhite,
-                    modifier = Modifier.widthIn(min = 44.dp),
-                )
-                Text(
-                    text = row.holderName.orEmpty(),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = PokerColors.CardWhite,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = money(row.amountCents),
-                    style = PokerType.NumberM,
-                    color = if (first) PokerColors.PokerGold else PokerColors.CardWhite,
+                    text = stringResource(R.string.payouts_rake_taken_in, money(model.rakeCents), money(model.takenInCents)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PokerColors.Chalk,
+                    modifier = Modifier.padding(top = PokerDimens.SpacingSmall),
                 )
             }
         }
-        if (model.rakeCents > 0L) {
-            Text(
-                text = stringResource(R.string.payouts_rake_taken_in, money(model.rakeCents), money(model.takenInCents)),
-                style = MaterialTheme.typography.bodySmall,
-                color = PokerColors.Chalk,
-                modifier = Modifier.padding(top = 4.dp),
-            )
+    }
+}
+
+/**
+ * "1st  Dana  $225", TalkBack reading it as one. [stacked] puts the amount under the name, so a long
+ * name and a big amount never squeeze the name until a word breaks.
+ */
+@Composable
+private fun WinnerPayoutRow(row: PayoutRowModel, stacked: Boolean) {
+    val tint = if (row.place == 1) PokerColors.PokerGold else PokerColors.CardWhite
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = PokerDimens.SpacingSmall)
+            .semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+    ) {
+        Text(
+            text = ordinalOf(row.place),
+            style = PokerType.NumberM,
+            color = tint,
+            modifier = Modifier.widthIn(min = PlaceColumn),
+        )
+        if (stacked) {
+            Column(Modifier.weight(1f)) {
+                WinnerName(row, Modifier)
+                Text(text = money(row.amountCents), style = PokerType.NumberM, color = tint)
+            }
+        } else {
+            WinnerName(row, Modifier.weight(1f))
+            Text(text = money(row.amountCents), style = PokerType.NumberM, color = tint)
         }
     }
+}
+
+@Composable
+private fun WinnerName(row: PayoutRowModel, modifier: Modifier) {
+    Text(
+        text = row.holderName.orEmpty(),
+        style = MaterialTheme.typography.bodyLarge,
+        color = PokerColors.CardWhite,
+        modifier = modifier,
+    )
 }
 
 /**
@@ -295,7 +330,7 @@ private fun WinnerPayouts(model: WinnerModel) {
  */
 @Composable
 private fun WinnerSave(night: NightSave, onAction: (WinnerAction) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
         when (night) {
             NightSave.Offered -> PokerButton(
                 text = stringResource(R.string.payouts_save_night),
@@ -304,7 +339,7 @@ private fun WinnerSave(night: NightSave, onAction: (WinnerAction) -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             )
             NightSave.Saved -> {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
                     Icon(
                         PokerIcons.Check,
                         contentDescription = null,
@@ -385,6 +420,10 @@ private fun GoldBurst(modifier: Modifier = Modifier) {
 
 private val CrownSize = 48.dp
 private val NameCap = 56.dp
+
+/** Under this width at font 1.0, a payout row puts its amount under the name (as Settle up does). */
+private val InlineAmountMinWidth = 240.dp
+private val PlaceColumn = 44.dp
 
 /** The crown's top in the card: its padding. */
 private val BurstTop = 20.dp

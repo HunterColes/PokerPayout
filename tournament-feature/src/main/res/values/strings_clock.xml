@@ -10,6 +10,10 @@
     <string name="clock_subtitle_break">Break %1$d · %2$d of %3$d left</string>
     <string name="clock_subtitle_overtime">Level %1$d · overtime</string>
     <string name="clock_subtitle_finished">Finished</string>
+    <!-- Large text: the short forms, the rest is on the clock -->
+    <string name="clock_subtitle_level_of">Level %1$d of %2$d</string>
+    <string name="clock_subtitle_level_short">Level %1$d</string>
+    <string name="clock_subtitle_break_short">Break %1$d</string>
     <!-- Tablets: "Level 6 of 9 · running · 7 of 9 left" -->
     <string name="clock_subtitle_with_players">%1$s · %2$d of %3$d left</string>
     <string name="clock_mute">Mute cue sounds</string>
@@ -39,6 +43,8 @@
         <item quantity="other">%d breaks</item>
     </plurals>
     <string name="setup_no_breaks">no breaks</string>
+    <!-- Beside the Blinds title when no ladder fits; the reason and the fix are in the box below -->
+    <string name="setup_blinds_needs_fix">Needs a fix</string>
 
     <!-- S1 v2: the setup page -->
     <string name="setup_players">Players</string>

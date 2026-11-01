@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -80,8 +81,8 @@ internal fun SetupContent(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(start = gutter, end = gutter, top = 4.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(start = gutter, end = gutter, top = 4.dp, bottom = PokerDimens.SpacingDefault),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
             if (setup.showWelcome) {
                 WelcomeCard(
@@ -108,7 +109,9 @@ internal fun SetupContent(
             var blindsOpen by rememberSaveable { mutableStateOf(true) }
             SetupSection(
                 title = stringResource(R.string.setup_blinds),
-                note = SetupSummary.levelsAndBreaks(timer),
+                // No ladder fits: "0 levels · no breaks" would read like a setting, so say it needs a fix
+                note = if (playable) SetupSummary.levelsAndBreaks(timer) else stringResource(R.string.setup_blinds_needs_fix),
+                noteColor = if (playable) PokerColors.Chalk else PokerColors.Danger,
                 summary = SetupSummary.blindsLine(timer),
                 expanded = blindsOpen,
                 onToggle = { blindsOpen = !blindsOpen },
@@ -124,9 +127,12 @@ internal fun SetupContent(
     }
 }
 
-/** A setup card that folds to its one-line [summary]; [note] sits beside the title ("$50 to sit down"). */
+/**
+ * A setup card that folds to its one-line [summary]; [note] sits beside the title ("$50 to sit down"),
+ * in [noteColor] (Danger when the section needs a fix).
+ */
 @OptIn(ExperimentalLayoutApi::class)
-@Suppress("LongParameterList") // a section: title, note, summary, state, toggle, body
+@Suppress("LongParameterList") // a section: title, note and its colour, summary, state, toggle, body
 @Composable
 internal fun SetupSection(
     title: String,
@@ -134,6 +140,7 @@ internal fun SetupSection(
     summary: String,
     expanded: Boolean,
     onToggle: () -> Unit,
+    noteColor: Color = PokerColors.Chalk,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val action = stringResource(if (expanded) R.string.setup_collapse_section else R.string.setup_expand_section, title)
@@ -142,25 +149,25 @@ internal fun SetupSection(
             .fillMaxWidth()
             .clip(SectionShape)
             .background(PokerColors.FeltGreen)
-            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(start = PokerDimens.SpacingDefault, end = PokerDimens.SpacingDefault, bottom = PokerDimens.SpacingDefault),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = PokerDimens.MinTouch)
                 .clickable(onClickLabel = action, role = Role.Button, onClick = onToggle)
-                .padding(top = 8.dp),
+                .padding(top = PokerDimens.SpacingSmall),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         ) {
             FlowRow(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                PokerEyebrow(title, modifier = Modifier.padding(end = 8.dp))
-                Text(note, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk, textAlign = TextAlign.End)
+                PokerEyebrow(title, modifier = Modifier.padding(end = PokerDimens.SpacingSmall))
+                Text(note, style = MaterialTheme.typography.bodySmall, color = noteColor, textAlign = TextAlign.End)
             }
             Icon(
                 imageVector = PokerIcons.ChevronDown,
@@ -203,13 +210,13 @@ internal fun PlayersCard(
                     Modifier
                         .clip(SectionShape)
                         .background(PokerColors.FeltGreen)
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(horizontal = PokerDimens.SpacingDefault, vertical = PokerDimens.SpacingMedium)
                 } else {
                     Modifier
                 },
             ),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite)
@@ -316,7 +323,7 @@ private fun PayoutsRow(setup: TournamentConfigUiState, openPayouts: () -> Unit) 
             .background(PokerColors.FeltGreen)
             .clickable(onClickLabel = stringResource(R.string.setup_payouts_open), role = Role.Button, onClick = openPayouts)
             .heightIn(min = PokerDimens.RowMinHeight)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = PokerDimens.SpacingDefault, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {

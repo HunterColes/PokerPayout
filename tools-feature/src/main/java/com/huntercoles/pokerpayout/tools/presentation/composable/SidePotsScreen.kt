@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonSize
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
@@ -118,7 +119,10 @@ private fun PotPlayerWell(index: Int, player: PotPlayer, canRemove: Boolean, onI
                 )
             }
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             ChipsField(
                 value = player.chips,
                 onChange = { onIntent(SidePotsIntent.SetChips(index, it)) },

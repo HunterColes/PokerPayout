@@ -113,7 +113,7 @@ private fun ColorUpRow(step: ColorUpStep) {
         Modifier
             .fillMaxWidth()
             .heightIn(min = PokerDimens.MinTouch)
-            .padding(vertical = 8.dp)
+            .padding(vertical = PokerDimens.SpacingSmall)
             .semantics(mergeDescendants = true) { contentDescription = spoken },
     ) {
         // Large text on a narrow card: the chips go above the words, which get the full width

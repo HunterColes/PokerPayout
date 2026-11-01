@@ -114,7 +114,7 @@ private fun EnvelopeAmount(cents: Long, scale: Float, alpha: Float) {
             .heightIn(min = CardHeight)
             .background(PokerColors.GoldWash, CardShape)
             .border(2.dp, PokerColors.PokerGold, CardShape)
-            .padding(16.dp),
+            .padding(PokerDimens.SpacingDefault),
         contentAlignment = Alignment.Center,
     ) {
         Text(

@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -56,7 +57,7 @@ internal fun TournamentTopBar(
     val muted = timer.isMuted
     PokerTopBar(
         title = stringResource(CoreR.string.navigation_tournament),
-        subtitle = subtitle(timer, mode, wide),
+        subtitle = topBarSubtitle(timer, mode, wide, compact = compactSubtitle(small)),
     ) {
         if (mode == TournamentMode.Setup) {
             PokerIconButton(
@@ -78,6 +79,16 @@ internal fun TournamentTopBar(
             MoreMenu(actions, muted, newTournament = reset, bellInMenu = small)
         }
     }
+}
+
+/**
+ * The live [subtitle]; [compact] (large text, or larger text on a small phone) gives the
+ * [shortSubtitle] once the clock runs.
+ */
+@Composable
+private fun topBarSubtitle(timer: TimerUiState, mode: TournamentMode, wide: Boolean, compact: Boolean): String {
+    val live = mode != TournamentMode.Setup && mode != TournamentMode.Folding && !timer.isFinished
+    return if (compact && live) shortSubtitle(timer) else subtitle(timer, mode, wide)
 }
 
 /** "Level 6 of 9 · running", "Break 1 · 8 of 9 left", "Setup · not started". */
@@ -107,6 +118,27 @@ private fun subtitle(timer: TimerUiState, mode: TournamentMode, wide: Boolean): 
     } else {
         base
     }
+}
+
+/**
+ * "Level 6 of 9", "Break 1", "Level 10": the subtitle without the tail the clock already shows (the
+ * PAUSED pill, the players strip, the OVERTIME eyebrow), whole instead of cut to "Level 6 of 9 · ru…".
+ */
+@Composable
+private fun shortSubtitle(timer: TimerUiState): String {
+    val level = timer.currentLevelSegment?.level?.level ?: 1
+    return when {
+        timer.isOnBreak -> stringResource(R.string.clock_subtitle_break_short, timer.currentBreak?.number ?: 1)
+        timer.currentLevelSegment?.isOvertime == true -> stringResource(R.string.clock_subtitle_level_short, level)
+        else -> stringResource(R.string.clock_subtitle_level_of, level, timer.regularLevelCount)
+    }
+}
+
+/** Large text, or larger text on a small phone: the subtitle's long form would be cut. */
+@Composable
+private fun compactSubtitle(small: Boolean): Boolean {
+    val scale = LocalDensity.current.fontScale
+    return scale >= COMPACT_FONT_SCALE || (small && scale > 1f)
 }
 
 /** The bell: tap to mute or unmute the cue sounds; hold to open Cue sounds. */
@@ -186,3 +218,4 @@ private fun MenuItem(text: String, onClick: () -> Unit) {
 }
 
 private const val SLASH_INSET = 0.18f
+private const val COMPACT_FONT_SCALE = 1.5f

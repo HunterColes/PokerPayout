@@ -1,5 +1,7 @@
 package com.huntercoles.pokerpayout.tools.presentation.composable
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,20 +44,36 @@ import com.huntercoles.pokerpayout.tools.presentation.CueSoundsIntent
 import com.huntercoles.pokerpayout.tools.presentation.CueSoundsUiState
 import com.huntercoles.pokerpayout.tools.presentation.CueSoundsViewModel
 
-/** The Cue sounds route: Tools > Sound and music > Cue sounds, and the clock's "Sound settings". */
+/**
+ * The Cue sounds route: Tools > Sound and music > Cue sounds, and the clock's "Sound settings"; and
+ * the system's file picker for the host's own sound (it lends the app the file: no storage permission).
+ */
 @Composable
 fun CueSoundsRoute(onBack: () -> Unit, viewModel: CueSoundsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    CueSoundsContent(state = state, onIntent = viewModel::acceptIntent, onBack = onBack)
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        viewModel.acceptIntent(CueSoundsIntent.CustomPicked(uri?.toString()))
+    }
+    CueSoundsContent(
+        state = state,
+        onIntent = viewModel::acceptIntent,
+        onBack = onBack,
+        // A phone with no file picker at all (rare) just does nothing
+        onPickFile = { runCatching { picker.launch(arrayOf(AUDIO_FILES)) } },
+    )
 }
+
+private const val AUDIO_FILES = "audio/*"
 
 /**
  * Cue sounds (S18), stateless, the clock's one sound screen (#79): the cue sounds on or off (the
- * bells' mute) and their volume, then each sound pack with a sound per moment (a new level, a
- * minute left, a break starting and ending, the game over, and the night's big moments: the bubble,
- * the final table, heads-up and the champion, PP-111), each one played on a tap, and the pack the
- * clock plays picked. An empty slot says so. A preview plays even with the cue sounds off (hearing
- * it is the point); with them off, the screen says so. The music is apart, on its own screen.
+ * bells' mute) and their volume, then the host's own sound for the four changes (#22: a file from
+ * the phone, its peak and end, and a preview bar with the change marked), then each sound pack with a
+ * sound per moment (a new level, a minute left, a break starting and ending, the game over, and the
+ * night's big moments: the bubble, the final table, heads-up and the champion, PP-111), each one
+ * played on a tap, and the pack the clock plays picked (with an own sound on, it is the fallback and
+ * plays the other moments). An empty slot says so. A preview plays even with the cue sounds off
+ * (hearing it is the point); with them off, the screen says so. The music is apart, on its own screen.
  */
 @Composable
 fun CueSoundsContent(
@@ -63,6 +81,7 @@ fun CueSoundsContent(
     onIntent: (CueSoundsIntent) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onPickFile: () -> Unit = {},
 ) {
     Column(modifier.fillMaxSize().background(PokerColors.PokerBlack)) {
         PokerTopBar(
@@ -85,6 +104,12 @@ fun CueSoundsContent(
                     color = PokerColors.CardWhite,
                 )
             }
+            OwnSoundCard(
+                custom = state.custom,
+                packName = stringResource(state.picked.name),
+                onIntent = onIntent,
+                onPickFile = onPickFile,
+            )
             state.packs.forEach { pack ->
                 PackCard(
                     pack = pack,

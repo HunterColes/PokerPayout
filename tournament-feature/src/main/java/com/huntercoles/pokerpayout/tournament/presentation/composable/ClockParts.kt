@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -31,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.LevelProgress
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
@@ -55,14 +58,17 @@ internal fun ClockHero(uiState: TimerUiState, width: Dp, cap: Dp, onIntent: ((Ti
     val toggle = stringResource(if (uiState.isRunning) R.string.clock_pause else R.string.clock_resume)
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall, Alignment.CenterHorizontally),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             PokerEyebrow(
                 text = clockEyebrow(uiState),
                 color = eyebrowColor(uiState),
+                // As tall as a pill, so the digits stay put when PAUSED or FINAL MINUTE comes and goes
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
+                    .heightIn(min = PokerDimens.PillHeight)
+                    .wrapContentHeight()
                     .semantics { liveRegion = LiveRegionMode.Polite },
             )
             clockPills(uiState).forEach { PokerPill(it.text, tone = it.tone) }
@@ -241,7 +247,7 @@ internal fun WithWidth(modifier: Modifier = Modifier, content: @Composable (Dp) 
 }
 
 internal val ControlSize = 52.dp
-private val CompactControl = 48.dp
+private val CompactControl = PokerDimens.MinTouch
 private val PlayButtonSize = 76.dp
 private val CompactPlay = 64.dp
 private const val ICON_SHARE = 0.45f

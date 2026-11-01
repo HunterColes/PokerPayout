@@ -1,24 +1,21 @@
 package com.huntercoles.pokerpayout.tools.presentation.composable
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -86,7 +83,7 @@ internal fun SettingsCard(
                     role = Role.Button,
                     onClick = { onExpand(!expanded) },
                 ),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -112,7 +109,7 @@ internal fun SettingsCard(
         if (expanded) {
             StackField(state, onIntent)
             ReserveSetting(state, onIntent)
-            CountSetting(
+            StepperSetting(
                 label = stringResource(R.string.chip_set_max_colours),
                 value = settings.maxColours,
                 range = ChipSetSettings.MAX_COLOURS_RANGE,
@@ -170,7 +167,7 @@ private fun StackField(state: ChipSetUiState, onIntent: (ChipSetIntent) -> Unit)
 @Composable
 private fun ReserveSetting(state: ChipSetUiState, onIntent: (ChipSetIntent) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        CountSetting(
+        StepperSetting(
             label = stringResource(R.string.chip_set_reserve),
             value = state.reserveStacks,
             range = ChipSetSettings.RESERVE_RANGE,
@@ -196,23 +193,40 @@ private fun ReserveSetting(state: ChipSetUiState, onIntent: (ChipSetIntent) -> U
     }
 }
 
-/** A labelled stepper; the stepper moves under the label when they don't fit side by side. */
+/**
+ * A labelled stepper, the one look for a count setting in the Tools (Chip set's stack settings and
+ * Seat draw's players): the stepper moves under the label when they don't fit side by side.
+ */
 @Composable
-private fun CountSetting(label: String, value: Int, range: IntRange, onChange: (Int) -> Unit) {
+internal fun StepperSetting(
+    label: String,
+    value: Int,
+    range: IntRange,
+    onChange: (Int) -> Unit,
+    stepperModifier: Modifier = Modifier,
+) {
     SideBySideOrStacked(
         modifier = Modifier.fillMaxWidth(),
-        first = { Text(label, style = MaterialTheme.typography.bodyMedium, color = PokerColors.CardWhite) },
-        second = { PokerStepper(value = value, onValueChange = onChange, range = range, label = label) },
+        first = { SettingLabel(label) },
+        second = {
+            PokerStepper(value = value, onValueChange = onChange, range = range, label = label, modifier = stepperModifier)
+        },
     )
 }
 
-/** The stack shape, one radio row each, in words rather than curve names. */
+/** A setting's name, in the same type as the chip names above it. */
+@Composable
+private fun SettingLabel(text: String) {
+    Text(text = text, style = MaterialTheme.typography.titleSmall, color = PokerColors.CardWhite)
+}
+
+/** The stack shape, one radio row each (as in Currency and Cue sounds), in words rather than curve names. */
 @Composable
 private fun ShapeOptions(selected: ChipDistributionCurve, onIntent: (ChipSetIntent) -> Unit) {
     val names = stringArrayResource(R.array.chip_set_shape_names)
     val descriptions = stringArrayResource(R.array.chip_set_shape_descriptions)
     Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(stringResource(R.string.chip_set_shape), style = MaterialTheme.typography.bodyMedium, color = PokerColors.CardWhite)
+        SettingLabel(stringResource(R.string.chip_set_shape))
         ChipDistributionCurve.getAllCurves().forEachIndexed { i, curve ->
             val isSelected = curve == selected
             Row(
@@ -225,32 +239,27 @@ private fun ShapeOptions(selected: ChipDistributionCurve, onIntent: (ChipSetInte
                         role = Role.RadioButton,
                         onClick = { onIntent(ChipSetIntent.SetShape(curve)) },
                     )
-                    .padding(vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(vertical = PokerDimens.SpacingSmall),
+                horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                RadioDot(isSelected)
+                RadioButton(
+                    selected = isSelected,
+                    onClick = null,
+                    colors = RadioButtonDefaults.colors(
+                        selectedColor = PokerColors.PokerGold,
+                        unselectedColor = PokerColors.Chalk,
+                    ),
+                )
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = names[i],
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = if (isSelected) PokerColors.PokerGold else PokerColors.CardWhite,
                     )
                     Text(descriptions[i], style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun RadioDot(selected: Boolean) {
-    Box(
-        modifier = Modifier
-            .size(20.dp)
-            .border(2.dp, if (selected) PokerColors.PokerGold else PokerColors.FeltEdge, CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (selected) Box(Modifier.size(10.dp).background(PokerColors.PokerGold, CircleShape))
     }
 }

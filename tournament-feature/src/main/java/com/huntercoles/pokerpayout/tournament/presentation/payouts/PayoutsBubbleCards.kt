@@ -28,6 +28,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
@@ -181,7 +182,7 @@ private fun BountyLine(name: String, detail: String, cents: Long) {
     Row(
         modifier = Modifier.heightIn(min = 32.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         Text(
             text = buildAnnotatedString {

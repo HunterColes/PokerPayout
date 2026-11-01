@@ -1049,7 +1049,7 @@ s_rebuy_amount() {
 s_bank() {
   tab Bank
   ui assert-text Player Buy-in Rebuy Out Paid "Player 1" "text~=players · " Collected "Paid out" Breakdown \
-    "text=Payout structure" "desc=More options" "desc=Nothing to undo" || return 1
+    "text=Structure" "desc=More options" "desc=Nothing to undo" || return 1
   require_tab_selected Bank
 }
 s_bank_rename() {
@@ -1211,7 +1211,7 @@ s_pool_summary() {
 s_weights_editor() {
   ui tap text=Close
   ui wait-gone "text=Pool breakdown"
-  ui tap "text=Payout structure"
+  ui tap "text=Structure"
   ui assert-text "Places paid" "WEIGHT OF EACH PLACE" "text=Save structure" Cancel
 }
 s_weights_close() {

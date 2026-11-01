@@ -86,7 +86,7 @@
 
     <!-- Color-up plan -->
     <string name="chip_set_color_up">Color-up plan</string>
-    <string name="chip_set_color_up_source">from the blind schedule</string>
+    <string name="chip_set_color_up_source">From the blind schedule</string>
     <string name="chip_set_color_up_break">Break %1$d, after Level %2$d</string>
     <string name="chip_set_color_up_level">Start of Level %1$d</string>
     <!-- "About 18 blacks needed · 60 spare" -->
@@ -124,7 +124,7 @@
     <string name="chip_set_estimate_add_ons">%1$d for add-ons (one each)</string>
     <string name="chip_set_reserve_own">Your own · Tournament setup suggests %1$d</string>
     <string name="chip_set_use_tournament_reserve">Use Tournament\'s estimate</string>
-    <string name="chip_set_max_colours">Colours per stack, at most</string>
+    <string name="chip_set_max_colours">Most colours in a stack</string>
     <string name="chip_set_shape">Stack shape</string>
 
     <!-- In ChipDistributionCurve.getAllCurves() order -->

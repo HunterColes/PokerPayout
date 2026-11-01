@@ -28,8 +28,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.utils.ChipColour
 import com.huntercoles.pokerpayout.core.utils.ChipShortfall
@@ -177,7 +177,7 @@ internal fun StackPicture(stack: PlayerStack, short: ChipShortfall? = null) {
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             maxItemsInEachRow = perRow,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
             stack.chips.forEach { chip ->
                 PileColumn(chip, needed = short?.takeIf { it.colour == chip.colour }?.more, pileHeight, Modifier.weight(1f))
@@ -211,7 +211,7 @@ private fun PileColumn(chip: StackChip, needed: Int?, pileHeight: Dp, modifier: 
         )
         Text(
             text = if (needed != null) stringResource(R.string.chip_set_pile_more, needed) else ChipFormat.number(chip.worth),
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+            style = MaterialTheme.typography.bodySmall,
             color = if (needed != null) PokerColors.Danger else PokerColors.Chalk,
             textAlign = TextAlign.Center,
         )

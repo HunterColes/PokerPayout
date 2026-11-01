@@ -134,7 +134,7 @@ internal fun LateEntrySheetContent(
         )
         if (reEntries.isNotEmpty()) {
             PokerEyebrow(stringResource(R.string.bank_late_re_enter_title), Modifier.padding(top = 4.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
                 reEntries.forEach { candidate -> ReEntryChoice(candidate) { onReEnter(candidate.playerId) } }
             }
         }
@@ -164,7 +164,7 @@ internal fun ReEntryChoice(candidate: ReEntryCandidate, modifier: Modifier = Mod
                 role = Role.Button,
                 onClick = onClick,
             )
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = PokerDimens.SpacingMedium, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {

@@ -235,7 +235,10 @@ private fun ToolRow(icon: ImageVector, title: String, description: String, onCli
             .clip(RoundedCornerShape(PokerDimens.CornerCard))
             .background(PokerColors.FeltGreen)
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(start = 12.dp, top = 12.dp, end = 10.dp, bottom = 12.dp),
+            .padding(
+                start = PokerDimens.SpacingMedium, top = PokerDimens.SpacingMedium,
+                end = 10.dp, bottom = PokerDimens.SpacingMedium,
+            ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {

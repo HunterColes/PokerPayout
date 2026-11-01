@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonSize
@@ -36,7 +37,7 @@ import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.LevelSegment
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 
-private val VerdictShape = RoundedCornerShape(12.dp)
+private val VerdictShape = RoundedCornerShape(PokerDimens.CornerControl)
 
 /**
  * PP-020: what the setup gives ("Works: 9 levels, 25 / 50 to 1,000 / 2,000, 2 breaks, ends at
@@ -83,8 +84,8 @@ private fun ValidSummary(uiState: TimerUiState, modifier: Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .background(PokerColors.FeltDeep, VerdictShape)
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(PokerDimens.SpacingMedium),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         Icon(PokerIcons.Check, contentDescription = null, tint = PokerColors.Live, modifier = Modifier.size(18.dp))
         Text(
@@ -124,10 +125,13 @@ internal fun ProblemBox(problem: BlindSetupProblem, onFix: (BlindSetupFix) -> Un
             .fillMaxWidth()
             .background(PokerColors.DangerWash, VerdictShape)
             .border(1.dp, PokerColors.Danger, VerdictShape)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(PokerDimens.SpacingMedium),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Icon(PokerIcons.Info, contentDescription = null, tint = PokerColors.Danger, modifier = Modifier.size(18.dp))
             Text(
                 text = stringResource(R.string.setup_cant_build),
@@ -137,7 +141,10 @@ internal fun ProblemBox(problem: BlindSetupProblem, onFix: (BlindSetupFix) -> Un
         }
         Text(text = problem.explanation, color = PokerColors.CardWhite, style = MaterialTheme.typography.bodyMedium)
         if (problem.fixes.isNotEmpty()) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+                verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+            ) {
                 problem.fixes.forEach { fix -> FixButton(fix, onFix) }
             }
         }

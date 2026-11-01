@@ -23,6 +23,7 @@ import com.huntercoles.pokerpayout.bank.R
 import com.huntercoles.pokerpayout.bank.presentation.BankSection
 import com.huntercoles.pokerpayout.bank.presentation.BankUiState
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
@@ -49,9 +50,12 @@ internal fun SectionLabel(section: BankSection, count: Int, hint: String?, first
             .fillMaxWidth()
             .background(PokerColors.FeltGreen)
             .then(if (first) Modifier else Modifier.topRule())
-            .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 6.dp),
+            .padding(
+                start = PokerDimens.SpacingMedium, end = PokerDimens.SpacingMedium,
+                top = PokerDimens.SpacingMedium, bottom = 6.dp,
+            ),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         Text(
             text = label.uppercase(Locale.ROOT),
@@ -86,7 +90,7 @@ internal fun LateEntryFooter(state: BankUiState, onLateEntry: () -> Unit) {
     }
     if (!state.canTakeLateEntry && note == null) return
     Column(
-        modifier = Modifier.padding(top = 12.dp),
+        modifier = Modifier.padding(top = PokerDimens.SpacingMedium),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         if (state.canTakeLateEntry) {

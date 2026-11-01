@@ -159,8 +159,8 @@ internal fun BoardStrip(
         modifier = modifier
             .fillMaxWidth()
             .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = 14.dp, vertical = PokerDimens.SpacingMedium),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

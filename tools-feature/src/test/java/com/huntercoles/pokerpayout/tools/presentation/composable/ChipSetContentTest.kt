@@ -94,7 +94,7 @@ class ChipSetContentTest {
         compose.onNodeWithText("Stack settings", ignoreCase = true).performScrollTo().performClick()
         compose.onNodeWithText("Mostly middle chips").performScrollTo().performClick()
         compose.onNodeWithContentDescription("Increase Keep back for rebuys and add-ons").performScrollTo().performClick()
-        compose.onNodeWithContentDescription("Decrease Colours per stack, at most").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Decrease Most colours in a stack").performScrollTo().performClick()
         assertEquals(
             listOf(
                 ChipSetIntent.SetShape(ChipDistributionCurve.BellCurve),

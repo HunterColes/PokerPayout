@@ -110,7 +110,10 @@ fun ChipSetContent(
                 SettingsCard(state, onIntent, expanded = showSettings, onExpand = { showSettings = it })
             }
             if (maxWidth >= TwoPaneWidth) {
-                Row(Modifier.fillMaxSize().padding(horizontal = gutter), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    Modifier.fillMaxSize().padding(horizontal = gutter),
+                    horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+                ) {
                     Pane(0.dp, Modifier.weight(1f)) {
                         OwnedCard(state, onIntent)
                         settings()
@@ -140,36 +143,36 @@ private fun Pane(gutter: Dp, modifier: Modifier, content: @Composable ColumnScop
             .fillMaxHeight()
             .verticalScroll(rememberScrollState())
             .padding(start = gutter, end = gutter, top = 4.dp, bottom = PokerDimens.Gutter),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         content = content,
     )
 }
 
-/** A felt card: one part of the screen. */
+/** A felt card: one part of the screen (Seat draw's, Deal's and Side pots' cards too, so the tools line up). */
 @Composable
-internal fun ChipSetSection(content: @Composable ColumnScope.() -> Unit) {
+internal fun ChipSetSection(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = PokerDimens.SpacingMedium),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         content = content,
     )
 }
 
-/** An eyebrow on the left and a short Chalk note on the right, wrapping under it if it must. */
+/** A gold eyebrow on the left and a short Chalk note on the right, wrapping under it if it must. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun SectionHeader(title: String, note: String?, gold: Boolean = true) {
+internal fun SectionHeader(title: String, note: String?) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         PokerEyebrow(
             text = title,
-            color = if (gold) PokerColors.PokerGold else PokerColors.Chalk,
+            color = PokerColors.PokerGold,
             modifier = Modifier.align(Alignment.CenterVertically),
         )
         if (note != null) {
@@ -191,7 +194,7 @@ internal fun NoteBox(ok: Boolean, content: @Composable ColumnScope.() -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(PokerColors.FeltDeep, RoundedCornerShape(PokerDimens.CornerControl))
-            .padding(12.dp),
+            .padding(PokerDimens.SpacingMedium),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {

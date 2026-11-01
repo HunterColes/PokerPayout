@@ -80,8 +80,8 @@ internal fun SetupPanel(
             modifier = Modifier
                 .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
-                .padding(start = gutter, end = gutter, bottom = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(start = gutter, end = gutter, bottom = PokerDimens.SpacingSmall),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
             AnyTimeFields(setup, timer, actions)
             HorizontalDivider(color = PokerColors.FeltLine)
@@ -126,7 +126,7 @@ private fun PanelHeader(timer: TimerUiState, gutter: Dp, onClose: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = gutter, end = gutter - 8.dp, top = 4.dp),
+            .padding(start = gutter, end = gutter - PokerDimens.SpacingSmall, top = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PokerEyebrow(
@@ -154,7 +154,7 @@ private fun AnyTimeFields(setup: TournamentConfigUiState, timer: TimerUiState, a
     PlayersCard(setup, hint = R.string.setup_players_late_entry, framed = false) {
         actions.onSetupIntent(TournamentConfigIntent.UpdatePlayerCount(it))
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium), verticalAlignment = Alignment.Bottom) {
         RebuysUntilSelect(timer, actions.onTimerIntent, Modifier.weight(1f))
         AnteSelect(
             fromLevel = timer.config.bigBlindAnteFromLevel,
@@ -163,7 +163,7 @@ private fun AnyTimeFields(setup: TournamentConfigUiState, timer: TimerUiState, a
             modifier = Modifier.weight(1f),
         )
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium), verticalAlignment = Alignment.Bottom) {
         LateEntryUntilSelect(setup, timer, actions.onSetupIntent, Modifier.weight(1f))
         Spacer(Modifier.weight(1f))
     }
@@ -177,11 +177,11 @@ private fun LockedSummary(setup: TournamentConfigUiState, timer: TimerUiState) {
     val separator = SetupSummary.stripSeparator()
     val amounts = setup.money
     val config = timer.config
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall), verticalAlignment = Alignment.CenterVertically) {
         Icon(PokerIcons.Lock, contentDescription = null, tint = PokerColors.Chalk, modifier = Modifier.size(16.dp))
         PokerEyebrow(stringResource(R.string.panel_locked))
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
         LockedValue(
             label = stringResource(R.string.panel_money_amounts),
             value = listOf(amounts.buyInCents, amounts.rebuyCents, amounts.addOnCents).joinToString(separator) { money(it) },
@@ -193,7 +193,7 @@ private fun LockedSummary(setup: TournamentConfigUiState, timer: TimerUiState) {
             modifier = Modifier.weight(1f),
         )
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
         LockedValue(
             label = stringResource(R.string.panel_length_levels),
             value = stringResource(R.string.panel_hours_minutes, config.gameDurationHours, config.roundLengthMinutes),
@@ -219,7 +219,7 @@ private fun LockedValue(label: String, value: String, modifier: Modifier) {
 @Composable
 private fun UnlockedFields(setup: TournamentConfigUiState, timer: TimerUiState, actions: TournamentActions) {
     val keepLevel: (TimerIntent) -> Unit = { actions.onTimerIntent(it.keepingLevel()) }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall), verticalAlignment = Alignment.CenterVertically) {
         PokerEyebrow(stringResource(R.string.panel_unlocked), color = PokerColors.PokerGold, modifier = Modifier.weight(1f))
         PokerButton(
             text = stringResource(R.string.panel_lock_again),

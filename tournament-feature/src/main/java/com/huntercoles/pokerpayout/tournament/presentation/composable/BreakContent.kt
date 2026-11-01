@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.tournament.presentation.composable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -24,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.LevelProgress
 import com.huntercoles.pokerpayout.core.design.components.LevelTone
@@ -49,12 +52,12 @@ import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 @Composable
 internal fun BreakContent(uiState: TimerUiState, actions: TournamentActions, width: Dp, heroCap: Dp) {
     val segment = uiState.currentBreak ?: return
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
         BreakHero(uiState, segment, width, heroCap)
         if (segment.colorUp.isNotEmpty()) ColorUpCard(segment, uiState.colorUpDone, uiState.chipSet, actions.onTimerIntent)
         if (uiState.purchases.addOnCents > 0) AddOnCard(uiState, actions.openBank)
         ThenCard(uiState)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Gap), verticalAlignment = Alignment.CenterVertically) {
             PokerButton(
                 text = stringResource(R.string.break_end_now),
                 onClick = { actions.onTimerIntent(TimerIntent.EndBreakNow) },
@@ -75,9 +78,9 @@ private fun BreakHero(uiState: TimerUiState, segment: BreakSegment, width: Dp, c
     Column(
         Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall, Alignment.CenterHorizontally)) {
             PokerPill(clockEyebrow(uiState), tone = PokerPillTone.Gold, icon = PokerIcons.Coffee)
             clockPills(uiState).forEach { PokerPill(it.text, tone = it.tone) }
             MoneyStagePill(uiState.table.moneyStage)
@@ -133,13 +136,13 @@ private fun ColorUpCard(segment: BreakSegment, done: Boolean, chipSet: ChipSetCh
             .clip(CardShape)
             .background(PokerColors.FeltGreen)
             .then(if (done) Modifier else Modifier.border(1.dp, PokerColors.DarkGold, CardShape))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(PokerDimens.SpacingDefault),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         if (done) {
             ColorUpDoneRow(chips) { onIntent(TimerIntent.MarkColorUpDone(done = false)) }
         } else {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Gap), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 PokerEyebrow(colorUpText(segment.colorUp, formatter), color = PokerColors.PokerGold)
                 Text(
                     text = stringResource(R.string.break_not_needed, chips, nextLevel),
@@ -161,31 +164,49 @@ private fun ColorUpCard(segment: BreakSegment, done: Boolean, chipSet: ChipSetCh
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * The tick, "Color-up done" and what left play, with Undo at the end of the row. Narrow for the text
+ * size (a small phone at large text), Undo goes under the words instead of squeezing them.
+ */
 @Composable
 private fun ColorUpDoneRow(chips: String, onUndo: () -> Unit) {
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Icon(PokerIcons.Check, contentDescription = null, tint = PokerColors.Live, modifier = Modifier.size(22.dp))
-            ColorUpDoneWords(chips)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val inline = maxWidth / LocalDensity.current.fontScale >= InlineUndoMinWidth
+        val undo = @Composable {
+            PokerButton(
+                text = stringResource(R.string.break_undo),
+                onClick = onUndo,
+                variant = PokerButtonVariant.Text,
+                size = PokerButtonSize.Small,
+                icon = PokerIcons.Undo,
+            )
         }
-        PokerButton(
-            text = stringResource(R.string.break_undo),
-            onClick = onUndo,
-            variant = PokerButtonVariant.Text,
-            size = PokerButtonSize.Small,
-            icon = PokerIcons.Undo,
-        )
+        if (inline) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Gap)) {
+                DoneTick()
+                ColorUpDoneWords(chips, Modifier.weight(1f))
+                undo()
+            }
+        } else {
+            Column(horizontalAlignment = Alignment.End) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Gap)) {
+                    DoneTick()
+                    ColorUpDoneWords(chips, Modifier.weight(1f))
+                }
+                undo()
+            }
+        }
     }
 }
 
 @Composable
-private fun ColorUpDoneWords(chips: String) {
-    Column {
+private fun DoneTick() {
+    Icon(PokerIcons.Check, contentDescription = null, tint = PokerColors.Live, modifier = Modifier.size(DoneTickSize))
+}
+
+@Composable
+private fun ColorUpDoneWords(chips: String, modifier: Modifier = Modifier) {
+    Column(modifier) {
         Text(stringResource(R.string.break_color_up_done), style = MaterialTheme.typography.titleMedium, color = PokerColors.Live)
         Text(
             text = stringResource(R.string.break_color_up_out, chips),
@@ -207,8 +228,8 @@ private fun AddOnCard(uiState: TimerUiState, openBank: () -> Unit) {
             .fillMaxWidth()
             .clip(CardShape)
             .background(PokerColors.FeltGreen)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(PokerDimens.SpacingDefault),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PokerEyebrow(stringResource(R.string.break_add_ons, money(purchases.addOnCents)), modifier = Modifier.weight(1f))
@@ -258,11 +279,11 @@ private fun ThenCard(uiState: TimerUiState) {
             .fillMaxWidth()
             .clip(CardShape)
             .background(PokerColors.FeltGreen)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = PokerDimens.SpacingDefault, vertical = PokerDimens.SpacingMedium),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         PokerEyebrow(stringResource(R.string.clock_then_level, next.level.level))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
             Text(
                 text = blindsText(next.level, formatter),
                 style = PokerType.NumberL,
@@ -280,3 +301,8 @@ private fun ThenCard(uiState: TimerUiState) {
         }
     }
 }
+
+/** Under this width at font 1.0, Undo goes under the words of "Color-up done". */
+private val InlineUndoMinWidth = 280.dp
+private val DoneTickSize = 22.dp
+private val Gap = PokerDimens.SpacingMedium

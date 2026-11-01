@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.components.leaveOnHardwareEnter
 import com.huntercoles.pokerpayout.tournament.R
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSettings
@@ -70,7 +71,7 @@ fun BlindsConfigPanel(uiState: TimerUiState, onIntent: (TimerIntent) -> Unit, mo
  */
 @Composable
 internal fun TimingRow(config: BlindConfiguration, onIntent: (TimerIntent) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium), verticalAlignment = Alignment.Bottom) {
         SetupNumberField(
             value = config.gameDurationHours,
             onCommit = { onIntent(TimerIntent.GameDurationHoursChanged(it)) },
@@ -91,7 +92,7 @@ internal fun TimingRow(config: BlindConfiguration, onIntent: (TimerIntent) -> Un
 
 @Composable
 private fun StackRow(config: BlindConfiguration, onIntent: (TimerIntent) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium), verticalAlignment = Alignment.Bottom) {
         SetupNumberField(
             value = config.startingChips,
             onCommit = { onIntent(TimerIntent.UpdateStartingChips(it)) },
@@ -109,7 +110,7 @@ private fun StackRow(config: BlindConfiguration, onIntent: (TimerIntent) -> Unit
 /** Break length and the note shown on the clock during each break. Both stay editable mid-game. */
 @Composable
 internal fun BreakRow(breaks: BreakSettings, onIntent: (TimerIntent) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium), verticalAlignment = Alignment.Bottom) {
         SetupNumberField(
             value = breaks.lengthMinutes,
             onCommit = { onIntent(TimerIntent.UpdateBreakLength(it)) },
@@ -175,7 +176,7 @@ internal fun AnteRow(fromLevel: Int, levelCount: Int, onChange: (Int) -> Unit) {
                 .fillMaxWidth()
                 .toggleable(value = on, role = Role.Switch, onValueChange = { onChange(if (it) 1 else 0) }),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(

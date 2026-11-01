@@ -107,7 +107,7 @@ private fun OddsHeader(state: OddsCalculatorUiState, onIntent: (OddsCalculatorIn
 private fun OddsFooter(state: OddsCalculatorUiState, onIntent: (OddsCalculatorIntent) -> Unit) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         ToggleChip(

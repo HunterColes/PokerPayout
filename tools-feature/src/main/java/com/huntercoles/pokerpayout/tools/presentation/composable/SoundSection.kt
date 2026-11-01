@@ -227,9 +227,9 @@ internal fun VolumeRow(volume: Float, enabled: Boolean, label: String, onVolume:
     }
 }
 
-/** A 6 dp track, gold up to the volume. */
+/** A 6 dp track, gold up to the volume (and up to a point in a cue sound file). */
 @Composable
-private fun VolumeTrack(state: SliderState, accent: Color) {
+internal fun VolumeTrack(state: SliderState, accent: Color) {
     val range = state.valueRange
     val fraction = ((state.value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
     Box(

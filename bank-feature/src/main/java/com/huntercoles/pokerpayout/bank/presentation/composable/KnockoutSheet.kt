@@ -98,7 +98,7 @@ internal fun KnockoutSheetContent(
         )
         Text(text = introText(sheet), style = MaterialTheme.typography.bodyMedium, color = PokerColors.Chalk)
         PokerEyebrow(stringResource(R.string.bank_ko_by))
-        Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
             ChoiceGrid(sheet.candidates.filterNot { it.isOut }, choice, perRow, showBounties = progressive) { choice = it }
             val out = sheet.candidates.filter { it.isOut }
             if (out.isNotEmpty()) {
@@ -187,7 +187,7 @@ private fun ChoiceGrid(
     onChoose: (Int) -> Unit,
 ) {
     candidates.chunked(perRow).forEach { pair ->
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
             pair.forEach { candidate ->
                 Choice(
                     label = candidate.name,
@@ -227,9 +227,9 @@ private fun Choice(
             .background(if (selected) PokerColors.FeltHigh else PokerColors.DarkGreen)
             .border(if (selected) 2.dp else 1.dp, if (selected) PokerColors.PokerGold else PokerColors.FeltEdge, shape)
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = PokerDimens.SpacingMedium, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         val color = when {
             selected -> PokerColors.PokerGold
@@ -243,13 +243,13 @@ private fun Choice(
         if (detail == null) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+                style = MaterialTheme.typography.bodyLarge,
                 color = color,
                 modifier = Modifier.weight(1f)
             )
         } else {
             Column(Modifier.weight(1f)) {
-                Text(text = label, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp), color = color)
+                Text(text = label, style = MaterialTheme.typography.bodyLarge, color = color)
                 Text(
                     text = detail,
                     style = MaterialTheme.typography.bodySmall,
@@ -264,7 +264,7 @@ private fun Choice(
 /** A sheet's big title with a pill on the right, as in S5b and S5c. */
 @Composable
 internal fun SheetHeading(title: String, pill: @Composable () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
         Text(
             text = title,
             style = SheetTitle,
@@ -293,7 +293,7 @@ internal fun SheetButtons(
     confirmVariant: PokerButtonVariant = PokerButtonVariant.Primary,
     confirmIcon: ImageVector? = null,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall), verticalAlignment = Alignment.CenterVertically) {
         PokerButton(
             text = dismissLabel,
             onClick = onDismiss,

@@ -29,6 +29,8 @@ import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.testing.forEachScrollPosition
+import com.huntercoles.pokerpayout.core.testing.withCurrency
+import com.huntercoles.pokerpayout.core.utils.AppCurrency
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -284,6 +286,27 @@ class BankScreensTest(private val config: ScreenConfig) {
         show(state) { SettleUpSheetContent(state.settleUp!!, state, onSetPaid = { _, _ -> }, onShare = {}, onDismiss = {}) }
         golden("S5e_settle_up_rake")
         check("Settle-up sheet, raked")
+    }
+
+    /**
+     * Hardening: the settle-up in yen at a thousand times the prices (¥40,000 buy-ins, payments up to
+     * ¥260,000), with two long names, so a row holds a long line and a big amount at once.
+     */
+    @Test
+    fun settleUpSheetLongNamesYen() = withCurrency(AppCurrency.YEN) {
+        with(kit) {
+            val viewModel = BankScenes.settleUp(kit, prices = 1_000.0)
+            viewModel.send(
+                BankIntent.PlayerNameChanged(BankScenes.DANA, "Christopher Montgomery"),
+                BankIntent.PlayerNameChanged(BankScenes.SAM, "Alexandria Whitfield"),
+            )
+            val state = viewModel.state()
+            show(state) {
+                SettleUpSheetContent(state.settleUp!!, state, onSetPaid = { _, _ -> }, onShare = {}, onDismiss = {})
+            }
+            golden("S5e_settle_up_long_yen")
+            check("Settle-up sheet, long names in yen")
+        }
     }
 
     /** Every payment ticked: the Bank records everyone square, and the sheet says so (layout only). */

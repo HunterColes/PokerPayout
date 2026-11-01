@@ -18,7 +18,6 @@ import com.huntercoles.pokerpayout.core.utils.MoneyFormat
 import com.huntercoles.pokerpayout.core.utils.SmallestChipChoices
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSettings
-import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCueTimes
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCues
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockLevels
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockSaves
@@ -366,7 +365,7 @@ class TimerViewModel @Inject constructor(
         val state = _uiState.value
         val timeline = state.timeline
         // The cue sound, and the quiet cues (PP-083), for every cue passed since the last look
-        if (playCues) cues.play(ClockCueTimes.crossed(timeline, lastSeenMillis, elapsedMillis))
+        if (playCues) cues.look(timeline, lastSeenMillis, elapsedMillis)
         lastSeenMillis = elapsedMillis
 
         val endMillis = timeline.endSeconds * MILLIS_PER_SECOND

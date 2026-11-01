@@ -67,4 +67,23 @@
     <string name="cue_event_game_over">Game over</string>
     <string name="cue_event_big_moment">Bubble, final table, heads-up</string>
     <string name="cue_event_champion">Champion</string>
+    <string name="cue_custom_title">Your own sound</string>
+    <string name="cue_custom_off_description">Pick a sound file on this phone to play at each change. %1$s plays the rest.</string>
+    <string name="cue_custom_on_description">Plays at each new level, break and the game over. 1 minute left and the big moments stay %1$s.</string>
+    <string name="cue_custom_missing">Your sound file can\'t be found; playing %1$s instead.</string>
+    <string name="cue_custom_refused">That file can\'t be played. Try another one.</string>
+    <string name="cue_custom_length">Your file · %1$s long</string>
+    <string name="cue_custom_peak">Peak</string>
+    <string name="cue_custom_peak_hint">The change lands here</string>
+    <string name="cue_custom_end">Ends at</string>
+    <string name="cue_custom_end_hint">Fades out here</string>
+    <string name="cue_custom_to_end">Play to the end</string>
+    <string name="cue_custom_to_end_hint">Turn off to stop it sooner</string>
+    <string name="cue_custom_preview">Preview</string>
+    <string name="cue_custom_change">Change · %1$s</string>
+    <string name="cue_custom_bar">Preview, the change at %1$s</string>
+    <string name="cue_custom_choose">Choose another file</string>
+    <string name="cue_custom_stop">Stop using it</string>
+    <string name="cue_custom_seconds">%1$.1f s</string>
+    <string name="cue_custom_seconds_spoken">%1$.1f seconds</string>
 </resources>

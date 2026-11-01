@@ -86,7 +86,7 @@ internal fun SettingsCard(
                     role = Role.Button,
                     onClick = { onExpand(!expanded) },
                 ),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -226,7 +226,7 @@ private fun ShapeOptions(selected: ChipDistributionCurve, onIntent: (ChipSetInte
                         onClick = { onIntent(ChipSetIntent.SetShape(curve)) },
                     )
                     .padding(vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 RadioDot(isSelected)

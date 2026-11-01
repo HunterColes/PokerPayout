@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.LevelProgress
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
@@ -55,7 +56,7 @@ internal fun ClockHero(uiState: TimerUiState, width: Dp, cap: Dp, onIntent: ((Ti
     val toggle = stringResource(if (uiState.isRunning) R.string.clock_pause else R.string.clock_resume)
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall, Alignment.CenterHorizontally),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             PokerEyebrow(

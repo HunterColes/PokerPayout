@@ -139,7 +139,7 @@ internal fun HistoryCard(modifier: Modifier = Modifier, content: @Composable Col
             .fillMaxWidth()
             .clip(RoundedCornerShape(PokerDimens.CornerCard))
             .background(PokerColors.FeltGreen)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = PokerDimens.SpacingDefault, vertical = PokerDimens.SpacingSmall),
         verticalArrangement = Arrangement.spacedBy(4.dp),
         content = content,
     )

@@ -110,7 +110,10 @@ fun ChipSetContent(
                 SettingsCard(state, onIntent, expanded = showSettings, onExpand = { showSettings = it })
             }
             if (maxWidth >= TwoPaneWidth) {
-                Row(Modifier.fillMaxSize().padding(horizontal = gutter), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    Modifier.fillMaxSize().padding(horizontal = gutter),
+                    horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+                ) {
                     Pane(0.dp, Modifier.weight(1f)) {
                         OwnedCard(state, onIntent)
                         settings()
@@ -140,7 +143,7 @@ private fun Pane(gutter: Dp, modifier: Modifier, content: @Composable ColumnScop
             .fillMaxHeight()
             .verticalScroll(rememberScrollState())
             .padding(start = gutter, end = gutter, top = 4.dp, bottom = PokerDimens.Gutter),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         content = content,
     )
 }
@@ -152,7 +155,7 @@ internal fun ChipSetSection(content: @Composable ColumnScope.() -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = PokerDimens.SpacingMedium),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         content = content,
     )
@@ -164,7 +167,7 @@ internal fun ChipSetSection(content: @Composable ColumnScope.() -> Unit) {
 internal fun SectionHeader(title: String, note: String?, gold: Boolean = true) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         PokerEyebrow(
@@ -191,7 +194,7 @@ internal fun NoteBox(ok: Boolean, content: @Composable ColumnScope.() -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(PokerColors.FeltDeep, RoundedCornerShape(PokerDimens.CornerControl))
-            .padding(12.dp),
+            .padding(PokerDimens.SpacingMedium),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {

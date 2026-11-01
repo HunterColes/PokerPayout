@@ -149,7 +149,10 @@ fun SeatDrawContent(
             // A phone on its side is wide but short: the controls and the tables scroll side by side,
             // so the tables are in view. Elsewhere one column, with the tables after the controls.
             if (draw != null && maxWidth >= TwoPaneWidth && maxHeight < ShortHeight) {
-                Row(Modifier.fillMaxSize().padding(horizontal = gutter), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    Modifier.fillMaxSize().padding(horizontal = gutter),
+                    horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+                ) {
                     Pane(Modifier.weight(CONTROLS_SHARE)) { controls() }
                     Pane(Modifier.weight(1f - CONTROLS_SHARE)) { tables(1) }
                 }
@@ -171,7 +174,7 @@ private fun Pane(modifier: Modifier, content: @Composable ColumnScope.() -> Unit
             .fillMaxHeight()
             .verticalScroll(rememberScrollState())
             .padding(top = 4.dp, bottom = PokerDimens.Gutter),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         content = content,
     )
 }
@@ -212,7 +215,10 @@ private fun DrawnActions(draw: SeatDraw, onIntent: (SeatDrawIntent) -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+        ) {
             SecondaryAction(R.string.seat_draw_redraw_seats, PokerIcons.Restart) { onIntent(SeatDrawIntent.DrawSeats) }
             if (draw.buttonDealt) {
                 SecondaryAction(R.string.seat_draw_deal_again, PokerIcons.Cards) { onIntent(SeatDrawIntent.DealButton) }
@@ -241,7 +247,7 @@ private fun SecondaryAction(label: Int, icon: ImageVector, onClick: () -> Unit) 
 /** A Chalk line with an icon: how the draw works, the rule for the button. */
 @Composable
 private fun NoteLine(icon: ImageVector, text: String, modifier: Modifier = Modifier) {
-    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
         Icon(icon, contentDescription = null, tint = PokerColors.Chalk, modifier = Modifier.padding(top = 1.dp).size(18.dp))
         Text(text = text, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk, modifier = Modifier.weight(1f))
     }

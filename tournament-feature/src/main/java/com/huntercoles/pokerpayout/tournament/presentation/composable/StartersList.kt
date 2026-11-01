@@ -64,7 +64,7 @@ private fun StarterItem(starter: StarterSetup, canLoad: Boolean, onIntent: (Pres
                     role = Role.Button,
                     onClick = { onIntent(PresetsIntent.LoadStarter(starter.starter)) },
                 )
-                .padding(vertical = 8.dp),
+                .padding(vertical = PokerDimens.SpacingSmall),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(

@@ -44,22 +44,22 @@ import com.huntercoles.pokerpayout.tournament.presentation.TournamentConfigUiSta
 internal fun MoneyGrid(setup: TournamentConfigUiState, timer: TimerUiState, actions: TournamentActions) {
     val amounts = setup.money
     val onSetup = actions.onSetupIntent
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
             BuyInField(amounts, onSetup, Modifier.weight(1f))
             BountyField(amounts, onSetup, Modifier.weight(1f), isLocked = setup.bountyAmountLocked)
         }
         BountyTypeField(setup, onSetup)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium), verticalAlignment = Alignment.Bottom) {
             RebuyField(amounts, onSetup, Modifier.weight(1f))
             RebuysUntilSelect(timer, actions.onTimerIntent, Modifier.weight(1f))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
             AddOnField(amounts, onSetup, Modifier.weight(1f))
             FoodField(amounts, onSetup, Modifier.weight(1f))
         }
         // Late arrivals and re-entries pay the entry above (PP-116); the rake comes off the prize pool (PP-145)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Bottom) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium), verticalAlignment = Alignment.Bottom) {
             LateEntryUntilSelect(setup, timer, onSetup, Modifier.weight(1f))
             RakeField(amounts, onSetup, Modifier.weight(1f))
         }
@@ -73,17 +73,17 @@ internal fun MoneyGrid(setup: TournamentConfigUiState, timer: TimerUiState, acti
 @Composable
 internal fun PanelMoneyGrid(setup: TournamentConfigUiState, onSetup: (TournamentConfigIntent) -> Unit) {
     val amounts = setup.money
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
             BuyInField(amounts, onSetup, Modifier.weight(1f))
             BountyField(amounts, onSetup, Modifier.weight(1f), isLocked = setup.bountyAmountLocked)
         }
         BountyTypeField(setup, onSetup)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
             RebuyField(amounts, onSetup, Modifier.weight(1f))
             AddOnField(amounts, onSetup, Modifier.weight(1f))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
             FoodField(amounts, onSetup, Modifier.weight(1f))
             RakeField(amounts, onSetup, Modifier.weight(1f))
         }
@@ -110,8 +110,8 @@ private fun BountyTypeField(setup: TournamentConfigUiState, onSetup: (Tournament
         Text(stringResource(R.string.setup_bounty_type), style = SetupFieldStyle.Label, color = PokerColors.Chalk)
         FlowRow(
             modifier = Modifier.selectableGroup(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         ) {
             BountyMode.entries.forEach { mode ->
                 BountyTypeChip(
@@ -142,7 +142,7 @@ private fun BountyTypeChip(label: String, selected: Boolean, enabled: Boolean, o
             .background(if (selected) PokerColors.FeltHigh else PokerColors.DarkGreen)
             .border(if (selected) 2.dp else 1.dp, if (selected) PokerColors.PokerGold else PokerColors.FeltEdge, shape)
             .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = PokerDimens.SpacingMedium, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {

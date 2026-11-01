@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.utils.ChipColour
 import com.huntercoles.pokerpayout.core.utils.ChipShortfall
@@ -177,7 +178,7 @@ internal fun StackPicture(stack: PlayerStack, short: ChipShortfall? = null) {
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             maxItemsInEachRow = perRow,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
             stack.chips.forEach { chip ->
                 PileColumn(chip, needed = short?.takeIf { it.colour == chip.colour }?.more, pileHeight, Modifier.weight(1f))

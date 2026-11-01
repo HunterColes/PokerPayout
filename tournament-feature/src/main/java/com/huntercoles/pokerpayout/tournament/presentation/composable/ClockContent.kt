@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
@@ -44,16 +45,25 @@ internal fun ClockContent(
         Column(Modifier.fillMaxSize().padding(horizontal = gutter)) {
             SetupStrip(SetupSummary.stripParts(setup, timer, full = true), openPanel)
             MomentSlot(timer.momentSlot, actions.onTimerIntent)
-            Row(Modifier.weight(1f).padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+            Row(
+                Modifier.weight(1f).padding(top = PokerDimens.SpacingMedium),
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
                 Column(
-                    modifier = Modifier.weight(LEFT_PANE).verticalScroll(rememberScrollState()).padding(bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier
+                        .weight(LEFT_PANE)
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = PokerDimens.SpacingDefault),
+                    verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingDefault),
                 ) {
                     ClockMain(timer, actions, layout)
                 }
                 Column(
-                    modifier = Modifier.weight(1f - LEFT_PANE).verticalScroll(rememberScrollState()).padding(bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .weight(1f - LEFT_PANE)
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = PokerDimens.SpacingDefault),
+                    verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
                 ) {
                     ClockSide(setup, timer, showSubs = true)
                 }
@@ -64,8 +74,8 @@ internal fun ClockContent(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(start = gutter, end = gutter, top = 4.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(start = gutter, end = gutter, top = 4.dp, bottom = PokerDimens.SpacingDefault),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
             // PP-111: a big moment shows under the strip; with none, the slot takes no room
             Column(Modifier.fillMaxWidth()) {
@@ -106,7 +116,10 @@ private fun ClockSide(setup: TournamentConfigUiState, timer: TimerUiState, showS
 /** A started clock whose saved setup can't be played (it shouldn't happen): say so, and open setup. */
 @Composable
 private fun NoSchedule(actions: TournamentActions) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+    ) {
         Text(
             text = stringResource(R.string.clock_no_blinds),
             style = MaterialTheme.typography.bodyLarge,

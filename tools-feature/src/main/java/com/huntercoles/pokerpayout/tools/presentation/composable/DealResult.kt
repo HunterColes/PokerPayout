@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
 import com.huntercoles.pokerpayout.core.utils.FormatUtils
@@ -89,7 +90,10 @@ private fun DealRows(state: DealUiState, deal: Deal) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SplitAmounts(icm: Long, chipChop: Long) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingDefault),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         SplitAmount(stringResource(R.string.deal_icm), FormatUtils.formatCents(icm))
         SplitAmount(stringResource(R.string.deal_chip_chop), FormatUtils.formatCents(chipChop))
     }

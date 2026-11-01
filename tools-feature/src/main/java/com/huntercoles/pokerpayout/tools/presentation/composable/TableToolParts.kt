@@ -61,7 +61,10 @@ internal fun TableToolPage(
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val gutter = if (maxWidth < SmallWidth) SmallGutter else PokerDimens.Gutter
             if (maxWidth >= TwoPaneWidth) {
-                Row(Modifier.fillMaxSize().padding(horizontal = gutter), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    Modifier.fillMaxSize().padding(horizontal = gutter),
+                    horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+                ) {
                     ToolPane(0.dp, Modifier.weight(1f)) {
                         ToolIntro(intro)
                         inputs()
@@ -100,7 +103,7 @@ private fun ToolPane(gutter: Dp, modifier: Modifier, content: @Composable Column
             .fillMaxHeight()
             .verticalScroll(rememberScrollState())
             .padding(start = gutter, end = gutter, top = 4.dp, bottom = PokerDimens.Gutter),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         content = content,
     )
 }
@@ -125,7 +128,7 @@ internal fun ToolWell(merged: Boolean = false, content: @Composable ColumnScope.
 /** A Chalk line with an icon, an info sign by default: how something is worked out. */
 @Composable
 internal fun ToolNote(text: String, modifier: Modifier = Modifier, icon: ImageVector = PokerIcons.Info) {
-    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
         Icon(icon, contentDescription = null, tint = PokerColors.Chalk, modifier = Modifier.padding(top = 1.dp).size(18.dp))
         Text(text = text, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk, modifier = Modifier.weight(1f))
     }

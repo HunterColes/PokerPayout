@@ -96,7 +96,7 @@ private fun OtherNames(aliases: List<String>, onIntent: (HistoryIntent) -> Unit)
                     .fillMaxWidth()
                     .heightIn(min = PokerDimens.MinTouch),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
             ) {
                 Text(
                     text = alias,

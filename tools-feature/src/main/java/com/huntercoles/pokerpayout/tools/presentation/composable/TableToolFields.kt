@@ -134,8 +134,8 @@ private fun OwnTextField(
                     .clip(shape)
                     .background(PokerColors.DarkGreen)
                     .border(if (focused) 2.dp else 1.dp, if (focused) PokerColors.PokerGold else PokerColors.FeltEdge, shape)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(horizontal = PokerDimens.SpacingMedium, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(Modifier.weight(1f)) {

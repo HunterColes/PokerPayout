@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.ChipDenominations
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.PokerChip
 import com.huntercoles.pokerpayout.core.design.components.chipColourWord
@@ -71,7 +72,7 @@ internal fun ColorUpExchange(swap: ColorUpSwap, chipSet: ChipSetChips?) {
 internal fun ColorUpSteps(swaps: List<ColorUpSwap>, chipSet: ChipSetChips?) {
     if (swaps.isEmpty()) return
     val formatter = rememberChipFormatter()
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
         swaps.forEachIndexed { index, swap ->
             val many = chipPhrase(swap.chip, plural = true, chipSet)
             val one = chipPhrase(swap.into, plural = false, chipSet)

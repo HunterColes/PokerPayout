@@ -83,7 +83,7 @@ internal fun FoldScene(setup: TournamentConfigUiState, timer: TimerUiState, gutt
         modifier = Modifier
             .fillMaxSize()
             .padding(start = gutter, end = gutter, top = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         FoldingLines(lines, collapse, stack, grow)
         FoldingHero(timer, grow)
@@ -92,7 +92,7 @@ internal fun FoldScene(setup: TournamentConfigUiState, timer: TimerUiState, gutt
                 alpha = grow
                 translationY = (1f - grow) * RISE.toPx()
             },
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
             BlindsCard(timer.blindsUp)
             ClockControls(timer.buttons, onIntent = {})
@@ -138,9 +138,9 @@ private fun FoldLine(text: String, first: Boolean, modifier: Modifier) {
             .fillMaxWidth()
             .background(PokerColors.FeltGreen, shape)
             .border(1.dp, if (first) PokerColors.FeltEdge else PokerColors.FeltLine, shape)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = PokerDimens.SpacingMedium, vertical = PokerDimens.SpacingSmall),
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         if (first) Icon(PokerIcons.Tune, contentDescription = null, tint = PokerColors.Chalk, modifier = Modifier.size(18.dp))
         Text(

@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.tournament.R
@@ -44,7 +45,7 @@ internal fun ClockInfo(uiState: TimerUiState, modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .clip(CardShape)
             .background(PokerColors.FeltGreen)
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = PokerDimens.SpacingDefault, vertical = 4.dp),
     ) {
         rows.forEachIndexed { index, row ->
             if (index > 0) HorizontalDivider(color = PokerColors.FeltLine)
@@ -109,7 +110,7 @@ private fun InfoRow(line: InfoLine) {
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 44.dp)
-            .padding(vertical = 8.dp)
+            .padding(vertical = PokerDimens.SpacingSmall)
             .semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),

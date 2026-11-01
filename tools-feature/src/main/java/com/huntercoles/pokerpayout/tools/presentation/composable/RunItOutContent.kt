@@ -105,7 +105,7 @@ private fun Pane(modifier: Modifier, content: @Composable ColumnScope.() -> Unit
             .widthIn(max = PANE_MAX_WIDTH)
             .verticalScroll(rememberScrollState())
             .padding(bottom = PokerDimens.SpacingDefault),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         content = content,
     )
 }
@@ -161,8 +161,8 @@ private fun RunSeatRow(runOut: RunOutState, seat: Int, equity: Double?, lead: Bo
             .then(if (won && !reduced) Modifier.drawBehind { drawGlow() } else Modifier)
             .background(PokerColors.FeltGreen, shape)
             .then(if (lead || won) Modifier.border(if (won) 2.dp else 1.5.dp, PokerColors.PokerGold, shape) else Modifier)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = 14.dp, vertical = PokerDimens.SpacingMedium),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         SeatHeader(
             cards = {

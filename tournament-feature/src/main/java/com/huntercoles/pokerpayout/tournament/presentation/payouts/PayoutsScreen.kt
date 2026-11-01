@@ -120,7 +120,7 @@ fun PayoutsContent(
 /** Why the structure controls don't respond: the clock is running. */
 @Composable
 private fun LockedNote() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
         Icon(PokerIcons.Lock, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(18.dp))
         Text(
             text = stringResource(R.string.payouts_locked_running),

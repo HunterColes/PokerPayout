@@ -79,7 +79,7 @@ private fun InsightCard(content: @Composable ColumnScope.() -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = PokerDimens.SpacingMedium),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         content = content,
     )
@@ -91,7 +91,7 @@ private fun InsightCard(content: @Composable ColumnScope.() -> Unit) {
 private fun SectionHeader(title: String, note: String) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.Start),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium, Alignment.Start),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         PokerEyebrow(title, color = PokerColors.PokerGold, modifier = Modifier.align(Alignment.CenterVertically))
@@ -263,7 +263,10 @@ private fun OutlookBars(rows: List<Pair<String, Double>>) {
         val labelWidth = widest.coerceIn(LABEL_MIN, maxOf(LABEL_MIN, maxWidth * LABEL_SHARE))
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             rows.forEach { (label, pct) ->
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+                ) {
                     Text(label, style = labelStyle, color = PokerColors.Chalk, modifier = Modifier.width(labelWidth))
                     Box(Modifier.weight(1f).height(BAR_HEIGHT).background(PokerColors.FeltDeep, RoundedCornerShape(3.dp))) {
                         Box(

@@ -134,15 +134,25 @@ internal fun WinnerContent(model: WinnerModel, onAction: (WinnerAction) -> Unit,
     ) {
         if (maxWidth > maxHeight) {
             Row(
-                modifier = Modifier.fillMaxSize().padding(start = 24.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+                modifier = Modifier.fillMaxSize().padding(
+                    start = 24.dp, end = PokerDimens.SpacingMedium,
+                    top = PokerDimens.SpacingSmall, bottom = PokerDimens.SpacingSmall,
+                ),
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
             ) {
-                ChampionCard(model, Modifier.weight(1f).fillMaxHeight().padding(vertical = 8.dp), scroll = true)
+                ChampionCard(
+                    model,
+                    Modifier.weight(1f).fillMaxHeight().padding(vertical = PokerDimens.SpacingSmall),
+                    scroll = true,
+                )
                 Column(Modifier.weight(1f)) {
                     WinnerTopRow(onAction)
                     Column(
-                        modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(end = 12.dp, bottom = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(end = PokerDimens.SpacingMedium, bottom = PokerDimens.SpacingSmall),
+                        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
                     ) {
                         WinnerPayouts(model)
                         WinnerSave(model.night, onAction)
@@ -156,8 +166,12 @@ internal fun WinnerContent(model: WinnerModel, onAction: (WinnerAction) -> Unit,
                     modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
-                        .padding(start = 12.dp, end = 12.dp, bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                        .padding(
+                            start = PokerDimens.SpacingMedium,
+                            end = PokerDimens.SpacingMedium,
+                            bottom = PokerDimens.SpacingDefault,
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingDefault),
                 ) {
                     ChampionCard(model, Modifier.fillMaxWidth())
                     WinnerPayouts(model)
@@ -201,7 +215,7 @@ private fun ChampionCard(model: WinnerModel, modifier: Modifier = Modifier, scro
             modifier = Modifier
                 .fillMaxWidth()
                 .then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
-                .padding(horizontal = 16.dp, vertical = 20.dp),
+                .padding(horizontal = PokerDimens.SpacingDefault, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -256,7 +270,7 @@ private fun WinnerPayouts(model: WinnerModel) {
                     // TalkBack reads a row as one: "1st, Dana, $225"
                     .semantics(mergeDescendants = true) {},
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
             ) {
                 val first = row.place == 1
                 Text(
@@ -304,7 +318,7 @@ private fun WinnerSave(night: NightSave, onAction: (WinnerAction) -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             )
             NightSave.Saved -> {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
                     Icon(
                         PokerIcons.Check,
                         contentDescription = null,

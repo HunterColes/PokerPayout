@@ -154,7 +154,7 @@ private fun BackupCard(icon: ImageVector, heading: String, body: String, button:
             .fillMaxWidth()
             .clip(RoundedCornerShape(PokerDimens.CornerCard))
             .background(PokerColors.FeltGreen)
-            .padding(16.dp),
+            .padding(PokerDimens.SpacingDefault),
         verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -186,8 +186,8 @@ private fun ProblemNote(message: String) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(PokerDimens.CornerCard))
             .background(PokerColors.FeltGreen)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(PokerDimens.SpacingDefault),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Icon(PokerIcons.Info, contentDescription = null, tint = PokerColors.Danger, modifier = Modifier.size(22.dp))
         Text(

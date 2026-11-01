@@ -115,7 +115,10 @@ internal fun QuickKnockoutOverlay(
                 // A tap on the panel between its buttons stays on it, rather than reaching the dim
                 .pointerInput(Unit) { detectTapGestures {} }
                 .windowInsetsPadding(WindowInsets.displayCutout.only(cutout))
-                .padding(start = PokerDimens.Gutter, end = PokerDimens.Gutter, top = 8.dp, bottom = 12.dp),
+                .padding(
+                    start = PokerDimens.Gutter, end = PokerDimens.Gutter,
+                    top = PokerDimens.SpacingSmall, bottom = PokerDimens.SpacingMedium,
+                ),
             verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         ) {
             when (val sheet = state.sheet) {
@@ -178,7 +181,10 @@ private fun ColumnScope.WhoIsBackIn(
     )
     val chips = remember { NumberFormat.getIntegerInstance(Locale.getDefault()) }.format(sheet.startingChips)
     // Two pills, so they wrap at large text rather than cut off
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         val price = FormatUtils.formatMoney(sheet.price.totalCents)
         PokerPill(stringResource(R.string.quick_ko_back_in_price, price), tone = PokerPillTone.Gold)
         PokerPill(stringResource(R.string.quick_ko_back_in_chips, chips), tone = PokerPillTone.Outline)
@@ -210,7 +216,10 @@ private fun ColumnScope.WhoKnockedOut(sheet: BankSheet.Knockout, onIntent: (Bank
         onClose = onClose,
         onBack = { onIntent(BankIntent.DismissSheet) },
     )
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         PokerPill(stringResource(R.string.bank_ko_place, ordinalOf(sheet.place)), tone = PokerPillTone.Danger)
         bountyPill(sheet)?.let { PokerPill(it, tone = PokerPillTone.Gold) }
     }
@@ -297,7 +306,7 @@ private fun ChoiceList(modifier: Modifier, content: @Composable ColumnScope.(per
         val perRow = if (maxWidth < TwoPerRowFrom || LocalDensity.current.fontScale > ONE_PER_ROW_ABOVE) 1 else 2
         Column(
             modifier = Modifier.verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         ) {
             content(perRow)
         }
@@ -307,7 +316,7 @@ private fun ChoiceList(modifier: Modifier, content: @Composable ColumnScope.(per
 @Composable
 private fun ChoiceGrid(choices: List<PanelChoice>, perRow: Int, onPick: (Int?) -> Unit) {
     choices.chunked(perRow).forEach { row ->
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
             row.forEach { choice ->
                 ChoiceTile(choice, onClick = { onPick(choice.playerId) }, modifier = Modifier.weight(1f))
             }
@@ -327,9 +336,9 @@ private fun ChoiceTile(choice: PanelChoice, onClick: () -> Unit, modifier: Modif
             .background(if (choice.muted) PokerColors.FeltDeep else PokerColors.DarkGreen)
             .border(1.dp, PokerColors.FeltEdge, shape)
             .clickable(onClickLabel = choice.clickLabel, role = Role.Button, onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = PokerDimens.SpacingMedium, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         val color = if (choice.muted) PokerColors.Chalk else PokerColors.CardWhite
         choice.icon?.let { Icon(it, contentDescription = null, tint = color, modifier = Modifier.size(20.dp)) }

@@ -68,9 +68,9 @@ internal fun PresetsRow(midGame: Boolean, onOpen: () -> Unit, modifier: Modifier
             .then(if (framed) Modifier.background(PokerColors.FeltGreen) else Modifier)
             .clickable(onClickLabel = stringResource(R.string.presets_open), role = Role.Button, onClick = onOpen)
             .heightIn(min = PokerDimens.RowMinHeight)
-            .padding(horizontal = if (framed) 16.dp else 0.dp, vertical = 10.dp),
+            .padding(horizontal = if (framed) PokerDimens.SpacingDefault else 0.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Icon(PokerIcons.List, contentDescription = null, tint = PokerColors.Chalk, modifier = Modifier.size(20.dp))
         Column(Modifier.weight(1f)) {
@@ -212,7 +212,7 @@ private fun PresetsList(state: PresetsUiState, onIntent: (PresetsIntent) -> Unit
  */
 @Composable
 private fun ListNote(text: String, problem: Boolean = false) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
         Icon(
             if (problem) PokerIcons.Info else PokerIcons.Lock,
             contentDescription = null,
@@ -244,7 +244,7 @@ private fun PresetItem(preset: TournamentPreset, canLoad: Boolean, onIntent: (Pr
                     role = Role.Button,
                     onClick = { onIntent(PresetsIntent.Load(preset.id)) },
                 )
-                .padding(vertical = 8.dp),
+                .padding(vertical = PokerDimens.SpacingSmall),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(

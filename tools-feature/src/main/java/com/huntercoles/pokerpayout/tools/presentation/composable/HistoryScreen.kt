@@ -159,7 +159,7 @@ private fun NightsList(
                 SeasonSection(state, text, onIntent)
                 PokerEyebrow(
                     stringResource(R.string.history_nights_heading),
-                    modifier = Modifier.padding(top = 8.dp).semantics { heading() },
+                    modifier = Modifier.padding(top = PokerDimens.SpacingSmall).semantics { heading() },
                 )
                 state.nights.forEach { saved -> NightRow(saved, text) { onIntent(HistoryIntent.Open(saved.id)) } }
                 PokerButton(
@@ -185,7 +185,7 @@ private fun NightsList(
 @Composable
 private fun EmptyNote() {
     HistoryCard {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
             Icon(PokerIcons.Trophy, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(24.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
@@ -218,7 +218,7 @@ private fun SeasonSection(state: HistoryUiState, text: HistoryText, onIntent: (H
         label = { year -> year?.toString() ?: allTime },
     )
     text.leaders(state.year, state.leaders)?.let { leaders ->
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
             Icon(
                 PokerIcons.Crown,
                 contentDescription = null,
@@ -298,7 +298,7 @@ private fun NightRow(night: SavedNight, text: HistoryText, onOpen: () -> Unit) {
             .clip(RoundedCornerShape(PokerDimens.CornerCard))
             .background(PokerColors.FeltGreen)
             .clickable(onClickLabel = stringResource(R.string.history_open), role = Role.Button, onClick = onOpen)
-            .padding(start = 16.dp, top = 10.dp, end = 10.dp, bottom = 10.dp),
+            .padding(start = PokerDimens.SpacingDefault, top = 10.dp, end = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {

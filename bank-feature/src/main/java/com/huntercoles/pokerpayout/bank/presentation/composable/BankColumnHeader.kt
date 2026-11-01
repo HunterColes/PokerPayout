@@ -33,6 +33,7 @@ import com.huntercoles.pokerpayout.bank.R
 import com.huntercoles.pokerpayout.bank.presentation.BankColumn
 import com.huntercoles.pokerpayout.bank.presentation.BankUiState
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.mayTruncate
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
@@ -54,7 +55,7 @@ internal fun BankColumnHeader(state: BankUiState, layout: BankLayout, modifier: 
             .drawBehind {
                 drawLine(PokerColors.FeltLine, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
             }
-            .padding(start = 12.dp, end = 2.dp, top = 6.dp, bottom = 6.dp),
+            .padding(start = PokerDimens.SpacingMedium, end = 2.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PlayerLabel(Modifier.weight(1f))
@@ -70,7 +71,7 @@ internal fun BankColumnHeader(state: BankUiState, layout: BankLayout, modifier: 
             HeaderLabel(stringResource(R.string.bank_column_in), Modifier.width(AmountWidth), TextAlign.End)
             HeaderLabel(
                 stringResource(R.string.bank_column_owed),
-                Modifier.width(AmountWidth).padding(end = 12.dp),
+                Modifier.width(AmountWidth).padding(end = PokerDimens.SpacingMedium),
                 TextAlign.End
             )
         }

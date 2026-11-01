@@ -43,8 +43,8 @@ internal fun RunCard(content: @Composable ColumnScope.() -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = 14.dp, vertical = PokerDimens.SpacingMedium),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         content = content,
     )
 }
@@ -124,7 +124,10 @@ internal fun RunButtons(runOut: RunOutState, onIntent: (OddsCalculatorIntent) ->
                 },
             )
             PokerButton(deal, { onIntent(OddsCalculatorIntent.DealNext) }, Modifier.fillMaxWidth(), enabled = ready)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 PokerButton(
                     text = again,
                     onClick = { onIntent(OddsCalculatorIntent.RunAgain) },
@@ -150,7 +153,10 @@ internal fun TwiceBoardRow(index: Int, board: TwiceBoard, runOut: RunOutState, f
         stringResource(R.string.odds_runout_split)
     }
     RunCard {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+        ) {
             PokerEyebrow(stringResource(R.string.odds_runout_run, index + 1), color = PokerColors.PokerGold)
             Text(result, style = MaterialTheme.typography.bodyMedium, color = PokerColors.CardWhite)
         }

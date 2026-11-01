@@ -152,8 +152,8 @@ internal fun SeatRow(
             .fillMaxWidth()
             .background(PokerColors.FeltGreen, shape)
             .then(if (ui.status == SeatStatus.Favourite) Modifier.border(1.5.dp, PokerColors.PokerGold, shape) else Modifier)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = 14.dp, vertical = PokerDimens.SpacingMedium),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         SeatHeader(
             cards = {

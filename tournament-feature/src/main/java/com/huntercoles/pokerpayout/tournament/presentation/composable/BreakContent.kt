@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.LevelProgress
 import com.huntercoles.pokerpayout.core.design.components.LevelTone
@@ -49,7 +50,7 @@ import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 @Composable
 internal fun BreakContent(uiState: TimerUiState, actions: TournamentActions, width: Dp, heroCap: Dp) {
     val segment = uiState.currentBreak ?: return
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
         BreakHero(uiState, segment, width, heroCap)
         if (segment.colorUp.isNotEmpty()) ColorUpCard(segment, uiState.colorUpDone, uiState.chipSet, actions.onTimerIntent)
         if (uiState.purchases.addOnCents > 0) AddOnCard(uiState, actions.openBank)
@@ -77,7 +78,7 @@ private fun BreakHero(uiState: TimerUiState, segment: BreakSegment, width: Dp, c
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall, Alignment.CenterHorizontally)) {
             PokerPill(clockEyebrow(uiState), tone = PokerPillTone.Gold, icon = PokerIcons.Coffee)
             clockPills(uiState).forEach { PokerPill(it.text, tone = it.tone) }
             MoneyStagePill(uiState.table.moneyStage)
@@ -133,8 +134,8 @@ private fun ColorUpCard(segment: BreakSegment, done: Boolean, chipSet: ChipSetCh
             .clip(CardShape)
             .background(PokerColors.FeltGreen)
             .then(if (done) Modifier else Modifier.border(1.dp, PokerColors.DarkGold, CardShape))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(PokerDimens.SpacingDefault),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         if (done) {
             ColorUpDoneRow(chips) { onIntent(TimerIntent.MarkColorUpDone(done = false)) }
@@ -207,7 +208,7 @@ private fun AddOnCard(uiState: TimerUiState, openBank: () -> Unit) {
             .fillMaxWidth()
             .clip(CardShape)
             .background(PokerColors.FeltGreen)
-            .padding(16.dp),
+            .padding(PokerDimens.SpacingDefault),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -258,7 +259,7 @@ private fun ThenCard(uiState: TimerUiState) {
             .fillMaxWidth()
             .clip(CardShape)
             .background(PokerColors.FeltGreen)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = PokerDimens.SpacingDefault, vertical = PokerDimens.SpacingMedium),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         PokerEyebrow(stringResource(R.string.clock_then_level, next.level.level))

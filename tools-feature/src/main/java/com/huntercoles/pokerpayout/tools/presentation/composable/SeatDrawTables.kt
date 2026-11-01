@@ -66,9 +66,9 @@ import com.huntercoles.pokerpayout.tools.seats.SeatDraw
 @Composable
 internal fun TablesGrid(draw: SeatDraw, columns: Int, dealToAnimate: Int, text: SeatDrawText) {
     val dealtMs = rememberDealClock(dealToAnimate, seats = draw.tables.maxOf { it.seats.size })
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
         draw.tables.chunked(columns).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+            Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium), verticalAlignment = Alignment.Top) {
                 row.forEach { table -> TableCard(table, dealtMs, text, Modifier.weight(1f)) }
                 repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
             }
@@ -113,8 +113,8 @@ private fun TableCard(table: DrawnTable, dealtMs: Float, text: SeatDrawText, mod
     Column(
         modifier = modifier
             .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = PokerDimens.SpacingMedium, vertical = PokerDimens.SpacingMedium),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         TableHeader(table, text)
         if (result != null) {
@@ -174,7 +174,7 @@ private fun TableHeader(table: DrawnTable, text: SeatDrawText) {
         modifier = Modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) { heading() },
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PokerEyebrow(text = title, color = PokerColors.PokerGold, modifier = Modifier.weight(1f))
@@ -208,7 +208,7 @@ private fun SeatRow(line: SeatLine) {
         SeatNumber(line.seat, gold = line.button)
         FlowRow(
             modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(

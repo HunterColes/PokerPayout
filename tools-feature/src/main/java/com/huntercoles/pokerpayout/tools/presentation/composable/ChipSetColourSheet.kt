@@ -83,7 +83,7 @@ fun ColourEditorContent(state: ChipSetUiState, editor: ColourEditor, onIntent: (
         modifier = Modifier
             .verticalScroll(rememberScrollState())
             .imePadding(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingDefault),
     ) {
         ColourChoices(choices, colour, value ?: colour.standardValue) { picked ->
             colour = picked

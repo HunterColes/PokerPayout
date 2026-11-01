@@ -49,6 +49,7 @@ import com.huntercoles.pokerpayout.bank.presentation.BankUiState
 import com.huntercoles.pokerpayout.bank.presentation.CellStatus
 import com.huntercoles.pokerpayout.bank.presentation.Purchase
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.PokerTypography
 import com.huntercoles.pokerpayout.core.design.components.leaveOnHardwareEnter
@@ -79,7 +80,7 @@ internal fun BankRow(
             .background(background)
             .then(if (row.section == BankSection.CHAMPION) Modifier.goldEdge() else Modifier)
             .heightIn(min = if (layout.showAmounts) 58.dp else 56.dp)
-            .padding(start = 12.dp, end = 2.dp),
+            .padding(start = PokerDimens.SpacingMedium, end = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
@@ -89,7 +90,7 @@ internal fun BankRow(
                 // even when five open columns leave the name 42 dp (a 320 dp phone). With a line
                 // under the name, more room above it, so the name's touch area stays clear of the
                 // row above (at 1.3x text, a row without a line over one with a line overlapped).
-                .padding(end = 6.dp, top = if (hasMicroLine(row, layout)) 8.dp else 4.dp, bottom = 4.dp),
+                .padding(end = 6.dp, top = if (hasMicroLine(row, layout)) PokerDimens.SpacingSmall else 4.dp, bottom = 4.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             NameField(row, large = layout.showAmounts, onRename = { onIntent(BankIntent.PlayerNameChanged(row.playerId, it)) })
@@ -101,7 +102,7 @@ internal fun BankRow(
             Amount(
                 text = if (row.owedCents > 0L) FormatUtils.formatMoney(row.owedCents) else "—",
                 color = PokerColors.Chalk,
-                modifier = Modifier.width(AmountWidth).padding(end = 12.dp),
+                modifier = Modifier.width(AmountWidth).padding(end = PokerDimens.SpacingMedium),
             )
         }
     }

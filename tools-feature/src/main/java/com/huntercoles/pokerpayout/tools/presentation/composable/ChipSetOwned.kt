@@ -91,7 +91,7 @@ private fun InventoryRow(chip: InventoryChip, onIntent: (ChipSetIntent) -> Unit)
                         role = Role.Button,
                         onClick = { onIntent(ChipSetIntent.EditColour(chip.colour)) },
                     ),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // The name beside it says what the chip is; TalkBack reads the name once
@@ -132,7 +132,7 @@ private fun AddColourRow(onClick: () -> Unit) {
             .clip(RoundedCornerShape(PokerDimens.CornerControl))
             .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(

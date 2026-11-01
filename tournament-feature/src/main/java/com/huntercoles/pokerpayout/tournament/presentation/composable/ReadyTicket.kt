@@ -44,7 +44,7 @@ internal fun ReadyTicket(uiState: TimerUiState, modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .border(BorderStroke(1.dp, if (playable) PokerColors.PokerGold else PokerColors.Danger), shape)
             .background(PokerColors.PokerBlack, shape)
-            .padding(16.dp)
+            .padding(PokerDimens.SpacingDefault)
             .semantics(mergeDescendants = true) {},
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -69,7 +69,11 @@ private fun TicketTop(uiState: TimerUiState) {
         val clockSize = rememberFittedSize(clock, PokerType.DisplayL, half, TicketClock)
         val blinds = blindsText(first, formatter)
         val blindsSize = rememberFittedSize(blinds, PokerType.NumberL, half, TicketBlinds)
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+        ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 PokerEyebrow(stringResource(R.string.setup_ticket_ready), color = PokerColors.PokerGold)
                 Text(
@@ -118,7 +122,7 @@ private fun CantStart() {
 /** "9 levels · 2 breaks" and "3:20 in all". */
 @Composable
 private fun TicketShape(uiState: TimerUiState) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
         Text(
             text = SetupSummary.levelsAndBreaks(uiState),
             style = MaterialTheme.typography.bodySmall,

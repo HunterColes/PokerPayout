@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.LocalShellSnackbars
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
@@ -150,7 +151,7 @@ private fun TableClock(
                 }
             }
             .windowInsetsPadding(WindowInsets.displayCutout)
-            .padding(horizontal = 24.dp, vertical = 12.dp)
+            .padding(horizontal = 24.dp, vertical = PokerDimens.SpacingMedium)
             .then(if (quiet) Modifier.clearAndSetSemantics {} else Modifier),
     ) {
         val width = maxWidth
@@ -219,7 +220,7 @@ private fun PortraitBody(uiState: TimerUiState, heroCap: Dp, width: Dp) {
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingDefault),
     ) {
         TableHero(uiState, width, heroCap)
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -239,7 +240,7 @@ private fun TableHero(uiState: TimerUiState, width: Dp, cap: Dp) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TableEyebrow(uiState: TimerUiState) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall, Alignment.CenterHorizontally)) {
         if (uiState.isOnBreak) {
             PokerPill(clockEyebrow(uiState), tone = PokerPillTone.Gold, icon = PokerIcons.Coffee)
         } else {
@@ -329,7 +330,7 @@ private fun TableFooter(
     Row(
         Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         // A snackbar (Undo after a knockout) sits over the numbers: they make way, not peek out beside it
         val snackbarUp = LocalShellSnackbars.current?.currentSnackbarData != null
@@ -348,7 +349,7 @@ private fun TableFooter(
         }
         Row(
             modifier = Modifier.alpha(controlsAlpha),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             onKnockOut?.let { KnockOutButton(it) }

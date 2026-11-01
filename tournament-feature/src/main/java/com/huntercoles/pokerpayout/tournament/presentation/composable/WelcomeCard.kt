@@ -39,7 +39,7 @@ internal fun WelcomeCard(onSeeStarters: () -> Unit, onDismiss: () -> Unit, modif
             .fillMaxWidth()
             .border(BorderStroke(1.dp, PokerColors.FeltEdge), shape)
             .background(PokerColors.FeltGreen, shape)
-            .padding(start = 16.dp, top = 4.dp, end = 4.dp, bottom = 4.dp),
+            .padding(start = PokerDimens.SpacingDefault, top = 4.dp, end = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {

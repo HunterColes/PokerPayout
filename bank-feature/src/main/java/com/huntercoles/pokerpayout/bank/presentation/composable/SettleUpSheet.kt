@@ -161,7 +161,7 @@ private fun PaymentRow(transfer: Transfer, line: AnnotatedString, paid: Boolean,
             .toggleable(value = paid, role = Role.Checkbox, onValueChange = onPaid)
             .heightIn(min = 52.dp)
             .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

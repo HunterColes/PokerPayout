@@ -42,10 +42,10 @@ internal fun MoneySummary(
         modifier = modifier
             .fillMaxWidth()
             .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
-            .padding(12.dp),
+            .padding(PokerDimens.SpacingMedium),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
             MoneyMeter(
                 label = stringResource(R.string.bank_collected),
                 currentCents = state.totalPaidInCents,
@@ -102,7 +102,7 @@ internal fun ButtonRow(content: @Composable (Modifier) -> Unit) {
     if (LocalDensity.current.fontScale > STACK_ABOVE_FONT_SCALE) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { content(Modifier.fillMaxWidth()) }
     } else {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { content(Modifier.weight(1f)) }
+        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) { content(Modifier.weight(1f)) }
     }
 }
 

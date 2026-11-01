@@ -80,8 +80,8 @@ internal fun SetupContent(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(start = gutter, end = gutter, top = 4.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(start = gutter, end = gutter, top = 4.dp, bottom = PokerDimens.SpacingDefault),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
             if (setup.showWelcome) {
                 WelcomeCard(
@@ -142,24 +142,24 @@ internal fun SetupSection(
             .fillMaxWidth()
             .clip(SectionShape)
             .background(PokerColors.FeltGreen)
-            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(start = PokerDimens.SpacingDefault, end = PokerDimens.SpacingDefault, bottom = PokerDimens.SpacingDefault),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = PokerDimens.MinTouch)
                 .clickable(onClickLabel = action, role = Role.Button, onClick = onToggle)
-                .padding(top = 8.dp),
+                .padding(top = PokerDimens.SpacingSmall),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         ) {
             FlowRow(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                PokerEyebrow(title, modifier = Modifier.padding(end = 8.dp))
+                PokerEyebrow(title, modifier = Modifier.padding(end = PokerDimens.SpacingSmall))
                 Text(note, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk, textAlign = TextAlign.End)
             }
             Icon(
@@ -203,13 +203,13 @@ internal fun PlayersCard(
                     Modifier
                         .clip(SectionShape)
                         .background(PokerColors.FeltGreen)
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(horizontal = PokerDimens.SpacingDefault, vertical = PokerDimens.SpacingMedium)
                 } else {
                     Modifier
                 },
             ),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite)
@@ -316,7 +316,7 @@ private fun PayoutsRow(setup: TournamentConfigUiState, openPayouts: () -> Unit) 
             .background(PokerColors.FeltGreen)
             .clickable(onClickLabel = stringResource(R.string.setup_payouts_open), role = Role.Button, onClick = openPayouts)
             .heightIn(min = PokerDimens.RowMinHeight)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = PokerDimens.SpacingDefault, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {

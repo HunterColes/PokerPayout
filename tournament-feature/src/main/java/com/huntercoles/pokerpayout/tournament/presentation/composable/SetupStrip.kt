@@ -55,9 +55,9 @@ internal fun SetupStrip(parts: List<String>, onOpen: () -> Unit, modifier: Modif
             .border(1.dp, PokerColors.FeltEdge, shape)
             .clickable(role = Role.Button, onClick = onOpen)
             .semantics(mergeDescendants = true) { contentDescription = description }
-            .padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+            .padding(start = PokerDimens.SpacingMedium, end = PokerDimens.SpacingSmall, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         Icon(PokerIcons.Tune, contentDescription = null, tint = PokerColors.Chalk, modifier = Modifier.size(18.dp))
         WithWidth(Modifier.weight(1f)) { width ->

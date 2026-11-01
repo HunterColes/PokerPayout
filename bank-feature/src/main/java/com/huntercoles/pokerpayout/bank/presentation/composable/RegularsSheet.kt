@@ -121,7 +121,7 @@ private fun seatsLine(model: RegularsModel): String = when {
 @Composable
 private fun AddName(query: String, canAdd: Boolean, onQuery: (String) -> Unit, onAdd: () -> Unit) {
     val label = stringResource(R.string.bank_regulars_add_label)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall), verticalAlignment = Alignment.Bottom) {
         PokerField(
             value = query,
             onValueChange = onQuery,
@@ -152,7 +152,7 @@ private fun RegularsList(rows: List<RegularRow>, canSeat: Boolean, onToggle: (St
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PokerEyebrow(
@@ -190,7 +190,7 @@ private fun RegularLine(row: RegularRow, detail: String, rule: Boolean, enabled:
             .toggleable(value = row.seated, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
             .heightIn(min = 52.dp)
             .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {

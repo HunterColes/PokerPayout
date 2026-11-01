@@ -99,7 +99,7 @@ internal fun BoxWithConstraintsScope.TableSnackbars() {
         modifier = Modifier
             .align(Alignment.BottomStart)
             .windowInsetsPadding(WindowInsets.displayCutout)
-            .padding(start = 12.dp, bottom = 4.dp)
+            .padding(start = PokerDimens.SpacingMedium, bottom = 4.dp)
             .width((maxWidth * share).coerceAtMost(SnackbarMaxWidth)),
     )
 }

@@ -201,12 +201,12 @@ private fun PhoneBody(state: BankUiState, layout: BankLayout, onIntent: (BankInt
                     onPayoutStructure = { onIntent(BankIntent.ShowPayoutStructure) },
                 ),
                 onSettleUp = { onIntent(BankIntent.ShowSettleUp) },
-                modifier = Modifier.padding(bottom = 12.dp),
+                modifier = Modifier.padding(bottom = PokerDimens.SpacingMedium),
             )
         }
         if (state.hasUnnamedSeat) {
             item(key = "regulars") {
-                RegularsButton(onIntent, Modifier.padding(bottom = 12.dp))
+                RegularsButton(onIntent, Modifier.padding(bottom = PokerDimens.SpacingMedium))
             }
         }
         playerList(state, layout, onIntent, hint = hint)
@@ -254,7 +254,7 @@ private fun TabletBody(state: BankUiState, layout: BankLayout, onIntent: (BankIn
                 .fillMaxHeight()
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
             MoneySummary(state = state, buttons = null, onSettleUp = { onIntent(BankIntent.ShowSettleUp) })
             if (state.hasUnnamedSeat) RegularsButton(onIntent)
@@ -285,7 +285,7 @@ private fun PaneCard(content: @Composable ColumnScope.() -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
-            .padding(16.dp),
+            .padding(PokerDimens.SpacingDefault),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         content = content,
     )

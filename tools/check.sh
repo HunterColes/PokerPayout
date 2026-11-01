@@ -18,6 +18,13 @@ if [[ "$main_root" != "$PWD" && ! -e build-cache && -d "$main_root/build-cache" 
   ln -s "$main_root/build-cache" build-cache
 fi
 tasks=("$@"); ((${#tasks[@]})) || tasks=(testDebugUnitTest lintDebug detekt)
+# This repo is public (GitHub mirrors master): no private host name in a tracked file. The pattern is local git config
+# (company.private, company.private-allow), set in each checkout and never committed.
+if ((! $#)) && pat="$(git config --get company.private)"; then
+  allow="$(git config --get company.private-allow || true)"
+  hits="$(git grep -nIiE "$pat" -- . | { [[ -n $allow ]] && grep -viE "$allow" || cat; } | head -5)" || true
+  [[ -z $hits ]] || { printf '%s\n' "$hits"; echo "gate: RED: a tracked file names a private host (git config company.private)"; exit 1; }
+fi
 log="$(mktemp)"; trap 'rm -f "$log"' EXIT
 rc=0
 flock -w "${GATE_LOCK_WAIT:-3600}" /tmp/pokerpayout-gradle.lock \

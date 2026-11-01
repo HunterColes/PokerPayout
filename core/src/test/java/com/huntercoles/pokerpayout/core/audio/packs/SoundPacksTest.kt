@@ -47,6 +47,25 @@ class SoundPacksTest {
         assertNull(SoundPacks.Classic.soundFor(CueEvent.BIG_MOMENT))
     }
 
+    /** #7: Chimes has a sound of its own for every moment, under an id that never changes. */
+    @Test
+    fun theChimesPackHasItsOwnSoundForEveryMoment() {
+        assertEquals("chimes", SoundPacks.CHIMES_ID)
+        assertEquals(SoundPacks.Chimes, SoundPacks.byId("chimes"))
+        assertTrue(SoundPacks.Chimes in SoundPacks.all)
+        val expected = mapOf(
+            CueEvent.LEVEL_UP to R.raw.cue_chimes_level_up,
+            CueEvent.ONE_MINUTE to R.raw.cue_chimes_one_minute,
+            CueEvent.BREAK_START to R.raw.cue_chimes_break_start,
+            CueEvent.BREAK_END to R.raw.cue_chimes_break_end,
+            CueEvent.GAME_OVER to R.raw.cue_chimes_game_over,
+            CueEvent.BIG_MOMENT to R.raw.cue_chimes_big_moment,
+            CueEvent.CHAMPION to R.raw.cue_chimes_champion,
+        )
+        CueEvent.entries.forEach { assertEquals("$it", expected[it], SoundPacks.Chimes.soundFor(it)) }
+        assertEquals("Chimes", context.getString(SoundPacks.Chimes.name))
+    }
+
     @Test
     fun everyPackHasItsOwnIdAndAName() {
         assertEquals(SoundPacks.all.size, SoundPacks.all.map { it.id }.toSet().size)

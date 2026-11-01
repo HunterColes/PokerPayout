@@ -23,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.bank.R
 import com.huntercoles.pokerpayout.bank.presentation.BankIntent
@@ -155,7 +157,7 @@ private fun TabletBody(state: BankUiState, layout: BankLayout, onIntent: (BankIn
             MoneySummary(state = state, buttons = null, onSettleUp = { onIntent(BankIntent.ShowSettleUp) })
             if (state.hasUnnamedSeat) RegularsButton(onIntent)
             PaneCard {
-                PokerEyebrow(stringResource(R.string.bank_pool_title), color = PokerColors.PokerGold)
+                PokerEyebrow(stringResource(R.string.bank_pool_title), Modifier.semantics { heading() })
                 PoolBreakdownContent(state)
             }
             PaneCard {

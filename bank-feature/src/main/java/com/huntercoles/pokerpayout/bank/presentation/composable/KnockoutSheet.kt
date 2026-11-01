@@ -243,13 +243,13 @@ private fun Choice(
         if (detail == null) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+                style = MaterialTheme.typography.bodyLarge,
                 color = color,
                 modifier = Modifier.weight(1f)
             )
         } else {
             Column(Modifier.weight(1f)) {
-                Text(text = label, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp), color = color)
+                Text(text = label, style = MaterialTheme.typography.bodyLarge, color = color)
                 Text(
                     text = detail,
                     style = MaterialTheme.typography.bodySmall,

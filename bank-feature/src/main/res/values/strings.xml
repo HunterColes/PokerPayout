@@ -49,7 +49,6 @@
     <string name="bank_collected">Collected</string>
     <string name="bank_paid_out">Paid out</string>
     <string name="bank_breakdown">Breakdown</string>
-    <string name="bank_payout_structure">Payout structure</string>
 
     <!-- Column header and sections -->
     <string name="bank_column_player">Player</string>
@@ -251,6 +250,7 @@
     <string name="bank_payouts">Payouts</string>
     <string name="bank_payout_row">%1$s · %2$s</string>
     <string name="bank_still_playing">still playing</string>
+    <!-- Opens the payout structure: on the summary, the pool breakdown and the tablet pane -->
     <string name="bank_structure">Structure</string>
 
     <!-- Settle up: who pays whom once the night is over -->

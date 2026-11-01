@@ -43,7 +43,7 @@ internal fun MoneySummary(
             .fillMaxWidth()
             .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
             .padding(PokerDimens.SpacingMedium),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
             MoneyMeter(
@@ -79,7 +79,7 @@ internal fun MoneySummary(
                 modifier = it,
             )
             PokerButton(
-                text = stringResource(R.string.bank_payout_structure),
+                text = stringResource(R.string.bank_structure),
                 onClick = buttons.onPayoutStructure,
                 variant = PokerButtonVariant.Secondary,
                 size = PokerButtonSize.Small,

@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -15,9 +15,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.bank.R
 import com.huntercoles.pokerpayout.bank.presentation.BankUiState
 import com.huntercoles.pokerpayout.core.design.PokerColors
@@ -35,18 +35,19 @@ import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 /** The pool breakdown as a modal bottom sheet (a tablet shows it open in the side pane instead). */
 @Composable
 internal fun PoolBreakdownSheet(state: BankUiState, onPayoutStructure: () -> Unit, onDismiss: () -> Unit) {
-    PokerSheet(onDismissRequest = onDismiss, title = stringResource(R.string.bank_pool_title)) {
+    PokerSheet(onDismissRequest = onDismiss) {
         PoolBreakdownSheetContent(state, onPayoutStructure, onDismiss)
     }
 }
 
-/** The pool breakdown sheet's body: the pool, the payout table, Close and Payout structure. */
+/** The pool breakdown sheet's body: its title, the pool, the payout table, Close and Structure. */
 @Composable
 internal fun PoolBreakdownSheetContent(state: BankUiState, onPayoutStructure: () -> Unit, onDismiss: () -> Unit) {
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
+        SheetHeading(title = stringResource(R.string.bank_pool_title)) {}
         PoolBreakdownContent(state)
         PayoutTableContent(state)
         ButtonRow {
@@ -58,7 +59,7 @@ internal fun PoolBreakdownSheetContent(state: BankUiState, onPayoutStructure: ()
                 modifier = it,
             )
             PokerButton(
-                text = stringResource(R.string.bank_payout_structure),
+                text = stringResource(R.string.bank_structure),
                 onClick = onPayoutStructure,
                 variant = PokerButtonVariant.Secondary,
                 size = PokerButtonSize.Small,
@@ -109,8 +110,8 @@ private fun bountyPoolLabel(mode: BountyMode): String = stringResource(
 @Composable
 internal fun PayoutTableContent(state: BankUiState) {
     val holderByPlace = state.placeByPlayer.entries.associate { (playerId, place) -> place to playerId }
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        PokerEyebrow(stringResource(R.string.bank_payouts))
+    Column {
+        PokerEyebrow(stringResource(R.string.bank_payouts), Modifier.semantics { heading() })
         state.payoutTable.places.forEach { row ->
             val holder = holderByPlace[row.place]?.let { id -> state.players.firstOrNull { it.id == id }?.name }
             Line(
@@ -126,6 +127,7 @@ internal fun PayoutTableContent(state: BankUiState) {
     }
 }
 
+/** A Line's [cents] as the shared [AmountLine]. */
 @Suppress("LongParameterList") // one line: words, amount and its emphasis
 @Composable
 private fun Line(
@@ -136,12 +138,30 @@ private fun Line(
     total: Boolean = false,
     gold: Boolean = false,
 ) {
+    AmountLine(label, formatMoney(cents), strong = strong, sub = sub, total = total, gold = gold)
+}
+
+/**
+ * A money line in a Bank sheet: the words on the left, the amount on the right. The pool breakdown
+ * and Pay out share it, so the same kind of line looks the same in both: [total] in gold at
+ * NumberL, an "of which" line ([sub]) smaller and in Chalk, the rest at NumberAmount.
+ */
+@Suppress("LongParameterList") // one line: words, amount and its emphasis
+@Composable
+internal fun AmountLine(
+    label: String,
+    amount: String,
+    strong: Boolean = false,
+    sub: Boolean = false,
+    total: Boolean = false,
+    gold: Boolean = false,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = if (total) 48.dp else 38.dp),
+            .padding(vertical = if (total) PokerDimens.SpacingMedium else PokerDimens.SpacingSmall),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Text(
             text = label,
@@ -152,16 +172,18 @@ private fun Line(
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = formatMoney(cents),
-            style = PokerType.NumberM.copy(
-                fontSize = if (total) 24.sp else if (sub) 17.sp else 19.sp,
-                lineHeight = if (total) 28.sp else 22.sp,
-            ),
+            text = amount,
+            style = when {
+                total -> PokerType.NumberL
+                sub -> PokerType.NumberM
+                else -> PokerType.NumberAmount
+            },
             color = when {
                 total || gold -> PokerColors.PokerGold
                 sub -> PokerColors.Chalk
                 else -> PokerColors.CardWhite
             },
+            softWrap = false,
         )
     }
 }

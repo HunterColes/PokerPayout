@@ -157,7 +157,6 @@ private fun RegularsList(rows: List<RegularRow>, canSeat: Boolean, onToggle: (St
         ) {
             PokerEyebrow(
                 text = stringResource(R.string.bank_regulars_heading),
-                color = PokerColors.PokerGold,
                 modifier = Modifier.semantics { heading() },
             )
             Text(
@@ -188,7 +187,7 @@ private fun RegularLine(row: RegularRow, detail: String, rule: Boolean, enabled:
             .fillMaxWidth()
             .then(if (rule) Modifier.topRule() else Modifier)
             .toggleable(value = row.seated, enabled = enabled, role = Role.Checkbox, onValueChange = { onToggle() })
-            .heightIn(min = 52.dp)
+            .heightIn(min = PokerDimens.RowMinHeight)
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         verticalAlignment = Alignment.CenterVertically,

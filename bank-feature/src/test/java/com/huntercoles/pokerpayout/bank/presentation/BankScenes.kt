@@ -29,8 +29,16 @@ object BankScenes {
         rebuy: Double = 40.0,
         addOn: Double = 10.0,
         bounties: BountyMode = BountyMode.STANDARD,
+        prices: Double = 1.0,
     ): BankViewModel {
-        configure(players = players.size, buyIn = 40.0, food = 5.0, bounty = 5.0, rebuy = rebuy, addOn = addOn)
+        configure(
+            players = players.size,
+            buyIn = 40.0 * prices,
+            food = 5.0 * prices,
+            bounty = 5.0 * prices,
+            rebuy = rebuy * prices,
+            addOn = addOn * prices,
+        )
         tournamentPreferences.setBountyMode(bounties)
         tournamentPreferences.setRebuyUntilLevel(4)
         tournamentPreferences.setPayoutRounding(PayoutRounding.FIVE_DOLLARS)
@@ -174,10 +182,11 @@ object BankScenes {
     /**
      * The champion night, settled between friends: Dana, Marcus, Priya, Theo and Jo paid in at the
      * start, Sam, Alex, Rita and Ben settle up at the end; nobody is paid out yet. The Bank holds
-     * $340 and keeps the $45 food money, so it pays out $295; the four owe $50 each.
+     * $340 and keeps the $45 food money, so it pays out $295; the four owe $50 each. [prices]
+     * scales every price (1,000 for a yen night of big amounts).
      */
-    fun settleUp(kit: BankTestKit): BankViewModel = with(kit) {
-        val viewModel = game()
+    fun settleUp(kit: BankTestKit, prices: Double = 1.0): BankViewModel = with(kit) {
+        val viewModel = game(prices = prices)
         buyIns(viewModel, JO)
         viewModel.send(BankIntent.AddPurchase(MARCUS, Purchase.REBUY))
         listOf(DANA, MARCUS, PRIYA, THEO, JO).forEach { viewModel.send(BankIntent.AddPurchase(it, Purchase.ADD_ON)) }

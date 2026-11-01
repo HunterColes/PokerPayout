@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -22,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -33,7 +35,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.bank.R
 import com.huntercoles.pokerpayout.bank.presentation.BankUiState
 import com.huntercoles.pokerpayout.bank.presentation.SettleUpModel
@@ -98,17 +99,22 @@ internal fun SettleUpSheetContent(
             SettleNote(stringResource(R.string.bank_settle_rake, settleUp.rake.label, formatMoney(settleUp.rakeCents)))
         }
         if (transfers.isNotEmpty()) {
-            Column {
-                PaymentsHeader(transfers.size)
-                val names = settleNames(state)
-                transfers.forEachIndexed { index, transfer ->
-                    PaymentRow(
-                        transfer = transfer,
-                        line = names.line(transfer),
-                        paid = state.isPaid(transfer),
-                        rule = index > 0,
-                        onPaid = { onSetPaid(transfer, it) },
-                    )
+            BoxWithConstraints {
+                // Narrow for the text size (a small phone at large text): the amount goes under the names
+                val stacked = maxWidth / LocalDensity.current.fontScale < InlineAmountMinWidth
+                Column {
+                    PaymentsHeader(transfers.size)
+                    val names = settleNames(state)
+                    transfers.forEachIndexed { index, transfer ->
+                        PaymentRow(
+                            transfer = transfer,
+                            line = names.line(transfer),
+                            paid = state.isPaid(transfer),
+                            rule = index > 0,
+                            stacked = stacked,
+                            onPaid = { onSetPaid(transfer, it) },
+                        )
+                    }
                 }
             }
         }
@@ -136,7 +142,6 @@ private fun PaymentsHeader(payments: Int) {
     ) {
         PokerEyebrow(
             text = pluralStringResource(R.plurals.bank_settle_count, payments, payments),
-            color = PokerColors.PokerGold,
             modifier = Modifier
                 .align(Alignment.CenterVertically)
                 .semantics { heading() },
@@ -150,35 +155,61 @@ private fun PaymentsHeader(payments: Int) {
     }
 }
 
-/** "Theo pays Dana   $47   [✓]": the whole row toggles; TalkBack reads it as one checkbox. */
+/**
+ * "Theo pays Dana   $47   [✓]": the whole row toggles; TalkBack reads it as one checkbox. [stacked]
+ * puts the amount under the names, so a long name and a big amount never squeeze a name to break.
+ */
+@Suppress("LongParameterList") // one row: the payment, its words, paid, rule, layout and tap
 @Composable
-private fun PaymentRow(transfer: Transfer, line: AnnotatedString, paid: Boolean, rule: Boolean, onPaid: (Boolean) -> Unit) {
+private fun PaymentRow(
+    transfer: Transfer,
+    line: AnnotatedString,
+    paid: Boolean,
+    rule: Boolean,
+    stacked: Boolean,
+    onPaid: (Boolean) -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (rule) Modifier.topRule() else Modifier)
             // One checkbox: the toggle merges the row, read as "Theo pays Dana, $47, checked"
             .toggleable(value = paid, role = Role.Checkbox, onValueChange = onPaid)
-            .heightIn(min = 52.dp)
+            .heightIn(min = PokerDimens.RowMinHeight)
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = line,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-            color = PokerColors.Chalk,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = formatMoney(transfer.amountCents),
-            style = PokerType.NumberAmount,
-            color = PokerColors.CardWhite,
-            softWrap = false,
-        )
+        if (stacked) {
+            Column(Modifier.weight(1f)) {
+                Text(text = line, style = MaterialTheme.typography.bodyLarge, color = PokerColors.Chalk)
+                PaymentAmount(transfer)
+            }
+        } else {
+            Text(
+                text = line,
+                style = MaterialTheme.typography.bodyLarge,
+                color = PokerColors.Chalk,
+                modifier = Modifier.weight(1f),
+            )
+            PaymentAmount(transfer)
+        }
         Box(Modifier.size(PokerDimens.MinTouch), contentAlignment = Alignment.Center) { TickBox(paid) }
     }
 }
+
+@Composable
+private fun PaymentAmount(transfer: Transfer) {
+    Text(
+        text = formatMoney(transfer.amountCents),
+        style = PokerType.NumberAmount,
+        color = PokerColors.CardWhite,
+        softWrap = false,
+    )
+}
+
+/** Below this much row width at font scale 1.0, a payment's amount goes under its names. */
+private val InlineAmountMinWidth = 240.dp
 
 /** The tick: a FeltEdge outline, gold with a check once ticked (paid, or at the table tonight). */
 @Composable

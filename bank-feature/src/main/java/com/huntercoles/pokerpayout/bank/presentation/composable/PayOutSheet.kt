@@ -2,16 +2,13 @@ package com.huntercoles.pokerpayout.bank.presentation.composable
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -19,13 +16,10 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.bank.R
 import com.huntercoles.pokerpayout.bank.presentation.BankSheet
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
-import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonSize
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
@@ -64,11 +58,11 @@ internal fun PayOutSheetContent(sheet: BankSheet.PayOut, onSetPaid: (Boolean) ->
             val lines = breakdownLines(sheet)
             lines.forEachIndexed { index, (label, cents) ->
                 if (index > 0) HorizontalDivider(color = PokerColors.FeltLine)
-                BreakdownLine(label, formatMoney(cents))
+                AmountLine(label, formatMoney(cents))
             }
             if (lines.isNotEmpty()) HorizontalDivider(color = PokerColors.FeltLine)
             if (owed.winningsCents > 0L) {
-                BreakdownLine(
+                AmountLine(
                     label = stringResource(R.string.bank_pay_hand_over),
                     amount = formatMoney(owed.winningsCents),
                     total = true,
@@ -176,29 +170,6 @@ private fun kingsBountyLabel(sheet: BankSheet.PayOut): String = when (sheet.mone
     BountyMode.MYSTERY -> {
         val left = sheet.envelopesLeft.coerceAtLeast(1)
         pluralStringResource(R.plurals.bank_pay_envelopes_left, left, left)
-    }
-}
-
-@Composable
-private fun BreakdownLine(label: String, amount: String, total: Boolean = false) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = if (total) 52.dp else 38.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (total) FontWeight.Medium else FontWeight.Normal),
-            color = if (total) PokerColors.CardWhite else PokerColors.Chalk,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = amount,
-            style = PokerType.NumberM.copy(fontSize = if (total) 30.sp else 19.sp, lineHeight = if (total) 34.sp else 22.sp),
-            color = if (total) PokerColors.PokerGold else PokerColors.CardWhite,
-        )
     }
 }
 

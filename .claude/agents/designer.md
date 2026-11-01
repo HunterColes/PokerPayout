@@ -18,4 +18,5 @@ Direction: polish, consistency and UI cleanup of what exists; no new features be
   Each finding cites the golden and the composable (`path:line`).
 - Ticket: build the UI in the files the card Owns, re-record the screen's goldens (`tools/check.sh
   recordRoborazziDebug`), look at every one you changed, and run `tools/check.sh` (layout checks included). Branch,
-  push and PR exactly as `builder.md` says (`tools/pr.sh`, forge only, never GitHub, no version bump).
+  push and PR exactly as `builder.md` says (`tools/pr.sh`, forge only, never GitHub, no version bump). The PR body
+  ends with the line `Reviewer: pending`.

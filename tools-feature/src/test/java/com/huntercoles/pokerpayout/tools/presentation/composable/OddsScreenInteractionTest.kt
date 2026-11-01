@@ -146,7 +146,8 @@ class OddsScreenInteractionTest {
     @Test
     fun `run it out deals, reruns and leaves`() {
         runOut(OddsFixtures.runOutTurn)
-        screen.compose.onNodeWithText("Player 1 needs one of 16 rivers (16 of 44):").assertExists()
+        screen.compose.onNodeWithText("Player 1 needs one of 16 rivers").assertExists()
+        screen.compose.onNodeWithText("16 of 44").assertExists()
         screen.compose.onNodeWithContentDescription("down 19.7").assertExists()
         screen.compose.onNodeWithContentDescription("up 19.7").assertExists()
         screen.compose.onNodeWithText("Deal the river").performScrollTo().performClick()

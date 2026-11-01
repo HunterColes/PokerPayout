@@ -142,7 +142,10 @@ private fun OddsBody(state: OddsCalculatorUiState, onIntent: (OddsCalculatorInte
                 .padding(horizontal = PokerDimens.Gutter),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(Modifier.widthIn(max = CONTENT_MAX_WIDTH).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                Modifier.widthIn(max = CONTENT_MAX_WIDTH).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+            ) {
                 BoardStrip(state.table, state.keypad.target, state.fourColourDeck, onIntent)
                 seats.forEach { SeatRow(it, state.table, state.keypad.target, state.fourColourDeck, onIntent) }
                 if (state.table.seats.size < OddsTable.MAX_SEATS) {

@@ -50,8 +50,9 @@ internal fun RunCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 /**
- * What the table is sweating: the trailing hand's outs drawn as cards ("Player 1 needs one of 16
- * rivers (16 of 44)"), or after the river who won and with what.
+ * What the table is sweating, under a gold "OUTS 16 of 44" header like the odds screen's "NEXT
+ * CARD": the trailing hand's outs drawn as cards ("Player 1 needs one of 16 rivers"), or after the
+ * river, under "RESULT", who won and with what.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -61,6 +62,7 @@ internal fun OutsCard(runOut: RunOutState, fourColour: Boolean) {
     when {
         runOut.twice != null -> Unit
         runOut.isComplete -> RunCard {
+            SectionHeader(stringResource(R.string.odds_runout_result), note = null)
             val winner = runOut.winners.firstOrNull()
             val hand = winner?.let { OddsInsights.describe(runOut.request.seats[it].cards, runOut.board) }
             val line = resultLine(runOut, labels)
@@ -79,8 +81,10 @@ internal fun OutsCard(runOut: RunOutState, fourColour: Boolean) {
             val text = if (count == 0) {
                 stringResource(R.string.odds_runout_drawing_dead, name)
             } else {
-                pluralStringResource(needs, count, name, count, outs.cards.size)
+                pluralStringResource(needs, count, name, count)
             }
+            val of = stringResource(R.string.odds_runout_outs_of, count, outs.cards.size)
+            SectionHeader(stringResource(R.string.odds_runout_outs), of)
             Text(text, style = MaterialTheme.typography.bodyMedium, color = PokerColors.CardWhite)
             // The flush draw's suit first, then by rank: "Q♠ 9♠ ... 2♠ A♥ A♦ A♣ K♥ K♦ K♣ Q♣".
             val flushSuit = OddsInsights.describe(request.seats[focus].cards, request.board).flushDrawSuit
@@ -113,7 +117,15 @@ internal fun RunButtons(runOut: RunOutState, onIntent: (OddsCalculatorIntent) ->
     when (val next = runOut.nextStreet) {
         null -> {
             PokerButton(again, { onIntent(OddsCalculatorIntent.RunAgain) }, Modifier.fillMaxWidth(), enabled = ready)
-            PokerButton(twice, runTwice, variant = PokerButtonVariant.Text, size = PokerButtonSize.Small, enabled = ready)
+            // Centred under the big button, not stranded at the left edge.
+            PokerButton(
+                text = twice,
+                onClick = runTwice,
+                variant = PokerButtonVariant.Text,
+                size = PokerButtonSize.Small,
+                enabled = ready,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
         else -> {
             val deal = stringResource(

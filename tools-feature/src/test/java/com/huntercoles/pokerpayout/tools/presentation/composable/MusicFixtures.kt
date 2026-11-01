@@ -1,11 +1,13 @@
 package com.huntercoles.pokerpayout.tools.presentation.composable
 
+import com.huntercoles.pokerpayout.core.audio.custom.CustomCueSound
 import com.huntercoles.pokerpayout.core.audio.music.BreakMusic
 import com.huntercoles.pokerpayout.core.audio.music.BundledTrack
 import com.huntercoles.pokerpayout.core.audio.music.MusicTrack
 import com.huntercoles.pokerpayout.core.audio.music.RepeatMode
 import com.huntercoles.pokerpayout.core.audio.packs.SoundPacks
 import com.huntercoles.pokerpayout.tools.presentation.CueSoundsUiState
+import com.huntercoles.pokerpayout.tools.presentation.CustomSoundUi
 import com.huntercoles.pokerpayout.tools.presentation.MusicUiState
 
 /** The Music (S18) and Cue sounds (S18) screens' states for the tests and goldens. */
@@ -53,4 +55,21 @@ internal object MusicFixtures {
     val cueSounds = CueSoundsUiState(packs = SoundPacks.all, selected = SoundPacks.CLASSIC_ID, soundOn = true, volume = 0.7f)
 
     val cueSoundsOff = cueSounds.copy(soundOn = false)
+
+    /** #22: the host's own 10 s file on, its peak at 8.0 s, playing to the end. */
+    val cueSoundsCustom = cueSounds.copy(
+        custom = CustomSoundUi(
+            on = true,
+            sound = CustomCueSound(uri = "content://picked/ten.mp3", lengthMillis = 10_000, peakMillis = 8_000),
+        ),
+    )
+
+    /** The file gone (the pack plays), with an end point set, and a refused pick: every line the card can show. */
+    val cueSoundsCustomMissing = cueSoundsCustom.copy(
+        custom = cueSoundsCustom.custom.copy(
+            sound = cueSoundsCustom.custom.sound?.copy(endMillis = 9_500),
+            missing = true,
+            refused = true,
+        ),
+    )
 }

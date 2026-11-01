@@ -36,6 +36,28 @@ dialog wrote; never rename it). It has one name everywhere, "cue sounds":
 The cue sounds are not the music: muting them leaves the music playing, and the music has its own
 volume on the Music screen.
 
+### Your own sound for the changes
+
+Cue sounds has a **Your own sound** card above the packs (#22; `OwnSoundCard.kt`,
+`CueSoundsViewModel.kt`). Turning it on opens the system's file picker (`OpenDocument`, `audio/*`;
+no storage permission); `CueSoundFiles.keep` takes the persistable read grant and measures the file.
+A file it can't read is refused in one line and nothing changes; a cancelled picker changes nothing.
+With a file on, the host sets:
+
+- **Peak** (0 to the length, 0.1 s steps): where the change lands. The clock starts the file this
+  long before each change (the lead, `ClockCueTimes`), so the peak sits on the change.
+- **Play to the end**, or an **Ends at** point (peak to the length), where it stops with a short fade.
+- **Preview**: plays the file from 0 to its end (`SoundManager.previewFile`, even with the cue
+  sounds off) and fills a bar the length of what plays, with a "Change" mark at the peak, so the
+  host sees the peak land on the mark.
+
+The file plays only the four change sounds (New level, Break starts, Break ends, Game over). The
+picked pack stays the fallback and keeps 1 minute left, the big moments and the champion. A newly
+picked file keeps the old peak, clamped to its length. **Choose another file** swaps it (the old
+grant is released); **Stop using it** releases the grant and clears the file. When the file can't
+be read (moved, deleted, its grant gone: found by the clock or on opening the screen), the pack
+plays and the card says "Your sound file can't be found; playing <pack> instead." until a new pick.
+
 ### Songs from the phone
 
 The host adds songs with the system's file picker (`ACTION_OPEN_DOCUMENT`, audio files only). The
@@ -100,6 +122,10 @@ own backup and a move to a new phone leave them out too (PP-137): they live in `
 the backup rules exclude. Older versions kept them in `music_prefs`; they move once, keeping their
 names (`PhonePrefs.moveOnce`).
 
+The own cue sound (`cue_custom_*`, `CustomCueSoundPreferences`) is in `phone_prefs` for the same
+reason: the file is a loan from this phone's file picker, and its grant means nothing on another
+phone, so no backup (the app's or Android's) carries it. A restored phone plays the restored pack.
+
 | File | Key | What |
 |---|---|---|
 | `audio_prefs` | `sound_pack` | The picked pack's id (none saved: the default) |
@@ -108,6 +134,12 @@ names (`PhonePrefs.moveOnce`).
 | `music_prefs` | `auto_play` | Play with the clock |
 | `music_prefs` | `break_music` | `KEEP`, `PAUSE` or `QUIET` |
 | `phone_prefs` | `position_ref`, `position_ms` | Where the current song was paused (saved on a pause, never while playing) |
+| `phone_prefs` | `cue_custom_on` | The own sound plays the four change cues (false: the pack's) |
+| `phone_prefs` | `cue_custom_uri` | The picked file's content URI, as the file picker lent it |
+| `phone_prefs` | `cue_custom_length_ms` | The file's length, measured when picked |
+| `phone_prefs` | `cue_custom_peak_ms` | Where the change lands, 0 to the length |
+| `phone_prefs` | `cue_custom_end_ms` | Where it stops with a short fade, peak to the length; 0 plays to the end |
+| `phone_prefs` | `cue_custom_missing` | The file could not be read at the last try (the pack played) |
 
 ## Bundled audio
 

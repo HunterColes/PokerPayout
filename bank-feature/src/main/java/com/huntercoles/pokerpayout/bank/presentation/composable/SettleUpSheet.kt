@@ -172,7 +172,7 @@ private fun PaymentRow(transfer: Transfer, line: AnnotatedString, paid: Boolean,
         )
         Text(
             text = formatMoney(transfer.amountCents),
-            style = PokerType.NumberM.copy(fontSize = 22.sp, lineHeight = 26.sp),
+            style = PokerType.NumberAmount,
             color = PokerColors.CardWhite,
             softWrap = false,
         )

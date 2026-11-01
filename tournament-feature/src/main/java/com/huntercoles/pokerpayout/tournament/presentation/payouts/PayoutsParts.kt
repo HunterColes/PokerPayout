@@ -212,7 +212,7 @@ private fun PayoutRow(row: PayoutRowModel) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
                 text = ordinalOf(row.place),
-                style = PokerType.NumberM.copy(fontSize = 22.sp, lineHeight = 26.sp),
+                style = PokerType.NumberAmount,
                 color = if (first) PokerColors.PokerGold else PokerColors.CardWhite,
                 modifier = Modifier.widthIn(min = 44.dp),
             )

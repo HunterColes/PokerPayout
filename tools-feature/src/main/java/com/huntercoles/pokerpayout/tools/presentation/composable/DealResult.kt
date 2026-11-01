@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.domain.model.ordinalOf
@@ -130,4 +129,4 @@ private const val PERCENT = 100.0
 
 /** Wide enough that ICM and chip chop line up from one player to the next. */
 private val SplitMinWidth = 112.dp
-private val SplitStyle = PokerType.NumberM.copy(fontSize = 22.sp, lineHeight = 26.sp)
+private val SplitStyle = PokerType.NumberAmount

@@ -131,7 +131,7 @@ internal fun EquityBarPreview() {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("Win 53.0 · tie 1.4", style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
-                Text("53.7%", style = PokerType.NumberM.copy(fontSize = 22.sp), color = PokerColors.CardWhite)
+                Text("53.7%", style = PokerType.NumberAmount.copy(lineHeight = 24.sp), color = PokerColors.CardWhite)
             }
             EquityBar(win = 0.53f, tie = 0.014f, large = true)
             EquityBar(win = 0.671f, tie = 0f, estimate = true)

@@ -58,7 +58,7 @@ import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
  */
 internal object SetupFieldStyle {
     val Label = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.5.sp, lineHeight = 16.sp)
-    val Number = PokerType.NumberM.copy(fontSize = 22.sp, lineHeight = 26.sp, color = PokerColors.CardWhite)
+    val Number = PokerType.NumberAmount.copy(color = PokerColors.CardWhite)
     val Text = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, color = PokerColors.CardWhite)
     val Prefix = Number.copy(fontWeight = FontWeight.Medium, color = PokerColors.Chalk)
     val Suffix = TextStyle(fontSize = 13.sp, lineHeight = 16.sp, color = PokerColors.Chalk)

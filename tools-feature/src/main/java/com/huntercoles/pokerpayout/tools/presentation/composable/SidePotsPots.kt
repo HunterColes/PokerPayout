@@ -4,7 +4,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.tools.R
@@ -99,4 +98,4 @@ internal fun AmountLine(label: String, amount: String, gold: Boolean = false) {
 }
 
 /** Pot sizes and prizes in the number face. */
-private val AmountStyle = PokerType.NumberM.copy(fontSize = 22.sp, lineHeight = 26.sp)
+private val AmountStyle = PokerType.NumberAmount

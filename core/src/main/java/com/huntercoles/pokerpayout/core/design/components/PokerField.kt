@@ -130,7 +130,7 @@ fun PokerField(
 private class FieldEdge(val width: Dp, val color: Color)
 
 private val FieldLabel = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.5.sp, lineHeight = 16.sp)
-private val FieldValue = PokerType.NumberM.copy(fontSize = 22.sp, lineHeight = 26.sp, color = PokerColors.CardWhite)
+private val FieldValue = PokerType.NumberAmount.copy(color = PokerColors.CardWhite)
 private val FieldPrefix = FieldValue.copy(fontWeight = FontWeight.Medium, color = PokerColors.Chalk)
 private val FieldSuffix = TextStyle(fontSize = 13.sp, lineHeight = 16.sp)
 private val FieldHelp = TextStyle(fontSize = 12.sp, lineHeight = 16.sp)

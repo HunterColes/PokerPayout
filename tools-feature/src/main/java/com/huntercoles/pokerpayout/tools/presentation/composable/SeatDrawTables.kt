@@ -110,12 +110,8 @@ private fun flipOf(index: Int, dealtMs: Float): Float = ((dealtMs - index * DEAL
 @Composable
 private fun TableCard(table: DrawnTable, dealtMs: Float, text: SeatDrawText, modifier: Modifier = Modifier) {
     val result = table.button?.takeIf { dealtMs >= dealMillis(table.seats.size) }
-    Column(
-        modifier = modifier
-            .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
-            .padding(horizontal = PokerDimens.SpacingMedium, vertical = PokerDimens.SpacingMedium),
-        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
-    ) {
+    // The same felt card as Who's playing above it, so names line up with the card's text
+    ChipSetSection(modifier) {
         TableHeader(table, text)
         if (result != null) {
             Text(

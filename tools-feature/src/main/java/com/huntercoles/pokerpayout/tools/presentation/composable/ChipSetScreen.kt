@@ -148,11 +148,11 @@ private fun Pane(gutter: Dp, modifier: Modifier, content: @Composable ColumnScop
     )
 }
 
-/** A felt card: one part of the screen. */
+/** A felt card: one part of the screen (Seat draw's, Deal's and Side pots' cards too, so the tools line up). */
 @Composable
-internal fun ChipSetSection(content: @Composable ColumnScope.() -> Unit) {
+internal fun ChipSetSection(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .background(PokerColors.FeltGreen, RoundedCornerShape(PokerDimens.CornerCard))
             .padding(horizontal = 14.dp, vertical = PokerDimens.SpacingMedium),
@@ -161,10 +161,10 @@ internal fun ChipSetSection(content: @Composable ColumnScope.() -> Unit) {
     )
 }
 
-/** An eyebrow on the left and a short Chalk note on the right, wrapping under it if it must. */
+/** A gold eyebrow on the left and a short Chalk note on the right, wrapping under it if it must. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun SectionHeader(title: String, note: String?, gold: Boolean = true) {
+internal fun SectionHeader(title: String, note: String?) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
@@ -172,7 +172,7 @@ internal fun SectionHeader(title: String, note: String?, gold: Boolean = true) {
     ) {
         PokerEyebrow(
             text = title,
-            color = if (gold) PokerColors.PokerGold else PokerColors.Chalk,
+            color = PokerColors.PokerGold,
             modifier = Modifier.align(Alignment.CenterVertically),
         )
         if (note != null) {

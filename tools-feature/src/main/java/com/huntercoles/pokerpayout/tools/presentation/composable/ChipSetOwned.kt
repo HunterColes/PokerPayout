@@ -50,7 +50,6 @@ internal fun OwnedCard(state: ChipSetUiState, onIntent: (ChipSetIntent) -> Unit)
         SectionHeader(
             title = stringResource(R.string.chip_set_owned),
             note = stringResource(R.string.chip_set_owned_total, chipNumber(inventory.totalChips)),
-            gold = false,
         )
         if (!state.settings.inventoryReviewed) {
             Text(
@@ -161,7 +160,7 @@ internal fun SideBySideOrStacked(
     first: @Composable () -> Unit,
     second: @Composable () -> Unit,
     modifier: Modifier = Modifier,
-    gap: Dp = 8.dp,
+    gap: Dp = PokerDimens.SpacingSmall,
 ) {
     Layout(contents = listOf(first, second), modifier = modifier) { (firstParts, secondParts), constraints ->
         val gapPx = gap.roundToPx()

@@ -37,13 +37,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
-import com.huntercoles.pokerpayout.core.design.components.LocalWidthClass
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonSize
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
 import com.huntercoles.pokerpayout.core.design.components.PokerIconButton
 import com.huntercoles.pokerpayout.core.design.components.PokerTopBar
-import com.huntercoles.pokerpayout.core.design.components.WidthClass
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.core.presentation.shareText
 import com.huntercoles.pokerpayout.tools.R
@@ -83,6 +81,9 @@ private val SmallGutter = 12.dp
 /** From this font scale on, the tables stack in one column. */
 private const val LARGE_TEXT = 1.5f
 
+/** The narrowest a table card gets when two sit side by side. */
+private val MinTableWidth = 300.dp
+
 /** Windows at least this wide but shorter than [ShortHeight] (phones on their side) get two panes. */
 private val TwoPaneWidth = 600.dp
 private val ShortHeight = 480.dp
@@ -112,10 +113,7 @@ fun SeatDrawContent(
     var showPlayers by rememberSaveable { mutableStateOf(playersOpen) }
     val text = rememberSeatDrawText()
     val draw = state.draw
-    // Two tables a row from 600 dp, except at the largest text, where every screen reflows in one
-    // column (design spec, section 6) and a half-width card would cut its pills.
-    val twoUp = LocalWidthClass.current >= WidthClass.Medium && LocalDensity.current.fontScale < LARGE_TEXT
-    val columns = if (twoUp) 2 else 1
+    val largeText = LocalDensity.current.fontScale >= LARGE_TEXT
     Column(modifier.fillMaxSize().background(PokerColors.PokerBlack)) {
         val subtitle = stringResource(
             R.string.seat_draw_subtitle,
@@ -134,6 +132,11 @@ fun SeatDrawContent(
         }
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val gutter = if (maxWidth < SmallWidth) SmallGutter else PokerDimens.Gutter
+            // Two tables a row when each card still gets [MinTableWidth] (a long name keeps its words
+            // whole beside its card and pills; a foldable beside the nav rail is too narrow), except at
+            // the largest text, where every screen reflows in one column (design spec, section 6).
+            val cardWidth = (maxWidth - gutter * 2 - PokerDimens.SpacingMedium) / 2
+            val columns = if (!largeText && cardWidth >= MinTableWidth) 2 else 1
             val controls: @Composable ColumnScope.() -> Unit = {
                 PlayersCard(state, text, onIntent, open = showPlayers, onOpen = { showPlayers = it })
                 DrawActions(state, onIntent)

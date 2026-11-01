@@ -48,7 +48,6 @@ import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonSize
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
-import com.huntercoles.pokerpayout.core.design.components.PokerStepper
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.tools.R
 import com.huntercoles.pokerpayout.tools.presentation.MAX_PLAYER_NAME
@@ -130,17 +129,19 @@ private fun FoldHeader(state: SeatDrawUiState, text: SeatDrawText, open: Boolean
 @Composable
 private fun PlayersSettings(state: SeatDrawUiState, text: SeatDrawText, onIntent: (SeatDrawIntent) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SettingRow(
+        StepperSetting(
             label = stringResource(R.string.seat_draw_players),
             value = state.players.size,
             range = SeatDrawer.MIN_PLAYERS..SeatDrawer.MAX_PLAYERS,
             onChange = { onIntent(SeatDrawIntent.SetPlayerCount(it)) },
+            stepperModifier = Modifier.widthIn(min = StepperWidth),
         )
-        SettingRow(
+        StepperSetting(
             label = stringResource(R.string.seat_draw_seats_per_table),
             value = state.seatsPerTable,
             range = SeatDrawer.MIN_SEATS_PER_TABLE..SeatDrawer.MAX_SEATS_PER_TABLE,
             onChange = { onIntent(SeatDrawIntent.SetSeatsPerTable(it)) },
+            stepperModifier = Modifier.widthIn(min = StepperWidth),
         )
         if (state.editingNames) {
             NameFields(state, onIntent)
@@ -179,24 +180,6 @@ private fun PlayersSettings(state: SeatDrawUiState, text: SeatDrawText, onIntent
             }
         }
     }
-}
-
-/** A label and its stepper, side by side when they fit, the stepper under the label when not. */
-@Composable
-private fun SettingRow(label: String, value: Int, range: IntRange, onChange: (Int) -> Unit) {
-    SideBySideOrStacked(
-        modifier = Modifier.fillMaxWidth(),
-        first = { Text(text = label, style = MaterialTheme.typography.titleSmall, color = PokerColors.CardWhite) },
-        second = {
-            PokerStepper(
-                value = value,
-                onValueChange = onChange,
-                range = range,
-                label = label,
-                modifier = Modifier.widthIn(min = StepperWidth),
-            )
-        },
-    )
 }
 
 /** One field per player, numbered; a blank one is drawn as its "Player N". */

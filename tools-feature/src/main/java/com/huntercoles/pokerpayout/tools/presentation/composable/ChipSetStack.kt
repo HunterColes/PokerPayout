@@ -28,7 +28,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
@@ -212,7 +211,7 @@ private fun PileColumn(chip: StackChip, needed: Int?, pileHeight: Dp, modifier: 
         )
         Text(
             text = if (needed != null) stringResource(R.string.chip_set_pile_more, needed) else ChipFormat.number(chip.worth),
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+            style = MaterialTheme.typography.bodySmall,
             color = if (needed != null) PokerColors.Danger else PokerColors.Chalk,
             textAlign = TextAlign.Center,
         )

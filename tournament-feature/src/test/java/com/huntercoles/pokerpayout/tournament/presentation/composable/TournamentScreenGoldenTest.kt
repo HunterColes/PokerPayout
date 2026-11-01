@@ -33,6 +33,8 @@ import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.testing.forEachScrollPosition
+import com.huntercoles.pokerpayout.core.testing.withCurrency
+import com.huntercoles.pokerpayout.core.utils.AppCurrency
 import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.moments.BigMoment
 import com.huntercoles.pokerpayout.tournament.presentation.MomentBanner
@@ -149,6 +151,36 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         screen.compose.waitForIdle()
         if (config in DeviceMatrix.goldens) screen.compose.onRoot().captureGolden("screens", name, config)
         screen.compose.forEachScrollPosition { LayoutAssertions.assertVisibleTextUnclipped(screen.compose, "$where, $it") }
+    }
+
+    /**
+     * #8: the setup in yen (no decimals) with big amounts: ¥10,000 buy-in and rebuy, ¥2,000 bounty,
+     * ¥5,000 add-on, ¥1,000 food. The money fields and the "to sit down" note must fit at every size;
+     * the golden is scrolled to the money fields.
+     */
+    @Test
+    fun setupYen() {
+        val big = setup.money.copy(
+            buyInCents = YEN_BUY_IN,
+            bountyCents = YEN_BOUNTY,
+            rebuyCents = YEN_BUY_IN,
+            addOnCents = YEN_ADD_ON,
+            foodCents = YEN_FOOD,
+        )
+        val yen = setup.copy(config = setup.config.copy(money = big))
+        val name = "S1_setup_yen"
+        withCurrency(AppCurrency.YEN) {
+            shownKey = name
+            shown = { InTournamentTab { TournamentContent(yen, fixture.ready, TournamentUi(), TournamentActions()) } }
+            screen.compose.waitForIdle()
+            val where = "$name on ${config.id}"
+            LayoutAssertions.assertTextFits(screen.compose, where)
+            LayoutAssertions.assertTouchTargets(screen.compose, where, strict = false)
+            screen.compose.onNodeWithText("Prize pool starts at", substring = true).performScrollTo()
+            screen.compose.waitForIdle()
+            if (config in DeviceMatrix.goldens) screen.compose.onRoot().captureGolden("screens", name, config)
+            screen.compose.forEachScrollPosition { LayoutAssertions.assertVisibleTextUnclipped(screen.compose, "$where, $it") }
+        }
     }
 
     @Test
@@ -432,6 +464,10 @@ class TournamentScreenGoldenTest(private val config: ScreenConfig) {
         private const val PRIZE_3RD = 9_500L
         private const val LONG_NAME = "Christopher Montgomery"
         private const val RAKE = 2_250L
+        private const val YEN_BUY_IN = 1_000_000L
+        private const val YEN_BOUNTY = 200_000L
+        private const val YEN_ADD_ON = 500_000L
+        private const val YEN_FOOD = 100_000L
 
         /** The mockups' night over: Dana wins the $450 pool, Standard to $5, her own bounty and Ben's. */
         private val WINNER = WinnerModel(

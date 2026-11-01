@@ -73,4 +73,4 @@ internal fun WelcomeCard(onSeeStarters: () -> Unit, onDismiss: () -> Unit, modif
 }
 
 /** How far a text button's icon sits in from its edge ([PokerButtonVariant.Text]'s padding). */
-private val TEXT_BUTTON_INSET = 12.dp
+private val TEXT_BUTTON_INSET = PokerDimens.SpacingMedium

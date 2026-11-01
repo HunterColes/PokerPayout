@@ -22,7 +22,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
@@ -147,7 +146,7 @@ private fun BountyTypeChip(label: String, selected: Boolean, enabled: Boolean, o
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         if (selected) Icon(PokerIcons.Check, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
-        Text(text = label, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp), color = color)
+        Text(text = label, style = MaterialTheme.typography.bodyLarge, color = color)
     }
 }
 

@@ -201,5 +201,5 @@ private fun RowLabel(text: String, color: Color) {
 }
 
 private val RowShape = RoundedCornerShape(10.dp)
-private val RowHeight = 48.dp
+private val RowHeight = PokerDimens.MinTouch
 private val LabelWidth = 28.dp

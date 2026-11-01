@@ -37,7 +37,7 @@ import com.huntercoles.pokerpayout.tournament.domain.clock.BreakSegment
 import com.huntercoles.pokerpayout.tournament.domain.clock.LevelSegment
 import com.huntercoles.pokerpayout.tournament.presentation.TimerUiState
 
-private val VerdictShape = RoundedCornerShape(12.dp)
+private val VerdictShape = RoundedCornerShape(PokerDimens.CornerControl)
 
 /**
  * PP-020: what the setup gives ("Works: 9 levels, 25 / 50 to 1,000 / 2,000, 2 breaks, ends at

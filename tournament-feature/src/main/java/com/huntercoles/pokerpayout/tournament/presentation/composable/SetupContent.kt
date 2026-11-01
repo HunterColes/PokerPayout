@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -108,7 +109,9 @@ internal fun SetupContent(
             var blindsOpen by rememberSaveable { mutableStateOf(true) }
             SetupSection(
                 title = stringResource(R.string.setup_blinds),
-                note = SetupSummary.levelsAndBreaks(timer),
+                // No ladder fits: "0 levels · no breaks" would read like a setting, so say it needs a fix
+                note = if (playable) SetupSummary.levelsAndBreaks(timer) else stringResource(R.string.setup_blinds_needs_fix),
+                noteColor = if (playable) PokerColors.Chalk else PokerColors.Danger,
                 summary = SetupSummary.blindsLine(timer),
                 expanded = blindsOpen,
                 onToggle = { blindsOpen = !blindsOpen },
@@ -124,9 +127,12 @@ internal fun SetupContent(
     }
 }
 
-/** A setup card that folds to its one-line [summary]; [note] sits beside the title ("$50 to sit down"). */
+/**
+ * A setup card that folds to its one-line [summary]; [note] sits beside the title ("$50 to sit down"),
+ * in [noteColor] (Danger when the section needs a fix).
+ */
 @OptIn(ExperimentalLayoutApi::class)
-@Suppress("LongParameterList") // a section: title, note, summary, state, toggle, body
+@Suppress("LongParameterList") // a section: title, note and its colour, summary, state, toggle, body
 @Composable
 internal fun SetupSection(
     title: String,
@@ -134,6 +140,7 @@ internal fun SetupSection(
     summary: String,
     expanded: Boolean,
     onToggle: () -> Unit,
+    noteColor: Color = PokerColors.Chalk,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val action = stringResource(if (expanded) R.string.setup_collapse_section else R.string.setup_expand_section, title)
@@ -160,7 +167,7 @@ internal fun SetupSection(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 PokerEyebrow(title, modifier = Modifier.padding(end = PokerDimens.SpacingSmall))
-                Text(note, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk, textAlign = TextAlign.End)
+                Text(note, style = MaterialTheme.typography.bodySmall, color = noteColor, textAlign = TextAlign.End)
             }
             Icon(
                 imageVector = PokerIcons.ChevronDown,

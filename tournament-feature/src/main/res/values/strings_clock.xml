@@ -39,6 +39,8 @@
         <item quantity="other">%d breaks</item>
     </plurals>
     <string name="setup_no_breaks">no breaks</string>
+    <!-- Beside the Blinds title when no ladder fits; the reason and the fix are in the box below -->
+    <string name="setup_blinds_needs_fix">Needs a fix</string>
 
     <!-- S1 v2: the setup page -->
     <string name="setup_players">Players</string>

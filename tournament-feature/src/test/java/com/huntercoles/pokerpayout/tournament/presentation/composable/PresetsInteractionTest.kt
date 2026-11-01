@@ -123,7 +123,7 @@ class PresetsInteractionTest {
         compose.setContent {
             PokerTheme(reducedMotion = true) { TournamentContent(setup, timer, ui, actions) }
         }
-        compose.onNodeWithText("Load a starter or a saved setup, save this one or share it").assertExists()
+        compose.onNodeWithText("Load, save or share a setup").assertExists()
         compose.onNode(hasText("Presets") and hasClickAction()).tap()
         assertEquals(listOf<PresetsIntent>(PresetsIntent.Open), sent)
 
@@ -250,8 +250,8 @@ class PresetsInteractionTest {
     fun `a starter loads with a tap, and its menu copies it into the saved presets`() {
         showSheet(PresetsFixture.list)
         compose.onNodeWithText("STARTERS").assertExists()
-        compose.onNodeWithText("3 h · 20-min levels · 2,500 chips · $20 buy-in · $5 bounty").assertExists()
-        compose.onNodeWithText("4 h · 20-min levels · 5,000 chips · ante from L7 · $30 buy-in").assertExists()
+        compose.onNodeWithText("$20 buy-in · $5 bounty · 3 h · 20-min levels · 2,500 chips").assertExists()
+        compose.onNodeWithText("$30 buy-in · 4 h · 20-min levels · 5,000 chips · ante from L7").assertExists()
         compose.onNodeWithText("Classic").tap()
         compose.onNodeWithContentDescription("More options for the Turbo starter").tap()
         compose.onNode(hasText("Copy to my presets") and hasClickAction()).performClick()

@@ -22,7 +22,8 @@ import com.huntercoles.pokerpayout.tournament.domain.presets.PresetStore
  * The mockups' game for the Payouts tab (S6), recorded straight into the preferences: 9 players
  * (Dana, Marcus, Priya, Theo, Jo, Sam, Alex, Rita, Ben) at $40, $5 food, $5 bounty; Marcus rebought
  * ($40), five players took the $10 add-on; Ben is out 9th (by Dana) and Rita 8th (by Marcus). A $450
- * prize pool, Standard, rounded to $5: 225 / 130 / 95.
+ * prize pool, Standard, rounded to $5: 225 / 130 / 95. [longNight] is the same table at high stakes
+ * with a 30-character winner (#49).
  */
 class PayoutsGame {
     val context: Context = ApplicationProvider.getApplicationContext()
@@ -79,6 +80,27 @@ class PayoutsGame {
         listOf(DANA, MARCUS, PRIYA).forEach { bank.savePlayerPayedOutStatus(it, true) }
     }
 
+    /**
+     * #49: the finished night at high stakes, for the layout checks. Dana's seat is [LONG_NAME] (30
+     * characters) and wins; nine $13,717.42 buy-ins and nothing else make a $123,456.78 pool, paid
+     * to the dollar, so every amount is as wide as it gets.
+     */
+    fun longNight(): PayoutsGame = apply {
+        tournament.setBuyInCents(LONG_BUY_IN_CENTS)
+        tournament.setFoodCents(0L)
+        tournament.setBountyCents(0L)
+        tournament.setPayoutRounding(PayoutRounding.ONE_DOLLAR)
+        NAMES.forEachIndexed { index, name ->
+            bank.savePlayerName(index + 1, if (index + 1 == DANA) LONG_NAME else name)
+            bank.savePlayerBuyInStatus(index + 1, true)
+        }
+        knockOut(BEN, by = DANA)
+        knockOut(RITA, by = MARCUS)
+        listOf(ALEX, SAM, JO, THEO).forEach { knockOut(it, by = DANA) }
+        knockOut(PRIYA, by = null)
+        knockOut(MARCUS, by = DANA)
+    }
+
     fun knockOut(id: Int, by: Int?) {
         bank.savePlayerOutStatus(id, true)
         bank.savePlayerEliminatedBy(id, by)
@@ -111,6 +133,11 @@ class PayoutsGame {
     }
 
     companion object {
+        /** 30 characters: the longest name #49's layout checks hold the tab to. */
+        const val LONG_NAME = "Maximilian Bartholomew-Ashford"
+
+        /** Nine of these make a $123,456.78 pool. */
+        const val LONG_BUY_IN_CENTS = 1_371_742L
         val NAMES = listOf("Dana", "Marcus", "Priya", "Theo", "Jo", "Sam", "Alex", "Rita", "Ben")
         const val DANA = 1
         const val MARCUS = 2

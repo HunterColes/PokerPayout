@@ -254,23 +254,12 @@ private fun PayoutRow(row: PayoutRowModel, placeWidth: Dp) {
                 .alignBy(FirstBaseline),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
-                Text(
-                    text = holder,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (row.holderName != null) PokerColors.CardWhite else PokerColors.Chalk,
-                    modifier = Modifier
-                        .weight(1f)
-                        .alignByBaseline(),
-                )
-                Text(
-                    text = formatMoney(row.amountCents),
-                    style = PokerType.NumberL,
-                    color = if (first) PokerColors.PokerGold else PokerColors.CardWhite,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.alignByBaseline(),
-                )
-            }
+            NameAndAmount(
+                holder = holder,
+                amount = formatMoney(row.amountCents),
+                nameColor = if (row.holderName != null) PokerColors.CardWhite else PokerColors.Chalk,
+                amountColor = if (first) PokerColors.PokerGold else PokerColors.CardWhite,
+            )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),

@@ -18,11 +18,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.PokerColors
@@ -43,6 +41,7 @@ import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.presentation.shareText
 import com.huntercoles.pokerpayout.core.utils.FormatUtils.formatMoney
 import com.huntercoles.pokerpayout.tournament.R
+import com.huntercoles.pokerpayout.tournament.presentation.composable.rememberFittedSize
 import com.huntercoles.pokerpayout.core.R as CoreR
 
 /** The Payouts tab (S6, D1): [PayoutsContent] over [PayoutsViewModel], with Share as text. */
@@ -70,7 +69,7 @@ fun PayoutsContent(
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val gutter = if (LocalWidthClass.current == WidthClass.Small) 12.dp else PokerDimens.Gutter
+    val gutter = if (LocalWidthClass.current == WidthClass.Small) PokerDimens.SpacingMedium else PokerDimens.Gutter
     Column(modifier = modifier.fillMaxSize()) {
         PokerTopBar(
             title = stringResource(CoreR.string.navigation_payouts),
@@ -94,7 +93,7 @@ fun PayoutsContent(
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(start = gutter, end = gutter, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
             if (state.isLocked) LockedNote()
             if (state.night != NightSave.NotOver) SaveNightCard(state.night, onIntent)
@@ -121,7 +120,7 @@ fun PayoutsContent(
 @Composable
 private fun LockedNote() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
-        Icon(PokerIcons.Lock, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(18.dp))
+        Icon(PokerIcons.Lock, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(StatusIconSize))
         Text(
             text = stringResource(R.string.payouts_locked_running),
             style = MaterialTheme.typography.bodyMedium,
@@ -148,13 +147,14 @@ private fun PoolHero(state: PayoutsUiState) {
     }
 }
 
-/** The pool in big gold digits: 64 sp, or smaller if a big pool at a large font size wouldn't fit. */
+/**
+ * The pool in big gold digits, measured to fit the width like the clock's (design spec 6.4): 64 dp at
+ * most, smaller for a big pool on a narrow screen, and not growing with the system font size.
+ */
 @Composable
 private fun FittedHero(text: String) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        // Both sizes go through the same font scale, so comparing them in sp is fair.
-        val fitting = with(LocalDensity.current) { (maxWidth / (text.length * HERO_EM_PER_CHAR)).toSp() }
-        val size = if (fitting.value < HeroSize.value) fitting else HeroSize
+        val size = rememberFittedSize(text, PokerType.DisplayL, maxWidth, HeroSize)
         Text(
             text = text,
             style = PokerType.DisplayL.copy(fontSize = size, lineHeight = size),
@@ -165,20 +165,12 @@ private fun FittedHero(text: String) {
     }
 }
 
-private val HeroSize = 64.sp
-
-/** A generous width per character of Barlow Condensed figures, in ems. */
-private const val HERO_EM_PER_CHAR = 0.55f
+private val HeroSize = 64.dp
 
 @Composable
 private fun StructurePicker(state: PayoutsUiState, onIntent: (PayoutsIntent) -> Unit) {
     val labels = PayoutPreset.entries.associateWith { presetLabel(it) }
-    Column(verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
-        Text(
-            stringResource(R.string.payouts_structure_label),
-            style = MaterialTheme.typography.bodySmall,
-            color = PokerColors.Chalk
-        )
+    Labelled(stringResource(R.string.payouts_structure_label)) {
         // Hand-edited weights select no preset.
         PokerSegmentedControl<PayoutPreset?>(
             options = PayoutPreset.entries,
@@ -193,12 +185,7 @@ private fun StructurePicker(state: PayoutsUiState, onIntent: (PayoutsIntent) -> 
 
 @Composable
 private fun RoundingPicker(state: PayoutsUiState, onIntent: (PayoutsIntent) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
-        Text(
-            text = stringResource(R.string.payouts_round_to),
-            style = MaterialTheme.typography.bodySmall,
-            color = PokerColors.Chalk,
-        )
+    Labelled(stringResource(R.string.payouts_round_to)) {
         PokerSegmentedControl(
             options = PayoutRounding.entries,
             selected = state.settings.rounding,
@@ -206,5 +193,14 @@ private fun RoundingPicker(state: PayoutsUiState, onIntent: (PayoutsIntent) -> U
             label = { it.label },
             enabled = !state.isLocked,
         )
+    }
+}
+
+/** A control under its section eyebrow, as in the payout structure sheet and the cards below. */
+@Composable
+private fun Labelled(label: String, content: @Composable () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
+        PokerEyebrow(label)
+        content()
     }
 }

@@ -161,7 +161,7 @@ class PayoutsTabScreenTest(private val config: ScreenConfig) {
     /** The "Round to" label sits on its own line above its control, so it never wraps to "Round / to". */
     private fun assertRoundToOnOneLine(where: String) {
         val layouts = mutableListOf<TextLayoutResult>()
-        screen.compose.onNodeWithText("Round to").performScrollTo()
+        screen.compose.onNodeWithText("Round to", ignoreCase = true).performScrollTo()
             .fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
         assertEquals("\"Round to\" lines in $where on ${config.id}", 1, layouts.single().lineCount)
     }
@@ -179,6 +179,7 @@ class PayoutsTabScreenTest(private val config: ScreenConfig) {
         withCurrency(AppCurrency.YEN) {
             game.midGame()
             show()
+            golden("S6_payouts_yen")
             assertRoundToOnOneLine("yen")
             check("Payouts, in yen")
         }

@@ -4,7 +4,10 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.huntercoles.pokerpayout.core.R
 import com.huntercoles.pokerpayout.core.audio.SoundManager
+import com.huntercoles.pokerpayout.core.audio.custom.CustomCueSound
 import com.huntercoles.pokerpayout.core.preferences.AudioPreferences
+import com.huntercoles.pokerpayout.core.preferences.CustomCueSoundPreferences
+import com.huntercoles.pokerpayout.core.preferences.PhonePrefs
 import com.huntercoles.pokerpayout.core.time.ClockAnchor
 import com.huntercoles.pokerpayout.core.time.TimeSource
 import com.huntercoles.pokerpayout.core.utils.BlindStructureCalculator
@@ -14,6 +17,7 @@ import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCues
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockTimeline
 import com.huntercoles.pokerpayout.tournament.domain.clock.SavedClock
 import com.huntercoles.pokerpayout.tournament.domain.clock.SilentCue
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -50,6 +54,7 @@ class LiveClockDriverTest {
     private val posts = mutableListOf<LiveClockCard>()
     private val awake = mutableListOf<Long?>()
     private lateinit var cues: ClockCues
+    private lateinit var custom: CustomCueSoundPreferences
 
     /** The monotonic and wall clocks, on the scheduler's virtual time. */
     private val time = object : TimeSource {
@@ -74,8 +79,11 @@ class LiveClockDriverTest {
     @Before
     fun setUp() {
         val context: Context = ApplicationProvider.getApplicationContext()
-        context.getSharedPreferences("audio_prefs", Context.MODE_PRIVATE).edit().clear().commit()
-        cues = ClockCues(sound, AudioPreferences(context), { buzzes += it }, time)
+        listOf("audio_prefs", PhonePrefs.FILE).forEach {
+            context.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit()
+        }
+        custom = CustomCueSoundPreferences(context)
+        cues = ClockCues(sound, AudioPreferences(context), { buzzes += it }, time, custom)
     }
 
     private fun runningFrom(elapsedMillis: Long) {
@@ -254,6 +262,29 @@ class LiveClockDriverTest {
         assertTrue(buzzes.isEmpty())
         advance(30_100) // and the change still comes
         assertEquals(listOf(SilentCue.LEVEL_CHANGE), buzzes)
+        run.cancel()
+    }
+
+    /** #21: from the background, a custom cue sound starts its peak (8 s) before the change, once. */
+    @Test
+    fun aCustomCueSoundStartsFromTheBackgroundSoItsPeakLandsOnTheChange() = runTest(dispatcher) {
+        custom.setSound(CustomCueSound("content://picked/cue.ogg", lengthMillis = 10_000, peakMillis = 8_000))
+        custom.setOn(true)
+        val starts = mutableListOf<Long>()
+        every { sound.playFile(any(), any(), any()) } answers {
+            starts += elapsed() - secondArg<Long>()
+            true
+        }
+        runningFrom(0L)
+        val run = start(driver())
+
+        advance(round - 8_100)
+        assertTrue(starts.isEmpty())
+        advance(8_200) // the file's start and the change
+        assertEquals(1, starts.size)
+        assertTrue("started for a peak at ${starts.single() + 8_000}", kotlin.math.abs(starts.single() - (round - 8_000)) <= 100)
+        assertEquals(listOf(SilentCue.ONE_MINUTE, SilentCue.LEVEL_CHANGE), buzzes)
+        verify(exactly = 0) { sound.playSound(any()) }
         run.cancel()
     }
 }

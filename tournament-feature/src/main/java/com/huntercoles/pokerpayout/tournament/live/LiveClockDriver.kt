@@ -2,7 +2,6 @@ package com.huntercoles.pokerpayout.tournament.live
 
 import com.huntercoles.pokerpayout.core.time.ClockAnchor
 import com.huntercoles.pokerpayout.core.time.TimeSource
-import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCueTimes
 import com.huntercoles.pokerpayout.tournament.domain.clock.ClockCues
 import com.huntercoles.pokerpayout.tournament.domain.clock.SavedClock
 import kotlinx.coroutines.channels.Channel
@@ -67,10 +66,10 @@ class LiveClockDriver(
 
     private fun lookRunning(clock: SavedClock.State, elapsed: Long): Long? {
         pausedSince = null
-        cues.play(ClockCueTimes.crossed(clock.timeline, seenMillis, elapsed))
+        cues.look(clock.timeline, seenMillis, elapsed)
         seenMillis = elapsed
         val end = clock.timeline.endSeconds * MILLIS_PER_SECOND
-        val next = ClockCueTimes.nextAfter(clock.timeline, elapsed) ?: end
+        val next = cues.nextAfter(clock.timeline, elapsed) ?: end
         // Past the last level the game is over; the clock's screen marks it finished when it looks
         val wait = (next - elapsed + LATE_MILLIS).coerceIn(MIN_WAIT_MILLIS, MAX_WAIT_MILLIS).takeIf { elapsed < end }
         keepAwake(wait?.let { it + AWAKE_MARGIN_MILLIS })

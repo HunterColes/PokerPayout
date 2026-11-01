@@ -104,7 +104,10 @@ private fun PotPlayersCard(state: SidePotsUiState, onIntent: (SidePotsIntent) ->
 private fun PotPlayerWell(index: Int, player: PotPlayer, canRemove: Boolean, onIntent: (SidePotsIntent) -> Unit) {
     val name = playerName(index, player.name)
     ToolWell {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+        ) {
             PlayerNameField(
                 number = index + 1,
                 value = player.name,
@@ -121,7 +124,7 @@ private fun PotPlayerWell(index: Int, player: PotPlayer, canRemove: Boolean, onI
         }
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         ) {
             ChipsField(
                 value = player.chips,

@@ -187,7 +187,7 @@ private fun EmptyNote() {
     HistoryCard {
         Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
             Icon(PokerIcons.Trophy, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(24.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
                 Text(
                     text = stringResource(R.string.history_empty_title),
                     style = MaterialTheme.typography.titleMedium,
@@ -265,10 +265,10 @@ private fun StandingRow(standing: Standing, text: HistoryText, onOpen: () -> Uni
                     Modifier.clickable(onClickLabel = open, role = Role.Button, onClick = onOpen)
                 },
             )
-            .padding(vertical = 6.dp)
+            .padding(vertical = PokerDimens.SpacingSmall)
             .semantics(mergeDescendants = true) { contentDescription = spoken },
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Text(
             text = ordinalOf(standing.rank),
@@ -278,7 +278,7 @@ private fun StandingRow(standing: Standing, text: HistoryText, onOpen: () -> Uni
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(standing.name, style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite)
-            Text(text.record(standing), style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
+            Text(keepDots(text.record(standing)), style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
         }
         Text(
             text = standing.points.toString(),
@@ -298,13 +298,18 @@ private fun NightRow(night: SavedNight, text: HistoryText, onOpen: () -> Unit) {
             .clip(RoundedCornerShape(PokerDimens.CornerCard))
             .background(PokerColors.FeltGreen)
             .clickable(onClickLabel = stringResource(R.string.history_open), role = Role.Button, onClick = onOpen)
-            .padding(start = PokerDimens.SpacingDefault, top = 10.dp, end = 10.dp, bottom = 10.dp),
+            .padding(
+                start = PokerDimens.SpacingDefault,
+                top = PokerDimens.SpacingMedium,
+                end = PokerDimens.SpacingMedium,
+                bottom = PokerDimens.SpacingMedium,
+            ),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(text.date(night.date), style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite)
-            Text(text.nightLine(night), style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
+            Text(keepDots(text.nightLine(night)), style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
         }
         Text(formatMoney(night.prizePoolCents), style = PokerType.NumberM, color = PokerColors.PokerGold)
         Icon(PokerIcons.ChevronRight, contentDescription = null, tint = PokerColors.Chalk)

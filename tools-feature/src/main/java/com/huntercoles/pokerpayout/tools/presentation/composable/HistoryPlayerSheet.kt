@@ -61,7 +61,7 @@ internal fun PlayerSheetContent(panel: PlayerPanel, onIntent: (HistoryIntent) ->
             // "13 points · 3 nights · 2 wins", all time
             val separator = stringResource(R.string.history_separator)
             Text(
-                text = text.points(standing.points) + separator + text.record(standing),
+                text = keepDots(text.points(standing.points) + separator + text.record(standing)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = PokerColors.Chalk,
             )
@@ -143,9 +143,9 @@ private fun CandidateRow(candidate: MergeCandidate, onPick: () -> Unit) {
             .fillMaxWidth()
             .heightIn(min = PokerDimens.RowMinHeight)
             .clickable(role = Role.Button, onClick = onPick)
-            .padding(vertical = 6.dp),
+            .padding(vertical = PokerDimens.SpacingSmall),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(candidate.name, style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite)

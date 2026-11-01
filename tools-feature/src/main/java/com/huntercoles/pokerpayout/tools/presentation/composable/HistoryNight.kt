@@ -95,7 +95,11 @@ internal fun NightContent(
     }
 }
 
-/** "1st  Dana / Paid in $50 · 2 knockouts · bounties $10  $235": one TalkBack stop. */
+/**
+ * "1st  Dana  $235 / Paid in $50 · 2 knockouts · bounties $10": one TalkBack stop. What they won sits
+ * at the end of the name's line, or under the name when a long name and a big amount don't fit side
+ * by side; the details take the whole width under them.
+ */
 @Composable
 private fun PlayerRow(player: NightPlayer, text: HistoryText) {
     val first = player.place == 1
@@ -103,19 +107,41 @@ private fun PlayerRow(player: NightPlayer, text: HistoryText) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
+            .padding(vertical = PokerDimens.SpacingSmall)
             .semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Text(ordinalOf(player.place), style = PokerType.NumberM, color = color, modifier = Modifier.widthIn(min = RankWidth))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(player.name, style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite)
-            Text(text.details(player), style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
+            val name = @Composable {
+                Text(player.name, style = MaterialTheme.typography.titleMedium, color = PokerColors.CardWhite)
+            }
+            if (player.wonCents > 0L) {
+                SideBySideOrStacked(
+                    first = name,
+                    second = { Text(formatMoney(player.wonCents), style = PokerType.NumberM, color = color) },
+                    gap = PokerDimens.SpacingMedium,
+                )
+            } else {
+                name()
+            }
+            Text(keepDots(text.details(player)), style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
         }
-        if (player.wonCents > 0L) Text(formatMoney(player.wonCents), style = PokerType.NumberM, color = color)
     }
 }
+
+/**
+ * A "·" list as shown on screen ("Paid in $50 · 1 rebuy · 2 knockouts"): each "·" stays on the line
+ * before it, so a wrapped line never starts with one. Shared text and TalkBack keep the plain spaces.
+ */
+@Composable
+internal fun keepDots(line: String): String {
+    val separator = stringResource(R.string.history_separator)
+    return line.replace(separator, NO_BREAK_SPACE + separator.trimStart())
+}
+
+private const val NO_BREAK_SPACE = "\u00A0"
 
 /** History's one scrolling column, with the app's gutters (12 dp on small phones). */
 @Composable
@@ -146,4 +172,4 @@ internal fun HistoryCard(modifier: Modifier = Modifier, content: @Composable Col
 }
 
 /** Below the phone width, gutters narrow to 12 dp (design spec, section 4). */
-private val SmallGutter = 12.dp
+private val SmallGutter = PokerDimens.SpacingMedium

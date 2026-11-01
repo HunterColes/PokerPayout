@@ -71,6 +71,31 @@ internal object HistoryFixtures {
 
     val empty = HistoryUiState.of(emptyList())
 
+    private val longNames = listOf("Christopher Montgomery", "Alexandria Whitfield", "Maximilian Vanderberg")
+
+    /**
+     * Hardening: Friday in yen (show it inside withCurrency(YEN)) at a thousand times the amounts,
+     * with long names, so a row holds a long name, a long line and a big prize at once.
+     */
+    val nightLongYen = HistoryUiState.of(
+        listOf(
+            friday.copy(
+                prizePoolCents = friday.prizePoolCents * 1_000,
+                players = friday.players.mapIndexed { index, player ->
+                    player.copy(
+                        name = longNames.getOrElse(index) { player.name },
+                        entryCents = player.entryCents * 1_000,
+                        rebuyCents = player.rebuyCents * 1_000,
+                        addOnCents = player.addOnCents * 1_000,
+                        prizeCents = player.prizeCents * 1_000,
+                        bountyCents = player.bountyCents * 1_000,
+                    )
+                },
+            ),
+        ),
+        openId = friday.id,
+    )
+
     /** PP-145: Friday played with a 5% house rake: the places shared $300 of the $315.79 in, the house kept $15.79. */
     val rakedNight = HistoryUiState.of(listOf(friday.copy(rakeCents = 1_579L), september, holiday), openId = friday.id)
 

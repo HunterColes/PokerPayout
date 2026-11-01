@@ -10,6 +10,8 @@ import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.testing.forEachScrollPosition
+import com.huntercoles.pokerpayout.core.testing.withCurrency
+import com.huntercoles.pokerpayout.core.utils.AppCurrency
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,8 +24,9 @@ import org.robolectric.annotation.GraphicsMode
  * matrix: text fits and is never clipped at any scroll position of either pane, 48 dp targets that
  * don't overlap. Goldens on [DeviceMatrix.goldens]: `S21_side_pots` (an all-in, a bigger all-in, a
  * fold and a bet nobody matched: a main pot, a side pot and chips back) and `S22_deal` (three left
- * from the Bank, ICM and chip chop side by side, $50 saved for the winner). The other states get
- * the layout checks only.
+ * from the Bank, ICM and chip chop side by side, $50 saved for the winner); for hardening,
+ * `S21_side_pots_long` (long names, nine-figure stacks) and `S22_deal_long_yen` (long names, millions
+ * of chips, in yen). The other states get the layout checks only.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -47,7 +50,17 @@ class TableToolsScreenTest(private val config: ScreenConfig) {
     fun sidePotsTen() = check(name = null) { SidePotsContent(TableToolFixtures.sidePotsTen, onIntent = {}, onBack = {}) }
 
     @Test
+    fun sidePotsLong() = check("S21_side_pots_long") {
+        SidePotsContent(TableToolFixtures.sidePotsLong, onIntent = {}, onBack = {})
+    }
+
+    @Test
     fun deal() = check("S22_deal") { DealContent(TableToolFixtures.deal, onIntent = {}, onBack = {}) }
+
+    @Test
+    fun dealLongYen() = withCurrency(AppCurrency.YEN) {
+        check("S22_deal_long_yen") { DealContent(TableToolFixtures.dealLongYen, onIntent = {}, onBack = {}) }
+    }
 
     @Test
     fun dealNoChips() = check(name = null) { DealContent(TableToolFixtures.dealNoChips, onIntent = {}, onBack = {}) }

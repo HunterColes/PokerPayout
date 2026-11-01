@@ -31,7 +31,7 @@ import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 
 /** Below the phone width, gutters narrow to 12 dp (design spec, section 4). */
 private val SmallWidth = 360.dp
-private val SmallGutter = 12.dp
+private val SmallGutter = PokerDimens.SpacingMedium
 
 /** From this width what you type and what it works out sit side by side, each scrolling on its own. */
 private val TwoPaneWidth = 600.dp
@@ -119,8 +119,8 @@ internal fun ToolWell(merged: Boolean = false, content: @Composable ColumnScope.
             .fillMaxWidth()
             .background(PokerColors.FeltDeep, RoundedCornerShape(PokerDimens.CornerControl))
             .then(if (merged) Modifier.semantics(mergeDescendants = true) {} else Modifier)
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(PokerDimens.SpacingMedium),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
         content = content,
     )
 }

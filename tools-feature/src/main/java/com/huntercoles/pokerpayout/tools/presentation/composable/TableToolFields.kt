@@ -30,10 +30,14 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
@@ -62,9 +66,9 @@ internal fun PlayerNameField(number: Int, value: String, onChange: (String) -> U
 }
 
 /**
- * A whole number of chips: digits only, at most nine. Empty is null, which a tool treats as "not
- * typed yet". [placeholder] shows while it is empty; [description] names it for TalkBack ("Chips
- * Dana put in").
+ * A whole number of chips: digits only, at most nine, shown grouped ("12,000") as the results show
+ * them. Empty is null, which a tool treats as "not typed yet". [placeholder] shows while it is empty;
+ * [description] names it for TalkBack ("Chips Dana put in").
  */
 @Composable
 internal fun ChipsField(
@@ -83,7 +87,28 @@ internal fun ChipsField(
         keyboard = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
         modifier = modifier,
         accept = { typed -> typed.length <= MAX_CHIP_DIGITS && typed.all(Char::isDigit) },
+        display = GroupedDigits,
     )
+}
+
+/**
+ * Typed digits shown with the results' grouping ("1200" reads "1,200"); the cursor keeps its place
+ * among the digits. What is typed and saved stays plain digits.
+ */
+private object GroupedDigits : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val digits = text.text
+        val shown = digits.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }?.let { chips(it.toLong()) }.orEmpty()
+        // Where each typed digit sits in what's shown; a separator never counts as a digit
+        val at = shown.indices.filter { shown[it].isDigit() }
+        if (shown.isEmpty() || at.size != digits.length) return TransformedText(text, OffsetMapping.Identity)
+        val mapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int = if (offset >= at.size) shown.length else at[offset]
+
+            override fun transformedToOriginal(offset: Int): Int = at.count { it < offset }
+        }
+        return TransformedText(AnnotatedString(shown), mapping)
+    }
 }
 
 /**
@@ -102,6 +127,7 @@ private fun OwnTextField(
     keyboard: KeyboardOptions,
     modifier: Modifier = Modifier,
     accept: (String) -> Boolean = { true },
+    display: VisualTransformation = VisualTransformation.None,
 ) {
     val focusManager = LocalFocusManager.current
     val interactions = remember { MutableInteractionSource() }
@@ -122,6 +148,7 @@ private fun OwnTextField(
             .semantics { contentDescription = description },
         textStyle = textStyle.copy(color = PokerColors.CardWhite),
         singleLine = true,
+        visualTransformation = display,
         keyboardOptions = keyboard,
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
         interactionSource = interactions,

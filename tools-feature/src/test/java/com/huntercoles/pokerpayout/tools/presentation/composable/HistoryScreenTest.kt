@@ -17,6 +17,8 @@ import com.huntercoles.pokerpayout.core.testing.ScreenConfig
 import com.huntercoles.pokerpayout.core.testing.ScreenTestRule
 import com.huntercoles.pokerpayout.core.testing.captureGolden
 import com.huntercoles.pokerpayout.core.testing.forEachScrollPosition
+import com.huntercoles.pokerpayout.core.testing.withCurrency
+import com.huntercoles.pokerpayout.core.utils.AppCurrency
 import com.huntercoles.pokerpayout.tools.presentation.HistoryUiState
 import org.junit.Rule
 import org.junit.Test
@@ -29,8 +31,9 @@ import org.robolectric.annotation.GraphicsMode
  * History (S16, PP-037) inside the app's shell on every cell of the device matrix: text fits and is
  * never clipped at any scroll position, 48 dp targets that don't overlap. Goldens on
  * [DeviceMatrix.goldens]: `S16_history_list` (all time, two players level at the top),
- * `S16_history_night` (one night in full) and `S16_history_empty` (nothing saved yet). A year picked
- * gets the layout checks too. A player opened from the standings (S26b, PP-110): `S26b_history_player`
+ * `S16_history_night` (one night in full), `S16_history_night_long_yen` (long names, in yen) and
+ * `S16_history_empty` (nothing saved yet). A year picked gets the layout checks too. A player opened
+ * from the standings (S26b, PP-110): `S26b_history_player`
  * (their other name, and who could be them), and the question of which name to keep (layout only).
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -45,6 +48,10 @@ class HistoryScreenTest(private val config: ScreenConfig) {
 
     @Test
     fun oneNight() = check("S16_history_night", HistoryFixtures.night)
+
+    /** Hardening: one night in yen at a thousand times the amounts, with long names. */
+    @Test
+    fun oneNightLongYen() = withCurrency(AppCurrency.YEN) { check("S16_history_night_long_yen", HistoryFixtures.nightLongYen) }
 
     /** PP-145: a night played with a house rake: a third stat, "House rake", between the pool and the players (layout only). */
     @Test

@@ -92,7 +92,7 @@ private fun DealRows(state: DealUiState, deal: Deal) {
 private fun SplitAmounts(icm: Long, chipChop: Long) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingDefault),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         SplitAmount(stringResource(R.string.deal_icm), FormatUtils.formatCents(icm))
         SplitAmount(stringResource(R.string.deal_chip_chop), FormatUtils.formatCents(chipChop))

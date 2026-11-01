@@ -53,6 +53,7 @@ data class SoundPack(
 /** Every sound pack the app has. The host picks one in Tools > Sound > Cue sounds. */
 object SoundPacks {
     const val CLASSIC_ID = "classic"
+    const val CHIMES_ID = "chimes"
 
     /**
      * The sounds the clock has always played: the cue sound at every change, nothing with a minute left.
@@ -71,11 +72,30 @@ object SoundPacks {
         ),
     )
 
+    /**
+     * #7: bell-style sounds for every moment (ElevenLabs sound effects). The change sounds are padded
+     * with silence so their strike lands [AudioConstants.LEVEL_CHANGE_SOUND_LEAD_SECONDS] in, on the change.
+     */
+    val Chimes = SoundPack(
+        id = CHIMES_ID,
+        name = R.string.sound_pack_chimes,
+        description = R.string.sound_pack_chimes_description,
+        sounds = mapOf(
+            CueEvent.LEVEL_UP to R.raw.cue_chimes_level_up,
+            CueEvent.ONE_MINUTE to R.raw.cue_chimes_one_minute,
+            CueEvent.BREAK_START to R.raw.cue_chimes_break_start,
+            CueEvent.BREAK_END to R.raw.cue_chimes_break_end,
+            CueEvent.GAME_OVER to R.raw.cue_chimes_game_over,
+            CueEvent.BIG_MOMENT to R.raw.cue_chimes_big_moment,
+            CueEvent.CHAMPION to R.raw.cue_chimes_champion,
+        ),
+    )
+
     /** The default pack: a fresh install, or a saved pack that is no longer here. */
     val default: SoundPack = Classic
 
     /** Every pack, the default first. A new pack is one more entry here. */
-    val all: List<SoundPack> = listOf(Classic)
+    val all: List<SoundPack> = listOf(Classic, Chimes)
 
     /** The pack saved as [id], or the default when there is none by that id. */
     fun byId(id: String?): SoundPack = all.firstOrNull { it.id == id } ?: default

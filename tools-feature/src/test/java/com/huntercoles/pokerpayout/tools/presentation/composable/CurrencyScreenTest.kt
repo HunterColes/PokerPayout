@@ -23,7 +23,8 @@ import org.robolectric.annotation.GraphicsMode
  * sample fits and is never clipped at any scroll position (the longest samples, "CHF 123’456.50" and
  * "₹1,23,456.50", at 2x text on the smallest phone), 48 dp rows that don't overlap, a TalkBack name for
  * each, and contrast. Goldens on [DeviceMatrix.goldens]: `S25_currency` (the dollar, as an install from
- * before has it) and `S25_currency_euro` (the euro picked, as a new install in Germany has it).
+ * before has it), `S25_currency_euro` (the euro picked, as a new install in Germany has it) and
+ * `S25_currency_yen` (whole amounts, no cents).
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -39,7 +40,7 @@ class CurrencyScreenTest(private val config: ScreenConfig) {
     fun euro() = check("S25_currency_euro", CurrencyUiState(picked = AppCurrency.EURO))
 
     @Test
-    fun yen() = check(name = null, CurrencyUiState(picked = AppCurrency.YEN))
+    fun yen() = check("S25_currency_yen", CurrencyUiState(picked = AppCurrency.YEN))
 
     private fun check(name: String?, state: CurrencyUiState) {
         screen.compose.setContent {

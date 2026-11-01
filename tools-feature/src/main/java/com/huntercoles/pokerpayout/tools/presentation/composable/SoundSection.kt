@@ -73,7 +73,7 @@ internal fun SoundSection(
             .clip(RoundedCornerShape(PokerDimens.CornerCard))
             .background(PokerColors.FeltGreen)
             .padding(PokerDimens.Gutter),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         val pack = stringResource(SoundPacks.byId(state.soundPack).name)
         val onOrOff = if (state.soundOn) R.string.tools_cue_sounds_on else R.string.tools_cue_sounds_off
@@ -103,7 +103,10 @@ internal fun SoundSection(
             onToggle = { onIntent(ToolsHomeIntent.ToggleMusic) },
             onOpen = { onOpen(NavigationDestination.Music) },
         )
-        if (state.notificationsOff) NotificationsOff(onAllowNotifications)
+        if (state.notificationsOff) {
+            HorizontalDivider(color = PokerColors.FeltLine)
+            NotificationsOff(onAllowNotifications)
+        }
     }
 }
 
@@ -174,7 +177,7 @@ internal fun SwitchRow(title: String, description: String, checked: Boolean, onC
 /** PP-081: notifications are off, so the running clock can't show on the lock screen; one tap to the setting. */
 @Composable
 private fun NotificationsOff(onAllow: () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(text = stringResource(R.string.tools_lock_screen_title), style = ToolTitle, color = PokerColors.CardWhite)
             Text(

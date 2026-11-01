@@ -40,7 +40,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -235,12 +234,9 @@ private fun ToolRow(icon: ImageVector, title: String, description: String, onCli
             .clip(RoundedCornerShape(PokerDimens.CornerCard))
             .background(PokerColors.FeltGreen)
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(
-                start = PokerDimens.SpacingMedium, top = PokerDimens.SpacingMedium,
-                end = 10.dp, bottom = PokerDimens.SpacingMedium,
-            ),
+            .padding(PokerDimens.SpacingMedium),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
         Box(
             modifier = Modifier
@@ -252,7 +248,7 @@ private fun ToolRow(icon: ImageVector, title: String, description: String, onCli
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(text = title, style = ToolTitle, color = PokerColors.CardWhite)
-            Text(text = description, style = ToolDescription, color = PokerColors.Chalk)
+            Text(text = description, style = MaterialTheme.typography.bodyMedium, color = PokerColors.Chalk)
         }
         Icon(PokerIcons.ChevronRight, contentDescription = null, tint = PokerColors.Chalk)
     }
@@ -309,6 +305,3 @@ private const val CURRENCY_ROW_SAMPLE_CENTS = 123_450L
 
 /** Tool names and section titles: Barlow, as in the mockup's tool rows. */
 internal val ToolTitle = PokerType.Title.copy(fontSize = 21.sp, lineHeight = 24.sp)
-
-/** What a tool does, under its name. */
-private val ToolDescription = TextStyle(fontSize = 13.sp, lineHeight = 18.sp)

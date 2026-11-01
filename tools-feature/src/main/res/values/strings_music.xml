@@ -39,7 +39,7 @@
     <string name="music_songs">Songs</string>
     <string name="music_edit">Edit</string>
     <string name="music_done">Done</string>
-    <string name="music_songs_empty">No songs yet. Add music files from your phone: any song it can play.</string>
+    <string name="music_songs_empty">Add music files from your phone: any song it can play.</string>
     <string name="music_add_songs">Add songs</string>
     <string name="music_missing">File not found</string>
     <string name="music_none_playable">None of these songs can be found. They may have been moved or deleted.</string>

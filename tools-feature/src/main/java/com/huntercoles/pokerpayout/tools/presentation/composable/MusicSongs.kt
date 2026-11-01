@@ -51,13 +51,7 @@ internal fun SongList(state: MusicUiState, onIntent: (MusicIntent) -> Unit, onAd
             )
         }
     }
-    if (state.tracks.isEmpty()) {
-        Text(
-            text = stringResource(R.string.music_songs_empty),
-            style = MaterialTheme.typography.bodyMedium,
-            color = PokerColors.Chalk,
-        )
-    }
+    if (state.tracks.isEmpty()) NoSongsNote()
     if (state.nothingPlayable) {
         Text(
             text = stringResource(R.string.music_none_playable),
@@ -166,6 +160,26 @@ private fun EditButtons(track: MusicTrack, index: Int, lastIndex: Int, onIntent:
         onClick = { onIntent(MusicIntent.Remove(track.ref)) },
         tint = PokerColors.Danger,
     )
+}
+
+/** No songs yet: an icon, a title and where songs come from, as History's empty note. */
+@Composable
+private fun NoSongsNote() {
+    Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
+        Icon(PokerIcons.MusicNote, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(24.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
+            Text(
+                text = stringResource(R.string.tools_music_none),
+                style = MaterialTheme.typography.titleMedium,
+                color = PokerColors.CardWhite,
+            )
+            Text(
+                text = stringResource(R.string.music_songs_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = PokerColors.Chalk,
+            )
+        }
+    }
 }
 
 @Composable

@@ -8,6 +8,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onRoot
 import com.huntercoles.pokerpayout.core.R as CoreR
 import com.huntercoles.pokerpayout.core.backup.BackupLine
@@ -68,8 +72,14 @@ class BackupScreenTest(private val config: ScreenConfig) {
     fun saveAndRestore() = checkScreen("S17_backup", BackupUiState())
 
     @Test
-    fun aFileThatIsNotABackup() =
+    fun aFileThatIsNotABackup() {
         checkScreen("S17_backup_problem", BackupUiState(problem = CoreR.string.backup_problem_not_backup))
+        // TalkBack reads the problem out as it appears, as one line.
+        screen.compose.onNode(
+            hasText("This isn't a Poker Payout backup.") and
+                SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite),
+        ).assertExists()
+    }
 
     @Test
     fun busy() = checkScreen(name = null, BackupUiState(busy = true))

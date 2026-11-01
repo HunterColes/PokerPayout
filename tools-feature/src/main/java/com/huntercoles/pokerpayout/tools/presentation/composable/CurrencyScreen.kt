@@ -26,9 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.PokerColors
@@ -78,7 +76,7 @@ fun CurrencyContent(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(PokerDimens.CornerCard))
                     .background(PokerColors.FeltGreen)
-                    .padding(horizontal = PokerDimens.SpacingMedium, vertical = PokerDimens.SpacingSmall)
+                    .padding(horizontal = PokerDimens.Gutter, vertical = PokerDimens.SpacingSmall)
                     .selectableGroup(),
             ) {
                 state.choices.forEachIndexed { index, currency ->
@@ -106,7 +104,7 @@ private fun CurrencyRow(currency: AppCurrency, picked: Boolean, onPick: () -> Un
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = RowMinHeight)
+            .heightIn(min = PokerDimens.RowMinHeight)
             .selectable(selected = picked, role = Role.RadioButton, onClick = onPick)
             .padding(vertical = PokerDimens.SpacingSmall),
         verticalAlignment = Alignment.CenterVertically,
@@ -125,7 +123,7 @@ private fun CurrencyRow(currency: AppCurrency, picked: Boolean, onPick: () -> Un
             )
             Text(
                 text = currency.format(AppCurrency.SAMPLE_CENTS, alwaysCents = true),
-                style = SampleStyle,
+                style = PokerType.NumberS,
                 color = PokerColors.CardWhite,
             )
             if (note != null) Text(text = note, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
@@ -158,8 +156,3 @@ private fun currencyNote(currency: AppCurrency): Int? = when {
     !currency.hasCents -> R.string.currency_whole_only
     else -> null
 }
-
-private val RowMinHeight = 56.dp
-
-/** The sample amount in the number face, a little smaller than a stat. */
-private val SampleStyle: TextStyle = PokerType.NumberM.copy(fontSize = 16.sp, lineHeight = 20.sp)

@@ -54,7 +54,7 @@ class MusicContentTest {
         show(MusicFixtures.empty)
         compose.onNodeWithText("Add songs below to play music here.").assertExists()
         compose.onNodeWithContentDescription("Play music").assertIsNotEnabled()
-        compose.onNodeWithText("No songs yet. Add music files from your phone", substring = true).performScrollTo()
+        compose.onNodeWithText("Add music files from your phone", substring = true).performScrollTo()
         compose.onNodeWithText("Add songs").performScrollTo().performClick()
         assertEquals(1, adds)
         compose.onNodeWithText("None yet. Songs that come with the app will show here.").performScrollTo().assertExists()

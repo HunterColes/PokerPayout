@@ -193,9 +193,30 @@ class PayoutsTabScreenTest(private val config: ScreenConfig) {
         withCurrency(AppCurrency.YEN) {
             game.yenSmallPool()
             show()
-            screen.compose.onNodeWithText("The pool is under the ¥500 step", substring = true).assertExists()
+            screen.compose.onNodeWithText("At the ¥500 step, 2nd would round to nothing", substring = true).assertExists()
             check("Payouts, yen pool under the rounding step")
         }
+    }
+
+    /** #65: a ¥500 pool at the ¥500 step with 2 places also pays 1st everything, and says so. */
+    @Test
+    fun aPoolOfOneStepWithTwoPlacesSaysSo() {
+        withCurrency(AppCurrency.YEN) {
+            game.smallTable(players = 2, buyInCents = 25_000L, rounding = PayoutRounding.FIVE_DOLLARS)
+            show()
+            screen.compose.onNodeWithText("At the ¥500 step, 2nd would round to nothing", substring = true).assertExists()
+            check("Payouts, ¥500 pool at the ¥500 step")
+        }
+    }
+
+    /** #65: at the smallest step, the note doesn't send the host looking for a smaller one. */
+    @Test
+    fun atTheSmallestStepTheNoteGivesNoStepAdvice() {
+        game.smallTable(players = 2, buyInCents = 50L, rounding = PayoutRounding.ONE_DOLLAR)
+        show()
+        screen.compose.onNodeWithText("The pool is too small to split in $1 steps", substring = true).assertExists()
+        screen.compose.onNodeWithText("Pick a smaller step", substring = true).assertDoesNotExist()
+        check("Payouts, $1 pool at the $1 step")
     }
 
     /** #49: a 30-character winner and a $123,456.78 pool fit at every size and font scale. */

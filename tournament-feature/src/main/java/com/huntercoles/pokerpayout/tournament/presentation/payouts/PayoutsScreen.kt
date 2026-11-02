@@ -100,9 +100,14 @@ fun PayoutsContent(
             PoolHero(state)
             StructurePicker(state, onIntent)
             RoundingPicker(state, onIntent)
-            if (state.poolUnderStep) {
+            if (state.stepPaysFirstAll) {
+                val note = if (state.onSmallestStep) {
+                    R.string.payouts_pool_under_smallest_step
+                } else {
+                    R.string.payouts_pool_under_step
+                }
                 Text(
-                    text = stringResource(R.string.payouts_pool_under_step, state.settings.rounding.label),
+                    text = stringResource(note, state.settings.rounding.label),
                     style = MaterialTheme.typography.bodyMedium,
                     color = PokerColors.Chalk,
                 )

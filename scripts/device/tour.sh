@@ -1432,7 +1432,7 @@ s_tools() {
   ui scroll-to "text=Cue sounds" --max 6
   ui assert-text "text=SOUND AND MUSIC" "text=Cue sounds" "text=On · Classic" || return 1
   # Back up to the tools for the next step (#46: the listing goes straight on to odds-empty)
-  ui scroll-to text=Odds --dir up --max 6
+  ui scroll-to "text=DURING PLAY" --dir up --max 6
   ui assert-text "text=DURING PLAY" text=Odds
 }
 s_sound_settings() {

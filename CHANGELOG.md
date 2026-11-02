@@ -3,6 +3,35 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.27 (on master, not published)
+
+A polish pass across the Tools, Payouts and sound screens:
+
+- **Payouts (#12, #49, #50):** "Structure" and "Round to" are labelled like the other sections, the
+  big first-place figure is measured to fit instead of guessed, and the place, name and amount sit
+  on one line with the share bars in line under each name. A long name and a big pool no longer
+  break words: the amount moves under the name when they do not share a line. A pool smaller than
+  the rounding step (yen, say) says so instead of quietly paying 1st everything.
+- **Odds, Run it out and Hand ranks (#13):** Run it out's board captions are in capitals like Odds,
+  its Outs and Result cards get gold headers, "Run it twice" sits under its button, section gaps
+  match the other tabs, and the Royal flush line reads "one suit · the best hand there is".
+- **Side pots, Split the prizes and History (#14):** typed chip counts show their commas, the Pots
+  card counts the pots, spacing matches the other tools, and a long name with a big prize in
+  History sits on its line or under the name rather than breaking it.
+- **Tools, Currency, Backup and Music (#15):** Music's empty list says so like History's, the
+  lock-screen block on Tools has its divider, Currency rows match the other cards, and Backup's
+  problem note is read out by TalkBack.
+- **Cue sounds (#40):** the switch and "Use <pack> again" say what they do, the Classic description
+  and screen subtitle are shorter, and the notices for a missing or refused file are checked at
+  every size.
+- **Top bar subtitle (#55):** at large text on a small phone, a subtitle like "4 players · 2,450
+  in" wraps to a second line instead of ending in "...". Odds hides its status while the keypad is
+  open on a short screen, to keep room for the card being filled.
+- **Segmented control (#61):** the picked label stays readable while the control is disabled.
+- **Under the hood (#46, #53):** the device tour follows the "Most colours in a stack" label and
+  the Tools step scrolls back to the tools; chip set numbers got names (four detekt baseline
+  entries gone).
+
 ## 1.4.26 (on master, not published)
 
 Your own cue sound, a Chimes pack, and a polish pass across the app:

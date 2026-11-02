@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -65,6 +66,13 @@ fun CueSoundsRoute(onBack: () -> Unit, viewModel: CueSoundsViewModel = hiltViewM
 
 private const val AUDIO_FILES = "audio/*"
 
+/** The gap between a row's title and the line under it, shared by the cards on this screen. */
+internal val TextGap = 2.dp
+
+/** The gold line round the card that is in use (the picked pack, your own sound when on): one way for both. */
+internal fun Modifier.pickedBorder(picked: Boolean, shape: Shape): Modifier =
+    if (picked) border(1.dp, PokerColors.DarkGold, shape) else this
+
 /**
  * Cue sounds (S18), stateless, the clock's one sound screen (#79): the cue sounds on or off (the
  * bells' mute) and their volume, then the host's own sound for the four changes (#22: a file from
@@ -93,7 +101,12 @@ fun CueSoundsContent(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(start = PokerDimens.Gutter, end = PokerDimens.Gutter, top = 4.dp, bottom = PokerDimens.Gutter),
+                .padding(
+                    start = PokerDimens.Gutter,
+                    end = PokerDimens.Gutter,
+                    top = PokerDimens.SpacingSmall,
+                    bottom = PokerDimens.Gutter,
+                ),
             verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
             OnOffCard(state = state, onIntent = onIntent)
@@ -139,7 +152,7 @@ private fun OnOffCard(state: CueSoundsUiState, onIntent: (CueSoundsIntent) -> Un
         verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         SwitchRow(
-            title = stringResource(R.string.tools_sound_title),
+            title = stringResource(R.string.cue_sounds_play),
             description = stringResource(R.string.tools_sound_description, AudioConstants.LEVEL_CHANGE_SOUND_LEAD_SECONDS),
             checked = state.soundOn,
             onChange = { onIntent(CueSoundsIntent.SetSoundOn(it)) },
@@ -162,7 +175,7 @@ private fun PackCard(pack: SoundPack, picked: Boolean, onPick: () -> Unit, onPre
             .fillMaxWidth()
             .clip(shape)
             .background(PokerColors.FeltGreen)
-            .then(if (picked) Modifier.border(1.dp, PokerColors.DarkGold, shape) else Modifier)
+            .pickedBorder(picked, shape)
             .padding(PokerDimens.Gutter),
         verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
@@ -179,7 +192,7 @@ private fun PackCard(pack: SoundPack, picked: Boolean, onPick: () -> Unit, onPre
                 onClick = null,
                 colors = RadioButtonDefaults.colors(selectedColor = PokerColors.PokerGold, unselectedColor = PokerColors.Chalk),
             )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(TextGap)) {
                 Text(
                     text = stringResource(pack.name),
                     style = ToolTitle,

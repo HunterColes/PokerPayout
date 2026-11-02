@@ -72,4 +72,31 @@ internal object MusicFixtures {
             refused = true,
         ),
     )
+
+    /** The file gone since the last cue: just the missing-file line, the pack playing. */
+    val cueSoundsMissing = cueSoundsCustom.copy(custom = cueSoundsCustom.custom.copy(missing = true))
+
+    /** A pick that can't be played: just the refused line, nothing changed. */
+    val cueSoundsRefused = cueSounds.copy(custom = CustomSoundUi(refused = true))
+
+    /** A file under a second, peak at its end (hardening). */
+    val cueSoundsShortFile = cueSounds.copy(
+        custom = CustomSoundUi(
+            on = true,
+            sound = CustomCueSound(uri = "content://picked/blip.wav", lengthMillis = 600, peakMillis = 600),
+        ),
+    )
+
+    /** A file over a minute, peak and end far in (hardening). */
+    val cueSoundsLongFile = cueSounds.copy(
+        custom = CustomSoundUi(
+            on = true,
+            sound = CustomCueSound(
+                uri = "content://picked/a-very-long-recording-of-the-whole-evening.m4a",
+                lengthMillis = 185_000,
+                peakMillis = 92_300,
+                endMillis = 150_000,
+            ),
+        ),
+    )
 }

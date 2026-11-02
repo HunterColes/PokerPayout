@@ -103,7 +103,7 @@ private fun FoldHeader(state: SeatDrawUiState, text: SeatDrawText, open: Boolean
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            PokerEyebrow(stringResource(R.string.seat_draw_whos_playing), color = PokerColors.PokerGold)
+            PokerEyebrow(stringResource(R.string.seat_draw_whos_playing))
             val source = if (state.fromBank) R.string.seat_draw_summary_from_bank else R.string.seat_draw_summary_changed
             Text(
                 text = stringResource(

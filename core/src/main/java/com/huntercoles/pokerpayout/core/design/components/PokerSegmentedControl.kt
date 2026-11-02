@@ -46,7 +46,7 @@ import com.huntercoles.pokerpayout.core.utils.FormatUtils
  * The selected segment gets a FeltHigh fill, a DarkGold outline and gold text. A segment may carry
  * a [secondary] preview value under its label (the 1st-place prize, "$225"). Each segment is a
  * radio button for TalkBack, at least 48 dp tall; labels wrap rather than truncate. While not
- * [enabled] (a structure locked while the clock runs) the selection still shows, dimmed, and taps do
+ * [enabled] (a structure locked while the clock runs) the selection still shows (white, readable on its thumb), the rest dim, and taps do
  * nothing.
  */
 @Suppress("LongParameterList") // a component API: one parameter per visual option
@@ -109,6 +109,8 @@ private fun Segment(
     val interactions = remember { MutableInteractionSource() }
     val thumbShape = RoundedCornerShape(9.dp)
     val color = when {
+        // Disabled but picked: the choice must stay readable on FeltHigh (ChalkDim there is under AA)
+        !enabled && selected -> PokerColors.CardWhite
         !enabled -> PokerColors.ChalkDim
         selected -> PokerColors.PokerGold
         else -> PokerColors.Chalk

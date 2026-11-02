@@ -24,7 +24,8 @@ import org.robolectric.annotation.GraphicsMode
  * [DeviceMatrix.goldens]: `S18_music_empty` (a fresh install), `S18_music_playing` (five songs, one
  * playing, one whose file has gone, with the clock and quieter on breaks), `S18_music_editing` (move
  * and remove), `S18_cue_sounds`, `S18_cue_sounds_off` (the cue sounds off) and `S18_cue_sounds_custom`
- * (the host's own file with its peak, #22). Every file gone, the built-in songs (none ship yet) and
+ * (the host's own file with its peak, #22), `S18_cue_sounds_missing` and `S18_cue_sounds_refused` (one notice each).
+ * A 0.6 s and a 3-minute file, every file gone, the built-in songs (none ship yet) and
  * the own file missing with an end point get the layout checks too.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -60,6 +61,18 @@ class MusicScreenTest(private val config: ScreenConfig) {
 
     @Test
     fun cueSoundsCustomMissing() = cueSounds(name = null, MusicFixtures.cueSoundsCustomMissing)
+
+    @Test
+    fun cueSoundsMissing() = cueSounds("S18_cue_sounds_missing", MusicFixtures.cueSoundsMissing)
+
+    @Test
+    fun cueSoundsRefused() = cueSounds("S18_cue_sounds_refused", MusicFixtures.cueSoundsRefused)
+
+    @Test
+    fun cueSoundsShortFile() = cueSounds(name = null, MusicFixtures.cueSoundsShortFile)
+
+    @Test
+    fun cueSoundsLongFile() = cueSounds(name = null, MusicFixtures.cueSoundsLongFile)
 
     private fun music(name: String?, state: MusicUiState) {
         screen.compose.setContent {

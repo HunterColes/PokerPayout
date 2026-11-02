@@ -5,7 +5,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,7 +75,7 @@ internal fun OwnSoundCard(
             .fillMaxWidth()
             .clip(shape)
             .background(PokerColors.FeltGreen)
-            .then(if (custom.on) Modifier.border(1.dp, PokerColors.DarkGold, shape) else Modifier)
+            .pickedBorder(custom.on, shape)
             .padding(PokerDimens.Gutter),
         verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
@@ -93,7 +92,12 @@ internal fun OwnSoundCard(
         if (custom.refused) Notice(stringResource(R.string.cue_custom_refused))
         if (custom.on && sound != null) OwnSoundDetails(sound = sound, custom = custom, onIntent = onIntent)
         if (sound != null || custom.refused) {
-            FileActions(hasFile = sound != null, onPickFile = onPickFile, onStop = { onIntent(CueSoundsIntent.StopCustom) })
+            FileActions(
+                hasFile = sound != null,
+                packName = packName,
+                onPickFile = onPickFile,
+                onStop = { onIntent(CueSoundsIntent.StopCustom) },
+            )
         }
     }
 }
@@ -142,7 +146,7 @@ private fun OwnSoundDetails(sound: CustomCueSound, custom: CustomSoundUi, onInte
 /** Choose another file, and (with one kept) Stop using it; they wrap at phone width. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun FileActions(hasFile: Boolean, onPickFile: () -> Unit, onStop: () -> Unit) {
+private fun FileActions(hasFile: Boolean, packName: String, onPickFile: () -> Unit, onStop: () -> Unit) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
@@ -157,7 +161,7 @@ private fun FileActions(hasFile: Boolean, onPickFile: () -> Unit, onStop: () -> 
         )
         if (hasFile) {
             PokerButton(
-                text = stringResource(R.string.cue_custom_stop),
+                text = stringResource(R.string.cue_custom_stop, packName),
                 onClick = onStop,
                 variant = PokerButtonVariant.Text,
                 size = PokerButtonSize.Small,
@@ -174,7 +178,7 @@ private fun Notice(text: String) {
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
-        Icon(PokerIcons.Info, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(20.dp))
+        Icon(PokerIcons.Info, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(NoticeIconSize))
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
@@ -191,12 +195,12 @@ private fun Notice(text: String) {
 @Composable
 private fun SecondsSlider(label: String, hint: String, millis: Long, range: LongRange, onMillis: (Long) -> Unit) {
     val spoken = stringResource(R.string.cue_custom_seconds_spoken, millis / MILLIS_PER_SECOND)
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(TextGap)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
         ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(TextGap)) {
                 Text(text = label, style = ToolTitle, color = PokerColors.CardWhite)
                 Text(text = hint, style = MaterialTheme.typography.bodySmall, color = PokerColors.Chalk)
             }
@@ -205,7 +209,7 @@ private fun SecondsSlider(label: String, hint: String, millis: Long, range: Long
                 style = PokerType.NumberM,
                 color = PokerColors.PokerGold,
                 textAlign = TextAlign.End,
-                modifier = Modifier.widthIn(min = 56.dp),
+                modifier = Modifier.widthIn(min = ValueMinWidth),
             )
         }
         val first = range.first.toFloat()
@@ -221,7 +225,7 @@ private fun SecondsSlider(label: String, hint: String, millis: Long, range: Long
                     contentDescription = label
                     stateDescription = spoken
                 },
-            thumb = { Box(Modifier.size(22.dp).background(PokerColors.PokerGold, CircleShape)) },
+            thumb = { Box(Modifier.size(ThumbSize).background(PokerColors.PokerGold, CircleShape)) },
             track = { sliderState -> VolumeTrack(sliderState, PokerColors.PokerGold) },
         )
     }
@@ -250,7 +254,7 @@ private fun PreviewBar(barMillis: Long, markMillis: Long, run: Int) {
                 contentDescription = description
                 progressBarRangeInfo = ProgressBarRangeInfo(progress.value, 0f..1f)
             },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
     ) {
         Canvas(modifier = Modifier.fillMaxWidth().height(MarkHeight)) {
             val barHeight = BarHeight.toPx()
@@ -262,7 +266,7 @@ private fun PreviewBar(barMillis: Long, markMillis: Long, run: Int) {
             val x = (size.width * mark).coerceIn(half, size.width - half)
             drawRect(PokerColors.CardWhite, Offset(x - half, 0f), Size(MarkWidth.toPx(), size.height))
         }
-        MarkLabel(fraction = mark, text = stringResource(R.string.cue_custom_change, markText))
+        MarkLabel(fraction = mark, text = stringResource(R.string.cue_custom_change))
     }
 }
 
@@ -287,6 +291,9 @@ private fun seconds(millis: Long): String = stringResource(R.string.cue_custom_s
 
 private const val MILLIS_PER_SECOND = 1000f
 private const val STEP_MILLIS = 100f
+private val NoticeIconSize = 20.dp
+private val ValueMinWidth = 56.dp
+private val ThumbSize = 22.dp
 private val BarHeight = 8.dp
 private val MarkHeight = 20.dp
 private val MarkWidth = 3.dp

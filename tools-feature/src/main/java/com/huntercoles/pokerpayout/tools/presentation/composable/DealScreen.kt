@@ -9,10 +9,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huntercoles.pokerpayout.core.design.PokerColors
+import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonSize
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
@@ -100,7 +100,10 @@ private fun DealPlayersCard(state: DealUiState, onIntent: (DealIntent) -> Unit) 
 private fun DealPlayerWell(index: Int, player: DealPlayer, canRemove: Boolean, onIntent: (DealIntent) -> Unit) {
     val name = playerName(index, player.name)
     ToolWell {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall),
+        ) {
             PlayerNameField(
                 number = index + 1,
                 value = player.name,

@@ -27,7 +27,6 @@
     <string name="tools_backup_title">Backup</string>
     <string name="tools_backup_description">Save everything to a file, or restore from one</string>
     <!-- The cue sounds' switch on Cue sounds: the same setting as the bells' mute (is_muted) -->
-    <string name="tools_sound_title">Cue sounds</string>
     <string name="tools_sound_description">A sound %1$d s before each level, break and the end. The music has its own volume.</string>
     <string name="tools_volume">Cue sound volume</string>
     <string name="tools_volume_percent">%1$d%%</string>

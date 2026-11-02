@@ -66,7 +66,7 @@
     <string name="card_slot_random">Random card</string>
     <!-- Cue sound packs (core/audio/packs/SoundPacks.kt): a name and one line on what it plays -->
     <string name="sound_pack_classic">Classic</string>
-    <string name="sound_pack_classic_description">One sound at every change. None with a minute left.</string>
+    <string name="sound_pack_classic_description">One sound at every change.</string>
     <string name="sound_pack_chimes">Chimes</string>
     <string name="sound_pack_chimes_description">Bells for every moment, a soft one with a minute left.</string>
 

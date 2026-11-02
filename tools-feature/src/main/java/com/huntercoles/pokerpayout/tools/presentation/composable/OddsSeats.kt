@@ -200,7 +200,7 @@ internal fun SeatHeader(
     equity: @Composable () -> Unit,
 ) {
     Layout(contents = listOf(cards, info, equity), modifier = Modifier.fillMaxWidth()) { (c, i, e), constraints ->
-        val gap = 12.dp.roundToPx()
+        val gap = PokerDimens.SpacingMedium.roundToPx()
         val width = constraints.maxWidth
         val loose = Constraints(maxWidth = width)
         val cardsP = c.first().measure(loose)

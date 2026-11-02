@@ -16,16 +16,16 @@
     <string name="hand_rank_high_card">High card</string>
 
     <!-- What makes the hand and how ties break -->
-    <string name="hand_rule_royal_flush">A-K-Q-J-10, all one suit. The best hand there is</string>
-    <string name="hand_rule_straight_flush">Five in a row, one suit · top card breaks ties</string>
-    <string name="hand_rule_four_of_a_kind">Four of one rank · the kicker breaks ties</string>
-    <string name="hand_rule_full_house">Three plus a pair · higher three wins</string>
-    <string name="hand_rule_flush">Any five of one suit · compare from the top card down</string>
-    <string name="hand_rule_straight">Five in a row · an ace plays high or low</string>
-    <string name="hand_rule_three_of_a_kind">Three of one rank · two kickers</string>
+    <string name="hand_rule_royal_flush">A-K-Q-J-10, one suit&#160;· the best hand there is</string>
+    <string name="hand_rule_straight_flush">Five in a row, one suit&#160;· top card breaks ties</string>
+    <string name="hand_rule_four_of_a_kind">Four of one rank&#160;· the kicker breaks ties</string>
+    <string name="hand_rule_full_house">Three plus a pair&#160;· higher three wins</string>
+    <string name="hand_rule_flush">Any five of one suit&#160;· compare from the top card down</string>
+    <string name="hand_rule_straight">Five in a row&#160;· an ace plays high or low</string>
+    <string name="hand_rule_three_of_a_kind">Three of one rank&#160;· two kickers</string>
     <string name="hand_rule_two_pair">Top pair first, then the second, then the kicker</string>
     <string name="hand_rule_one_pair">The pair, then three kickers in order</string>
-    <string name="hand_rule_high_card">Nothing made · highest card, then the next</string>
+    <string name="hand_rule_high_card">Nothing made&#160;· highest card, then the next</string>
 
     <!-- How often by the river: "0.003%", "1 in 30,940" -->
     <string name="hand_ranks_share">%1$s%%</string>

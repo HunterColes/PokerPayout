@@ -54,7 +54,7 @@ class MusicContentTest {
         show(MusicFixtures.empty)
         compose.onNodeWithText("Add songs below to play music here.").assertExists()
         compose.onNodeWithContentDescription("Play music").assertIsNotEnabled()
-        compose.onNodeWithText("No songs yet. Add music files from your phone", substring = true).performScrollTo()
+        compose.onNodeWithText("Add music files from your phone", substring = true).performScrollTo()
         compose.onNodeWithText("Add songs").performScrollTo().performClick()
         assertEquals(1, adds)
         compose.onNodeWithText("None yet. Songs that come with the app will show here.").performScrollTo().assertExists()
@@ -220,7 +220,7 @@ class MusicContentTest {
     fun theCueSoundsSwitchIsOneSwitchAndSaysTheMusicIsApart() {
         // #79: the bells' mute, by the same name; the music keeps its own volume
         showCues(MusicFixtures.cueSounds)
-        val cueSwitch = compose.onNode(hasText("Cue sounds") and isSwitch)
+        val cueSwitch = compose.onNode(hasText("Play cue sounds") and isSwitch)
         cueSwitch.assertIsOn()
         compose.onNodeWithText("The music has its own volume", substring = true).assertExists()
         cueSwitch.performClick()

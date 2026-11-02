@@ -8,19 +8,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.LocalReducedMotion
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.components.CardEmphasis
@@ -34,7 +29,7 @@ import com.huntercoles.pokerpayout.tools.presentation.Street
 
 /**
  * Run it out's board: dealt cards face up (the street just dealt with a gold edge, flipping in),
- * the rest face down, with Flop / Turn / River underneath. Large cards when they fit, medium on
+ * the rest face down, captioned FLOP / TURN / RIVER as on the odds board. Large cards when they fit, medium on
  * narrow phones.
  */
 @Composable
@@ -51,30 +46,16 @@ internal fun RunBoard(runOut: RunOutState, fourColour: Boolean) {
                     }
                     val street = Street.entries[group + 1]
                     val justDealt = runOut.dealt > 0 && runOut.street == street
-                    // Captions follow the font scale only to 1.3x and may spill past a one-card group,
-                    // so neither the cards nor "River" get squeezed. "just dealt" goes on its own line.
+                    // The odds board's captions ("FLOP", "RIVER"); "JUST DEALT" goes on its own line.
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         val colour = if (justDealt) PokerColors.PokerGold else PokerColors.Chalk
-                        BoardCaption(streetName(street.boardCards), colour)
-                        if (justDealt) BoardCaption(stringResource(R.string.odds_runout_just_dealt), colour)
+                        StreetCaption(streetName(street.boardCards), colour)
+                        if (justDealt) StreetCaption(stringResource(R.string.odds_runout_just_dealt), colour)
                     }
                 }
             }
         }
     }
-}
-
-/** A caption under the board's cards, at most 1.3x the font scale, free to spill sideways. */
-@Composable
-private fun BoardCaption(text: String, colour: Color) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall.copy(fontSize = CAPTION.cappedSp(CAPTION_MAX_SCALE), lineHeight = 16.sp),
-        color = colour,
-        maxLines = 1,
-        softWrap = false,
-        modifier = Modifier.wrapContentWidth(unbounded = true),
-    )
 }
 
 /** A dealt card (flipping in when it's new, unless motion is reduced) or a face-down card. */
@@ -103,8 +84,6 @@ private fun previousBoardSize(street: Street): Int = when (street) {
     Street.RIVER -> Street.TURN.boardCards
 }
 
-private val CAPTION = 12.dp
-private const val CAPTION_MAX_SCALE = 1.3f
 private const val FLIP_MS = 250
 
 /** Five large cards and their gaps: 5 x 58 + 4 x 6, plus the group gaps. */

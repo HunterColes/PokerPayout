@@ -79,7 +79,8 @@ fun OddsCalculatorContent(
             }
         } else {
             Column(Modifier.fillMaxSize()) {
-                OddsHeader(state, onIntent, onBack)
+                // The status would wrap at large text and cost the slot being filled its room.
+                OddsHeader(state, onIntent, onBack, showStatus = !(state.keypad.isOpen && bottomDock == KeypadDock.BottomShort))
                 OddsBody(state, onIntent, Modifier.weight(1f))
                 CardKeypad(
                     state = state,
@@ -94,8 +95,17 @@ fun OddsCalculatorContent(
 
 /** "Odds" with the live status underneath, then Swap and New hand (as in the mockup). */
 @Composable
-private fun OddsHeader(state: OddsCalculatorUiState, onIntent: (OddsCalculatorIntent) -> Unit, onBack: () -> Unit) {
-    PokerTopBar(title = stringResource(R.string.odds_title), subtitle = oddsStatus(state), onBack = onBack) {
+private fun OddsHeader(
+    state: OddsCalculatorUiState,
+    onIntent: (OddsCalculatorIntent) -> Unit,
+    onBack: () -> Unit,
+    showStatus: Boolean = true,
+) {
+    PokerTopBar(
+        title = stringResource(R.string.odds_title),
+        subtitle = if (showStatus) oddsStatus(state) else null,
+        onBack = onBack,
+    ) {
         PokerIconButton(PokerIcons.Swap, stringResource(R.string.odds_swap), onClick = { onIntent(OddsCalculatorIntent.Swap()) })
         PokerIconButton(PokerIcons.Restart, stringResource(R.string.odds_new_hand), { onIntent(OddsCalculatorIntent.NewHand) })
     }
@@ -142,7 +152,10 @@ private fun OddsBody(state: OddsCalculatorUiState, onIntent: (OddsCalculatorInte
                 .padding(horizontal = PokerDimens.Gutter),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(Modifier.widthIn(max = CONTENT_MAX_WIDTH).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                Modifier.widthIn(max = CONTENT_MAX_WIDTH).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+            ) {
                 BoardStrip(state.table, state.keypad.target, state.fourColourDeck, onIntent)
                 seats.forEach { SeatRow(it, state.table, state.keypad.target, state.fourColourDeck, onIntent) }
                 if (state.table.seats.size < OddsTable.MAX_SEATS) {

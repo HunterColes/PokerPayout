@@ -59,7 +59,9 @@ sealed class ChipDistributionCurve {
      * Good middle-ground for most tournaments.
      */
     object LinearModerate : ChipDistributionCurve() {
-        override fun getValue(x: Double): Double = -0.5 * x + 1.0
+        private const val SLOPE = 0.5   // Drop in weight from the smallest chip to the largest
+
+        override fun getValue(x: Double): Double = -SLOPE * x + 1.0
         override val displayName = "Linear Moderate"
         override val id = "linear_moderate"
     }
@@ -106,7 +108,9 @@ sealed class ChipDistributionCurve {
      * Ideal for cash games requiring lots of change-making.
      */
     object ExponentialDecay : ChipDistributionCurve() {
-        override fun getValue(x: Double): Double = exp(-3 * x)
+        private const val DECAY_RATE = 3.0   // Steepness of the dropoff
+
+        override fun getValue(x: Double): Double = exp(-DECAY_RATE * x)
         override val displayName = "Exponential (Cash Game)"
         override val id = "exponential"
     }

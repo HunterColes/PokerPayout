@@ -20,6 +20,11 @@
 
     <!-- The pots -->
     <string name="side_pots_pots_title">Pots</string>
+    <!-- The Pots card's note, like the other cards' notes: "3 pots" (the main pot and two side pots) -->
+    <plurals name="side_pots_pots_note">
+        <item quantity="one">%1$d pot</item>
+        <item quantity="other">%1$d pots</item>
+    </plurals>
     <string name="side_pots_main">Main pot</string>
     <string name="side_pots_side">Side pot %1$d</string>
     <!-- "Dana, Sam or Theo can win it" -->

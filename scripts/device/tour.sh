@@ -1428,7 +1428,10 @@ s_tools() {
   # The Sound and music section comes after the tools: on a phone it is below the fold. The cue
   # sounds' switch and volume live on Cue sounds (#79); the row says whether they are on.
   ui scroll-to "text=Cue sounds" --max 6
-  ui assert-text "text=SOUND AND MUSIC" "text=Cue sounds" "text=On · Classic"
+  ui assert-text "text=SOUND AND MUSIC" "text=Cue sounds" "text=On · Classic" || return 1
+  # Back up to the tools for the next step (#46: the listing goes straight on to odds-empty)
+  ui scroll-to text=Odds --dir up --max 6
+  ui assert-text "text=DURING PLAY" text=Odds
 }
 s_sound_settings() {
   # #79: the clock's ⋮ > Sound settings opens Cue sounds itself (it used to land on the top of the
@@ -2014,7 +2017,7 @@ s_chip_calc_settings() {
   ui scroll-to "re=(?i)stack settings" --max 6
   ui tap "re=(?i)^stack settings"
   ui scroll-to "re=Lots of small chips" --max 4   # the lowest thing checked (a fling's reach varies)
-  ui assert-text "text=Starting stack" "text=Keep back for rebuys and add-ons" "text=Colours per stack, at most" \
+  ui assert-text "text=Starting stack" "text=Keep back for rebuys and add-ons" "text=Most colours in a stack" \
     "re=More small chips" "re=Lots of small chips" "text=From Tournament setup: no rebuys or add-ons." || return 1
   ui tap "desc=Increase Keep back for rebuys and add-ons"
   ui tap "desc=Increase Keep back for rebuys and add-ons"

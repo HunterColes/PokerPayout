@@ -3,6 +3,78 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
+## 1.4.27 (on master, not published)
+
+A polish pass across the Tools, Payouts and sound screens:
+
+- **Payouts (#12, #49, #50):** "Structure" and "Round to" are labelled like the other sections, the
+  big first-place figure is measured to fit instead of guessed, and the place, name and amount sit
+  on one line with the share bars in line under each name. A long name and a big pool no longer
+  break words: the amount moves under the name when they do not share a line. A pool smaller than
+  the rounding step (yen, say) says so instead of quietly paying 1st everything.
+- **Odds, Run it out and Hand ranks (#13):** Run it out's board captions are in capitals like Odds,
+  its Outs and Result cards get gold headers, "Run it twice" sits under its button, section gaps
+  match the other tabs, and the Royal flush line reads "one suit · the best hand there is".
+- **Side pots, Split the prizes and History (#14):** typed chip counts show their commas, the Pots
+  card counts the pots, spacing matches the other tools, and a long name with a big prize in
+  History sits on its line or under the name rather than breaking it.
+- **Tools, Currency, Backup and Music (#15):** Music's empty list says so like History's, the
+  lock-screen block on Tools has its divider, Currency rows match the other cards, and Backup's
+  problem note is read out by TalkBack.
+- **Cue sounds (#40):** the switch and "Use <pack> again" say what they do, the Classic description
+  and screen subtitle are shorter, and the notices for a missing or refused file are checked at
+  every size.
+- **Top bar subtitle (#55):** at large text on a small phone, a subtitle like "4 players · 2,450
+  in" wraps to a second line instead of ending in "...". Odds hides its status while the keypad is
+  open on a short screen, to keep room for the card being filled.
+- **Segmented control (#61):** the picked label stays readable while the control is disabled.
+- **Under the hood (#46, #53):** the device tour follows the "Most colours in a stack" label and
+  the Tools step scrolls back to the tools; chip set numbers got names (four detekt baseline
+  entries gone).
+
+## 1.4.26 (on master, not published)
+
+Your own cue sound, a Chimes pack, and a polish pass across the app:
+
+- **Chimes sound pack (#7):** Cue sounds has a new pack, Chimes, with bell sounds for every moment
+  (new level, breaks, the last minute, big moments, the champion). Each previews on Cue sounds and
+  plays on the clock like the other packs.
+- **Your own cue sound (#19, #20, #21, #22):** Tools > Cue sounds has a Your own sound card above
+  the packs. Pick any sound file on the phone, set where its peak is and where it ends, and preview
+  it: a bar shows what plays and marks the change. The clock starts the sound early so its peak
+  lands right on the level change; when a level is shorter than that, it plays part way in rather
+  than late. If the file goes missing the picked pack plays instead, and the screen says so. The
+  file stays on this phone: no backup carries it.
+- **Bank header never cut (#24):** on a small phone or at large text, the Bank's "5 of 5 left ·
+  $25 collected" line moves under the title and wraps, instead of ending in "…".
+- **Tournament setup (#8):** the welcome card names the real button ("Start clock"), the presets
+  row hint is one short line, a setup with no valid ladder says "Needs a fix" in red beside
+  Blinds, and starter rows put the buy-in first, like saved presets.
+- **Payouts (#4):** "Round to" sits above its control, like Structure, so it no longer wraps at
+  large text.
+- **Bank and its sheets (#9):** "Structure" fits on one line, the pool breakdown and Pay out show
+  their amounts the same way, section labels match, and Settle up puts a big amount under a long
+  name instead of breaking the name.
+- **Chip set and Seat draw (#10):** stack shapes use the usual radio buttons, the settings rows
+  match, "Most colours in a stack" replaces a label that wrapped, and two tables sit side by side
+  only where each has room.
+- **Clock, breaks, table view and champion (#11):** the clock no longer jumps when you pause, the
+  top bar drops the part of its subtitle the clock already shows when text is large, Undo sits
+  beside "Color-up done", and the champion's payout rows fit long names and big amounts.
+- **Under the hood (#4, #5, #6):** spacing and type sizes come from the design tokens everywhere
+  (no visible change). Tooling: the gate (`tools/check.sh`) runs in a fresh Gradle JVM so a lint
+  crash can't break later builds (#38), and fails on a private host name in a tracked file.
+
+## [1.4.25](https://github.com/HunterColes/PokerPayout/releases/tag/v1.4.25) (2026-10-29)
+
+Published release: 1.4.23 and 1.4.24 below. What's new in the app:
+
+- Sound settings in the clock's menu now opens the sound screen: the on/off switch, the volume
+  and the sound packs with their previews, together. Back returns to the clock.
+- One name for the mute: the clock's bell, the Bank's bell and the switch all say "cue sounds".
+  Your saved settings carry over.
+- "Test chime" is gone: the play buttons on the sound screen play the same sound, even while muted.
+
 ## 1.4.24 (on master, not published)
 
 Sound settings, in one place (#79):

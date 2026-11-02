@@ -3,6 +3,7 @@ package com.huntercoles.pokerpayout.tools.presentation.composable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerType
@@ -15,13 +16,18 @@ import com.huntercoles.pokerpayout.tools.table.Uncalled
 /**
  * The pots: the main pot, then each side pot, each with its chips, who can win it and which chips
  * make it ("Over 300, up to 800 from each player"); chips nobody matched go back. The total and
- * how pots are made close the card.
+ * how pots are made close the card. The header counts the pots, as the other cards' headers say what they hold.
  */
 @Composable
 internal fun PotsCard(state: SidePotsUiState) {
     ChipSetSection {
-        SectionHeader(title = stringResource(R.string.side_pots_pots_title), note = null)
-        when (val split = state.split) {
+        val split = state.split
+        val count = (split as? PotSplit.Pots)?.pots?.size
+        SectionHeader(
+            title = stringResource(R.string.side_pots_pots_title),
+            note = count?.let { pluralStringResource(R.plurals.side_pots_pots_note, it, it) },
+        )
+        when (split) {
             PotSplit.Empty -> ToolNote(stringResource(R.string.side_pots_empty))
             PotSplit.AllFolded -> NoteBox(ok = false) {
                 Text(

@@ -58,6 +58,8 @@ class OddsScreenGoldenTest(private val config: ScreenConfig) {
 
     @Test fun s10RiverP2() = runOut("S10_runout_river_p2", OddsFixtures.runOutRiverP2)
 
+    @Test fun s10Twice() = runOut("S10_runout_twice", OddsFixtures.runOutTwice)
+
     private fun odds(name: String, state: OddsCalculatorUiState) {
         render { OddsCalculatorContent(state, onIntent = {}) }
         screen.compose.onRoot().captureGolden(GROUP, name, config)

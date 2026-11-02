@@ -28,7 +28,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -157,7 +159,10 @@ private fun BackupCard(icon: ImageVector, heading: String, body: String, button:
             .padding(PokerDimens.SpacingDefault),
         verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Box(
                 modifier = Modifier
                     .size(PokerDimens.MinTouch)
@@ -178,7 +183,7 @@ private fun BackupCard(icon: ImageVector, heading: String, body: String, button:
     }
 }
 
-/** Why the last file couldn't be saved or read. */
+/** Why the last file couldn't be saved or read; TalkBack reads it out as it appears. */
 @Composable
 private fun ProblemNote(message: String) {
     Row(
@@ -186,8 +191,10 @@ private fun ProblemNote(message: String) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(PokerDimens.CornerCard))
             .background(PokerColors.FeltGreen)
-            .padding(PokerDimens.SpacingDefault),
+            .padding(PokerDimens.SpacingDefault)
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
         horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(PokerIcons.Info, contentDescription = null, tint = PokerColors.Danger, modifier = Modifier.size(22.dp))
         Text(

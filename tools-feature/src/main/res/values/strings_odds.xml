@@ -194,13 +194,17 @@
     </string-array>
     <string name="odds_runout_sweat_desc">%1$s: %2$s</string>
     <string name="odds_runout_sweat_point">%2$s%% %1$s</string>
+    <string name="odds_runout_outs">Outs</string>
+    <!-- The outs header's note: "16 of 44" (cards that help, of the cards left) -->
+    <string name="odds_runout_outs_of">%1$d of %2$d</string>
+    <string name="odds_runout_result">Result</string>
     <plurals name="odds_runout_needs_river">
-        <item quantity="one">%1$s needs the one river that helps (%2$d of %3$d):</item>
-        <item quantity="other">%1$s needs one of %2$d rivers (%2$d of %3$d):</item>
+        <item quantity="one">%1$s needs the one river that helps</item>
+        <item quantity="other">%1$s needs one of %2$d rivers</item>
     </plurals>
     <plurals name="odds_runout_needs_turn">
-        <item quantity="one">%1$s takes the lead on %2$d turn (%2$d of %3$d):</item>
-        <item quantity="other">%1$s takes the lead on %2$d turns (%2$d of %3$d):</item>
+        <item quantity="one">%1$s takes the lead on %2$d turn</item>
+        <item quantity="other">%1$s takes the lead on %2$d turns</item>
     </plurals>
     <string name="odds_runout_drawing_dead">%1$s is drawing dead: no card puts them ahead.</string>
     <string name="odds_runout_wins">%1$s wins</string>

@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -196,18 +197,27 @@ internal fun BoardStrip(
                     }
                     // Captions under the slots grow with the font only up to 1.3x, so "TURN" and "RIVER"
                     // stay within their 48 dp slots; TalkBack reads each slot's full name anyway.
-                    Text(
-                        text = streetNames[group].uppercase(Locale.ROOT),
-                        style = PokerType.Eyebrow.copy(fontSize = CAPTION.cappedSp(CAPTION_MAX_SCALE), letterSpacing = 1.2.sp),
-                        color = PokerColors.Chalk,
-                        maxLines = 1,
-                        softWrap = false,
-                        modifier = Modifier.wrapContentWidth(unbounded = true),
-                    )
+                    StreetCaption(streetNames[group])
                 }
             }
         }
     }
+}
+
+/**
+ * A street's caption under board cards ("FLOP", "RIVER"), the same on the odds board and in run it
+ * out: Barlow caps that follow the font only up to 1.3x and may spill past a one-card group.
+ */
+@Composable
+internal fun StreetCaption(text: String, color: Color = PokerColors.Chalk) {
+    Text(
+        text = text.uppercase(Locale.ROOT),
+        style = PokerType.Eyebrow.copy(fontSize = CAPTION.cappedSp(CAPTION_MAX_SCALE), letterSpacing = 1.2.sp),
+        color = color,
+        maxLines = 1,
+        softWrap = false,
+        modifier = Modifier.wrapContentWidth(unbounded = true),
+    )
 }
 
 /** "Flop card 1, empty. Next." / "Player 1, card 2, Ace of spades". */

@@ -26,7 +26,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.huntercoles.pokerpayout.core.design.PokerColors
 import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
@@ -193,6 +192,6 @@ private fun BountyLine(name: String, detail: String, cents: Long) {
             color = PokerColors.CardWhite,
             modifier = Modifier.weight(1f),
         )
-        Text(text = formatMoney(cents), style = PokerType.NumberM.copy(fontSize = 18.sp), color = PokerColors.CardWhite)
+        Text(text = formatMoney(cents), style = PokerType.NumberM, color = PokerColors.CardWhite)
     }
 }

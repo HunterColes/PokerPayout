@@ -28,7 +28,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.huntercoles.pokerpayout.core.R
@@ -42,7 +41,8 @@ import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
  * titles and the floating reset button).
  *
  * The title is gold Barlow and never ellipsizes: at large font scales it wraps and the bar grows.
- * The subtitle is live state ("Level 6 of 9 · running") and may ellipsize. Put up to three
+ * The subtitle is live state ("Level 6 of 9 · running"): one line when it fits, wrapping (and the bar
+ * growing) when it does not, never an ellipsis. Put up to three
  * [PokerIconButton]s in [actions] and the rest behind a "More" menu. Sub-screens pass [onBack].
  * The bar pads itself below the status bar once the app draws edge to edge.
  */
@@ -87,9 +87,6 @@ fun PokerTopBar(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = PokerColors.Chalk,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.semantics { mayTruncate = true },
                 )
             }
         }

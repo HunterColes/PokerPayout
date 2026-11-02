@@ -19,5 +19,7 @@ CLAUDE.md, `src/testFixtures/`) before you run anything from it.
   the branch from that worktree and `tools/forge.sh git push forge HEAD:<branch>` (merge, never rebase or force).
 - Post findings with `tools/forge.sh comment <n> <file>`. Replace the body's `Reviewer: pending` with exactly
   `Reviewer: pass` or `Reviewer: fail: <one sentence>` (`pr-body` into a `mktemp` file, edit, `pr-set-body`).
+  When the body has no `Reviewer: pending` line, append exactly `Reviewer: pass` or `Reviewer: fail: <one sentence>`
+  as its own line the same way; never only a comment.
 - List the gate files with `tools/forge.sh gate-files <n>`, read each one's diff, and name the ones you accept in
   `crew next ... --gate-files a,b`; the merge refuses any you did not name. Never merge, never push to master or GitHub.

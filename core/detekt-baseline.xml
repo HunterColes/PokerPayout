@@ -2,10 +2,6 @@
 <SmellBaseline>
   <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
-    <ID>MagicNumber:ChipDistributionCurve.kt$ChipDistributionCurve.ExponentialDecay$3</ID>
-    <ID>MagicNumber:ChipDistributionCurve.kt$ChipDistributionCurve.LinearModerate$0.5</ID>
-    <ID>MagicNumber:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$0.5</ID>
-    <ID>MagicNumber:ChipDistributionOptimizer.kt$ChipDistributionOptimizer$3</ID>
     <ID>TooManyFunctions:BankPreferences.kt$BankPreferences</ID>
     <ID>TooManyFunctions:ChipCalculatorPreferences.kt$ChipCalculatorPreferences</ID>
     <ID>TooManyFunctions:ChipDistributionOptimizer.kt$ChipDistributionOptimizer</ID>

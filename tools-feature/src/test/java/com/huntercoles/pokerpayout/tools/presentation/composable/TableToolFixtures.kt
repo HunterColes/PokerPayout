@@ -36,6 +36,19 @@ internal object TableToolFixtures {
         },
     )
 
+    /**
+     * Hardening: long names and big stacks (S21_side_pots_long): a 24-letter name, the longest a
+     * field takes, and nine-figure chips, the most it takes.
+     */
+    val sidePotsLong = SidePotsUiState(
+        listOf(
+            PotPlayer("Christopher Montgomery", 1_250_000),
+            PotPlayer("Alexandria Whitfield", 987_654_321),
+            PotPlayer("Maximilian Vanderberg", 640_000),
+            PotPlayer("Bartholomew Fitzgerald", 75_000, folded = true),
+        ),
+    )
+
     /** Tonight's $900 paid 50 / 30 / 20 among nine: three left from the Bank, the chip leader well ahead. */
     private val tonight = listOf(45_000L, 27_000L, 18_000L, 0L, 0L, 0L, 0L, 0L, 0L)
 
@@ -45,6 +58,22 @@ internal object TableToolFixtures {
         source = PrizeSource.Payouts,
         payouts = tonight,
         forWinnerCents = 5_000,
+    )
+
+    /**
+     * Hardening: the deal in yen (show it inside withCurrency(YEN)) at a thousand times tonight's
+     * prizes, with long names and stacks in the millions (S22_deal_long_yen).
+     */
+    val dealLongYen = DealUiState(
+        players = listOf(
+            DealPlayer("Christopher Montgomery", 12_500_000),
+            DealPlayer("Alexandria Whitfield", 7_500_000),
+            DealPlayer("Maximilian Vanderberg", 4_500_000),
+        ),
+        fromBank = true,
+        source = PrizeSource.Payouts,
+        payouts = tonight.map { it * 1_000 },
+        forWinnerCents = 5_000_000,
     )
 
     /** The deal as it opens from the Bank, chips still to type. */

@@ -45,7 +45,14 @@ Builds:
 
   - versionName: 1.4.25
     versionCode: 66
-    commit: v1.4.25
+    commit: 826efdcf1275f2de6c5c4aefa9f85ed9f8528634
+    subdir: app
+    gradle:
+      - yes
+
+  - versionName: 1.4.28
+    versionCode: 69
+    commit: v1.4.28
     subdir: app
     gradle:
       - yes
@@ -54,5 +61,5 @@ AllowedAPKSigningKeys: 223c397a82d6ed7b50659d30ed907ed23b200509b84fdcf8412f4ed85
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 1.4.25
-CurrentVersionCode: 66
+CurrentVersion: 1.4.28
+CurrentVersionCode: 69

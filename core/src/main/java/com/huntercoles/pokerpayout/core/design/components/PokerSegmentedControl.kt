@@ -46,8 +46,8 @@ import com.huntercoles.pokerpayout.core.utils.FormatUtils
  * The selected segment gets a FeltHigh fill, a DarkGold outline and gold text. A segment may carry
  * a [secondary] preview value under its label (the 1st-place prize, "$225"). Each segment is a
  * radio button for TalkBack, at least 48 dp tall; labels wrap rather than truncate. While not
- * [enabled] (a structure locked while the clock runs) the selection still shows (white, readable on its thumb), the rest dim, and taps do
- * nothing.
+ * [enabled] (a structure locked while the clock runs) the selection still shows (white, readable
+ * on its thumb), the rest dim, and taps do nothing.
  */
 @Suppress("LongParameterList") // a component API: one parameter per visual option
 @Composable

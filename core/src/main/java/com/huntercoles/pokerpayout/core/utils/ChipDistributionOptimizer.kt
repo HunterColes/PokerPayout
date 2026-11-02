@@ -40,6 +40,12 @@ object ChipDistributionOptimizer {
     private val PREFERRED_CHIP_RANGE = 40..80
     private const val PREFERRED_RANGE_FIT_BOOST = 2.0
 
+    /** The largest chip is capped at this share of the stack: one over the divisor (a third). */
+    private const val MAX_CHIP_STACK_DIVISOR = 3
+
+    /** Position on the curve used when there is only one denomination (min == max). */
+    private const val SINGLE_DENOMINATION_X = 0.5
+
     /**
      * Search nodes one [optimize] call may spend improving answers that are already exact.
      * Finding the first exact answer for each set doesn't count against it.
@@ -79,7 +85,7 @@ object ChipDistributionOptimizer {
 
         // The largest chip should be no more than a third of the stack, but the smallest chip is
         // always allowed (e.g. 100 with a 50 smallest chip is 2 × 50).
-        val maxDenomination = targetValue / 3
+        val maxDenomination = targetValue / MAX_CHIP_STACK_DIVISOR
         val available = STANDARD_DENOMINATIONS.filter { it == smallest || (it in (smallest + 1)..maxDenomination) }
 
         val unit = available.fold(0) { acc, d -> gcd(acc, d) }
@@ -395,7 +401,7 @@ object ChipDistributionOptimizer {
         val min = denominations.first().toDouble()
         val max = denominations.last().toDouble()
         return DoubleArray(denominations.size) { i ->
-            val x = if (min == max) 0.5 else (denominations[i] - min) / (max - min)
+            val x = if (min == max) SINGLE_DENOMINATION_X else (denominations[i] - min) / (max - min)
             curve.getValue(x).coerceIn(0.0, 1.0)
         }
     }

@@ -38,6 +38,10 @@ data class PayoutsUiState(
 
     val preset: PayoutPreset? get() = settings.preset
 
+    /** #50: a pool under the rounding step can't be split: every lower place rounds to nothing and 1st takes it all. */
+    val poolUnderStep: Boolean
+        get() = playerCount > 1 && pool.prizePoolCents in 1 until settings.rounding.unitCentsIn()
+
     val canPlaceMore: Boolean get() = !isLocked && places < maxPlaces
 }
 

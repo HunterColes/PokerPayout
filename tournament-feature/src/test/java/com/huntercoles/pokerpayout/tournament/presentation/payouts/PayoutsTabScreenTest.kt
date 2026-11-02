@@ -178,11 +178,23 @@ class PayoutsTabScreenTest(private val config: ScreenConfig) {
     @Test
     fun inYenTheRoundingChoicesFit() {
         withCurrency(AppCurrency.YEN) {
-            game.midGame()
+            game.yenNight()
             show()
+            screen.compose.onNodeWithText("¥35,000 prize pool", substring = true).assertExists()
             golden("S6_payouts_yen")
             assertRoundToOnOneLine("yen")
             check("Payouts, in yen")
+        }
+    }
+
+    /** #50: a pool under the rounding step is not split, and says so instead of quietly paying 1st everything. */
+    @Test
+    fun aPoolUnderTheRoundingStepSaysSo() {
+        withCurrency(AppCurrency.YEN) {
+            game.yenSmallPool()
+            show()
+            screen.compose.onNodeWithText("The pool is under the ¥500 step", substring = true).assertExists()
+            check("Payouts, yen pool under the rounding step")
         }
     }
 

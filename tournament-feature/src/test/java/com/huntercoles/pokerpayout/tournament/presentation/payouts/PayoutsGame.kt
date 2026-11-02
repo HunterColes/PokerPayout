@@ -55,15 +55,38 @@ class PayoutsGame {
     }
 
     /** Names, buy-ins, Marcus's rebuy and the five add-ons. */
-    fun midGame(): PayoutsGame = apply {
+    fun midGame(rebuyCents: Long = 4_000L, addOnCents: Long = 1_000L): PayoutsGame = apply {
         NAMES.forEachIndexed { index, name ->
             bank.savePlayerName(index + 1, name)
             bank.savePlayerBuyInStatus(index + 1, true)
         }
-        bank.savePlayerRebuyPrices(MARCUS, listOf(4_000L))
-        (1..5).forEach { bank.savePlayerAddonPrices(it, listOf(1_000L)) }
+        bank.savePlayerRebuyPrices(MARCUS, listOf(rebuyCents))
+        (1..5).forEach { bank.savePlayerAddonPrices(it, listOf(addOnCents)) }
         knockOut(BEN, by = DANA)
         knockOut(RITA, by = MARCUS)
+    }
+
+    /**
+     * #50: the same night with yen-sized money, for the yen golden: ¥3,000 buy-ins, ¥500 food and
+     * bounty, a ¥3,000 rebuy and ¥1,000 add-ons make a ¥35,000 pool, so the presets differ at ¥500.
+     */
+    fun yenNight(): PayoutsGame = apply {
+        tournament.setBuyInCents(YEN_BUY_IN_CENTS)
+        tournament.setFoodCents(YEN_SIDE_CENTS)
+        tournament.setBountyCents(YEN_SIDE_CENTS)
+        midGame(rebuyCents = YEN_BUY_IN_CENTS, addOnCents = YEN_ADD_ON_CENTS)
+    }
+
+    /** #50: a ¥300 pool, under the ¥500 step, to see the note. */
+    fun yenSmallPool(): PayoutsGame = apply {
+        tournament.setBuyInCents(YEN_SMALL_BUY_IN_CENTS)
+        tournament.setFoodCents(0L)
+        tournament.setBountyCents(0L)
+        NAMES.take(YEN_SMALL_PLAYERS).forEachIndexed { index, name ->
+            bank.savePlayerName(index + 1, name)
+            bank.savePlayerBuyInStatus(index + 1, true)
+        }
+        tournament.setPlayerCount(YEN_SMALL_PLAYERS)
     }
 
     /** Everyone but Dana out: Marcus 2nd, Priya 3rd, the rest outside the money. */
@@ -138,6 +161,13 @@ class PayoutsGame {
 
         /** Nine of these make a $123,456.78 pool. */
         const val LONG_BUY_IN_CENTS = 1_371_742L
+
+        /** Yen are whole: ¥3,000 is 300,000 of the cents money is kept in. */
+        const val YEN_BUY_IN_CENTS = 300_000L
+        const val YEN_SIDE_CENTS = 50_000L
+        const val YEN_ADD_ON_CENTS = 100_000L
+        const val YEN_SMALL_BUY_IN_CENTS = 5_000L
+        const val YEN_SMALL_PLAYERS = 6
         val NAMES = listOf("Dana", "Marcus", "Priya", "Theo", "Jo", "Sam", "Alex", "Rita", "Ben")
         const val DANA = 1
         const val MARCUS = 2

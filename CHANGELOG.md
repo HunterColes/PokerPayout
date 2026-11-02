@@ -3,7 +3,12 @@
 Versions on master step up as each batch of work lands; a version is published (GitHub release, then
 F-Droid) only when it has a tag. Published versions link to their release notes.
 
-## 1.4.27 (on master, not published)
+## [1.4.28](https://github.com/HunterColes/PokerPayout/releases/tag/v1.4.28) (2026-11-02)
+
+Published as 1.4.28 (versionCode 69): 1.4.27 plus the device tour fixes, since release.sh steps
+the version. Everything below and in 1.4.26 ships in it.
+
+### 1.4.27 (on master, not published)
 
 A polish pass across the Tools, Payouts and sound screens:
 

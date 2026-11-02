@@ -1,0 +1,6 @@
+- Your own cue sound: Tools > Cue sounds lets you pick any sound file, set its peak and end, and preview it. The clock starts it early so the peak lands on the level change.
+- New Chimes sound pack, with a bell for every moment.
+- Fixed: the clock no longer jumps when you pause.
+- Fixed: titles, the Bank header and the top bar no longer cut off with "…" on small phones or at large text.
+- Long names and big amounts fit on Payouts, Settle up and the champion screen.
+…

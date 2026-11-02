@@ -1320,8 +1320,8 @@ s_history_save() {
   ui tap text=History
   ui assert-text "text=1 night saved" "text=Most points all time: Alice" "desc=1st, Alice, 5 points, 1 night · 1 win" || return 1
   require_tab_selected Tools || return 1
-  ui scroll-to "5 players · Alice won" --max 3
-  ui tap "5 players · Alice won"
+  ui scroll-to "text~=Alice won" --max 3
+  ui tap "text~=Alice won"
   ui assert-text "desc=Share this night" Alice "Player 5" || return 1
   ui back                                      # the night -> History
   ui assert-text "text=1 night saved" || return 1

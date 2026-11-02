@@ -62,6 +62,8 @@ class ComponentGoldenTest(private val config: ScreenConfig) {
 
     @Test fun statStrip() = golden("StatStrip")
 
+    @Test fun pokerEmptyNote() = golden("PokerEmptyNote")
+
     @Test
     fun shell() {
         screen.compose.setContent { ShellSample() }

@@ -41,6 +41,7 @@ import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.PokerType
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
+import com.huntercoles.pokerpayout.core.design.components.PokerEmptyNote
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerSegmentedControl
 import com.huntercoles.pokerpayout.core.design.components.PokerTopBar
@@ -154,7 +155,14 @@ private fun NightsList(
         )
         HistoryPane {
             if (state.nights.isEmpty()) {
-                EmptyNote()
+                // Nothing saved yet: where nights come from.
+                HistoryCard {
+                    PokerEmptyNote(
+                        icon = PokerIcons.Trophy,
+                        title = stringResource(R.string.history_empty_title),
+                        body = stringResource(R.string.history_empty_body),
+                    )
+                }
             } else {
                 SeasonSection(state, text, onIntent)
                 PokerEyebrow(
@@ -175,28 +183,6 @@ private fun NightsList(
                     variant = PokerButtonVariant.Secondary,
                     icon = PokerIcons.Share,
                     modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-    }
-}
-
-/** Nothing saved yet: where nights come from. */
-@Composable
-private fun EmptyNote() {
-    HistoryCard {
-        Row(horizontalArrangement = Arrangement.spacedBy(PokerDimens.SpacingMedium)) {
-            Icon(PokerIcons.Trophy, contentDescription = null, tint = PokerColors.PokerGold, modifier = Modifier.size(24.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PokerDimens.SpacingSmall)) {
-                Text(
-                    text = stringResource(R.string.history_empty_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = PokerColors.CardWhite,
-                )
-                Text(
-                    text = stringResource(R.string.history_empty_body),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = PokerColors.Chalk,
                 )
             }
         }

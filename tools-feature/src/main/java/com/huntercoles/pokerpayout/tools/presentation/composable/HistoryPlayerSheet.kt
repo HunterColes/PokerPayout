@@ -195,7 +195,7 @@ private fun KeepWhich(name: String, picked: MergeCandidate, onIntent: (HistoryIn
 
 @Composable
 private fun Heading(text: String) {
-    PokerEyebrow(text = text, color = PokerColors.PokerGold, modifier = Modifier.padding(bottom = 4.dp).semantics { heading() })
+    PokerEyebrow(text = text, modifier = Modifier.padding(bottom = 4.dp).semantics { heading() })
 }
 
 @Composable

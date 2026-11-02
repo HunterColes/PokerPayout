@@ -87,7 +87,7 @@ internal fun SettingsCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                PokerEyebrow(stringResource(R.string.chip_set_settings), color = PokerColors.PokerGold)
+                PokerEyebrow(stringResource(R.string.chip_set_settings))
                 Text(
                     text = stringResource(
                         R.string.chip_set_settings_summary,

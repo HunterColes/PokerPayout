@@ -161,7 +161,7 @@ internal fun ChipSetSection(modifier: Modifier = Modifier, content: @Composable 
     )
 }
 
-/** A gold eyebrow on the left and a short Chalk note on the right, wrapping under it if it must. */
+/** A Chalk eyebrow on the left and a short Chalk note on the right, wrapping under it if it must. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun SectionHeader(title: String, note: String?) {
@@ -172,7 +172,6 @@ internal fun SectionHeader(title: String, note: String?) {
     ) {
         PokerEyebrow(
             text = title,
-            color = PokerColors.PokerGold,
             modifier = Modifier.align(Alignment.CenterVertically),
         )
         if (note != null) {

@@ -328,7 +328,8 @@
         <item quantity="other">%1$d nights · last %2$s</item>
     </plurals>
     <string name="bank_regulars_new">No saved night yet</string>
-    <string name="bank_regulars_empty">No regulars yet. Names you type in the Bank and the players of saved nights show up here.</string>
+    <string name="bank_regulars_empty_title">No regulars yet</string>
+    <string name="bank_regulars_empty">Names you type in the Bank and the players of saved nights show up here.</string>
     <string name="bank_regulars_no_match">Nobody called “%1$s” yet. Add seats them.</string>
     <string name="bank_regulars_done">Done</string>
 </resources>

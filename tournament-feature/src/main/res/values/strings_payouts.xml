@@ -11,7 +11,8 @@
     <string name="payouts_prize_pool">Prize pool</string>
     <string name="payouts_structure_label">Structure · what 1st gets</string>
     <string name="payouts_round_to">Round to</string>
-    <string name="payouts_pool_under_step">The pool is under the %1$s step, so 1st takes it all. Pick a smaller step to split it.</string>
+    <string name="payouts_pool_under_step">At the %1$s step, 2nd would round to nothing, so 1st takes it all. Pick a smaller step to split it.</string>
+    <string name="payouts_pool_under_smallest_step">The pool is too small to split in %1$s steps, so 1st takes it all.</string>
     <string name="payouts_places_stepper">Places paid</string>
     <string name="payouts_adds_up">Adds up to %1$s</string>
     <string name="payouts_still_playing">Still playing</string>

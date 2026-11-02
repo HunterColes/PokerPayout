@@ -32,6 +32,7 @@ import com.huntercoles.pokerpayout.core.design.components.PayoutPreview
 import com.huntercoles.pokerpayout.core.design.components.PayoutStructureContent
 import com.huntercoles.pokerpayout.core.design.components.PlayingCard
 import com.huntercoles.pokerpayout.core.design.components.PokerChip
+import com.huntercoles.pokerpayout.core.design.components.PokerEmptyNote
 import com.huntercoles.pokerpayout.core.design.components.PokerField
 import com.huntercoles.pokerpayout.core.design.components.PokerNavBar
 import com.huntercoles.pokerpayout.core.design.components.PokerPill
@@ -41,6 +42,7 @@ import com.huntercoles.pokerpayout.core.design.components.PokerTopBar
 import com.huntercoles.pokerpayout.core.design.components.ToggleChip
 import com.huntercoles.pokerpayout.core.design.components.UndoSnackbar
 import com.huntercoles.pokerpayout.core.design.components.pokerNavItems
+import com.huntercoles.pokerpayout.core.design.icons.PokerIcons
 import com.huntercoles.pokerpayout.core.domain.model.PayoutRounding
 import com.huntercoles.pokerpayout.core.domain.model.PayoutSettings
 import com.huntercoles.pokerpayout.core.testing.Device
@@ -201,6 +203,16 @@ class ComponentSemanticsTest {
         rule.onNodeWithContentDescription("Win 53.0%, tie 1.4%").assertExists()
         rule.onNodeWithContentDescription("Win about 67.1%, tie about 0.0%, still estimating").assertExists()
         rule.onNodeWithContentDescription("Green 25 chip").assertExists()
+    }
+
+    @Test
+    fun emptyNoteTitleIsAHeadingAndItsIconIsSilent() {
+        show {
+            PokerEmptyNote(icon = PokerIcons.People, title = "No regulars yet", body = "Names show up here.")
+        }
+        rule.onNodeWithText("No regulars yet").assert(isHeading())
+        rule.onNodeWithText("Names show up here.").assert(isHeading().not())
+        rule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.ContentDescription)).assertCountEquals(0)
     }
 
     @Test

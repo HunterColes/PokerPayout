@@ -38,9 +38,16 @@ data class PayoutsUiState(
 
     val preset: PayoutPreset? get() = settings.preset
 
-    /** #50: a pool under the rounding step can't be split: every lower place rounds to nothing and 1st takes it all. */
-    val poolUnderStep: Boolean
-        get() = playerCount > 1 && pool.prizePoolCents in 1 until settings.rounding.unitCentsIn()
+    /**
+     * #50, #65: the rounding step leaves only 1st paid: with more than one player in, even 2nd's share
+     * rounds to nothing, so the stepper stops at 1 and 1st takes it all (a pool under one step, or a
+     * 2-place table under two). One place picked on purpose, with room for more, is not this.
+     */
+    val stepPaysFirstAll: Boolean
+        get() = playerCount > 1 && pool.prizePoolCents > 0 && maxPlaces == 1
+
+    /** The smallest step is already picked, so a smaller one is no fix (#65). */
+    val onSmallestStep: Boolean get() = settings.rounding == PayoutRounding.entries.first()
 
     val canPlaceMore: Boolean get() = !isLocked && places < maxPlaces
 }

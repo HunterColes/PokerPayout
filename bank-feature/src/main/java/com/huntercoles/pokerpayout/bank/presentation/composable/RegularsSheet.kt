@@ -41,6 +41,7 @@ import com.huntercoles.pokerpayout.core.design.PokerDimens
 import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonSize
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonVariant
+import com.huntercoles.pokerpayout.core.design.components.PokerEmptyNote
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
 import com.huntercoles.pokerpayout.core.design.components.PokerField
 import com.huntercoles.pokerpayout.core.design.components.PokerSheet
@@ -95,7 +96,11 @@ internal fun RegularsSheetContent(
         )
         val rows = model.matching(query)
         when {
-            model.rows.isEmpty() -> Note(stringResource(R.string.bank_regulars_empty))
+            model.rows.isEmpty() -> PokerEmptyNote(
+                icon = PokerIcons.People,
+                title = stringResource(R.string.bank_regulars_empty_title),
+                body = stringResource(R.string.bank_regulars_empty),
+            )
             rows.isEmpty() -> Note(stringResource(R.string.bank_regulars_no_match, query.trim()))
             else -> RegularsList(rows, canSeat = model.canSeat, onToggle = onToggle)
         }

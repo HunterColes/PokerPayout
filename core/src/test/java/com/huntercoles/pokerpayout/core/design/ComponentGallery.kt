@@ -31,6 +31,7 @@ import com.huntercoles.pokerpayout.core.design.components.PokerButton
 import com.huntercoles.pokerpayout.core.design.components.PokerButtonPreview
 import com.huntercoles.pokerpayout.core.design.components.PokerChipPreview
 import com.huntercoles.pokerpayout.core.design.components.PokerEyebrow
+import com.huntercoles.pokerpayout.core.design.components.PokerEmptyNotePreview
 import com.huntercoles.pokerpayout.core.design.components.PokerFieldPreview
 import com.huntercoles.pokerpayout.core.design.components.PokerIconButton
 import com.huntercoles.pokerpayout.core.design.components.PokerNavBarPreview
@@ -69,6 +70,7 @@ internal val ComponentGallery: List<Pair<String, @Composable () -> Unit>> = list
     "PokerNavRail" to { PokerNavRailPreview() },
     "LevelProgress" to { LevelProgressPreview() },
     "StatStrip" to { StatStripPreview() },
+    "PokerEmptyNote" to { PokerEmptyNotePreview() },
 )
 
 /**

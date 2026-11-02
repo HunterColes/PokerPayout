@@ -89,6 +89,23 @@ class PayoutsGame {
         tournament.setPlayerCount(YEN_SMALL_PLAYERS)
     }
 
+    /**
+     * #65: [players] players in at [buyInCents] each and nothing else, paying [places] places
+     * (Standard) rounded to [rounding]: a small table to see when the step leaves only 1st paid.
+     */
+    fun smallTable(players: Int, buyInCents: Long, rounding: PayoutRounding, places: Int = 2): PayoutsGame = apply {
+        tournament.setBuyInCents(buyInCents)
+        tournament.setFoodCents(0L)
+        tournament.setBountyCents(0L)
+        tournament.setPayoutPreset(PayoutPreset.STANDARD, places)
+        tournament.setPayoutRounding(rounding)
+        NAMES.take(players).forEachIndexed { index, name ->
+            bank.savePlayerName(index + 1, name)
+            bank.savePlayerBuyInStatus(index + 1, true)
+        }
+        tournament.setPlayerCount(players)
+    }
+
     /** Everyone but Dana out: Marcus 2nd, Priya 3rd, the rest outside the money. */
     fun finished(): PayoutsGame = apply {
         midGame()

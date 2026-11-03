@@ -106,11 +106,14 @@ for c in json.load(sys.stdin): print("--- {} {} {}\n{}".format(c["user"]["login"
     [[ ! ($head =~ $TRAIN && $base == master) ]] || { echo "forge.sh: merge #$1: a day PR; Hunter merges those" >&2; exit 1; }
     out="$(mktemp)"; trap 'rm -f "$out"' EXIT
     # Our own title and message: the forge's default adds a Reviewed-on: line with the PR's URL, and GitHub mirrors
-    # master. The PR body goes in without any line naming the forge.
+    # master. The PR body goes in without any line naming the forge, and ends with Hunter as co-author so GitHub
+    # credits him beside the agent (the author).
     code="$(py '
 import json,sys
 p=json.loads(sys.argv[1]); base=sys.argv[3]
-body="\n".join(l for l in (p.get("body") or "").splitlines() if base not in l).strip()
+co="Co-authored-by: Hunter Coles <hunter.colesw@gmail.com>"
+body="\n".join(l for l in (p.get("body") or "").splitlines() if base not in l and l.strip()!=co).strip()
+body=(body+"\n\n" if body else "")+co
 print(json.dumps({"Do":"squash","head_commit_id":sys.argv[2],"delete_branch_after_merge":True,
   "MergeTitleField":"{} (#{})".format(p["title"], p["number"]),"MergeMessageField":body}))' "$pr_json" "$2" "$BASE_URL" \
       | curl -sS --proto '=https' -H @"$HDR" -H 'Content-Type: application/json' -X POST --data-binary @- \
